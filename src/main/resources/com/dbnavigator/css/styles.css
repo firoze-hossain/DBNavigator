@@ -1,0 +1,35 @@
+/*.root {*/
+/*    -fx-base: #ececec;*/
+/*    -fx-accent: #0096c9;*/
+/*    -fx-default-button: #abd8ed;*/
+/*    -fx-focus-color: #039ed3;*/
+/*    -fx-faint-focus-color: #039ed322;*/
+/*}*/
+
+/*.sql-editor {*/
+/*    -fx-font-family: 'Consolas', monospace;*/
+/*    -fx-font-size: 14px;*/
+/*}*/
+
+/*.keyword {*/
+/*    -fx-fill: blue;*/
+/*    -fx-font-weight: bold;*/
+/*}*/
+
+/*.string {*/
+/*    -fx-fill: green;*/
+/*}*/
+
+/*.comment {*/
+/*    -fx-fill: gray;*/
+/*}*/
+
+/*.table-view {*/
+/*    -fx-table-cell-border-color: transparent;*/
+/*}*/
+
+/*.status-bar {*/
+/*    -fx-background-color: -fx-box-border, -fx-control-inner-background;*/
+/*    -fx-background-insets: 0, 1;*/
+/*    -fx-padding: 5px;*/
+/*}*/
