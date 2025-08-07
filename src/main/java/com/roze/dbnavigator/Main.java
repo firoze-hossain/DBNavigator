@@ -9,21 +9,21 @@ import javafx.stage.Stage;
 import java.io.IOException;
 
 public class Main extends Application {
-
-    public static void main(String[] args) {
-        launch(args);
-    }
-
     @Override
     public void start(Stage stage) throws IOException {
-        FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/dbnavigator/views/fxml/main.fxml"));
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/assets/views/fxml/main.fxml"));
         Parent root = loader.load();
 
         Scene scene = new Scene(root, 1200, 800);
-        scene.getStylesheets().add(getClass().getResource("/com/dbnavigator/css/styles.css").toExternalForm());
+        scene.getStylesheets().add(getClass().getResource("/assets/css/styles.css").toExternalForm());
+        scene.getStylesheets().add(getClass().getResource("/assets/css/theme-dark.css").toExternalForm());
 
-        stage.setTitle("Database Workbench");
+        stage.setTitle("DBNavigator");
         stage.setScene(scene);
         stage.show();
+    }
+
+    public static void main(String[] args) {
+        launch(args);
     }
 }

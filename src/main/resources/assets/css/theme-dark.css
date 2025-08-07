@@ -1,0 +1,31 @@
+
+.root {
+    -fx-base: #2b2b2b;
+    -fx-background: #1e1e1e;
+    -fx-control-inner-background: #252525;
+    -fx-control-inner-background-alt: derive(-fx-control-inner-background, 5%);
+    -fx-light-text-color: #f5f5f5;
+    -fx-mid-text-color: #d0d0d0;
+    -fx-dark-text-color: #a0a0a0;
+
+    /* Custom Colors */
+    -fx-titlebar: #252525;
+    -fx-sidebar: #252525;
+    -fx-sidebar-header: #2d2d2d;
+    -fx-statusbar: #252525;
+    -fx-border: #383838;
+    -fx-table-header: #333333;
+    -fx-table-row-odd: #252525;
+    -fx-table-row-even: #2a2a2a;
+
+    /* Text Colors */
+    -fx-text-primary: #e0e0e0;
+    -fx-text-secondary: #a0a0a0;
+    -fx-keyword: #569cd6;
+    -fx-string: #ce9178;
+    -fx-comment: #6a9955;
+
+    /* Control States */
+    -fx-control-hover: rgba(255, 255, 255, 0.08);
+    -fx-control-pressed: rgba(255, 255, 255, 0.12);
+}

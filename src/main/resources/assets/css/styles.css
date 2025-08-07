@@ -1,0 +1,100 @@
+/* Base Styles */
+.root {
+    -fx-font-family: 'Segoe UI', Roboto, sans-serif;
+    -fx-font-size: 13px;
+    -fx-accent: #3f6a8a;
+    -fx-focus-color: -fx-accent;
+    -fx-faint-focus-color: rgba(63, 106, 138, 0.2);
+}
+
+/* Main Window */
+.main-pane {
+    -fx-background-color: -fx-background;
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+    -fx-border-width: 1;
+    -fx-border-color: -fx-border;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 10, 0.2, 0, 2);
+}
+
+/* Title Bar */
+.title-bar {
+    -fx-background-color: -fx-titlebar;
+    -fx-padding: 8 12;
+    -fx-border-width: 0 0 1 0;
+    -fx-border-color: -fx-border;
+    -fx-border-radius: 8 8 0 0;
+}
+
+.title-text {
+    -fx-font-size: 14;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-primary;
+    -fx-padding: 0 12;
+}
+
+/* SQL Editor */
+.sql-editor {
+    -fx-font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    -fx-font-size: 13;
+    -fx-background-color: -fx-background;
+    -fx-padding: 8;
+}
+
+.sql-editor .keyword {
+    -fx-fill: -fx-keyword;
+    -fx-font-weight: bold;
+}
+
+.sql-editor .string {
+    -fx-fill: -fx-string;
+}
+
+.sql-editor .comment {
+    -fx-fill: -fx-comment;
+    -fx-font-style: italic;
+}
+
+/* Result Table */
+.result-table {
+    -fx-background-color: -fx-background;
+}
+
+.result-table .column-header {
+    -fx-background-color: -fx-table-header;
+    -fx-border-color: -fx-border;
+    -fx-border-width: 0 0 1 0;
+}
+
+.result-table .table-row-cell:odd {
+    -fx-background-color: -fx-table-row-odd;
+}
+
+.result-table .table-row-cell:even {
+    -fx-background-color: -fx-table-row-even;
+}
+
+.result-table .table-row-cell:selected {
+    -fx-background-color: -fx-accent;
+    -fx-text-fill: white;
+}
+
+/* Schema Tree */
+.schema-tree {
+    -fx-background-color: transparent;
+    -fx-padding: 4;
+}
+
+.schema-tree .tree-cell {
+    -fx-padding: 4 4 4 8;
+    -fx-background-color: transparent;
+}
+
+.schema-tree .tree-cell:hover {
+    -fx-background-color: -fx-control-hover;
+}
+
+.schema-tree .tree-cell:selected {
+    -fx-background-color: -fx-accent;
+    -fx-text-fill: white;
+}
