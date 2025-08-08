@@ -98,3 +98,29 @@
     -fx-background-color: -fx-accent;
     -fx-text-fill: white;
 }
+
+/* Add to your styles.css */
+.connection-status {
+    -fx-font-size: 12px;
+    -fx-padding: 2 8;
+    -fx-background-radius: 4;
+    -fx-border-radius: 4;
+}
+
+.connection-status-success {
+    -fx-text-fill: #2e7d32;
+    -fx-background-color: #e8f5e9;
+}
+
+.connection-status-error {
+    -fx-text-fill: #c62828;
+    -fx-background-color: #ffebee;
+}
+
+.connection-status-neutral {
+    -fx-text-fill: #666;
+}
+
+.progress-indicator {
+    -fx-progress-color: #3f6a8a;
+}

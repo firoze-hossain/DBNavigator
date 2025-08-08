@@ -64,9 +64,9 @@
 
     <bottom>
         <HBox styleClass="status-bar" alignment="CENTER_LEFT" spacing="10">
-            <Label fx:id="connectionStatus" text="Not connected" />
+            <Label fx:id="connectionStatus" styleClass="connection-status connection-status-neutral"  />
             <Separator orientation="VERTICAL" />
-            <Label fx:id="executionTimeLabel" text="0ms" />
+            <Label fx:id="executionTimeLabel" text="Ready" />
         </HBox>
     </bottom>
 </BorderPane>

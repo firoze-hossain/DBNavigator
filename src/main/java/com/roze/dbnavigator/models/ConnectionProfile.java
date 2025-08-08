@@ -21,7 +21,11 @@ public class ConnectionProfile {
     public String getJdbcUrl() {
         return switch (type) {
             case MYSQL -> String.format("jdbc:mysql://%s:%d/%s?useSSL=false", host, port, database);
-            case POSTGRESQL -> String.format("jdbc:postgresql://%s:%d/%s", host, port, database);
+            case POSTGRESQL -> {
+                String baseUrl = String.format("jdbc:postgresql://%s:%d/%s", host, port, database);
+                // Add SSL and other PostgreSQL-specific parameters
+                yield baseUrl + "?ssl=false&sslmode=disable";
+            }
             case SQLITE -> String.format("jdbc:sqlite:%s", database);
             default -> throw new IllegalArgumentException("Unsupported database type");
         };

@@ -1,6 +1,7 @@
 package com.roze.dbnavigator.controllers;
 
 import com.roze.dbnavigator.models.ConnectionProfile;
+import com.roze.dbnavigator.services.ConnectionService;
 import com.roze.dbnavigator.views.components.ConnectionDialog;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -13,7 +14,10 @@ import org.fxmisc.richtext.CodeArea;
 import org.fxmisc.richtext.LineNumberFactory;
 
 import java.io.IOException;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 public class MainController {
     @FXML
@@ -50,6 +54,18 @@ public class MainController {
         // New setup from suggested code
         setupTabs();
         setupStatusBar();
+        // Load saved connections
+        loadSavedConnections();
+    }
+
+    private void loadSavedConnections() {
+        connectionCombo.getItems().clear();
+        connectionCombo.getItems().addAll(
+                ConnectionService.getSavedConnections()
+                        .stream()
+                        .map(ConnectionProfile::getName)
+                        .collect(Collectors.toList())
+        );
     }
 
     private void setupConnectionCombo() {
@@ -98,19 +114,37 @@ public class MainController {
         ((Stage) connectionCombo.getScene().getWindow()).close();
     }
 
+
     @FXML
     private void showConnectionDialog() {
         ConnectionDialog dialog = new ConnectionDialog();
         Optional<ConnectionProfile> result = dialog.showAndWait();
 
         result.ifPresent(profile -> {
-            currentConnection = profile;
-            connectionStatus.setText("Connected to: " + profile.getName());
-//            statusBar.getRightItems().clear();
-//            statusBar.getRightItems().add(new Label("Connected to: " + profile.getName()));
+            try {
+                // First test the connection with the original profile
+                long startTime = System.currentTimeMillis();
+                Connection conn = ConnectionService.getConnection(profile);
+                long endTime = System.currentTimeMillis();
 
-            // Load schema browser with real data
-            loadSchemaBrowser(profile);
+                // Only save the connection if it succeeds
+                ConnectionService.saveConnection(profile);
+
+                currentConnection = profile;
+                connectionStatus.setText(String.format("Connected to %s (%d ms)",
+                        profile.getName(), endTime - startTime));
+                connectionStatus.setStyle("-fx-text-fill: #2e7d32;");
+
+                loadSavedConnections();
+                connectionCombo.getSelectionModel().select(profile.getName());
+                loadSchemaBrowser(profile);
+
+            } catch (SQLException e) {
+                showErrorDialog("Connection Error",
+                        "Failed to establish connection: " + e.getMessage());
+                connectionStatus.setText("Connection failed");
+                connectionStatus.setStyle("-fx-text-fill: #c62828;");
+            }
         });
     }
 
@@ -140,7 +174,7 @@ public class MainController {
         mainTabPane.getTabs().add(addTab);
     }
 
-//    private void addNewQueryTab() {
+    //    private void addNewQueryTab() {
 //        try {
 //            FXMLLoader loader = new FXMLLoader(getClass().getResource("/assets/views/fxml/query-tab.fxml"));
 //            BorderPane content = loader.load();
@@ -164,29 +198,30 @@ public class MainController {
 //            showErrorDialog("Failed to create new query tab", e.getMessage());
 //        }
 //    }
-private void addNewQueryTab() {
-    try {
-        FXMLLoader loader = new FXMLLoader(getClass().getResource("/assets/views/fxml/query-tab.fxml"));
-        VBox content = loader.load(); // Changed from BorderPane to VBox
-        QueryTabController controller = loader.getController();
+    private void addNewQueryTab() {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/assets/views/fxml/query-tab.fxml"));
+            VBox content = loader.load(); // Changed from BorderPane to VBox
+            QueryTabController controller = loader.getController();
 
-        Tab tab = new Tab("Query " + (mainTabPane.getTabs().size() + 1));
-        tab.setContent(content);
-        tab.setOnCloseRequest(e -> {
-            if (controller.hasUnsavedChanges()) {
-                if (!confirmTabClose()) {
-                    e.consume();
+            Tab tab = new Tab("Query " + (mainTabPane.getTabs().size() + 1));
+            tab.setContent(content);
+            tab.setOnCloseRequest(e -> {
+                if (controller.hasUnsavedChanges()) {
+                    if (!confirmTabClose()) {
+                        e.consume();
+                    }
                 }
-            }
-        });
+            });
 
-        mainTabPane.getTabs().add(mainTabPane.getTabs().size() - 1, tab);
-        mainTabPane.getSelectionModel().select(tab);
-    } catch (IOException e) {
-        e.printStackTrace();
-        showErrorDialog("Failed to create new query tab", e.getMessage());
+            mainTabPane.getTabs().add(mainTabPane.getTabs().size() - 1, tab);
+            mainTabPane.getSelectionModel().select(tab);
+        } catch (IOException e) {
+            e.printStackTrace();
+            showErrorDialog("Failed to create new query tab", e.getMessage());
+        }
     }
-}
+
     private boolean confirmTabClose() {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("Unsaved Changes");
