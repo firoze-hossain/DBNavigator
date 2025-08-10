@@ -124,3 +124,48 @@
 .progress-indicator {
     -fx-progress-color: #3f6a8a;
 }
+
+/* Schema Browser Styles */
+.schema-browser {
+    -fx-background-color: -fx-background;
+    -fx-spacing: 5;
+}
+
+.schema-toolbar {
+    -fx-background-color: -fx-titlebar;
+    -fx-padding: 5;
+}
+
+.schema-tree {
+    -fx-background-color: transparent;
+    -fx-padding: 5;
+}
+
+.status-bar {
+    -fx-padding: 5;
+    -fx-background-color: -fx-titlebar;
+    -fx-border-color: -fx-border;
+    -fx-border-width: 1 0 0 0;
+}
+/* Schema Browser Styles */
+.schema-browser {
+    -fx-background-color: -fx-background;
+    -fx-spacing: 5;
+}
+
+.schema-toolbar {
+    -fx-background-color: -fx-titlebar;
+    -fx-padding: 5;
+}
+
+.schema-tree {
+    -fx-background-color: transparent;
+    -fx-padding: 5;
+}
+
+.status-bar {
+    -fx-padding: 5;
+    -fx-background-color: -fx-titlebar;
+    -fx-border-color: -fx-border;
+    -fx-border-width: 1 0 0 0;
+}

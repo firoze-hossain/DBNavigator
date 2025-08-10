@@ -2,34 +2,33 @@
 
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<?import javafx.scene.image.*?>
 
-<BorderPane xmlns="http://javafx.com/javafx/21"
-            xmlns:fx="http://javafx.com/fxml/1"
-            fx:controller="com.roze.dbnavigator.controllers.SchemaBrowserController"
-            styleClass="schema-browser">
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.image.Image?>
+<?import org.controlsfx.control.StatusBar?>
+<VBox xmlns="http://javafx.com/javafx/21"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.roze.dbnavigator.controllers.SchemaBrowserController"
+      styleClass="schema-browser">
 
-    <top>
-        <ToolBar styleClass="schema-toolbar">
-            <Button text="Refresh" onAction="#refreshSchema">
-                <graphic>
-                    <ImageView fitWidth="16" fitHeight="16">
-                        <Image url="@../../icons/refresh.png" />
-                    </ImageView>
-                </graphic>
-            </Button>
-            <Separator orientation="VERTICAL" />
-            <TextField fx:id="searchField" promptText="Search schema..." />
-        </ToolBar>
-    </top>
+    <ToolBar styleClass="schema-toolbar">
+        <Button text="Refresh" onAction="#refreshSchema">
+            <graphic>
+                <ImageView fitWidth="16" fitHeight="16">
+                    <Image url="@../../icons/refresh.png" />
+                </ImageView>
+            </graphic>
+        </Button>
+        <Separator orientation="VERTICAL" />
+        <TextField fx:id="searchField" promptText="Search schema..." />
+    </ToolBar>
 
-    <center>
-        <TreeView fx:id="schemaTree" styleClass="schema-tree" />
-    </center>
+    <TreeView fx:id="schemaTree" styleClass="schema-tree" VBox.vgrow="ALWAYS" />
 
-    <bottom>
-        <StatusBar>
+    <StatusBar>
+        <leftItems>
             <Label fx:id="statusLabel" text="Ready" />
-        </StatusBar>
-    </bottom>
-</BorderPane>
+        </leftItems>
+    </StatusBar>
+
+</VBox>

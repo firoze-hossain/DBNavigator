@@ -7,6 +7,7 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.control.*;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import org.controlsfx.control.StatusBar;
@@ -36,6 +37,8 @@ public class MainController {
     private Label connectionStatus;
     @FXML
     private Label executionTimeLabel;
+    @FXML private Accordion schemaAccordion;
+    @FXML private TitledPane databasePane;
 
     @FXML
     private BorderPane mainPane;
@@ -43,6 +46,9 @@ public class MainController {
     private StatusBar statusBar;
 
     private ConnectionProfile currentConnection;
+
+    @FXML
+    private BorderPane leftPane;
 
     @FXML
     public void initialize() {
@@ -149,13 +155,22 @@ public class MainController {
     }
 
     private void loadSchemaBrowser(ConnectionProfile profile) {
-        // Replace with actual schema loading
-        setupSchemaTree(); // Temporary - keep your existing setup until implemented
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/assets/views/fxml/schema-browser.fxml"));
+            Pane schemaBrowser = loader.load();
+            SchemaBrowserController controller = loader.getController();
+            controller.loadConnection(profile);
 
-        // TODO: Implement real schema loading using SchemaService
-        // schemaTree.setRoot(SchemaService.loadSchema(profile));
+            // Replace the TreeView in the accordion
+            TitledPane databasePane = (TitledPane) schemaAccordion.getPanes().get(0);
+            ScrollPane scrollPane = new ScrollPane(schemaBrowser);
+            scrollPane.setFitToWidth(true);
+            databasePane.setContent(scrollPane);
+
+        } catch (IOException e) {
+            showErrorDialog("Schema Browser Error", "Failed to load schema browser: " + e.getMessage());
+        }
     }
-
     // New methods from suggested code
     private void setupTabs() {
         // Add initial query tab
@@ -174,30 +189,6 @@ public class MainController {
         mainTabPane.getTabs().add(addTab);
     }
 
-    //    private void addNewQueryTab() {
-//        try {
-//            FXMLLoader loader = new FXMLLoader(getClass().getResource("/assets/views/fxml/query-tab.fxml"));
-//            BorderPane content = loader.load();
-//            QueryTabController controller = loader.getController();
-//
-//            Tab tab = new Tab("Query " + (mainTabPane.getTabs().size() + 1));
-//            tab.setContent(content);
-//            tab.setOnCloseRequest(e -> {
-//                if (controller.hasUnsavedChanges()) {
-//                    // Prompt to save
-//                    if (!confirmTabClose()) {
-//                        e.consume(); // Cancel closing
-//                    }
-//                }
-//            });
-//
-//            mainTabPane.getTabs().add(mainTabPane.getTabs().size() - 1, tab);
-//            mainTabPane.getSelectionModel().select(tab);
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//            showErrorDialog("Failed to create new query tab", e.getMessage());
-//        }
-//    }
     private void addNewQueryTab() {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/assets/views/fxml/query-tab.fxml"));
@@ -246,14 +237,6 @@ public class MainController {
         }
     }
 
-    //    private void setupStatusBar() {
-//        if (statusBar != null) {
-//            statusBar.setText("Ready");
-//            if (statusBar.getRightItems() != null) {
-//                statusBar.getRightItems().add(new Label("Not connected"));
-//            }
-//        }
-//    }
     private void setupStatusBar() {
         // Remove statusBar related code since we're using HBox instead
         connectionStatus.setText("Not connected");

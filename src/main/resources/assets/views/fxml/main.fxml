@@ -30,10 +30,11 @@
                 </HBox>
 
                 <!-- Schema Browser -->
-                <Accordion styleClass="schema-accordion">
+                <Accordion fx:id="schemaAccordion" styleClass="schema-accordion">
                     <panes>
-                        <TitledPane text="Database" styleClass="schema-pane" expanded="true">
+                        <TitledPane fx:id="databasePane" text="Database" styleClass="schema-pane" expanded="true">
                             <content>
+                                <!-- This will be replaced by the schema browser -->
                                 <TreeView fx:id="schemaTree" styleClass="schema-tree" />
                             </content>
                         </TitledPane>
@@ -44,6 +45,7 @@
                         </TitledPane>
                     </panes>
                 </Accordion>
+
             </VBox>
 
             <!-- Main Content Area -->
