@@ -15,7 +15,7 @@
         <Button text="Refresh" onAction="#refreshSchema">
             <graphic>
                 <ImageView fitWidth="16" fitHeight="16">
-                    <Image url="@../../icons/refresh.png" />
+                    <Image url="@../../icons/objects/refresh.png" />
                 </ImageView>
             </graphic>
         </Button>
