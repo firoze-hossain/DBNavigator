@@ -30,24 +30,38 @@ public class SchemaBrowserController {
         schemaTree.setCellFactory(tv -> new DatabaseObjectCell());
         schemaTree.setShowRoot(true);
 
-// Handle expansion events for lazy loading
         schemaTree.addEventHandler(TreeItem.<DatabaseObject>branchExpandedEvent(), event -> {
             TreeItem<DatabaseObject> item = event.getTreeItem();
             if (item != null && !item.getValue().isLoaded()) {
-                DatabaseObject obj = item.getValue();
+                try {
+                    DatabaseObject obj = item.getValue();
 
-                if (obj.getType() == DatabaseObject.Type.TABLES_FOLDER) {
-                    SchemaService.loadTables(item, currentProfile);
+                    if (obj.getType() == DatabaseObject.Type.TABLES_FOLDER) {
+                        SchemaService.loadTables(item, currentProfile);
+                    }
+                    else if (obj.getType() == DatabaseObject.Type.VIEWS_FOLDER) {
+                        SchemaService.loadViews(item, currentProfile);
+                    }
+                    else if (obj.getType() == DatabaseObject.Type.PROCEDURES_FOLDER) {
+                        SchemaService.loadProcedures(item, currentProfile);
+                    }
+                    else if (obj.getType() == DatabaseObject.Type.SEQUENCES_FOLDER) {
+                        SchemaService.loadSequences(item, currentProfile);
+                    }
+                    else if (obj.getType() == DatabaseObject.Type.FUNCTIONS_FOLDER) {
+                        SchemaService.loadFunctions(item, currentProfile);
+                    }
+
                     obj.setLoaded(true);
+                } catch (Exception e) {
+                    statusLabel.setText("Error loading: " + e.getMessage());
+                    item.getChildren().clear();
+                    item.getChildren().add(new TreeItem<>(
+                            new DatabaseObject("Error: " + e.getMessage(),
+                                    DatabaseObject.Type.SYSTEM_FOLDER)));
                 }
-                else if (obj.getType() == DatabaseObject.Type.PROCEDURES_FOLDER) {
-                    SchemaService.loadProcedures(item, currentProfile);
-                    obj.setLoaded(true);
-                }
-                // Add similar handlers for other types as needed
             }
         });
-
         // Handle double-click
         schemaTree.setOnMouseClicked(event -> {
             if (event.getClickCount() == 2) {
@@ -64,6 +78,7 @@ public class SchemaBrowserController {
 
 
     public void loadConnection(ConnectionProfile profile) {
+
         this.currentProfile = profile;
         statusLabel.setText("Loading schema...");
 
@@ -81,12 +96,11 @@ public class SchemaBrowserController {
         loadTask.setOnSucceeded(e -> {
             schemaTree.setRoot(loadTask.getValue());
             statusLabel.setText("Ready");
-            // Expand the root node
-            if (schemaTree.getRoot() != null) {
-                schemaTree.getRoot().setExpanded(true);
+            // Expand the database node by default
+            if (schemaTree.getRoot() != null && !schemaTree.getRoot().getChildren().isEmpty()) {
+                schemaTree.getRoot().getChildren().get(0).setExpanded(true);
             }
         });
-
         loadTask.setOnFailed(e -> {
             Throwable ex = loadTask.getException();
             String errorMsg = ex.getMessage();

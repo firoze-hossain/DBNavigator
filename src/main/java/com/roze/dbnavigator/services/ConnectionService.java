@@ -13,15 +13,20 @@ public class ConnectionService {
     private static final Map<String, HikariDataSource> connectionPools = new HashMap<>();
     private static final List<ConnectionProfile> savedConnections = new ArrayList<>();
 
-    public static synchronized Connection getConnection(ConnectionProfile profile) throws SQLException {
-        String poolKey = profile.getId();
+public static Connection getConnection(ConnectionProfile profile) throws SQLException {
+    System.out.println("Attempting connection to: " + profile.getJdbcUrl());
+    System.out.println("Using username: " + profile.getUsername());
 
-        if (!connectionPools.containsKey(poolKey)) {
-            createConnectionPool(profile);
-        }
-
-        return connectionPools.get(poolKey).getConnection();
+    String poolKey = profile.getId();
+    if (!connectionPools.containsKey(poolKey)) {
+        System.out.println("Creating new connection pool for: " + poolKey);
+        createConnectionPool(profile);
     }
+
+    Connection conn = connectionPools.get(poolKey).getConnection();
+    System.out.println("Connection obtained. Schema: " + conn.getSchema());
+    return conn;
+}
 
     public static Connection testConnection(ConnectionProfile profile) throws SQLException {
         // Create a temporary connection without pooling for testing
