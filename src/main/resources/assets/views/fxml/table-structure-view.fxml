@@ -1,0 +1,68 @@
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.control.TabPane?>
+<?import javafx.scene.control.Tab?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.cell.PropertyValueFactory?>
+
+<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.roze.dbnavigator.controllers.TableStructureController">
+    <TabPane>
+        <Tab text="Columns">
+            <TableView fx:id="columnsTable">
+                <columns>
+                    <TableColumn text="Name">
+                        <cellValueFactory>
+                            <PropertyValueFactory property="name" />
+                        </cellValueFactory>
+                    </TableColumn>
+                    <TableColumn text="Type">
+                        <cellValueFactory>
+                            <PropertyValueFactory property="type" />
+                        </cellValueFactory>
+                    </TableColumn>
+                    <TableColumn text="Size">
+                        <cellValueFactory>
+                            <PropertyValueFactory property="size" />
+                        </cellValueFactory>
+                    </TableColumn>
+                    <TableColumn text="Nullable">
+                        <cellValueFactory>
+                            <PropertyValueFactory property="nullable" />
+                        </cellValueFactory>
+                    </TableColumn>
+                    <TableColumn text="Default">
+                        <cellValueFactory>
+                            <PropertyValueFactory property="defaultValue" />
+                        </cellValueFactory>
+                    </TableColumn>
+                </columns>
+            </TableView>
+        </Tab>
+        <Tab text="Indexes">
+            <TableView fx:id="indexesTable">
+                <columns>
+                    <TableColumn text="Name">
+                        <cellValueFactory>
+                            <PropertyValueFactory property="name" />
+                        </cellValueFactory>
+                    </TableColumn>
+                    <TableColumn text="Column">
+                        <cellValueFactory>
+                            <PropertyValueFactory property="columnName" />
+                        </cellValueFactory>
+                    </TableColumn>
+                    <TableColumn text="Unique">
+                        <cellValueFactory>
+                            <PropertyValueFactory property="nonUnique" />
+                        </cellValueFactory>
+                    </TableColumn>
+                </columns>
+            </TableView>
+        </Tab>
+        <Tab text="DDL">
+            <TextArea fx:id="ddlText" editable="false"/>
+        </Tab>
+    </TabPane>
+</VBox>

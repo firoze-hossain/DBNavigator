@@ -1,0 +1,13 @@
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.control.ToolBar?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TableView?>
+<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.roze.dbnavigator.controllers.DataViewController">
+    <ToolBar>
+        <Button text="Refresh" onAction="#refreshData"/>
+        <Label fx:id="rowCountLabel"/>
+    </ToolBar>
+    <TableView fx:id="dataTable"/>
+</VBox>

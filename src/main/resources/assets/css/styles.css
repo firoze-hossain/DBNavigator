@@ -169,3 +169,31 @@
     -fx-border-color: -fx-border;
     -fx-border-width: 1 0 0 0;
 }
+
+/* Add to styles.css */
+
+.table-structure-view {
+    -fx-padding: 10;
+}
+
+.table-structure-view .tab-pane {
+    -fx-tab-min-width: 80px;
+}
+
+.table-structure-view .text-area {
+    -fx-font-family: monospace;
+    -fx-font-size: 12px;
+}
+
+.data-view {
+    -fx-padding: 5;
+}
+
+.data-view .table-view {
+    -fx-font-size: 12px;
+}
+
+.data-view .tool-bar {
+    -fx-padding: 5;
+    -fx-spacing: 5;
+}

@@ -1,6 +1,7 @@
 package com.roze.dbnavigator.controllers;
 
 import com.roze.dbnavigator.models.ConnectionProfile;
+import com.roze.dbnavigator.models.DatabaseObject;
 import com.roze.dbnavigator.services.ConnectionService;
 import com.roze.dbnavigator.views.components.ConnectionDialog;
 import javafx.fxml.FXML;
@@ -44,26 +45,30 @@ public class MainController {
     private BorderPane mainPane;
     @FXML
     private StatusBar statusBar;
-
-    private ConnectionProfile currentConnection;
+    private static MainController instance;
+    public static MainController getInstance() {
+        return instance;
+    }
 
     @FXML
     private BorderPane leftPane;
-
+    private ConnectionProfile currentProfile;
     @FXML
     public void initialize() {
         setupConnectionCombo();
         setupSchemaTree();
         setupSavedQueries();
         setupCodeEditor();
-
+        instance = this;
         // New setup from suggested code
         setupTabs();
         setupStatusBar();
         // Load saved connections
         loadSavedConnections();
     }
-
+    public TabPane getTabPane() {
+        return mainTabPane;
+    }
     private void loadSavedConnections() {
         connectionCombo.getItems().clear();
         connectionCombo.getItems().addAll(
@@ -73,7 +78,24 @@ public class MainController {
                         .collect(Collectors.toList())
         );
     }
+    // MainController.java
+    public void openDataViewTab(DatabaseObject table) {
+        try {
+            // Use absolute path with leading slash
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/assets/views/fxml/data-view.fxml"));
+            Tab tab = new Tab(table.getName());
+            tab.setContent(loader.load());
 
+            DataViewController controller = loader.getController();
+            controller.loadTableData(currentProfile, table);
+
+            mainTabPane.getTabs().add(tab);
+            mainTabPane.getSelectionModel().select(tab);
+        } catch (IOException e) {
+            e.printStackTrace();
+            showErrorDialog("Error", "Could not open data view: " + e.getMessage());
+        }
+    }
     private void setupConnectionCombo() {
         connectionCombo.getItems().addAll("MySQL", "PostgreSQL");
         connectionCombo.getSelectionModel().selectFirst();
@@ -136,7 +158,7 @@ public class MainController {
                 // Only save the connection if it succeeds
                 ConnectionService.saveConnection(profile);
 
-                currentConnection = profile;
+                currentProfile = profile;
                 connectionStatus.setText(String.format("Connected to %s (%d ms)",
                         profile.getName(), endTime - startTime));
                 connectionStatus.setStyle("-fx-text-fill: #2e7d32;");
@@ -160,7 +182,7 @@ public class MainController {
             Pane schemaBrowser = loader.load();
             SchemaBrowserController controller = loader.getController();
             controller.loadConnection(profile);
-
+            controller.setMainController(this);
             // Replace the TreeView in the accordion
             TitledPane databasePane = (TitledPane) schemaAccordion.getPanes().get(0);
             ScrollPane scrollPane = new ScrollPane(schemaBrowser);
