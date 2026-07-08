@@ -1,26 +1,31 @@
 package com.roze.dbnavigator;
 
+import com.roze.dbnavigator.db.ClientRegistry;
+import com.roze.dbnavigator.ui.MainWindow;
+import com.roze.dbnavigator.util.AppExecutor;
 import javafx.application.Application;
-import javafx.fxml.FXMLLoader;
-import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 
-import java.io.IOException;
-
 public class Main extends Application {
+
     @Override
-    public void start(Stage stage) throws IOException {
-        FXMLLoader loader = new FXMLLoader(getClass().getResource("/assets/views/fxml/main.fxml"));
-        Parent root = loader.load();
+    public void start(Stage stage) {
+        MainWindow window = new MainWindow(stage);
+        Scene scene = new Scene(window.getRoot(), 1440, 900);
+        scene.getStylesheets().add(getClass().getResource("/css/app.css").toExternalForm());
 
-        Scene scene = new Scene(root, 1200, 800);
-        scene.getStylesheets().add(getClass().getResource("/assets/css/styles.css").toExternalForm());
-        scene.getStylesheets().add(getClass().getResource("/assets/css/theme-dark.css").toExternalForm());
-
-        stage.setTitle("DBNavigator");
+        stage.setTitle("DBNavigator Pro");
         stage.setScene(scene);
+        stage.setMinWidth(1000);
+        stage.setMinHeight(650);
         stage.show();
+    }
+
+    @Override
+    public void stop() {
+        ClientRegistry.closeAll();
+        AppExecutor.shutdown();
     }
 
     public static void main(String[] args) {

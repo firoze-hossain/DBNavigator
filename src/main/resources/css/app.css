@@ -1,0 +1,212 @@
+/* ============================================================
+   DBNavigator Pro — dark professional theme (Darcula-inspired)
+   ============================================================ */
+
+.root {
+    -bg-darkest:   #1e1f22;
+    -bg-dark:      #2b2d30;
+    -bg-mid:       #313438;
+    -bg-light:     #3c3f43;
+    -border:       #43454a;
+    -text:         #dfe1e5;
+    -text-dim:     #868a91;
+    -accent:       #3574f0;
+    -accent-green: #57965c;
+
+    -fx-base: -bg-dark;
+    -fx-background: -bg-dark;
+    -fx-control-inner-background: -bg-darkest;
+    -fx-text-fill: -text;
+    -fx-font-family: "Segoe UI", "SF Pro Text", "Ubuntu", sans-serif;
+    -fx-font-size: 13px;
+    -fx-accent: -accent;
+    -fx-focus-color: -accent;
+    -fx-faint-focus-color: transparent;
+}
+
+.app-root { -fx-background-color: -bg-dark; }
+
+/* ---------- toolbar ---------- */
+.app-toolbar {
+    -fx-background-color: -bg-mid;
+    -fx-border-color: transparent transparent -border transparent;
+}
+.brand-label {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -text;
+    -fx-graphic-text-gap: 8;
+}
+
+/* ---------- buttons ---------- */
+.button {
+    -fx-background-color: -bg-light;
+    -fx-text-fill: -text;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-border-color: -border;
+    -fx-padding: 4 12 4 12;
+    -fx-cursor: hand;
+}
+.button:hover  { -fx-background-color: #4a4d52; }
+.button:pressed{ -fx-background-color: #55585e; }
+.run-button    { -fx-border-color: -accent-green; }
+
+/* ---------- text inputs ---------- */
+.text-field, .password-field, .combo-box, .spinner, .choice-box {
+    -fx-background-color: -bg-darkest;
+    -fx-text-fill: -text;
+    -fx-prompt-text-fill: -text-dim;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-border-color: -border;
+}
+.text-field:focused, .password-field:focused { -fx-border-color: -accent; }
+.combo-box .list-cell { -fx-text-fill: -text; }
+
+/* ---------- split panes ---------- */
+.split-pane { -fx-background-color: -bg-dark; -fx-padding: 0; }
+.split-pane-divider {
+    -fx-background-color: -border;
+    -fx-padding: 0 1 0 1;
+}
+
+/* ---------- explorer panel ---------- */
+.schema-pane { -fx-background-color: -bg-mid; }
+.panel-header-box {
+    -fx-background-color: -bg-mid;
+    -fx-border-color: transparent transparent -border transparent;
+}
+.panel-header {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -text-dim;
+}
+.schema-tree {
+    -fx-background-color: -bg-mid;
+    -fx-border-width: 0;
+}
+.schema-tree .tree-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: -text;
+    -fx-padding: 3 4 3 4;
+}
+.schema-tree .tree-cell:hover    { -fx-background-color: #393c40; }
+.schema-tree .tree-cell:selected { -fx-background-color: #2e436e; }
+.schema-tree .tree-cell .arrow   { -fx-background-color: -text-dim; }
+
+/* ---------- tabs ---------- */
+.main-tabs .tab-header-area .tab-header-background { -fx-background-color: -bg-mid; }
+.main-tabs .tab {
+    -fx-background-color: -bg-mid;
+    -fx-background-radius: 0;
+    -fx-padding: 5 12 5 12;
+    -fx-border-color: transparent;
+}
+.main-tabs .tab:selected {
+    -fx-background-color: -bg-dark;
+    -fx-border-color: -accent transparent transparent transparent;
+    -fx-border-width: 2 0 0 0;
+}
+.main-tabs .tab .tab-label { -fx-text-fill: -text-dim; }
+.main-tabs .tab:selected .tab-label { -fx-text-fill: -text; }
+
+.structure-tabs .tab-header-area .tab-header-background { -fx-background-color: -bg-mid; }
+
+/* ---------- console ---------- */
+.console-toolbar {
+    -fx-background-color: -bg-mid;
+    -fx-border-color: transparent transparent -border transparent;
+}
+.console-status-bar {
+    -fx-background-color: -bg-mid;
+    -fx-border-color: -border transparent transparent transparent;
+}
+.console-status { -fx-text-fill: -text-dim; -fx-font-size: 12px; }
+.console-connection-label { -fx-text-fill: -text-dim; -fx-graphic-text-gap: 6; }
+
+/* ---------- SQL editor (RichTextFX) ---------- */
+.sql-editor {
+    -fx-background-color: -bg-darkest;
+    -fx-font-family: "JetBrains Mono", "Consolas", "Menlo", monospace;
+    -fx-font-size: 14px;
+}
+.sql-editor .text { -fx-fill: #a9b7c6; }
+.sql-editor .caret { -fx-stroke: #dfe1e5; }
+.sql-editor .selection { -fx-fill: #214283; }
+.sql-editor .lineno {
+    -fx-background-color: -bg-darkest;
+    -fx-text-fill: #5c6064;
+    -fx-font-size: 12px;
+}
+.sql-keyword { -fx-fill: #cc7832; -fx-font-weight: bold; }
+.sql-string  { -fx-fill: #6a8759; }
+.sql-number  { -fx-fill: #6897bb; }
+.sql-comment { -fx-fill: #808080; -fx-font-style: italic; }
+
+/* ---------- result grid ---------- */
+.result-grid {
+    -fx-background-color: -bg-darkest;
+    -fx-border-width: 0;
+}
+.result-grid .column-header-background {
+    -fx-background-color: -bg-mid;
+    -fx-border-color: transparent transparent -border transparent;
+}
+.result-grid .column-header .label {
+    -fx-text-fill: -text;
+    -fx-font-weight: bold;
+    -fx-font-size: 12px;
+}
+.result-grid .table-row-cell {
+    -fx-background-color: -bg-darkest;
+    -fx-text-fill: -text;
+    -fx-border-color: transparent;
+}
+.result-grid .table-row-cell:odd      { -fx-background-color: #232428; }
+.result-grid .table-row-cell:hover    { -fx-background-color: #2e3033; }
+.result-grid .table-row-cell:selected { -fx-background-color: #2e436e; }
+.result-grid .table-cell {
+    -fx-text-fill: #c8ccd4;
+    -fx-font-family: "JetBrains Mono", "Consolas", monospace;
+    -fx-font-size: 12px;
+    -fx-border-color: transparent #2c2e32 transparent transparent;
+}
+
+/* ---------- status bar ---------- */
+.app-status-bar {
+    -fx-background-color: -bg-mid;
+    -fx-border-color: -border transparent transparent transparent;
+}
+.status-text { -fx-text-fill: -text-dim; -fx-font-size: 12px; }
+
+/* ---------- welcome ---------- */
+.welcome-title { -fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: -text; }
+.welcome-hint  { -fx-text-fill: -text-dim; -fx-font-size: 13px; -fx-line-spacing: 4; }
+
+/* ---------- dialogs / menus ---------- */
+.dialog-pane { -fx-background-color: -bg-dark; }
+.dialog-pane .label { -fx-text-fill: -text; }
+.context-menu {
+    -fx-background-color: -bg-mid;
+    -fx-border-color: -border;
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+}
+.menu-item .label { -fx-text-fill: -text; }
+.menu-item:focused { -fx-background-color: #2e436e; }
+
+/* ---------- scrollbars ---------- */
+.scroll-bar { -fx-background-color: transparent; }
+.scroll-bar .thumb { -fx-background-color: #4a4d52; -fx-background-radius: 6; }
+.scroll-bar .thumb:hover { -fx-background-color: #5a5e64; }
+.scroll-bar .increment-button, .scroll-bar .decrement-button { -fx-padding: 2; }
+
+.check-box .box {
+    -fx-background-color: -bg-darkest;
+    -fx-border-color: -border;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+}
+.check-box:selected .mark { -fx-background-color: -accent; }
+.tooltip { -fx-background-color: -bg-light; -fx-text-fill: -text; }
