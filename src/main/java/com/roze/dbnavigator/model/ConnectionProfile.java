@@ -43,6 +43,8 @@ public class ConnectionProfile {
     private String password = "";
     private boolean savePassword;
     private boolean useSsl;
+    /** Databases shown under this connection; empty = show all. */
+    private java.util.List<String> visibleDatabases = new java.util.ArrayList<>();
 
     public ConnectionProfile() {}
 
@@ -104,6 +106,7 @@ public class ConnectionProfile {
         c.password = password;
         c.savePassword = savePassword;
         c.useSsl = useSsl;
+        c.visibleDatabases = new java.util.ArrayList<>(visibleDatabases);
         return c;
     }
 
@@ -128,6 +131,11 @@ public class ConnectionProfile {
     public void setSavePassword(boolean savePassword) { this.savePassword = savePassword; }
     public boolean isUseSsl() { return useSsl; }
     public void setUseSsl(boolean useSsl) { this.useSsl = useSsl; }
+    public java.util.List<String> getVisibleDatabases() { return visibleDatabases; }
+    public void setVisibleDatabases(java.util.List<String> visibleDatabases) {
+        this.visibleDatabases = visibleDatabases == null
+                ? new java.util.ArrayList<>() : visibleDatabases;
+    }
 
     @Override public String toString() { return name; }
 }

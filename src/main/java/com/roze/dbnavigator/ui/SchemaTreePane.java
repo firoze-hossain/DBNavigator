@@ -96,10 +96,44 @@ public class SchemaTreePane extends VBox {
             if (expanded && !obj.isLoaded()) {
                 obj.setLoaded(true);
                 loadChildrenAsync(item, profile,
-                        () -> MetadataService.loadTopLevel(profile));
+                        () -> loadTopLevelFiltered(profile, obj));
             }
         });
         root.getChildren().add(item);
+    }
+
+    /**
+     * Top-level children with the database show/hide filter applied.
+     * Also writes the DataGrip-style "2 of 4" counter onto the connection node.
+     */
+    private List<DbObject> loadTopLevelFiltered(ConnectionProfile profile, DbObject connectionObj)
+            throws Exception {
+        List<DbObject> all = MetadataService.loadTopLevel(profile);
+
+        boolean databases = !all.isEmpty()
+                && all.stream().allMatch(o -> o.getKind() == Kind.DATABASE);
+        if (!databases) {
+            connectionObj.setDetail(null);
+            return all;
+        }
+
+        List<String> filter = profile.getVisibleDatabases();
+        List<DbObject> visible = (filter == null || filter.isEmpty())
+                ? all
+                : all.stream().filter(o -> filter.contains(o.getName())).toList();
+
+        connectionObj.setDetail(visible.size() + " of " + all.size());
+        Platform.runLater(tree::refresh);
+        return visible;
+    }
+
+    /** Re-loads one connection's children (used after the filter dialog). */
+    private void refreshConnection(TreeItem<DbObject> item, ConnectionProfile profile) {
+        DbObject obj = item.getValue();
+        obj.setLoaded(true);
+        item.getChildren().setAll(loadingNode());
+        loadChildrenAsync(item, profile, () -> loadTopLevelFiltered(profile, obj));
+        item.setExpanded(true);
     }
 
     private void openObject(TreeItem<DbObject> item) {
@@ -108,7 +142,7 @@ public class SchemaTreePane extends VBox {
         if (profile == null) return;
 
         switch (obj.getKind()) {
-            case TABLE, VIEW -> mainWindow.openDataTab(profile, obj);
+            case TABLE, VIEW, PARTITION -> mainWindow.openDataTab(profile, obj);
             case COLLECTION  -> mainWindow.openMongoTab(profile, obj);
             case CONNECTION  -> item.setExpanded(!item.isExpanded());
             default -> {}
@@ -170,7 +204,7 @@ public class SchemaTreePane extends VBox {
         return switch (obj.getKind()) {
             case DATABASE -> MetadataService.loadDatabaseChildren(profile, obj);
             case SCHEMA   -> MetadataService.loadSchemaChildren(obj);
-            case TABLE    -> MetadataService.loadTableChildren(profile, obj);
+            case TABLE, PARTITION -> MetadataService.loadTableChildren(profile, obj);
             case TABLES_FOLDER, VIEWS_FOLDER, PROCEDURES_FOLDER, FUNCTIONS_FOLDER,
                  SEQUENCES_FOLDER, COLLECTIONS_FOLDER,
                  COLUMNS_FOLDER, INDEXES_FOLDER, PARTITIONS_FOLDER
@@ -183,9 +217,32 @@ public class SchemaTreePane extends VBox {
         return switch (kind) {
             case DATABASE, SCHEMA, TABLES_FOLDER, VIEWS_FOLDER, PROCEDURES_FOLDER,
                  FUNCTIONS_FOLDER, SEQUENCES_FOLDER, COLLECTIONS_FOLDER,
-                 TABLE, COLUMNS_FOLDER, INDEXES_FOLDER, PARTITIONS_FOLDER -> true;
+                 TABLE, PARTITION, COLUMNS_FOLDER, INDEXES_FOLDER, PARTITIONS_FOLDER -> true;
             default -> false;
         };
+    }
+
+    /** Opens the DataGrip-style show/hide databases popup for one connection. */
+    private void showDatabaseFilterDialog(TreeItem<DbObject> connectionItem,
+                                          ConnectionProfile profile) {
+        AppExecutor.run(() -> {
+            try {
+                List<String> allDatabases = MetadataService.listDatabaseNames(profile);
+                Platform.runLater(() -> {
+                    DatabaseFilterDialog dialog = new DatabaseFilterDialog(profile, allDatabases);
+                    dialog.initOwner(getScene().getWindow());
+                    dialog.showAndWait().ifPresent(selected -> {
+                        profile.setVisibleDatabases(selected);
+                        ConnectionStore.saveOrUpdate(profile);
+                        refreshConnection(connectionItem, profile);
+                    });
+                });
+            } catch (Exception ex) {
+                String msg = ex.getMessage() == null ? ex.toString() : ex.getMessage();
+                Platform.runLater(() -> new Alert(Alert.AlertType.ERROR,
+                        "Could not list databases: " + msg).showAndWait());
+            }
+        });
     }
 
     private static TreeItem<DbObject> loadingNode() {
@@ -238,6 +295,8 @@ public class SchemaTreePane extends VBox {
                 case CONNECTION -> {
                     MenuItem newConsole = new MenuItem("New Query Console");
                     newConsole.setOnAction(e -> mainWindow.openQueryTab(profile, null, null));
+                    MenuItem filterDbs = new MenuItem("Show / Hide Databases…");
+                    filterDbs.setOnAction(e -> showDatabaseFilterDialog(getTreeItem(), profile));
                     MenuItem edit = new MenuItem("Edit Connection…");
                     edit.setOnAction(e -> mainWindow.showEditConnectionDialog(profile));
                     MenuItem disconnect = new MenuItem("Disconnect");
@@ -261,9 +320,12 @@ public class SchemaTreePane extends VBox {
                     if (profile.getType().isRelational()) {
                         menu.getItems().addAll(newConsole, new SeparatorMenuItem());
                     }
+                    if (MetadataService.supportsDatabaseFilter(profile)) {
+                        menu.getItems().add(filterDbs);
+                    }
                     menu.getItems().addAll(edit, disconnect, new SeparatorMenuItem(), delete);
                 }
-                case TABLE, VIEW -> {
+                case TABLE, VIEW, PARTITION -> {
                     MenuItem openData = new MenuItem("Open Data");
                     openData.setOnAction(e -> mainWindow.openDataTab(profile, obj));
                     MenuItem structure = new MenuItem("Show Structure");

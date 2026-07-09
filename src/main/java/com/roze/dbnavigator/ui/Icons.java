@@ -34,7 +34,7 @@ public final class Icons {
             case COLLECTION -> of(FontAwesomeSolid.LAYER_GROUP, "#57965c", 12);
             case COLUMN     -> of(FontAwesomeSolid.COLUMNS, "#868a91", 11);
             case INDEX      -> of(FontAwesomeSolid.BOLT, "#e0a44c", 11);
-            case PARTITION  -> of(FontAwesomeSolid.PUZZLE_PIECE, "#6897bb", 11);
+            case PARTITION  -> of(FontAwesomeSolid.TABLE, "#4a88c7", 12);
             case MESSAGE    -> of(FontAwesomeSolid.INFO_CIRCLE, "#868a91", 11);
         };
     }

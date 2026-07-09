@@ -26,6 +26,41 @@ public final class MetadataService {
         return profile.getType() == DatabaseType.POSTGRESQL ? null : catalog;
     }
 
+    /** Names of every database on the server — used by the show/hide dialog. */
+    public static List<String> listDatabaseNames(ConnectionProfile profile) throws Exception {
+        return switch (profile.getType()) {
+            case MONGODB -> ClientRegistry.mongo(profile).listDatabases();
+            case POSTGRESQL -> {
+                List<String> names = new ArrayList<>();
+                try (Connection conn = client(profile, null).getConnection();
+                     Statement stmt = conn.createStatement();
+                     ResultSet rs = stmt.executeQuery(
+                             "SELECT datname FROM pg_database " +
+                             "WHERE datistemplate = false AND datallowconn ORDER BY datname")) {
+                    while (rs.next()) names.add(rs.getString(1));
+                }
+                yield names;
+            }
+            case MYSQL, MARIADB -> {
+                List<String> names = new ArrayList<>();
+                try (Connection conn = client(profile, null).getConnection();
+                     ResultSet rs = conn.getMetaData().getCatalogs()) {
+                    while (rs.next()) names.add(rs.getString("TABLE_CAT"));
+                }
+                yield names;
+            }
+            default -> List.of();
+        };
+    }
+
+    /** True when this engine shows DATABASE nodes that can be filtered. */
+    public static boolean supportsDatabaseFilter(ConnectionProfile profile) {
+        return switch (profile.getType()) {
+            case POSTGRESQL, MYSQL, MARIADB, MONGODB -> true;
+            default -> false;
+        };
+    }
+
     // ------------------------------------------------------------ top level
 
     /** Children of the connection root node. */
@@ -345,8 +380,11 @@ public final class MetadataService {
     }
 
     private static List<DbObject> loadPartitions(ConnectionProfile profile, DbObject folder) {
-        String sql = "SELECT c.relname FROM pg_inherits i " +
+        // Partitions ARE tables — fetch them with their own schema so they can be
+        // opened, expanded to columns/indexes, and queried like any other table.
+        String sql = "SELECT c.relname, cn.nspname FROM pg_inherits i " +
                 "JOIN pg_class c ON c.oid = i.inhrelid " +
+                "JOIN pg_namespace cn ON cn.oid = c.relnamespace " +
                 "JOIN pg_class p ON p.oid = i.inhparent " +
                 "JOIN pg_namespace n ON n.oid = p.relnamespace " +
                 "WHERE n.nspname = ? AND p.relname = ? ORDER BY c.relname";
@@ -358,8 +396,7 @@ public final class MetadataService {
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     DbObject part = new DbObject(rs.getString(1), Kind.PARTITION,
-                            folder.getCatalog(), folder.getSchema());
-                    part.setTableName(folder.getTableName());
+                            folder.getCatalog(), rs.getString(2));
                     result.add(part);
                 }
             }
