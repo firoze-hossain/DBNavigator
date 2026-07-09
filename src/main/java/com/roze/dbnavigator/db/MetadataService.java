@@ -199,12 +199,43 @@ public final class MetadataService {
     private static List<DbObject> loadTablesOrViews(ConnectionProfile profile, String catalog,
                                                     String schema, String type, Kind kind)
             throws SQLException {
+        // PostgreSQL: hide partition child tables from the Tables folder —
+        // they appear under their parent table's "partitions" node instead
+        if (profile.getType() == DatabaseType.POSTGRESQL && "TABLE".equals(type)) {
+            return loadPostgresTablesWithoutPartitions(profile, catalog, schema);
+        }
+
         List<DbObject> result = new ArrayList<>();
         try (Connection conn = client(profile, catalog).getConnection();
              ResultSet rs = conn.getMetaData().getTables(
                      metaCatalog(profile, catalog), schema, "%", new String[]{type})) {
             while (rs.next()) {
                 result.add(new DbObject(rs.getString("TABLE_NAME"), kind, catalog, schema));
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Regular + partitioned parent tables of a schema, excluding partition
+     * children (anything that is a child in pg_inherits — this covers both
+     * declarative partitions and old-style inheritance children).
+     */
+    private static List<DbObject> loadPostgresTablesWithoutPartitions(
+            ConnectionProfile profile, String catalog, String schema) throws SQLException {
+        String sql = "SELECT c.relname FROM pg_class c " +
+                "JOIN pg_namespace n ON n.oid = c.relnamespace " +
+                "WHERE n.nspname = ? AND c.relkind IN ('r', 'p', 'f') " +
+                "AND NOT EXISTS (SELECT 1 FROM pg_inherits i WHERE i.inhrelid = c.oid) " +
+                "ORDER BY c.relname";
+        List<DbObject> result = new ArrayList<>();
+        try (Connection conn = client(profile, catalog).getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, schema);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    result.add(new DbObject(rs.getString(1), Kind.TABLE, catalog, schema));
+                }
             }
         }
         return result;
