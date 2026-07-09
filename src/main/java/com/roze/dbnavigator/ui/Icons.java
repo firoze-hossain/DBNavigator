@@ -23,7 +23,8 @@ public final class Icons {
             case DATABASE   -> of(FontAwesomeSolid.DATABASE, "#3592c4", 12);
             case SCHEMA     -> of(FontAwesomeSolid.FOLDER_OPEN, "#c77dbb", 12);
             case TABLES_FOLDER, VIEWS_FOLDER, PROCEDURES_FOLDER,
-                 FUNCTIONS_FOLDER, SEQUENCES_FOLDER, COLLECTIONS_FOLDER
+                 FUNCTIONS_FOLDER, SEQUENCES_FOLDER, COLLECTIONS_FOLDER,
+                 COLUMNS_FOLDER, INDEXES_FOLDER, PARTITIONS_FOLDER
                             -> of(FontAwesomeSolid.FOLDER, "#e0a44c", 12);
             case TABLE      -> of(FontAwesomeSolid.TABLE, "#4a88c7", 12);
             case VIEW       -> of(FontAwesomeSolid.EYE, "#57965c", 12);
@@ -32,6 +33,8 @@ public final class Icons {
             case SEQUENCE   -> of(FontAwesomeSolid.SORT_NUMERIC_DOWN, "#e0a44c", 12);
             case COLLECTION -> of(FontAwesomeSolid.LAYER_GROUP, "#57965c", 12);
             case COLUMN     -> of(FontAwesomeSolid.COLUMNS, "#868a91", 11);
+            case INDEX      -> of(FontAwesomeSolid.BOLT, "#e0a44c", 11);
+            case PARTITION  -> of(FontAwesomeSolid.PUZZLE_PIECE, "#6897bb", 11);
             case MESSAGE    -> of(FontAwesomeSolid.INFO_CIRCLE, "#868a91", 11);
         };
     }

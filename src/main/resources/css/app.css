@@ -210,3 +210,42 @@
 }
 .check-box:selected .mark { -fx-background-color: -accent; }
 .tooltip { -fx-background-color: -bg-light; -fx-text-fill: -text; }
+
+
+/* ---------- schema tree detail (counts, column types) ---------- */
+.tree-name   { -fx-text-fill: -text; }
+.tree-detail { -fx-text-fill: #6f7680; -fx-font-size: 11px; }
+.schema-tree .tree-cell:selected .tree-name   { -fx-text-fill: white; }
+.schema-tree .tree-cell:selected .tree-detail { -fx-text-fill: #b9c4d4; }
+
+/* ---------- autocomplete popup ---------- */
+.completion-list {
+    -fx-background-color: -bg-mid;
+    -fx-border-color: -border;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-font-family: "JetBrains Mono", "Consolas", monospace;
+    -fx-font-size: 13px;
+}
+.completion-list .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: -text;
+    -fx-padding: 3 10 3 10;
+}
+.completion-list .list-cell:filled:selected { -fx-background-color: #2e436e; }
+.completion-list .list-cell:filled:hover    { -fx-background-color: #393c40; }
+
+/* ---------- dump/restore process output ---------- */
+.process-output {
+    -fx-control-inner-background: -bg-darkest;
+    -fx-font-family: "JetBrains Mono", "Consolas", monospace;
+    -fx-font-size: 12px;
+    -fx-text-fill: #a9b7c6;
+}
+
+/* ---------- editable data grid ---------- */
+.result-grid .text-field {
+    -fx-background-color: #1a2c47;
+    -fx-text-fill: white;
+    -fx-border-color: -accent;
+}

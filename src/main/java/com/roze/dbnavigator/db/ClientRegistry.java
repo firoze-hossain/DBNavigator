@@ -1,11 +1,12 @@
 package com.roze.dbnavigator.db;
 
 import com.roze.dbnavigator.model.ConnectionProfile;
+import com.roze.dbnavigator.model.ConnectionProfile.DatabaseType;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-/** Keeps one live client per connection profile and closes them on demand. */
+/** Keeps live clients per connection profile (and per database for PostgreSQL). */
 public final class ClientRegistry {
 
     private static final Map<String, JdbcClient> jdbcClients = new ConcurrentHashMap<>();
@@ -14,7 +15,21 @@ public final class ClientRegistry {
     private ClientRegistry() {}
 
     public static JdbcClient jdbc(ConnectionProfile profile) {
-        return jdbcClients.computeIfAbsent(profile.getId(), id -> new JdbcClient(profile));
+        return jdbc(profile, null);
+    }
+
+    /**
+     * Client for a specific database on the profile's server. Only PostgreSQL
+     * needs a distinct physical connection per database; every other engine
+     * reaches all its catalogs through the default connection.
+     */
+    public static JdbcClient jdbc(ConnectionProfile profile, String catalog) {
+        boolean perCatalog = catalog != null && !catalog.isBlank()
+                && profile.getType() == DatabaseType.POSTGRESQL
+                && !catalog.equals(profile.getDatabase());
+        String key = perCatalog ? profile.getId() + "::" + catalog : profile.getId();
+        String override = perCatalog ? catalog : null;
+        return jdbcClients.computeIfAbsent(key, k -> new JdbcClient(profile, override));
     }
 
     public static MongoDbClient mongo(ConnectionProfile profile) {
@@ -26,8 +41,14 @@ public final class ClientRegistry {
     }
 
     public static void disconnect(ConnectionProfile profile) {
-        JdbcClient jdbc = jdbcClients.remove(profile.getId());
-        if (jdbc != null) jdbc.close();
+        // Close the default client and every per-database client of this profile
+        jdbcClients.entrySet().removeIf(e -> {
+            if (e.getKey().equals(profile.getId()) || e.getKey().startsWith(profile.getId() + "::")) {
+                e.getValue().close();
+                return true;
+            }
+            return false;
+        });
         MongoDbClient mongo = mongoClients.remove(profile.getId());
         if (mongo != null) mongo.close();
     }
@@ -41,7 +62,7 @@ public final class ClientRegistry {
 
     /** Opens a client and verifies the server is reachable. Throws on failure. */
     public static void connectAndVerify(ConnectionProfile profile) throws Exception {
-        if (profile.getType() == ConnectionProfile.DatabaseType.MONGODB) {
+        if (profile.getType() == DatabaseType.MONGODB) {
             mongo(profile).ping();
         } else {
             try (var conn = jdbc(profile).getConnection()) {

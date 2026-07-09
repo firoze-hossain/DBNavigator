@@ -7,9 +7,7 @@ import com.roze.dbnavigator.model.DbObject.Kind;
 import com.roze.dbnavigator.model.QueryResult;
 
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /** Loads schema tree children lazily for both JDBC and MongoDB connections. */
 public final class MetadataService {
@@ -18,6 +16,17 @@ public final class MetadataService {
 
     private static final Set<String> PG_SYSTEM_SCHEMAS =
             Set.of("pg_catalog", "information_schema", "pg_toast");
+
+    private static JdbcClient client(ConnectionProfile profile, String catalog) {
+        return ClientRegistry.jdbc(profile, catalog);
+    }
+
+    /** PostgreSQL's JDBC metadata calls ignore/reject foreign catalogs — pass null. */
+    private static String metaCatalog(ConnectionProfile profile, String catalog) {
+        return profile.getType() == DatabaseType.POSTGRESQL ? null : catalog;
+    }
+
+    // ------------------------------------------------------------ top level
 
     /** Children of the connection root node. */
     public static List<DbObject> loadTopLevel(ConnectionProfile profile) throws Exception {
@@ -29,21 +38,41 @@ public final class MetadataService {
             return dbs;
         }
 
-        JdbcClient client = ClientRegistry.jdbc(profile);
-        try (Connection conn = client.getConnection()) {
-            return switch (profile.getType()) {
-                case POSTGRESQL, ORACLE -> loadSchemas(conn, profile);
-                case MYSQL, MARIADB     -> loadCatalogs(conn);
-                case SQLSERVER          -> loadSchemas(conn, profile);
-                case SQLITE             -> objectFolders(null, null);
-                default -> List.of();
-            };
-        }
+        return switch (profile.getType()) {
+            // PostgreSQL: list EVERY database on the server (DataGrip style)
+            case POSTGRESQL -> loadPostgresDatabases(profile);
+            case MYSQL, MARIADB -> loadCatalogs(profile);
+            case SQLSERVER, ORACLE -> {
+                try (Connection conn = client(profile, null).getConnection()) {
+                    yield loadSchemas(conn, profile, null);
+                }
+            }
+            case SQLITE -> objectFolders(null, null);
+            default -> List.of();
+        };
     }
 
-    private static List<DbObject> loadCatalogs(Connection conn) throws SQLException {
+    private static List<DbObject> loadPostgresDatabases(ConnectionProfile profile) throws SQLException {
         List<DbObject> result = new ArrayList<>();
-        try (ResultSet rs = conn.getMetaData().getCatalogs()) {
+        try (Connection conn = client(profile, null).getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(
+                     "SELECT datname FROM pg_database " +
+                     "WHERE datistemplate = false AND datallowconn ORDER BY datname")) {
+            while (rs.next()) {
+                String db = rs.getString(1);
+                DbObject obj = new DbObject(db, Kind.DATABASE, db, null);
+                if (db.equals(profile.getDatabase())) obj.setDetail("(default)");
+                result.add(obj);
+            }
+        }
+        return result;
+    }
+
+    private static List<DbObject> loadCatalogs(ConnectionProfile profile) throws SQLException {
+        List<DbObject> result = new ArrayList<>();
+        try (Connection conn = client(profile, null).getConnection();
+             ResultSet rs = conn.getMetaData().getCatalogs()) {
             while (rs.next()) {
                 String catalog = rs.getString("TABLE_CAT");
                 result.add(new DbObject(catalog, Kind.DATABASE, catalog, null));
@@ -52,32 +81,42 @@ public final class MetadataService {
         return result;
     }
 
-    private static List<DbObject> loadSchemas(Connection conn, ConnectionProfile profile) throws SQLException {
+    private static List<DbObject> loadSchemas(Connection conn, ConnectionProfile profile,
+                                              String catalog) throws SQLException {
         List<DbObject> result = new ArrayList<>();
         try (ResultSet rs = conn.getMetaData().getSchemas()) {
             while (rs.next()) {
                 String schema = rs.getString("TABLE_SCHEM");
                 if (profile.getType() == DatabaseType.POSTGRESQL
                         && PG_SYSTEM_SCHEMAS.contains(schema)) continue;
-                result.add(new DbObject(schema, Kind.SCHEMA, null, schema));
+                result.add(new DbObject(schema, Kind.SCHEMA, catalog, schema));
             }
         }
         return result;
     }
 
-    /** Children of a DATABASE node (MySQL catalog or Mongo database). */
+    // -------------------------------------------------------- intermediate
+
+    /** Children of a DATABASE node. */
     public static List<DbObject> loadDatabaseChildren(ConnectionProfile profile, DbObject database)
             throws Exception {
-        if (profile.getType() == DatabaseType.MONGODB) {
-            return List.of(folder("Collections", Kind.COLLECTIONS_FOLDER, database.getCatalog(), null));
-        }
-        // MySQL/MariaDB: catalog acts as schema
-        return objectFolders(database.getCatalog(), null);
+        return switch (profile.getType()) {
+            case MONGODB -> List.of(
+                    folder("Collections", Kind.COLLECTIONS_FOLDER, database.getCatalog(), null));
+            case POSTGRESQL -> {
+                // schemas of that particular database (separate physical connection)
+                try (Connection conn = client(profile, database.getCatalog()).getConnection()) {
+                    yield loadSchemas(conn, profile, database.getCatalog());
+                }
+            }
+            // MySQL/MariaDB: catalog acts as schema
+            default -> objectFolders(database.getCatalog(), null);
+        };
     }
 
     /** Children of a SCHEMA node. */
     public static List<DbObject> loadSchemaChildren(DbObject schema) {
-        return objectFolders(null, schema.getSchema());
+        return objectFolders(schema.getCatalog(), schema.getSchema());
     }
 
     private static List<DbObject> objectFolders(String catalog, String schema) {
@@ -94,7 +133,9 @@ public final class MetadataService {
         return new DbObject(name, kind, catalog, schema);
     }
 
-    /** Children of a folder node (Tables, Views, Collections, ...). */
+    // ------------------------------------------------------------- folders
+
+    /** Children of a folder node (Tables, Views, Collections, Columns, ...). */
     public static List<DbObject> loadFolderChildren(ConnectionProfile profile, DbObject dbFolder)
             throws Exception {
         String catalog = dbFolder.getCatalog();
@@ -113,6 +154,9 @@ public final class MetadataService {
             case PROCEDURES_FOLDER -> loadRoutines(profile, catalog, schema, true);
             case FUNCTIONS_FOLDER  -> loadRoutines(profile, catalog, schema, false);
             case SEQUENCES_FOLDER  -> loadSequences(profile, catalog, schema);
+            case COLUMNS_FOLDER    -> loadColumns(profile, dbFolder);
+            case INDEXES_FOLDER    -> loadIndexes(profile, dbFolder);
+            case PARTITIONS_FOLDER -> loadPartitions(profile, dbFolder);
             default -> List.of();
         };
     }
@@ -121,8 +165,9 @@ public final class MetadataService {
                                                     String schema, String type, Kind kind)
             throws SQLException {
         List<DbObject> result = new ArrayList<>();
-        try (Connection conn = ClientRegistry.jdbc(profile).getConnection();
-             ResultSet rs = conn.getMetaData().getTables(catalog, schema, "%", new String[]{type})) {
+        try (Connection conn = client(profile, catalog).getConnection();
+             ResultSet rs = conn.getMetaData().getTables(
+                     metaCatalog(profile, catalog), schema, "%", new String[]{type})) {
             while (rs.next()) {
                 result.add(new DbObject(rs.getString("TABLE_NAME"), kind, catalog, schema));
             }
@@ -131,14 +176,13 @@ public final class MetadataService {
     }
 
     private static List<DbObject> loadRoutines(ConnectionProfile profile, String catalog,
-                                               String schema, boolean procedures)
-            throws SQLException {
+                                               String schema, boolean procedures) {
         List<DbObject> result = new ArrayList<>();
-        try (Connection conn = ClientRegistry.jdbc(profile).getConnection()) {
+        try (Connection conn = client(profile, catalog).getConnection()) {
             DatabaseMetaData meta = conn.getMetaData();
             ResultSet rs = procedures
-                    ? meta.getProcedures(catalog, schema, "%")
-                    : meta.getFunctions(catalog, schema, "%");
+                    ? meta.getProcedures(metaCatalog(profile, catalog), schema, "%")
+                    : meta.getFunctions(metaCatalog(profile, catalog), schema, "%");
             try (rs) {
                 String nameCol = procedures ? "PROCEDURE_NAME" : "FUNCTION_NAME";
                 while (rs.next()) {
@@ -147,7 +191,6 @@ public final class MetadataService {
                 }
             }
         } catch (SQLException e) {
-            // Some drivers (e.g. SQLite) don't support routines — return empty rather than fail
             return List.of();
         }
         return result;
@@ -164,7 +207,7 @@ public final class MetadataService {
         if (sql == null) return List.of();
 
         List<DbObject> result = new ArrayList<>();
-        try (Connection conn = ClientRegistry.jdbc(profile).getConnection();
+        try (Connection conn = client(profile, catalog).getConnection();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
@@ -176,31 +219,184 @@ public final class MetadataService {
         return result;
     }
 
+    // ------------------------------------------- table children (DataGrip style)
+
+    /**
+     * Children of a TABLE node: "columns N", "indexes N" (and "partitions N"
+     * for PostgreSQL) folders with counts in the detail text.
+     */
+    public static List<DbObject> loadTableChildren(ConnectionProfile profile, DbObject table)
+            throws SQLException {
+        List<DbObject> result = new ArrayList<>();
+
+        int columnCount = 0;
+        Set<String> indexNames = new LinkedHashSet<>();
+        try (Connection conn = client(profile, table.getCatalog()).getConnection()) {
+            DatabaseMetaData meta = conn.getMetaData();
+            String cat = metaCatalog(profile, table.getCatalog());
+            try (ResultSet rs = meta.getColumns(cat, table.getSchema(), table.getName(), "%")) {
+                while (rs.next()) columnCount++;
+            }
+            try (ResultSet rs = meta.getIndexInfo(cat, table.getSchema(), table.getName(), false, true)) {
+                while (rs.next()) {
+                    String name = rs.getString("INDEX_NAME");
+                    if (name != null) indexNames.add(name);
+                }
+            } catch (SQLException ignored) { /* some drivers can't */ }
+        }
+
+        DbObject columns = childFolder("columns", Kind.COLUMNS_FOLDER, table);
+        columns.setDetail(String.valueOf(columnCount));
+        result.add(columns);
+
+        DbObject indexes = childFolder("indexes", Kind.INDEXES_FOLDER, table);
+        indexes.setDetail(String.valueOf(indexNames.size()));
+        result.add(indexes);
+
+        if (profile.getType() == DatabaseType.POSTGRESQL) {
+            long partitionCount = countPartitions(profile, table);
+            if (partitionCount > 0) {
+                DbObject partitions = childFolder("partitions", Kind.PARTITIONS_FOLDER, table);
+                partitions.setDetail(String.valueOf(partitionCount));
+                result.add(partitions);
+            }
+        }
+        return result;
+    }
+
+    private static DbObject childFolder(String name, Kind kind, DbObject table) {
+        DbObject folder = new DbObject(name, kind, table.getCatalog(), table.getSchema());
+        folder.setTableName(table.getName());
+        return folder;
+    }
+
+    private static long countPartitions(ConnectionProfile profile, DbObject table) {
+        String sql = "SELECT count(*) FROM pg_inherits i " +
+                "JOIN pg_class p ON p.oid = i.inhparent " +
+                "JOIN pg_namespace n ON n.oid = p.relnamespace " +
+                "WHERE n.nspname = ? AND p.relname = ?";
+        try (Connection conn = client(profile, table.getCatalog()).getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, table.getSchema());
+            stmt.setString(2, table.getName());
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next() ? rs.getLong(1) : 0;
+            }
+        } catch (SQLException e) {
+            return 0;
+        }
+    }
+
+    private static List<DbObject> loadColumns(ConnectionProfile profile, DbObject folder)
+            throws SQLException {
+        List<DbObject> result = new ArrayList<>();
+        try (Connection conn = client(profile, folder.getCatalog()).getConnection()) {
+            DatabaseMetaData meta = conn.getMetaData();
+            String cat = metaCatalog(profile, folder.getCatalog());
+
+            Set<String> primaryKeys = new LinkedHashSet<>();
+            try (ResultSet pk = meta.getPrimaryKeys(cat, folder.getSchema(), folder.getTableName())) {
+                while (pk.next()) primaryKeys.add(pk.getString("COLUMN_NAME"));
+            } catch (SQLException ignored) {}
+
+            try (ResultSet rs = meta.getColumns(cat, folder.getSchema(), folder.getTableName(), "%")) {
+                while (rs.next()) {
+                    String name = rs.getString("COLUMN_NAME");
+                    DbObject col = new DbObject(name, Kind.COLUMN,
+                            folder.getCatalog(), folder.getSchema());
+                    col.setTableName(folder.getTableName());
+                    String type = rs.getString("TYPE_NAME");
+                    boolean nullable = "YES".equalsIgnoreCase(rs.getString("IS_NULLABLE"));
+                    col.setDetail(type.toLowerCase()
+                            + (primaryKeys.contains(name) ? "  PK" : nullable ? "" : "  not null"));
+                    result.add(col);
+                }
+            }
+        }
+        return result;
+    }
+
+    private static List<DbObject> loadIndexes(ConnectionProfile profile, DbObject folder)
+            throws SQLException {
+        Map<String, List<String>> indexColumns = new LinkedHashMap<>();
+        Map<String, Boolean> unique = new LinkedHashMap<>();
+        try (Connection conn = client(profile, folder.getCatalog()).getConnection();
+             ResultSet rs = conn.getMetaData().getIndexInfo(
+                     metaCatalog(profile, folder.getCatalog()),
+                     folder.getSchema(), folder.getTableName(), false, true)) {
+            while (rs.next()) {
+                String name = rs.getString("INDEX_NAME");
+                if (name == null) continue;
+                indexColumns.computeIfAbsent(name, k -> new ArrayList<>())
+                        .add(rs.getString("COLUMN_NAME"));
+                unique.put(name, !rs.getBoolean("NON_UNIQUE"));
+            }
+        }
+        List<DbObject> result = new ArrayList<>();
+        for (var entry : indexColumns.entrySet()) {
+            DbObject idx = new DbObject(entry.getKey(), Kind.INDEX,
+                    folder.getCatalog(), folder.getSchema());
+            idx.setTableName(folder.getTableName());
+            idx.setDetail("(" + String.join(", ", entry.getValue()) + ")"
+                    + (Boolean.TRUE.equals(unique.get(entry.getKey())) ? "  unique" : ""));
+            result.add(idx);
+        }
+        return result;
+    }
+
+    private static List<DbObject> loadPartitions(ConnectionProfile profile, DbObject folder) {
+        String sql = "SELECT c.relname FROM pg_inherits i " +
+                "JOIN pg_class c ON c.oid = i.inhrelid " +
+                "JOIN pg_class p ON p.oid = i.inhparent " +
+                "JOIN pg_namespace n ON n.oid = p.relnamespace " +
+                "WHERE n.nspname = ? AND p.relname = ? ORDER BY c.relname";
+        List<DbObject> result = new ArrayList<>();
+        try (Connection conn = client(profile, folder.getCatalog()).getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, folder.getSchema());
+            stmt.setString(2, folder.getTableName());
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    DbObject part = new DbObject(rs.getString(1), Kind.PARTITION,
+                            folder.getCatalog(), folder.getSchema());
+                    part.setTableName(folder.getTableName());
+                    result.add(part);
+                }
+            }
+        } catch (SQLException e) {
+            return List.of();
+        }
+        return result;
+    }
+
+    // -------------------------------------------------------- structure view
+
     /** Column definitions of a table — used by the structure viewer. */
     public static QueryResult loadTableStructure(ConnectionProfile profile, DbObject table)
             throws SQLException {
         QueryResult result = new QueryResult();
         result.getColumns().addAll(List.of("Column", "Type", "Size", "Nullable", "Default", "Key"));
 
-        try (Connection conn = ClientRegistry.jdbc(profile).getConnection()) {
+        try (Connection conn = client(profile, table.getCatalog()).getConnection()) {
             DatabaseMetaData meta = conn.getMetaData();
+            String cat = metaCatalog(profile, table.getCatalog());
 
             List<String> primaryKeys = new ArrayList<>();
-            try (ResultSet pk = meta.getPrimaryKeys(table.getCatalog(), table.getSchema(), table.getName())) {
+            try (ResultSet pk = meta.getPrimaryKeys(cat, table.getSchema(), table.getName())) {
                 while (pk.next()) primaryKeys.add(pk.getString("COLUMN_NAME"));
             }
 
-            try (ResultSet rs = meta.getColumns(table.getCatalog(), table.getSchema(), table.getName(), "%")) {
+            try (ResultSet rs = meta.getColumns(cat, table.getSchema(), table.getName(), "%")) {
                 while (rs.next()) {
                     String name = rs.getString("COLUMN_NAME");
-                    result.getRows().add(List.of(
+                    result.getRows().add(new ArrayList<>(List.of(
                             name,
                             String.valueOf(rs.getString("TYPE_NAME")),
                             String.valueOf(rs.getInt("COLUMN_SIZE")),
                             "YES".equalsIgnoreCase(rs.getString("IS_NULLABLE")) ? "YES" : "NO",
                             String.valueOf(rs.getString("COLUMN_DEF")),
                             primaryKeys.contains(name) ? "PK" : ""
-                    ));
+                    )));
                 }
             }
         }
@@ -213,21 +409,60 @@ public final class MetadataService {
         QueryResult result = new QueryResult();
         result.getColumns().addAll(List.of("Index", "Column", "Unique", "Type"));
 
-        try (Connection conn = ClientRegistry.jdbc(profile).getConnection();
+        try (Connection conn = client(profile, table.getCatalog()).getConnection();
              ResultSet rs = conn.getMetaData().getIndexInfo(
-                     table.getCatalog(), table.getSchema(), table.getName(), false, true)) {
+                     metaCatalog(profile, table.getCatalog()),
+                     table.getSchema(), table.getName(), false, true)) {
             while (rs.next()) {
                 String indexName = rs.getString("INDEX_NAME");
                 if (indexName == null) continue;
-                result.getRows().add(List.of(
+                result.getRows().add(new ArrayList<>(List.of(
                         indexName,
                         String.valueOf(rs.getString("COLUMN_NAME")),
                         rs.getBoolean("NON_UNIQUE") ? "NO" : "YES",
                         indexType(rs.getShort("TYPE"))
-                ));
+                )));
             }
         }
         return result;
+    }
+
+    /** Primary key column names of a table (used by the editable data grid). */
+    public static List<String> loadPrimaryKeys(ConnectionProfile profile, DbObject table)
+            throws SQLException {
+        List<String> keys = new ArrayList<>();
+        try (Connection conn = client(profile, table.getCatalog()).getConnection();
+             ResultSet rs = conn.getMetaData().getPrimaryKeys(
+                     metaCatalog(profile, table.getCatalog()), table.getSchema(), table.getName())) {
+            while (rs.next()) keys.add(rs.getString("COLUMN_NAME"));
+        }
+        return keys;
+    }
+
+    /** All table names visible in a database/schema — used for autocomplete. */
+    public static List<String> listAllTables(ConnectionProfile profile, String catalog) {
+        List<String> tables = new ArrayList<>();
+        try (Connection conn = client(profile, catalog).getConnection();
+             ResultSet rs = conn.getMetaData().getTables(
+                     metaCatalog(profile, catalog), null, "%", new String[]{"TABLE", "VIEW"})) {
+            while (rs.next()) {
+                String schema = rs.getString("TABLE_SCHEM");
+                if (schema != null && PG_SYSTEM_SCHEMAS.contains(schema)) continue;
+                tables.add(rs.getString("TABLE_NAME"));
+            }
+        } catch (SQLException ignored) {}
+        return tables;
+    }
+
+    /** Column names of one table — used for autocomplete after "table.". */
+    public static List<String> listColumns(ConnectionProfile profile, String catalog, String table) {
+        List<String> columns = new ArrayList<>();
+        try (Connection conn = client(profile, catalog).getConnection();
+             ResultSet rs = conn.getMetaData().getColumns(
+                     metaCatalog(profile, catalog), null, table, "%")) {
+            while (rs.next()) columns.add(rs.getString("COLUMN_NAME"));
+        } catch (SQLException ignored) {}
+        return columns;
     }
 
     private static String indexType(short type) {

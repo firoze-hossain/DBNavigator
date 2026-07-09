@@ -18,7 +18,6 @@ import org.kordamp.ikonli.fontawesome5.FontAwesomeSolid;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Consumer;
 
 /**
  * The DataGrip-style "Database Explorer": all connections in one lazy tree.
@@ -171,8 +170,10 @@ public class SchemaTreePane extends VBox {
         return switch (obj.getKind()) {
             case DATABASE -> MetadataService.loadDatabaseChildren(profile, obj);
             case SCHEMA   -> MetadataService.loadSchemaChildren(obj);
+            case TABLE    -> MetadataService.loadTableChildren(profile, obj);
             case TABLES_FOLDER, VIEWS_FOLDER, PROCEDURES_FOLDER, FUNCTIONS_FOLDER,
-                 SEQUENCES_FOLDER, COLLECTIONS_FOLDER
+                 SEQUENCES_FOLDER, COLLECTIONS_FOLDER,
+                 COLUMNS_FOLDER, INDEXES_FOLDER, PARTITIONS_FOLDER
                           -> MetadataService.loadFolderChildren(profile, obj);
             default -> List.of();
         };
@@ -181,7 +182,8 @@ public class SchemaTreePane extends VBox {
     private static boolean isExpandable(Kind kind) {
         return switch (kind) {
             case DATABASE, SCHEMA, TABLES_FOLDER, VIEWS_FOLDER, PROCEDURES_FOLDER,
-                 FUNCTIONS_FOLDER, SEQUENCES_FOLDER, COLLECTIONS_FOLDER -> true;
+                 FUNCTIONS_FOLDER, SEQUENCES_FOLDER, COLLECTIONS_FOLDER,
+                 TABLE, COLUMNS_FOLDER, INDEXES_FOLDER, PARTITIONS_FOLDER -> true;
             default -> false;
         };
     }
@@ -212,10 +214,19 @@ public class SchemaTreePane extends VBox {
 
             ConnectionProfile profile = profileFor(getTreeItem());
             boolean connected = profile != null && ClientRegistry.isConnected(profile);
-            setGraphic(Icons.forObject(obj, connected));
-            setText(obj.getDetail() != null && obj.getKind() == Kind.CONNECTION
-                    ? obj.getName() + "   " + obj.getDetail()
-                    : obj.getName());
+
+            Label nameLabel = new Label(obj.getName());
+            nameLabel.getStyleClass().add("tree-name");
+            HBox box = new HBox(6, Icons.forObject(obj, connected), nameLabel);
+            box.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+            if (obj.getDetail() != null && !obj.getDetail().isBlank()) {
+                Label detailLabel =
+                        new Label(obj.getDetail());
+                detailLabel.getStyleClass().add("tree-detail");
+                box.getChildren().add(detailLabel);
+            }
+            setText(null);
+            setGraphic(box);
             setContextMenu(buildMenu(obj, profile));
         }
 
@@ -226,7 +237,7 @@ public class SchemaTreePane extends VBox {
             switch (obj.getKind()) {
                 case CONNECTION -> {
                     MenuItem newConsole = new MenuItem("New Query Console");
-                    newConsole.setOnAction(e -> mainWindow.openQueryTab(profile, null));
+                    newConsole.setOnAction(e -> mainWindow.openQueryTab(profile, null, null));
                     MenuItem edit = new MenuItem("Edit Connection…");
                     edit.setOnAction(e -> mainWindow.showEditConnectionDialog(profile));
                     MenuItem disconnect = new MenuItem("Disconnect");
@@ -258,10 +269,10 @@ public class SchemaTreePane extends VBox {
                     MenuItem structure = new MenuItem("Show Structure");
                     structure.setOnAction(e -> mainWindow.openStructureTab(profile, obj));
                     MenuItem select = new MenuItem("New Query: SELECT *");
-                    select.setOnAction(e -> mainWindow.openQueryTab(profile,
+                    select.setOnAction(e -> mainWindow.openQueryTab(profile, obj.getCatalog(),
                             "SELECT * FROM " + obj.qualifiedName() + " LIMIT 100;"));
                     MenuItem count = new MenuItem("New Query: COUNT(*)");
-                    count.setOnAction(e -> mainWindow.openQueryTab(profile,
+                    count.setOnAction(e -> mainWindow.openQueryTab(profile, obj.getCatalog(),
                             "SELECT COUNT(*) FROM " + obj.qualifiedName() + ";"));
                     menu.getItems().addAll(openData, structure, new SeparatorMenuItem(), select, count);
                 }
@@ -269,6 +280,19 @@ public class SchemaTreePane extends VBox {
                     MenuItem openDocs = new MenuItem("Open Documents");
                     openDocs.setOnAction(e -> mainWindow.openMongoTab(profile, obj));
                     menu.getItems().add(openDocs);
+                }
+                case DATABASE -> {
+                    if (profile.getType() == ConnectionProfile.DatabaseType.MONGODB) return null;
+                    MenuItem newConsole = new MenuItem("New Query Console on " + obj.getName());
+                    newConsole.setOnAction(e ->
+                            mainWindow.openQueryTab(profile, obj.getCatalog(), null));
+                    MenuItem dump = new MenuItem("Dump Database to .sql…");
+                    dump.setOnAction(e -> DumpRestoreService.dumpDatabase(
+                            getScene().getWindow(), profile, obj.getName()));
+                    MenuItem restore = new MenuItem("Restore .sql into This Database…");
+                    restore.setOnAction(e -> DumpRestoreService.restoreDatabase(
+                            getScene().getWindow(), profile, obj.getName()));
+                    menu.getItems().addAll(newConsole, new SeparatorMenuItem(), dump, restore);
                 }
                 default -> {
                     return null;

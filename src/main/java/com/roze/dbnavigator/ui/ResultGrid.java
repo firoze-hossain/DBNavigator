@@ -5,6 +5,7 @@ import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.control.*;
+import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.stage.FileChooser;
@@ -15,8 +16,22 @@ import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-/** Read-only spreadsheet-like grid used everywhere results are shown. */
+/** Spreadsheet-like grid used everywhere results are shown; optionally editable. */
 public class ResultGrid extends TableView<List<String>> {
+
+    /** Fired when the user commits an inline cell edit. */
+    @FunctionalInterface
+    public interface CellEditListener {
+        void onEdit(int rowIndex, int columnIndex, String oldValue, String newValue);
+    }
+
+    private CellEditListener editListener;
+
+    /** Turns on inline cell editing; commits are reported to the listener. */
+    public void enableEditing(CellEditListener listener) {
+        this.editListener = listener;
+        setEditable(true);
+    }
 
     public ResultGrid() {
         getStyleClass().add("result-grid");
@@ -47,6 +62,20 @@ public class ResultGrid extends TableView<List<String>> {
                 return new ReadOnlyStringWrapper(value == null ? "NULL" : value);
             });
             col.setPrefWidth(Math.max(90, Math.min(280, columnNames.get(i).length() * 12 + 40)));
+            if (editListener != null) {
+                col.setCellFactory(TextFieldTableCell.forTableColumn());
+                col.setOnEditCommit(event -> {
+                    List<String> row = event.getRowValue();
+                    String oldValue = index < row.size() ? row.get(index) : null;
+                    String newValue = event.getNewValue();
+                    if (newValue != null && !newValue.equals(oldValue == null ? "NULL" : oldValue)) {
+                        row.set(index, newValue);
+                        editListener.onEdit(event.getTablePosition().getRow(), index,
+                                oldValue, newValue);
+                        refresh();
+                    }
+                });
+            }
             getColumns().add(col);
         }
 

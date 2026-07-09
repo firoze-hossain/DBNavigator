@@ -7,7 +7,9 @@ public class DbObject {
         CONNECTION, DATABASE, SCHEMA,
         TABLES_FOLDER, VIEWS_FOLDER, PROCEDURES_FOLDER, FUNCTIONS_FOLDER,
         SEQUENCES_FOLDER, COLLECTIONS_FOLDER,
-        TABLE, VIEW, PROCEDURE, FUNCTION, SEQUENCE, COLLECTION, COLUMN,
+        COLUMNS_FOLDER, INDEXES_FOLDER, PARTITIONS_FOLDER,
+        TABLE, VIEW, PROCEDURE, FUNCTION, SEQUENCE, COLLECTION,
+        COLUMN, INDEX, PARTITION,
         MESSAGE
     }
 
@@ -15,7 +17,8 @@ public class DbObject {
     private final Kind kind;
     private final String catalog;   // database name (nullable)
     private final String schema;    // schema name (nullable)
-    private String detail;          // e.g. column type, row count
+    private String tableName;       // owning table for COLUMN/INDEX/folder nodes (nullable)
+    private String detail;          // e.g. column type, child count
     private boolean loaded;
 
     public DbObject(String name, Kind kind) {
@@ -33,6 +36,8 @@ public class DbObject {
     public Kind getKind()      { return kind; }
     public String getCatalog() { return catalog; }
     public String getSchema()  { return schema; }
+    public String getTableName() { return tableName; }
+    public void setTableName(String tableName) { this.tableName = tableName; }
     public String getDetail()  { return detail; }
     public void setDetail(String detail) { this.detail = detail; }
     public boolean isLoaded()  { return loaded; }
@@ -51,7 +56,7 @@ public class DbObject {
         return sb.toString();
     }
 
-    private static String quote(String ident) {
+    public static String quote(String ident) {
         // Quote only when necessary to keep SQL readable
         if (ident.matches("[A-Za-z_][A-Za-z0-9_]*")) return ident;
         return '"' + ident.replace("\"", "\"\"") + '"';

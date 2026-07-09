@@ -16,9 +16,14 @@ public class JdbcClient implements AutoCloseable {
     private final HikariDataSource dataSource;
 
     public JdbcClient(ConnectionProfile profile) {
+        this(profile, null);
+    }
+
+    /** @param catalogOverride connect to a different database on the same server (PostgreSQL). */
+    public JdbcClient(ConnectionProfile profile, String catalogOverride) {
         this.profile = profile;
         HikariConfig config = new HikariConfig();
-        config.setJdbcUrl(profile.getJdbcUrl());
+        config.setJdbcUrl(profile.getJdbcUrl(catalogOverride));
         if (profile.getType() != ConnectionProfile.DatabaseType.SQLITE) {
             config.setUsername(profile.getUsername());
             config.setPassword(profile.getPassword() == null ? "" : profile.getPassword());
@@ -26,7 +31,8 @@ public class JdbcClient implements AutoCloseable {
         config.setMaximumPoolSize(5);
         config.setMinimumIdle(1);
         config.setConnectionTimeout(10_000);
-        config.setPoolName("DBNav-" + profile.getName());
+        config.setPoolName("DBNav-" + profile.getName()
+                + (catalogOverride == null ? "" : "-" + catalogOverride));
         this.dataSource = new HikariDataSource(config);
     }
 

@@ -48,6 +48,17 @@ public class ConnectionProfile {
 
     @JsonIgnore
     public String getJdbcUrl() {
+        return getJdbcUrl(null);
+    }
+
+    /**
+     * JDBC URL, optionally pointing at a different database on the same server.
+     * Used to browse every database under one PostgreSQL/SQL Server connection.
+     */
+    @JsonIgnore
+    public String getJdbcUrl(String databaseOverride) {
+        String database = (databaseOverride != null && !databaseOverride.isBlank())
+                ? databaseOverride : this.database;
         return switch (type) {
             case MYSQL      -> "jdbc:mysql://%s:%d/%s?useSSL=%s&allowPublicKeyRetrieval=true&serverTimezone=UTC"
                                    .formatted(host, port, database, useSsl);
