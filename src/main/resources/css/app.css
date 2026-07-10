@@ -311,3 +311,13 @@
     -fx-font-size: 14px;
     -fx-background-color: -bg-darkest;
 }
+
+
+/* ---------- syntax color fix ----------
+   ".sql-editor .text" (2 classes) was beating ".sql-keyword" (1 class),
+   leaving keywords bold but white. These equal-specificity rules are
+   declared last, so they win. */
+.sql-editor .sql-keyword { -fx-fill: #cc7832; -fx-font-weight: bold; }
+.sql-editor .sql-string  { -fx-fill: #6a8759; }
+.sql-editor .sql-number  { -fx-fill: #6897bb; }
+.sql-editor .sql-comment { -fx-fill: #808080; -fx-font-style: italic; }

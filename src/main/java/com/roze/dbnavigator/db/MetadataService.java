@@ -576,6 +576,29 @@ public final class MetadataService {
     /** Tables/views whose name contains the query — for Search Everywhere. */
     public static List<DbObject> searchTables(ConnectionProfile profile, String catalog,
                                               String query, int limit) {
+        // PostgreSQL: search parent tables only — partition children are noise
+        if (profile.getType() == DatabaseType.POSTGRESQL) {
+            List<DbObject> out = new ArrayList<>();
+            String sql = "SELECT c.relname, n.nspname FROM pg_class c " +
+                    "JOIN pg_namespace n ON n.oid = c.relnamespace " +
+                    "WHERE c.relkind IN ('r', 'p', 'v', 'm') " +
+                    "AND n.nspname NOT IN ('pg_catalog', 'information_schema', 'pg_toast') " +
+                    "AND c.relname ILIKE ? " +
+                    "AND NOT EXISTS (SELECT 1 FROM pg_inherits i WHERE i.inhrelid = c.oid) " +
+                    "ORDER BY c.relname LIMIT " + limit;
+            try (Connection conn = client(profile, catalog).getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, "%" + query + "%");
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        out.add(new DbObject(rs.getString(1), Kind.TABLE,
+                                catalog, rs.getString(2)));
+                    }
+                }
+            } catch (SQLException ignored) {}
+            return out;
+        }
+
         List<DbObject> out = new ArrayList<>();
         try (Connection conn = client(profile, catalog).getConnection();
              ResultSet rs = conn.getMetaData().getTables(

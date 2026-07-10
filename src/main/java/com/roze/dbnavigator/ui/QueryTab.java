@@ -300,22 +300,42 @@ public class QueryTab extends Tab {
 
         AppExecutor.run(() -> {
             try {
-                QueryResult result = ClientRegistry.jdbc(profile, catalog).execute(sql, limit);
-
                 // Editable when this is a simple single-table SELECT with a usable PK
-                String editableTable = null;
+                String editableTable = detectEditableTable(sql);
                 List<String> pkColumns = List.of();
-                if (result.isResultSet()) {
-                    editableTable = detectEditableTable(sql);
-                    if (editableTable != null) {
-                        try {
-                            pkColumns = MetadataService.loadPrimaryKeys(
-                                    profile, tableRef(editableTable));
-                        } catch (Exception ignored) {
-                            pkColumns = List.of();
-                        }
+                boolean viaCtid = false;
+                String sqlToRun = sql;
+
+                if (editableTable != null) {
+                    try {
+                        pkColumns = MetadataService.loadPrimaryKeys(
+                                profile, tableRef(editableTable));
+                    } catch (Exception ignored) {
+                        pkColumns = List.of();
+                    }
+                    // PostgreSQL table without a PK (e.g. a partition) + plain
+                    // "SELECT *": silently select ctid too so edits still work.
+                    // The ctid column stays hidden in the grid.
+                    if (pkColumns.isEmpty()
+                            && profile.getType() == DatabaseType.POSTGRESQL
+                            && sql.matches("(?is)\\s*select\\s+\\*\\s+from\\s+.*")) {
+                        sqlToRun = sql.replaceFirst("(?is)^(\\s*select\\s+)\\*", "$1ctid, *");
+                        pkColumns = List.of("ctid");
+                        viaCtid = true;
                     }
                 }
+
+                QueryResult execResult;
+                try {
+                    execResult = ClientRegistry.jdbc(profile, catalog).execute(sqlToRun, limit);
+                } catch (Exception rewriteFailure) {
+                    if (!viaCtid) throw rewriteFailure;
+                    // views have no ctid — run the original query, read-only
+                    execResult = ClientRegistry.jdbc(profile, catalog).execute(sql, limit);
+                    pkColumns = List.of();
+                }
+
+                final QueryResult result = execResult;
                 final String targetTable = editableTable;
                 final List<String> pk = pkColumns;
 
