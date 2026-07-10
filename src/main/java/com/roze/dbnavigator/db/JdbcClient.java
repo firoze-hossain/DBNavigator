@@ -105,6 +105,13 @@ public class JdbcClient implements AutoCloseable {
         int colCount = meta.getColumnCount();
         for (int i = 1; i <= colCount; i++) {
             result.getColumns().add(meta.getColumnLabel(i));
+            String typeName;
+            try {
+                typeName = meta.getColumnTypeName(i);
+            } catch (SQLException e) {
+                typeName = "";
+            }
+            result.getColumnTypes().add(typeName == null ? "" : typeName);
         }
         int count = 0;
         while (rs.next() && (maxRows <= 0 || count < maxRows)) {

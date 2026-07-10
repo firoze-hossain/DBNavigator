@@ -27,10 +27,16 @@ public final class ConnectionStore {
             new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
 
     private static final List<ConnectionProfile> profiles = new ArrayList<>();
+    private static boolean loadedFromDisk = false;
 
     private ConnectionStore() {}
 
     public static synchronized List<ConnectionProfile> load() {
+        // Read the file only on first access. After that the in-memory list is
+        // authoritative — this keeps passwords the user typed this session.
+        if (loadedFromDisk) return new ArrayList<>(profiles);
+        loadedFromDisk = true;
+
         profiles.clear();
         if (Files.exists(FILE)) {
             try {

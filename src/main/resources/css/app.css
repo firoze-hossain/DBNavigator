@@ -249,3 +249,40 @@
     -fx-text-fill: white;
     -fx-border-color: -accent;
 }
+
+/* ---------- database filter dialog ---------- */
+.database-filter-scroll {
+    -fx-background-color: -bg-dark;
+    -fx-background: -bg-dark;
+    -fx-border-width: 0;
+}
+.database-filter-scroll .viewport { -fx-background-color: -bg-dark; }
+
+/* ---------- breadcrumb (which db ▸ schema ▸ table is open) ---------- */
+.breadcrumb-bar {
+    -fx-background-color: -bg-mid;
+    -fx-border-color: transparent transparent -border transparent;
+}
+.breadcrumb {
+    -fx-text-fill: #9aa4b0;
+    -fx-font-size: 12px;
+    -fx-graphic-text-gap: 6;
+}
+
+/* ---------- inline cell editor + date picker button ---------- */
+.cell-editor {
+    -fx-background-color: #1a2c47;
+    -fx-text-fill: white;
+    -fx-border-color: -accent;
+    -fx-background-radius: 3;
+    -fx-border-radius: 3;
+    -fx-padding: 1 4 1 4;
+}
+.calendar-button {
+    -fx-padding: 1 6 1 6;
+    -fx-background-color: -bg-light;
+}
+.date-picker-popup {
+    -fx-background-color: -bg-mid;
+}
+.date-picker .arrow-button { -fx-background-color: -bg-light; }

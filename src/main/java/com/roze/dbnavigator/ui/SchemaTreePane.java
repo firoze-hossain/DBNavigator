@@ -18,6 +18,7 @@ import org.kordamp.ikonli.fontawesome5.FontAwesomeSolid;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 
 /**
  * The DataGrip-style "Database Explorer": all connections in one lazy tree.
@@ -94,6 +95,11 @@ public class SchemaTreePane extends VBox {
 
         item.expandedProperty().addListener((observable, was, expanded) -> {
             if (expanded && !obj.isLoaded()) {
+                // Ask for the password now if it wasn't saved (DataGrip behavior)
+                if (!Passwords.ensure(profile, getScene() == null ? null : getScene().getWindow())) {
+                    item.setExpanded(false);
+                    return;
+                }
                 obj.setLoaded(true);
                 loadChildrenAsync(item, profile,
                         () -> loadTopLevelFiltered(profile, obj));

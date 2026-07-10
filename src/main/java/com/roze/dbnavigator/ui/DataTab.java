@@ -16,24 +16,17 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import org.kordamp.ikonli.fontawesome5.FontAwesomeSolid;
 
-import java.sql.Connection;
-import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
- * DataGrip-style table data view: paged grid with WHERE filter and ORDER BY.
- * Cells are editable when the table has a primary key — edits are collected
- * as pending changes and written back with Submit (like DataGrip's DML preview).
+ * DataGrip-style table data view: breadcrumb showing exactly which
+ * connection ▸ database ▸ schema ▸ table is open, paged grid with WHERE/ORDER BY,
+ * inline editing (incl. date picker), multi-row delete, transactional Submit.
  */
 public class DataTab extends Tab {
 
     private static final int PAGE_SIZE = 500;
-
-    /** One pending cell change, keyed by the row's primary-key values at edit time. */
-    private record PendingChange(Map<String, String> pkValues, String column, String newValue) {}
 
     private final ConnectionProfile profile;
     private final DbObject table;
@@ -46,11 +39,9 @@ public class DataTab extends Tab {
     private final Button nextButton = new Button();
     private final Button submitButton = new Button("Submit");
     private final Button revertButton = new Button("Revert");
+    private final GridEditManager editManager;
 
     private final List<String> pkColumns = new ArrayList<>();
-    private final List<PendingChange> pending = new ArrayList<>();
-    private QueryResult currentResult;
-
     private int page = 0;
     private long totalRows = -1;
 
@@ -60,13 +51,22 @@ public class DataTab extends Tab {
 
         setText(table.getName());
         setGraphic(Icons.of(FontAwesomeSolid.TABLE, "#4a88c7", 11));
+        setTooltip(new Tooltip(breadcrumbText()));
+
+        submitButton.setGraphic(Icons.of(FontAwesomeSolid.CHECK, "#57965c", 11));
+        submitButton.setTooltip(new Tooltip("Write pending edits/deletes to the database"));
+        revertButton.setGraphic(Icons.of(FontAwesomeSolid.UNDO, "#e05555", 11));
+        revertButton.setTooltip(new Tooltip("Discard pending edits and reload"));
+
+        editManager = new GridEditManager(profile, table.getCatalog(), grid,
+                submitButton, revertButton, this::loadPage, statusLabel::setText);
 
         filterField.setPromptText("WHERE …  (e.g. status = 'active')");
-        filterField.setPrefWidth(260);
+        filterField.setPrefWidth(240);
         filterField.setOnAction(e -> reloadFromStart());
 
         orderField.setPromptText("ORDER BY …  (e.g. id DESC)");
-        orderField.setPrefWidth(180);
+        orderField.setPrefWidth(170);
         orderField.setOnAction(e -> reloadFromStart());
 
         Button applyButton = new Button("Apply");
@@ -82,20 +82,6 @@ public class DataTab extends Tab {
         exportButton.setTooltip(new Tooltip("Export current page to CSV"));
         exportButton.setOnAction(e -> grid.exportCsv());
 
-        submitButton.setGraphic(Icons.of(FontAwesomeSolid.CHECK, "#57965c", 11));
-        submitButton.setTooltip(new Tooltip("Write pending edits to the database"));
-        submitButton.setDisable(true);
-        submitButton.setOnAction(e -> submitChanges());
-
-        revertButton.setGraphic(Icons.of(FontAwesomeSolid.UNDO, "#e05555", 11));
-        revertButton.setTooltip(new Tooltip("Discard pending edits and reload"));
-        revertButton.setDisable(true);
-        revertButton.setOnAction(e -> {
-            pending.clear();
-            updatePendingState();
-            loadPage();
-        });
-
         prevButton.setGraphic(Icons.of(FontAwesomeSolid.CHEVRON_LEFT, "#a9b7c6", 11));
         prevButton.setOnAction(e -> { if (page > 0) { page--; loadPage(); } });
         nextButton.setGraphic(Icons.of(FontAwesomeSolid.CHEVRON_RIGHT, "#a9b7c6", 11));
@@ -109,31 +95,44 @@ public class DataTab extends Tab {
         toolbar.setPadding(new Insets(6, 10, 6, 10));
         toolbar.getStyleClass().add("console-toolbar");
 
+        // Breadcrumb bar: connection ▸ database ▸ schema ▸ table (DataGrip style)
+        Label crumb = new Label(breadcrumbText());
+        crumb.getStyleClass().add("breadcrumb");
+        crumb.setGraphic(Icons.of(FontAwesomeSolid.MAP_MARKER_ALT, "#868a91", 10));
+        HBox crumbBar = new HBox(crumb);
+        crumbBar.setPadding(new Insets(4, 10, 4, 10));
+        crumbBar.getStyleClass().add("breadcrumb-bar");
+
         statusLabel.getStyleClass().add("console-status");
         HBox statusBar = new HBox(statusLabel);
         statusBar.setPadding(new Insets(4, 10, 4, 10));
         statusBar.getStyleClass().add("console-status-bar");
 
-        VBox root = new VBox(toolbar, grid, statusBar);
+        VBox root = new VBox(crumbBar, toolbar, grid, statusBar);
         VBox.setVgrow(grid, Priority.ALWAYS);
         setContent(root);
 
         detectPrimaryKeyThenLoad();
     }
 
-    // ---------------------------------------------------------------- load
+    private String breadcrumbText() {
+        StringBuilder sb = new StringBuilder(profile.getName());
+        if (table.getCatalog() != null && !table.getCatalog().isBlank()) {
+            sb.append("  ▸  ").append(table.getCatalog());
+        }
+        if (table.getSchema() != null && !table.getSchema().isBlank()) {
+            sb.append("  ▸  ").append(table.getSchema());
+        }
+        sb.append("  ▸  ").append(table.getName());
+        return sb.toString();
+    }
 
     private void detectPrimaryKeyThenLoad() {
         AppExecutor.run(() -> {
             try {
                 pkColumns.addAll(MetadataService.loadPrimaryKeys(profile, table));
             } catch (Exception ignored) {}
-            Platform.runLater(() -> {
-                if (!pkColumns.isEmpty()) {
-                    grid.enableEditing(this::onCellEdited);
-                }
-                loadPage();
-            });
+            Platform.runLater(this::loadPage);
         });
     }
 
@@ -162,7 +161,7 @@ public class DataTab extends Tab {
                     }
                 }
                 Platform.runLater(() -> {
-                    currentResult = result;
+                    editManager.configure(table.qualifiedName(), pkColumns, result);
                     grid.showResult(result);
                     long from = (long) currentPage * PAGE_SIZE + 1;
                     long to = from + result.getRows().size() - 1;
@@ -171,9 +170,9 @@ public class DataTab extends Tab {
                             : from + "–" + to + (totalRows >= 0 ? " of " + totalRows : ""));
                     statusLabel.setText(result.getRows().size() + " row(s) in "
                             + result.getExecutionMillis() + " ms"
-                            + (pkColumns.isEmpty()
-                                ? "  ·  read-only (no primary key)"
-                                : "  ·  double-click a cell to edit"));
+                            + (editManager.isEditable()
+                                ? "  ·  double-click a cell to edit, select rows + Delete to remove"
+                                : "  ·  read-only (no primary key)"));
                     prevButton.setDisable(currentPage == 0);
                     nextButton.setDisable(result.getRows().size() < PAGE_SIZE);
                 });
@@ -182,107 +181,5 @@ public class DataTab extends Tab {
                 Platform.runLater(() -> statusLabel.setText("Error: " + msg));
             }
         });
-    }
-
-    // ---------------------------------------------------------------- edit
-
-    private void onCellEdited(int rowIndex, int columnIndex, String oldValue, String newValue) {
-        if (currentResult == null) return;
-        List<String> columns = currentResult.getColumns();
-        List<String> row = grid.getItems().get(rowIndex);
-
-        // Snapshot the primary-key values that identify this row.
-        // If the edited column IS a pk column, use its pre-edit value.
-        Map<String, String> pkValues = new LinkedHashMap<>();
-        for (String pk : pkColumns) {
-            int pkIndex = indexOfColumn(columns, pk);
-            if (pkIndex < 0) {
-                statusLabel.setText("Cannot edit: primary key column " + pk + " is not in the result");
-                return;
-            }
-            pkValues.put(pk, pkIndex == columnIndex ? oldValue : row.get(pkIndex));
-        }
-
-        pending.add(new PendingChange(pkValues, columns.get(columnIndex), newValue));
-        updatePendingState();
-    }
-
-    private static int indexOfColumn(List<String> columns, String name) {
-        for (int i = 0; i < columns.size(); i++) {
-            if (columns.get(i).equalsIgnoreCase(name)) return i;
-        }
-        return -1;
-    }
-
-    private void updatePendingState() {
-        boolean has = !pending.isEmpty();
-        submitButton.setDisable(!has);
-        revertButton.setDisable(!has);
-        submitButton.setText(has ? "Submit (" + pending.size() + ")" : "Submit");
-        if (has) statusLabel.setText(pending.size() + " pending change(s) — press Submit to save");
-    }
-
-    private void submitChanges() {
-        if (pending.isEmpty()) return;
-        List<PendingChange> toApply = new ArrayList<>(pending);
-        submitButton.setDisable(true);
-        statusLabel.setText("Submitting " + toApply.size() + " change(s)…");
-
-        AppExecutor.run(() -> {
-            try (Connection conn = ClientRegistry.jdbc(profile, table.getCatalog()).getConnection()) {
-                conn.setAutoCommit(false);
-                try (Statement stmt = conn.createStatement()) {
-                    for (PendingChange change : toApply) {
-                        stmt.executeUpdate(buildUpdateSql(change));
-                    }
-                    conn.commit();
-                } catch (Exception inner) {
-                    conn.rollback();
-                    throw inner;
-                }
-                Platform.runLater(() -> {
-                    pending.clear();
-                    updatePendingState();
-                    statusLabel.setText("✓ " + toApply.size() + " change(s) committed");
-                    loadPage();
-                });
-            } catch (Exception ex) {
-                String msg = ex.getMessage() == null ? ex.toString() : ex.getMessage();
-                Platform.runLater(() -> {
-                    statusLabel.setText("Commit failed (rolled back): " + msg);
-                    submitButton.setDisable(false);
-                });
-            }
-        });
-    }
-
-    private String buildUpdateSql(PendingChange change) {
-        StringBuilder sql = new StringBuilder("UPDATE ")
-                .append(table.qualifiedName())
-                .append(" SET ").append(DbObject.quote(change.column()))
-                .append(" = ").append(literal(change.newValue()))
-                .append(" WHERE ");
-        boolean first = true;
-        for (var pk : change.pkValues().entrySet()) {
-            if (!first) sql.append(" AND ");
-            sql.append(DbObject.quote(pk.getKey()));
-            if (pk.getValue() == null) {
-                sql.append(" IS NULL");
-            } else {
-                sql.append(" = ").append(literal(pk.getValue()));
-            }
-            first = false;
-        }
-        return sql.toString();
-    }
-
-    /**
-     * Converts a grid string back into an SQL literal:
-     * "NULL" → NULL, numbers unquoted, everything else a quoted string.
-     */
-    private static String literal(String value) {
-        if (value == null || value.equals("NULL")) return "NULL";
-        if (value.matches("-?\\d+(\\.\\d+)?")) return value;
-        return "'" + value.replace("'", "''") + "'";
     }
 }

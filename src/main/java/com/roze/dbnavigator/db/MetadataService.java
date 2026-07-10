@@ -7,7 +7,12 @@ import com.roze.dbnavigator.model.DbObject.Kind;
 import com.roze.dbnavigator.model.QueryResult;
 
 import java.sql.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /** Loads schema tree children lazily for both JDBC and MongoDB connections. */
 public final class MetadataService {
@@ -507,8 +512,28 @@ public final class MetadataService {
         return keys;
     }
 
-    /** All table names visible in a database/schema — used for autocomplete. */
+    /**
+     * All table names visible in a database — used for autocomplete.
+     * PostgreSQL: partition child tables are excluded, only parent tables
+     * (and regular tables/views) are suggested.
+     */
     public static List<String> listAllTables(ConnectionProfile profile, String catalog) {
+        if (profile.getType() == DatabaseType.POSTGRESQL) {
+            List<String> tables = new ArrayList<>();
+            String sql = "SELECT c.relname FROM pg_class c " +
+                    "JOIN pg_namespace n ON n.oid = c.relnamespace " +
+                    "WHERE c.relkind IN ('r', 'p', 'v', 'm') " +
+                    "AND n.nspname NOT IN ('pg_catalog', 'information_schema', 'pg_toast') " +
+                    "AND NOT EXISTS (SELECT 1 FROM pg_inherits i WHERE i.inhrelid = c.oid) " +
+                    "ORDER BY 1";
+            try (Connection conn = client(profile, catalog).getConnection();
+                 Statement stmt = conn.createStatement();
+                 ResultSet rs = stmt.executeQuery(sql)) {
+                while (rs.next()) tables.add(rs.getString(1));
+            } catch (SQLException ignored) {}
+            return tables;
+        }
+
         List<String> tables = new ArrayList<>();
         try (Connection conn = client(profile, catalog).getConnection();
              ResultSet rs = conn.getMetaData().getTables(
@@ -520,6 +545,21 @@ public final class MetadataService {
             }
         } catch (SQLException ignored) {}
         return tables;
+    }
+
+    /** Distinct column names of every user table — global autocomplete pool. */
+    public static List<String> listAllColumns(ConnectionProfile profile, String catalog) {
+        Set<String> columns = new LinkedHashSet<>();
+        try (Connection conn = client(profile, catalog).getConnection();
+             ResultSet rs = conn.getMetaData().getColumns(
+                     metaCatalog(profile, catalog), null, "%", "%")) {
+            while (rs.next() && columns.size() < 4000) {
+                String schema = rs.getString("TABLE_SCHEM");
+                if (schema != null && PG_SYSTEM_SCHEMAS.contains(schema)) continue;
+                columns.add(rs.getString("COLUMN_NAME"));
+            }
+        } catch (SQLException ignored) {}
+        return new ArrayList<>(columns);
     }
 
     /** Column names of one table — used for autocomplete after "table.". */

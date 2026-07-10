@@ -7,12 +7,14 @@ import java.util.List;
 public class QueryResult {
 
     private final List<String> columns = new ArrayList<>();
+    private final List<String> columnTypes = new ArrayList<>();   // e.g. varchar, timestamp
     private final List<List<String>> rows = new ArrayList<>();
     private long executionMillis;
     private int updateCount = -1;   // >= 0 when the statement was an UPDATE/INSERT/DELETE/DDL
     private String message;
 
     public List<String> getColumns() { return columns; }
+    public List<String> getColumnTypes() { return columnTypes; }
     public List<List<String>> getRows() { return rows; }
 
     public long getExecutionMillis() { return executionMillis; }
