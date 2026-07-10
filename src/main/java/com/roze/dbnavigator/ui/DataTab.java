@@ -42,6 +42,7 @@ public class DataTab extends Tab {
     private final GridEditManager editManager;
 
     private final List<String> pkColumns = new ArrayList<>();
+    private boolean useCtid = false;
     private int page = 0;
     private long totalRows = -1;
 
@@ -132,6 +133,13 @@ public class DataTab extends Tab {
             try {
                 pkColumns.addAll(MetadataService.loadPrimaryKeys(profile, table));
             } catch (Exception ignored) {}
+            // PostgreSQL tables without a PK (typically partitions) are still
+            // editable through the physical row id (ctid) — DataGrip does the same
+            if (pkColumns.isEmpty()
+                    && profile.getType() == ConnectionProfile.DatabaseType.POSTGRESQL) {
+                useCtid = true;
+                pkColumns.add("ctid");
+            }
             Platform.runLater(this::loadPage);
         });
     }
@@ -152,7 +160,8 @@ public class DataTab extends Tab {
             try {
                 var client = ClientRegistry.jdbc(profile, table.getCatalog());
                 QueryResult result = client.fetchTablePage(
-                        table.qualifiedName(), currentPage * PAGE_SIZE, PAGE_SIZE, where, order);
+                        table.qualifiedName(), currentPage * PAGE_SIZE, PAGE_SIZE,
+                        where, order, useCtid);
                 if (totalRows < 0) {
                     try {
                         totalRows = client.countRows(table.qualifiedName(), where);
@@ -171,7 +180,9 @@ public class DataTab extends Tab {
                     statusLabel.setText(result.getRows().size() + " row(s) in "
                             + result.getExecutionMillis() + " ms"
                             + (editManager.isEditable()
-                                ? "  ·  double-click a cell to edit, select rows + Delete to remove"
+                                ? (useCtid
+                                    ? "  ·  editable via row id (no primary key)"
+                                    : "  ·  double-click a cell to edit, select rows + Delete to remove")
                                 : "  ·  read-only (no primary key)"));
                     prevButton.setDisable(currentPage == 0);
                     nextButton.setDisable(result.getRows().size() < PAGE_SIZE);

@@ -286,3 +286,28 @@
     -fx-background-color: -bg-mid;
 }
 .date-picker .arrow-button { -fx-background-color: -bg-light; }
+
+/* ---------- menu bar ---------- */
+.app-menu-bar { -fx-background-color: -bg-mid; }
+.app-menu-bar .menu .label { -fx-text-fill: -text; }
+.app-menu-bar .menu:hover, .app-menu-bar .menu:showing { -fx-background-color: #3c4046; }
+
+/* ---------- colored completion entries (DataGrip style) ---------- */
+.completion-name    { -fx-font-family: "JetBrains Mono", "Consolas", monospace; -fx-font-size: 13px; }
+.completion-keyword { -fx-text-fill: #cc7832; -fx-font-weight: bold; }
+.completion-table   { -fx-text-fill: #4a88c7; }
+.completion-column  { -fx-text-fill: #6a8759; }
+.completion-detail  { -fx-text-fill: #6f7680; -fx-font-size: 11px; }
+
+/* ---------- search everywhere ---------- */
+.search-dialog {
+    -fx-background-color: -bg-mid;
+    -fx-border-color: -border;
+    -fx-border-width: 1;
+    -fx-background-radius: 10;
+    -fx-border-radius: 10;
+}
+.search-field {
+    -fx-font-size: 14px;
+    -fx-background-color: -bg-darkest;
+}

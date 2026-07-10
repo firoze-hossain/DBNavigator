@@ -107,6 +107,7 @@ public class ResultGrid extends TableView<List<String>> {
                 return new ReadOnlyStringWrapper(value == null ? "NULL" : value);
             });
             col.setPrefWidth(Math.max(90, Math.min(280, columnNames.get(i).length() * 12 + 40)));
+            if (columnNames.get(i).equalsIgnoreCase("ctid")) col.setVisible(false);
 
             if (editListener != null) {
                 col.setCellFactory(c -> new EditCell(index, isDateColumn(index)));

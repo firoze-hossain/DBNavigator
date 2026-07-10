@@ -573,6 +573,25 @@ public final class MetadataService {
         return columns;
     }
 
+    /** Tables/views whose name contains the query — for Search Everywhere. */
+    public static List<DbObject> searchTables(ConnectionProfile profile, String catalog,
+                                              String query, int limit) {
+        List<DbObject> out = new ArrayList<>();
+        try (Connection conn = client(profile, catalog).getConnection();
+             ResultSet rs = conn.getMetaData().getTables(
+                     metaCatalog(profile, catalog), null, "%" + query + "%",
+                     new String[]{"TABLE", "VIEW"})) {
+            while (rs.next() && out.size() < limit) {
+                String schema = rs.getString("TABLE_SCHEM");
+                if (schema != null && PG_SYSTEM_SCHEMAS.contains(schema)) continue;
+                String rowCatalog = rs.getString("TABLE_CAT");
+                String useCatalog = catalog != null ? catalog : rowCatalog;
+                out.add(new DbObject(rs.getString("TABLE_NAME"), Kind.TABLE, useCatalog, schema));
+            }
+        } catch (SQLException ignored) {}
+        return out;
+    }
+
     private static String indexType(short type) {
         return switch (type) {
             case DatabaseMetaData.tableIndexClustered -> "CLUSTERED";

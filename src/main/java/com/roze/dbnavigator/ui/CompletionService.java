@@ -11,12 +11,22 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Supplies completion candidates for the SQL console:
- * table names → column names → keywords, ranked in that order.
- * "tableName." suggests that table's columns.
- * PostgreSQL suggests parent tables only, never partition children.
+ * DataGrip-style contextual completion:
+ *   after FROM / JOIN / UPDATE / INTO  → tables
+ *   after SELECT / WHERE / ON / SET …  → columns first
+ *   "tableName."                       → that table's columns
+ * Each suggestion carries a kind + description so the popup can color it.
  */
 public final class CompletionService {
+
+    public enum Kind { KEYWORD, TABLE, COLUMN }
+
+    /** What the previous word tells us the user is about to type. */
+    public enum Context { ANY, TABLES, COLUMNS }
+
+    public record Suggestion(String text, Kind kind, String detail) {
+        @Override public String toString() { return text; }
+    }
 
     private static final List<String> KEYWORDS = List.of(
             "SELECT", "FROM", "WHERE", "INSERT INTO", "VALUES", "UPDATE", "SET",
@@ -56,52 +66,85 @@ public final class CompletionService {
     }
 
     /**
-     * Candidates for the token under the caret:
-     * "app<caret>"      → tables, then columns, then keywords starting with "app"
-     * "users.na<caret>" → columns of table users starting with "na"
+     * Ranked suggestions for the token under the caret.
+     * Empty tokens are allowed when the context already narrows the answer
+     * (e.g. right after "FROM " every table is a valid suggestion).
      */
-    public static List<String> suggest(ConnectionProfile profile, String catalog, String token) {
-        if (token == null || token.isBlank()) return List.of();
+    public static List<Suggestion> suggest(ConnectionProfile profile, String catalog,
+                                           String token, Context context) {
+        if (token == null) token = "";
 
+        // "users.na" → columns of users
         int dot = token.lastIndexOf('.');
         if (dot > 0) {
             String table = token.substring(0, dot);
             String prefix = token.substring(dot + 1).toLowerCase(Locale.ROOT);
-            List<String> matches = new ArrayList<>();
+            List<Suggestion> matches = new ArrayList<>();
             for (String col : columnsOf(profile, catalog, table)) {
                 if (col.toLowerCase(Locale.ROOT).startsWith(prefix)) {
-                    matches.add(table + "." + col);
+                    matches.add(new Suggestion(table + "." + col, Kind.COLUMN, "column of " + table));
                     if (matches.size() >= MAX_SUGGESTIONS) break;
                 }
             }
             return matches;
         }
 
-        String prefix = token.toLowerCase(Locale.ROOT);
-        List<String> matches = new ArrayList<>();
+        if (token.isBlank() && context == Context.ANY) return List.of();
 
-        // 1. tables first (most useful after FROM/UPDATE/JOIN)
-        for (String table : tableCache.getOrDefault(key(profile, catalog), List.of())) {
-            if (table.toLowerCase(Locale.ROOT).startsWith(prefix)) {
-                matches.add(table);
-                if (matches.size() >= MAX_SUGGESTIONS) return matches;
+        String prefix = token.toLowerCase(Locale.ROOT);
+        List<Suggestion> matches = new ArrayList<>();
+
+        switch (context) {
+            case TABLES -> {
+                addTables(profile, catalog, prefix, matches);
+                addKeywords(prefix, matches);      // e.g. FROM (SELECT …
             }
-        }
-        // 2. then column names from every table (SELECT/WHERE clauses)
-        for (String column : allColumnsCache.getOrDefault(key(profile, catalog), List.of())) {
-            if (column.toLowerCase(Locale.ROOT).startsWith(prefix) && !matches.contains(column)) {
-                matches.add(column);
-                if (matches.size() >= MAX_SUGGESTIONS) return matches;
+            case COLUMNS -> {
+                addColumns(profile, catalog, prefix, matches);
+                addKeywords(prefix, matches);
+                addTables(profile, catalog, prefix, matches);
             }
-        }
-        // 3. keywords last
-        for (String keyword : KEYWORDS) {
-            if (keyword.toLowerCase(Locale.ROOT).startsWith(prefix)) {
-                matches.add(keyword);
-                if (matches.size() >= MAX_SUGGESTIONS) return matches;
+            case ANY -> {
+                addTables(profile, catalog, prefix, matches);
+                addColumns(profile, catalog, prefix, matches);
+                addKeywords(prefix, matches);
             }
         }
         return matches;
+    }
+
+    private static void addTables(ConnectionProfile profile, String catalog,
+                                  String prefix, List<Suggestion> matches) {
+        for (String table : tableCache.getOrDefault(key(profile, catalog), List.of())) {
+            if (matches.size() >= MAX_SUGGESTIONS) return;
+            if (table.toLowerCase(Locale.ROOT).startsWith(prefix) && notPresent(matches, table)) {
+                matches.add(new Suggestion(table, Kind.TABLE, "table"));
+            }
+        }
+    }
+
+    private static void addColumns(ConnectionProfile profile, String catalog,
+                                   String prefix, List<Suggestion> matches) {
+        for (String column : allColumnsCache.getOrDefault(key(profile, catalog), List.of())) {
+            if (matches.size() >= MAX_SUGGESTIONS) return;
+            if (column.toLowerCase(Locale.ROOT).startsWith(prefix) && notPresent(matches, column)) {
+                matches.add(new Suggestion(column, Kind.COLUMN, "column"));
+            }
+        }
+    }
+
+    private static void addKeywords(String prefix, List<Suggestion> matches) {
+        if (prefix.isBlank()) return;              // don't flood with all keywords
+        for (String keyword : KEYWORDS) {
+            if (matches.size() >= MAX_SUGGESTIONS) return;
+            if (keyword.toLowerCase(Locale.ROOT).startsWith(prefix) && notPresent(matches, keyword)) {
+                matches.add(new Suggestion(keyword, Kind.KEYWORD, "keyword"));
+            }
+        }
+    }
+
+    private static boolean notPresent(List<Suggestion> matches, String text) {
+        return matches.stream().noneMatch(s -> s.text().equalsIgnoreCase(text));
     }
 
     private static List<String> columnsOf(ConnectionProfile profile, String catalog, String table) {

@@ -73,7 +73,19 @@ public class JdbcClient implements AutoCloseable {
     /** Paged read of a whole table. */
     public QueryResult fetchTablePage(String qualifiedTable, int offset, int pageSize,
                                       String whereClause, String orderBy) throws SQLException {
-        StringBuilder sql = new StringBuilder("SELECT * FROM ").append(qualifiedTable);
+        return fetchTablePage(qualifiedTable, offset, pageSize, whereClause, orderBy, false);
+    }
+
+    /**
+     * @param includeCtid PostgreSQL only: select the physical row id (ctid) so
+     *                    tables WITHOUT a primary key — e.g. partitions — can
+     *                    still be edited and have rows deleted.
+     */
+    public QueryResult fetchTablePage(String qualifiedTable, int offset, int pageSize,
+                                      String whereClause, String orderBy,
+                                      boolean includeCtid) throws SQLException {
+        StringBuilder sql = new StringBuilder(includeCtid
+                ? "SELECT ctid, * FROM " : "SELECT * FROM ").append(qualifiedTable);
         if (whereClause != null && !whereClause.isBlank()) sql.append(" WHERE ").append(whereClause);
         if (orderBy != null && !orderBy.isBlank()) sql.append(" ORDER BY ").append(orderBy);
 

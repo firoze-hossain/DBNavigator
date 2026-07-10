@@ -54,7 +54,7 @@ public class QueryTab extends Tab {
 
     // ---- autocomplete ----
     private final Popup completionPopup = new Popup();
-    private final ListView<String> completionList = new ListView<>();
+    private final ListView<CompletionService.Suggestion> completionList = new ListView<>();
     private int tokenStart = -1;
     private boolean suppressCompletion = false;
 
@@ -139,7 +139,29 @@ public class QueryTab extends Tab {
 
     private void setupCompletion() {
         completionList.getStyleClass().add("completion-list");
-        completionList.setPrefSize(340, 200);
+        completionList.setPrefSize(430, 210);
+        completionList.setCellFactory(list -> new ListCell<>() {
+            @Override
+            protected void updateItem(CompletionService.Suggestion item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setGraphic(null);
+                    setText(null);
+                    return;
+                }
+                Label name = new Label(item.text());
+                name.getStyleClass().addAll("completion-name",
+                        "completion-" + item.kind().name().toLowerCase());
+                Label detail = new Label(item.detail());
+                detail.getStyleClass().add("completion-detail");
+                Region gap = new Region();
+                HBox.setHgrow(gap, Priority.ALWAYS);
+                HBox box = new HBox(10, name, gap, detail);
+                box.setAlignment(Pos.CENTER_LEFT);
+                setGraphic(box);
+                setText(null);
+            }
+        });
         completionPopup.getContent().add(completionList);
         completionPopup.setAutoHide(true);
 
@@ -172,9 +194,12 @@ public class QueryTab extends Tab {
 
         editor.plainTextChanges().subscribe(change -> {
             if (suppressCompletion) return;
-            if (change.getInserted().length() == 1
-                    && change.getInserted().matches("[A-Za-z0-9_.]")) {
+            String inserted = change.getInserted();
+            if (inserted.length() == 1 && inserted.matches("[A-Za-z0-9_.]")) {
                 showCompletions();
+            } else if (inserted.equals(" ")
+                    && contextAt(editor.getCaretPosition()) != CompletionService.Context.ANY) {
+                showCompletions();   // DataGrip behavior: popup right after FROM/SELECT/…
             } else if (completionPopup.isShowing()) {
                 showCompletions();   // refresh after backspace etc.
             }
@@ -183,14 +208,16 @@ public class QueryTab extends Tab {
 
     private void showCompletions() {
         String token = currentToken();
-        if (token.isBlank()) {
+        CompletionService.Context context = contextAt(tokenStart);
+        if (token.isBlank() && context == CompletionService.Context.ANY) {
             completionPopup.hide();
             return;
         }
-        List<String> suggestions = CompletionService.suggest(profile, catalog, token);
+        List<CompletionService.Suggestion> suggestions =
+                CompletionService.suggest(profile, catalog, token, context);
         // Nothing useful, or the token is already the only completion → hide
         if (suggestions.isEmpty()
-                || (suggestions.size() == 1 && suggestions.get(0).equalsIgnoreCase(token))) {
+                || (suggestions.size() == 1 && suggestions.get(0).text().equalsIgnoreCase(token))) {
             completionPopup.hide();
             return;
         }
@@ -218,16 +245,38 @@ public class QueryTab extends Tab {
     }
 
     private void insertSelectedCompletion() {
-        String selected = completionList.getSelectionModel().getSelectedItem();
+        CompletionService.Suggestion selected =
+                completionList.getSelectionModel().getSelectedItem();
         if (selected == null || tokenStart < 0) {
             completionPopup.hide();
             return;
         }
         suppressCompletion = true;
-        editor.replaceText(tokenStart, editor.getCaretPosition(), selected);
+        editor.replaceText(tokenStart, editor.getCaretPosition(), selected.text());
         suppressCompletion = false;
         completionPopup.hide();
         editor.requestFocus();
+    }
+
+    /** Context from the previous significant word: FROM → tables, WHERE → columns … */
+    private CompletionService.Context contextAt(int position) {
+        String text = editor.getText();
+        int i = Math.min(position, text.length()) - 1;
+        while (i >= 0 && Character.isWhitespace(text.charAt(i))) i--;
+        int end = i + 1;
+        while (i >= 0 && (Character.isLetterOrDigit(text.charAt(i)) || text.charAt(i) == '_')) i--;
+        String word = text.substring(i + 1, end).toLowerCase(Locale.ROOT);
+        return switch (word) {
+            case "from", "join", "update", "into", "table" -> CompletionService.Context.TABLES;
+            case "select", "where", "on", "and", "or", "by", "set",
+                 "having", "between", "like", "when", "then" -> CompletionService.Context.COLUMNS;
+            default -> CompletionService.Context.ANY;
+        };
+    }
+
+    /** Pre-filled console text accessor (used by File → Save Console As…). */
+    public String getSqlText() {
+        return editor.getText();
     }
 
     // ------------------------------------------------------------- execute
