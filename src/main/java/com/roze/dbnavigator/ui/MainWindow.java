@@ -7,29 +7,50 @@ import com.roze.dbnavigator.model.DbObject;
 import com.roze.dbnavigator.util.AppExecutor;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
+import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.scene.Parent;
 import javafx.scene.control.*;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
-import javafx.scene.layout.*;
+import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import javafx.stage.Window;
 import org.kordamp.ikonli.fontawesome5.FontAwesomeSolid;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 
-/** Top-level layout: toolbar (top), explorer (left), tabs (center), status bar (bottom). */
+/**
+ * Top-level layout: menu bar + toolbar (top), explorer (left), tabs (center),
+ * a docked/resizable Run panel (bottom, collapsible), and a status bar with
+ * a background-task indicator (very bottom).
+ */
 public class MainWindow {
 
     private final Stage stage;
     private final BorderPane root = new BorderPane();
     private final TabPane tabPane = new TabPane();
     private final SchemaTreePane schemaPane;
+    private final RunPanel runPanel = new RunPanel();
+    private final SplitPane verticalSplit = new SplitPane();
+    private final SplitPane centerSplit;
+    private boolean runPanelVisible = false;
+    private double lastRunPanelDivider = 0.72;
+
     private final Label statusLabel = new Label("Ready");
+    private final HBox taskIndicator = new HBox();
+    private final Label taskBreadcrumbLabel = new Label();
+    private final Label taskNameLabel = new Label();
+    private final ProgressBar taskProgressBar = new ProgressBar();
+    private final Button taskCancelButton = new Button();
     private int consoleCounter = 0;
 
     public MainWindow(Stage stage) {
@@ -52,13 +73,44 @@ public class MainWindow {
         tabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.ALL_TABS);
         showWelcomeTab();
 
-        SplitPane split = new SplitPane(schemaPane, tabPane);
-        split.setDividerPositions(0.22);
+        centerSplit = new SplitPane(schemaPane, tabPane);
+        centerSplit.setDividerPositions(0.22);
         SplitPane.setResizableWithParent(schemaPane, false);
-        root.setCenter(split);
+
+        // Vertical split: main content on top, Run panel docked at the bottom.
+        // The divider between them is mouse-draggable by default (standard
+        // SplitPane behavior) — that's what makes the Run panel resizable.
+        verticalSplit.setOrientation(Orientation.VERTICAL);
+        verticalSplit.getItems().add(centerSplit);
+        runPanel.setOnMinimize(this::hideRunPanel);
+
+        root.setCenter(verticalSplit);
     }
 
     public Parent getRoot() { return root; }
+
+    /** A Window suitable for initOwner() on dialogs raised from anywhere in the app. */
+    public Window getOwnerWindow() { return stage; }
+
+    public RunPanel getRunPanel() { return runPanel; }
+
+    /** Shows the docked Run panel, expanding it if it was collapsed. */
+    public void showRunPanel() {
+        if (!runPanelVisible) {
+            verticalSplit.getItems().add(runPanel);
+            verticalSplit.setDividerPositions(lastRunPanelDivider);
+            runPanelVisible = true;
+        }
+    }
+
+    /** Hides the Run panel, remembering its size so re-showing restores it. */
+    public void hideRunPanel() {
+        if (runPanelVisible) {
+            lastRunPanelDivider = verticalSplit.getDividerPositions()[0];
+            verticalSplit.getItems().remove(runPanel);
+            runPanelVisible = false;
+        }
+    }
 
     // ------------------------------------------------------------- chrome
 
@@ -90,7 +142,11 @@ public class MainWindow {
         // ---- View ----
         MenuItem refreshExplorer = new MenuItem("Refresh Database Explorer");
         refreshExplorer.setOnAction(e -> schemaPane.reload());
-        Menu viewMenu = new Menu("View", null, refreshExplorer);
+        MenuItem toggleRunPanel = new MenuItem("Run Tool Window");
+        toggleRunPanel.setOnAction(e -> {
+            if (runPanelVisible) hideRunPanel(); else showRunPanel();
+        });
+        Menu viewMenu = new Menu("View", null, refreshExplorer, toggleRunPanel);
 
         // ---- Navigate ----
         MenuItem searchEverywhere = new MenuItem("Search Everywhere…");
@@ -103,7 +159,7 @@ public class MainWindow {
         MenuItem about = new MenuItem("About DBNavigator Pro");
         about.setOnAction(e -> {
             Alert alert = new Alert(Alert.AlertType.INFORMATION,
-                    "DBNavigator Pro 2.6\nA DataGrip-style database IDE built with JavaFX.\n"
+                    "DBNavigator Pro 3.2\nA DataGrip-style database IDE built with JavaFX.\n"
                     + "MySQL · MariaDB · PostgreSQL · SQL Server · Oracle · SQLite · MongoDB");
             alert.setHeaderText("DBNavigator Pro");
             alert.initOwner(stage);
@@ -177,6 +233,11 @@ public class MainWindow {
         newConsole.setGraphic(Icons.of(FontAwesomeSolid.TERMINAL, "#6897bb", 12));
         newConsole.setOnAction(e -> openConsoleForSelectedConnection());
 
+        Button runToggle = new Button("Run");
+        runToggle.setGraphic(Icons.of(FontAwesomeSolid.TERMINAL, "#57965c", 12));
+        runToggle.setTooltip(new Tooltip("Show/hide the Run panel"));
+        runToggle.setOnAction(e -> { if (runPanelVisible) hideRunPanel(); else showRunPanel(); });
+
         Label brand = new Label("DBNavigator Pro");
         brand.getStyleClass().add("brand-label");
         brand.setGraphic(Icons.of(FontAwesomeSolid.DATABASE, "#4a88c7", 14));
@@ -201,8 +262,8 @@ public class MainWindow {
         settingsButton.setOnAction(e ->
                 settingsMenu.show(settingsButton, javafx.geometry.Side.BOTTOM, 0, 4));
 
-        HBox toolbar = new HBox(10, brand, new Separator(javafx.geometry.Orientation.VERTICAL),
-                newConnection, newConsole, spacer, searchButton, settingsButton);
+        HBox toolbar = new HBox(10, brand, new Separator(Orientation.VERTICAL),
+                newConnection, newConsole, runToggle, spacer, searchButton, settingsButton);
         toolbar.setAlignment(Pos.CENTER_LEFT);
         toolbar.setPadding(new Insets(8, 12, 8, 12));
         toolbar.getStyleClass().add("app-toolbar");
@@ -211,10 +272,49 @@ public class MainWindow {
 
     private HBox buildStatusBar() {
         statusLabel.getStyleClass().add("status-text");
-        HBox bar = new HBox(statusLabel);
+
+        taskBreadcrumbLabel.getStyleClass().add("task-breadcrumb");
+        taskNameLabel.getStyleClass().add("task-name");
+        taskProgressBar.setProgress(ProgressBar.INDETERMINATE_PROGRESS);
+        taskProgressBar.setPrefWidth(110);
+        taskCancelButton.setGraphic(Icons.of(FontAwesomeSolid.TIMES, "#a9b7c6", 10));
+        taskCancelButton.getStyleClass().add("task-cancel-button");
+        Button bell = new Button();
+        bell.setGraphic(Icons.of(FontAwesomeSolid.BELL, "#a9b7c6", 12));
+        bell.getStyleClass().add("task-cancel-button");
+        bell.setTooltip(new Tooltip("Show Run panel"));
+        bell.setOnAction(e -> showRunPanel());
+
+        taskIndicator.setSpacing(8);
+        taskIndicator.setAlignment(Pos.CENTER_LEFT);
+        taskIndicator.getChildren().addAll(taskBreadcrumbLabel, new Separator(Orientation.VERTICAL),
+                taskNameLabel, taskProgressBar, taskCancelButton, bell);
+        taskIndicator.getStyleClass().add("task-indicator");
+        taskIndicator.setVisible(false);
+        taskIndicator.setManaged(false);
+        taskIndicator.setOnMouseClicked(e -> showRunPanel());
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        HBox bar = new HBox(statusLabel, spacer, taskIndicator);
         bar.setPadding(new Insets(5, 12, 5, 12));
         bar.getStyleClass().add("app-status-bar");
         return bar;
+    }
+
+    /** Shows the right-aligned background-task indicator (breadcrumb + progress + cancel). */
+    public void showTask(String breadcrumb, String taskName, Runnable onCancel) {
+        taskBreadcrumbLabel.setText(breadcrumb);
+        taskNameLabel.setText(taskName);
+        taskCancelButton.setOnAction(e -> { if (onCancel != null) onCancel.run(); });
+        taskIndicator.setVisible(true);
+        taskIndicator.setManaged(true);
+    }
+
+    public void hideTask() {
+        taskIndicator.setVisible(false);
+        taskIndicator.setManaged(false);
     }
 
     private void showWelcomeTab() {
@@ -228,8 +328,7 @@ public class MainWindow {
                 • Press Ctrl+Enter in a console to run the selected statement""");
         hint.getStyleClass().add("welcome-hint");
 
-        VBox box = new VBox(14,
-                Icons.of(FontAwesomeSolid.DATABASE, "#3d4d5c", 52), title, hint);
+        VBox box = new VBox(14, Icons.of(FontAwesomeSolid.DATABASE, "#3d4d5c", 52), title, hint);
         box.setAlignment(Pos.CENTER);
 
         Tab welcome = new Tab("Welcome", box);

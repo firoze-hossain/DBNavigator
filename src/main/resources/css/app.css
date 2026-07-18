@@ -331,3 +331,73 @@
 }
 .exact-count-link:hover { -fx-text-fill: #8ab4dd; -fx-underline: true; }
 
+
+/* ---------- docked Run panel (bottom, resizable via SplitPane divider) ---------- */
+.run-panel {
+    -fx-background-color: -bg-dark;
+    -fx-border-color: -border transparent transparent transparent;
+    -fx-border-width: 1 0 0 0;
+}
+.run-panel-header {
+    -fx-background-color: -bg-mid;
+    -fx-border-color: transparent transparent -border transparent;
+    -fx-min-height: 30px;
+}
+.run-panel-title {
+    -fx-text-fill: -text;
+    -fx-font-weight: bold;
+    -fx-font-size: 12px;
+    -fx-padding: 0 8 0 0;
+}
+.run-panel-chrome-button {
+    -fx-background-color: transparent;
+    -fx-border-width: 0;
+    -fx-padding: 4 6 4 6;
+}
+.run-panel-chrome-button:hover { -fx-background-color: #3c4046; }
+
+.run-tabs { -fx-background-color: transparent; }
+.run-tabs .tab-header-area { -fx-padding: 0; }
+.run-tabs .tab-header-area .tab-header-background { -fx-background-color: transparent; }
+.run-tabs .tab {
+    -fx-background-color: transparent;
+    -fx-background-radius: 0;
+    -fx-padding: 4 10 4 10;
+    -fx-border-color: transparent;
+}
+.run-tabs .tab:selected {
+    -fx-background-color: -bg-dark;
+    -fx-border-color: -accent transparent transparent transparent;
+    -fx-border-width: 2 0 0 0;
+}
+.run-tabs .tab .tab-label { -fx-text-fill: -text-dim; -fx-font-size: 12px; }
+.run-tabs .tab:selected .tab-label { -fx-text-fill: -text; }
+
+.run-tab-content { -fx-background-color: -bg-darkest; }
+.run-tab-rail {
+    -fx-background-color: -bg-mid;
+    -fx-border-color: transparent -border transparent transparent;
+}
+.run-tab-rail .button {
+    -fx-background-color: transparent;
+    -fx-border-width: 0;
+    -fx-background-radius: 4;
+    -fx-padding: 5;
+    -fx-pref-width: 28px;
+    -fx-alignment: center;
+}
+.run-tab-rail .button:hover { -fx-background-color: #3c4046; }
+.run-tab-rail .separator {
+    -fx-padding: 2 0 2 0;
+}
+
+/* ---------- status bar task indicator ---------- */
+.task-indicator { -fx-cursor: hand; }
+.task-breadcrumb { -fx-text-fill: -text-dim; -fx-font-size: 12px; }
+.task-name { -fx-text-fill: -text; -fx-font-size: 12px; }
+.task-cancel-button {
+    -fx-background-color: transparent;
+    -fx-border-width: 0;
+    -fx-padding: 2 4 2 4;
+}
+.task-cancel-button:hover { -fx-background-color: #3c4046; }

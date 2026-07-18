@@ -6,7 +6,11 @@ import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
-import javafx.stage.*;
+import javafx.stage.DirectoryChooser;
+import javafx.stage.FileChooser;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
+import javafx.stage.Window;
 import org.kordamp.ikonli.fontawesome5.FontAwesomeSolid;
 
 import java.io.File;
@@ -14,6 +18,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * DataGrip-style "Export with pg_dump…" dialog: full option set (statements
@@ -25,6 +30,7 @@ public final class PgDumpDialog {
     private static final String PLACEHOLDER_HINT =
             "Allowed substitution patterns: {timestamp}, {data_source}, {database}";
 
+    private final MainWindow mainWindow;
     private final ConnectionProfile profile;
     private final String database;
     private final Stage stage = new Stage();
@@ -42,16 +48,17 @@ public final class PgDumpDialog {
     private final CheckBox dataOnly = new CheckBox("Export data without schema");
     private final TextArea commandPreview = new TextArea();
 
-    private PgDumpDialog(Window owner, ConnectionProfile profile, String database) {
+    private PgDumpDialog(MainWindow mainWindow, ConnectionProfile profile, String database) {
+        this.mainWindow = mainWindow;
         this.profile = profile;
         this.database = database;
-        buildUi(owner);
+        buildUi(mainWindow.getOwnerWindow());
         wireLivePreview();
         refreshPreview();
     }
 
-    public static void show(Window owner, ConnectionProfile profile, String database) {
-        new PgDumpDialog(owner, profile, database).stage.showAndWait();
+    public static void show(MainWindow mainWindow, ConnectionProfile profile, String database) {
+        new PgDumpDialog(mainWindow, profile, database).stage.showAndWait();
     }
 
     // --------------------------------------------------------------- UI
@@ -321,9 +328,10 @@ public final class PgDumpDialog {
         command.add("--file=" + resolvedOutput);
 
         stage.close();
-        DumpRestoreService.runProcess(stage.getOwner(),
-                "Dumping " + databaseField.getText() + " → " + new File(resolvedOutput).getName(),
-                command, profile, null);
+        String breadcrumb = "Database  ›  " + profile.getName() + "  ›  " + databaseField.getText();
+        String taskLabel = "Dumping with pg_dump… (" + profile.getName() + ")";
+        DumpRestoreService.runProcess(mainWindow, "pg_dump (" + profile.getName() + ")",
+                command, profile, null, breadcrumb, taskLabel);
     }
 
     private String substitutePlaceholders(String path) {

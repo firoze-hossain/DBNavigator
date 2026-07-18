@@ -4,15 +4,10 @@ import com.roze.dbnavigator.model.ConnectionProfile;
 import com.roze.dbnavigator.model.ConnectionProfile.DatabaseType;
 import com.roze.dbnavigator.util.AppExecutor;
 import javafx.application.Platform;
-import javafx.geometry.Insets;
-import javafx.scene.Scene;
-import javafx.scene.control.*;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
-import javafx.scene.layout.VBox;
+import javafx.scene.control.Alert;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.TextInputDialog;
 import javafx.stage.FileChooser;
-import javafx.stage.Modality;
-import javafx.stage.Stage;
 import javafx.stage.Window;
 
 import java.io.BufferedReader;
@@ -21,11 +16,16 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Dump a database to .sql and restore it, using the native client tools:
  * PostgreSQL → pg_dump / psql, MySQL & MariaDB → mysqldump / mysql.
  * The tools must be installed and on PATH (or give the full path in the dialog).
+ *
+ * Output streams into the app's docked Run panel (like DataGrip's Run tool
+ * window) instead of a separate popup, with a matching status-bar progress
+ * indicator while the process is alive.
  */
 public final class DumpRestoreService {
 
@@ -33,20 +33,20 @@ public final class DumpRestoreService {
 
     // ------------------------------------------------------------- dump
 
-    public static void dumpDatabase(Window owner, ConnectionProfile profile, String database) {
+    public static void dumpDatabase(MainWindow mainWindow, ConnectionProfile profile, String database) {
         String defaultTool = switch (profile.getType()) {
             case POSTGRESQL -> "pg_dump";
             case MYSQL, MARIADB -> "mysqldump";
             default -> null;
         };
         if (defaultTool == null) {
-            info(owner, "Dump is supported for PostgreSQL, MySQL and MariaDB connections.");
+            info(mainWindow.getOwnerWindow(), "Dump is supported for PostgreSQL, MySQL and MariaDB connections.");
             return;
         }
 
-        TextInputDialog toolDialog = toolPathDialog(owner, defaultTool,
-                "Dump " + database, "Path to " + defaultTool + " (keep default if it is on PATH):");
-        var tool = toolDialog.showAndWait();
+        Window owner = mainWindow.getOwnerWindow();
+        var tool = toolPathDialog(owner, defaultTool,
+                "Dump " + database, "Path to " + defaultTool + " (keep default if it is on PATH):").showAndWait();
         if (tool.isEmpty()) return;
 
         FileChooser chooser = new FileChooser();
@@ -73,25 +73,26 @@ public final class DumpRestoreService {
                     "--result-file=" + file.getAbsolutePath(),
                     database));
         }
-        runProcess(owner, "Dumping " + database + " → " + file.getName(), command, profile, null);
+        runProcess(mainWindow, defaultTool + " (" + profile.getName() + ")", command, profile, null,
+                breadcrumb(profile, database), "Dumping with " + defaultTool + "… (" + profile.getName() + ")");
     }
 
     // ---------------------------------------------------------- restore
 
-    public static void restoreDatabase(Window owner, ConnectionProfile profile, String database) {
+    public static void restoreDatabase(MainWindow mainWindow, ConnectionProfile profile, String database) {
         String defaultTool = switch (profile.getType()) {
             case POSTGRESQL -> "psql";
             case MYSQL, MARIADB -> "mysql";
             default -> null;
         };
         if (defaultTool == null) {
-            info(owner, "Restore is supported for PostgreSQL, MySQL and MariaDB connections.");
+            info(mainWindow.getOwnerWindow(), "Restore is supported for PostgreSQL, MySQL and MariaDB connections.");
             return;
         }
 
-        TextInputDialog toolDialog = toolPathDialog(owner, defaultTool,
-                "Restore into " + database, "Path to " + defaultTool + " (keep default if it is on PATH):");
-        var tool = toolDialog.showAndWait();
+        Window owner = mainWindow.getOwnerWindow();
+        var tool = toolPathDialog(owner, defaultTool,
+                "Restore into " + database, "Path to " + defaultTool + " (keep default if it is on PATH):").showAndWait();
         if (tool.isEmpty()) return;
 
         FileChooser chooser = new FileChooser();
@@ -125,44 +126,43 @@ public final class DumpRestoreService {
                     database));
             stdinFile = file;   // mysql reads the script from stdin
         }
-        runProcess(owner, "Restoring " + file.getName() + " → " + database, command, profile, stdinFile);
+        runProcess(mainWindow, defaultTool + " (" + profile.getName() + ")", command, profile, stdinFile,
+                breadcrumb(profile, database), "Restoring with " + defaultTool + "… (" + profile.getName() + ")");
     }
 
     // ----------------------------------------------------------- process
 
+    private static String breadcrumb(ConnectionProfile profile, String database) {
+        return "Database  ›  " + profile.getName() + "  ›  " + database;
+    }
+
     /**
-     * Runs a command with live streaming output in a small window. Package-visible
-     * so richer dialogs (e.g. PgDumpDialog) can reuse the same execution/output UI
+     * Runs a command with live streaming output in the docked Run panel, and
+     * shows a matching progress indicator in the status bar. Package-visible
+     * so richer dialogs (e.g. PgDumpDialog) can reuse the same execution path
      * instead of duplicating it.
      */
-    static void runProcess(Window owner, String title, List<String> command,
-                           ConnectionProfile profile, File stdinFile) {
-        Stage stage = new Stage();
-        stage.initOwner(owner);
-        stage.initModality(Modality.NONE);
-        stage.setTitle(title);
+    static void runProcess(MainWindow mainWindow, String tabTitle, List<String> command,
+                           ConnectionProfile profile, File stdinFile, String breadcrumb, String taskLabel) {
+        RunPanel.RunHandle handle = mainWindow.getRunPanel().startRun(tabTitle);
+        mainWindow.showRunPanel();
 
-        TextArea output = new TextArea();
-        output.setEditable(false);
-        output.getStyleClass().add("process-output");
-        VBox.setVgrow(output, Priority.ALWAYS);
+        Runnable execution = () -> execute(mainWindow, handle, command, profile, stdinFile, breadcrumb, taskLabel);
+        handle.setRerunAction(execution);
+        execution.run();
+    }
 
-        Label status = new Label("Running…");
-        Button closeButton = new Button("Close");
-        closeButton.setDisable(true);
-        closeButton.setOnAction(e -> stage.close());
-        HBox bottom = new HBox(10, status, closeButton);
-        bottom.setPadding(new Insets(8));
-
-        VBox root = new VBox(output, bottom);
-        Scene scene = new Scene(root, 720, 420);
-        if (owner != null && owner.getScene() != null) {
-            scene.getStylesheets().addAll(owner.getScene().getStylesheets());
-        }
-        stage.setScene(scene);
-        stage.show();
-
-        appendLine(output, "$ " + String.join(" ", command));
+    private static void execute(MainWindow mainWindow, RunPanel.RunHandle handle, List<String> command,
+                                ConnectionProfile profile, File stdinFile, String breadcrumb, String taskLabel) {
+        handle.appendLine("$ " + String.join(" ", command));
+        AtomicReference<Process> processHolder = new AtomicReference<>();
+        mainWindow.showTask(breadcrumb, taskLabel, () -> {
+            Process p = processHolder.get();
+            if (p != null && p.isAlive()) {
+                p.destroy();
+                handle.appendLine("[cancelled by user]");
+            }
+        });
 
         AppExecutor.run(() -> {
             try {
@@ -179,36 +179,28 @@ public final class DumpRestoreService {
                 }
 
                 Process process = builder.start();
+                processHolder.set(process);
+                handle.setProcess(process);
+
                 try (BufferedReader reader = new BufferedReader(
                         new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
                     String line;
                     while ((line = reader.readLine()) != null) {
-                        appendLine(output, line);
+                        handle.appendLine(line);
                     }
                 }
                 int exit = process.waitFor();
-                Platform.runLater(() -> {
-                    status.setText(exit == 0 ? "✓ Finished successfully" : "✗ Exited with code " + exit);
-                    status.setStyle(exit == 0 ? "-fx-text-fill: #57965c;" : "-fx-text-fill: #e05555;");
-                    closeButton.setDisable(false);
-                });
+                handle.appendLine(exit == 0 ? "✓ Finished successfully" : "✗ Exited with code " + exit);
+                handle.markFinished(exit);
             } catch (Exception ex) {
                 String msg = ex.getMessage() == null ? ex.toString() : ex.getMessage();
-                appendLine(output, "ERROR: " + msg);
-                appendLine(output, "Is the client tool installed and on PATH? "
+                handle.markFailed(msg + "  — is the client tool installed and on PATH? "
                         + "On Windows, point the dialog at e.g. "
                         + "C:\\Program Files\\PostgreSQL\\16\\bin\\pg_dump.exe");
-                Platform.runLater(() -> {
-                    status.setText("✗ Failed to start process");
-                    status.setStyle("-fx-text-fill: #e05555;");
-                    closeButton.setDisable(false);
-                });
+            } finally {
+                Platform.runLater(mainWindow::hideTask);
             }
         });
-    }
-
-    private static void appendLine(TextArea area, String line) {
-        Platform.runLater(() -> area.appendText(line + System.lineSeparator()));
     }
 
     private static TextInputDialog toolPathDialog(Window owner, String defaultTool,

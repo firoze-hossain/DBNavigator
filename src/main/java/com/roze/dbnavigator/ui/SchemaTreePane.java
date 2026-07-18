@@ -19,6 +19,7 @@ import org.kordamp.ikonli.fontawesome5.FontAwesomeSolid;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 
 /**
  * The DataGrip-style "Database Explorer": all connections in one lazy tree.
@@ -402,15 +403,14 @@ public class SchemaTreePane extends VBox {
                     MenuItem dump = new MenuItem("Dump Database to .sql…");
                     dump.setOnAction(e -> {
                         if (profile.getType() == ConnectionProfile.DatabaseType.POSTGRESQL) {
-                            PgDumpDialog.show(getScene().getWindow(), profile, obj.getName());
+                            PgDumpDialog.show(mainWindow, profile, obj.getName());
                         } else {
-                            DumpRestoreService.dumpDatabase(
-                                    getScene().getWindow(), profile, obj.getName());
+                            DumpRestoreService.dumpDatabase(mainWindow, profile, obj.getName());
                         }
                     });
                     MenuItem restore = new MenuItem("Restore .sql into This Database…");
                     restore.setOnAction(e -> DumpRestoreService.restoreDatabase(
-                            getScene().getWindow(), profile, obj.getName()));
+                            mainWindow, profile, obj.getName()));
                     MenuItem deleteDb = new MenuItem("Delete Database…");
                     deleteDb.setOnAction(e -> confirmAndDeleteDatabase(profile, obj.getName()));
                     menu.getItems().addAll(newConsole, new SeparatorMenuItem(), dump, restore,
