@@ -18,6 +18,7 @@ import org.kordamp.ikonli.fontawesome5.FontAwesomeSolid;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * DataGrip-style table data view: breadcrumb showing exactly which
@@ -42,9 +43,12 @@ public class DataTab extends Tab {
     private final GridEditManager editManager;
 
     private final List<String> pkColumns = new ArrayList<>();
+    private Map<String, Integer> columnTypes = Map.of();
     private boolean useCtid = false;
     private int page = 0;
     private long totalRows = -1;
+    private boolean totalRowsExact = false;
+    private final Hyperlink exactCountLink = new Hyperlink("(get exact count)");
 
     public DataTab(ConnectionProfile profile, DbObject table) {
         this.profile = profile;
@@ -88,10 +92,16 @@ public class DataTab extends Tab {
         nextButton.setGraphic(Icons.of(FontAwesomeSolid.CHEVRON_RIGHT, "#a9b7c6", 11));
         nextButton.setOnAction(e -> { page++; loadPage(); });
 
+        exactCountLink.setVisible(false);
+        exactCountLink.setManaged(false);
+        exactCountLink.getStyleClass().add("exact-count-link");
+        exactCountLink.setOnAction(e -> fetchExactCount());
+
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
         HBox toolbar = new HBox(8, filterField, orderField, applyButton, refreshButton,
-                submitButton, revertButton, exportButton, spacer, prevButton, pageLabel, nextButton);
+                submitButton, revertButton, exportButton, spacer,
+                prevButton, pageLabel, exactCountLink, nextButton);
         toolbar.setAlignment(Pos.CENTER_LEFT);
         toolbar.setPadding(new Insets(6, 10, 6, 10));
         toolbar.getStyleClass().add("console-toolbar");
@@ -133,6 +143,9 @@ public class DataTab extends Tab {
             try {
                 pkColumns.addAll(MetadataService.loadPrimaryKeys(profile, table));
             } catch (Exception ignored) {}
+            try {
+                columnTypes = MetadataService.loadColumnTypes(profile, table);
+            } catch (Exception ignored) {}
             // PostgreSQL tables without a PK (typically partitions) are still
             // editable through the physical row id (ctid) — DataGrip does the same
             if (pkColumns.isEmpty()
@@ -147,7 +160,42 @@ public class DataTab extends Tab {
     private void reloadFromStart() {
         page = 0;
         totalRows = -1;
+        totalRowsExact = false;
         loadPage();
+    }
+
+    /** Runs a real COUNT(*) in the background and updates the page label. */
+    private void fetchExactCount() {
+        String where = filterField.getText().trim();
+        exactCountLink.setDisable(true);
+        AppExecutor.run(() -> {
+            try {
+                long exact = ClientRegistry.jdbc(profile, table.getCatalog())
+                        .countRows(table.qualifiedName(), where);
+                Platform.runLater(() -> {
+                    totalRows = exact;
+                    totalRowsExact = true;
+                    exactCountLink.setVisible(false);
+                    exactCountLink.setManaged(false);
+                    exactCountLink.setDisable(false);
+                    refreshPageLabel();
+                });
+            } catch (Exception ex) {
+                Platform.runLater(() -> exactCountLink.setDisable(false));
+            }
+        });
+    }
+
+    private void refreshPageLabel() {
+        long from = (long) page * PAGE_SIZE + 1;
+        long shown = grid.getItems().size();
+        long to = from + shown - 1;
+        String countText = totalRows < 0 ? ""
+                : (totalRowsExact ? " of " + totalRows : " of ~" + totalRows);
+        pageLabel.setText(shown == 0 ? "0 rows" : from + "–" + to + countText);
+        boolean showLink = totalRows >= 0 && !totalRowsExact;
+        exactCountLink.setVisible(showLink);
+        exactCountLink.setManaged(showLink);
     }
 
     private void loadPage() {
@@ -163,20 +211,32 @@ public class DataTab extends Tab {
                         table.qualifiedName(), currentPage * PAGE_SIZE, PAGE_SIZE,
                         where, order, useCtid);
                 if (totalRows < 0) {
-                    try {
-                        totalRows = client.countRows(table.qualifiedName(), where);
-                    } catch (Exception ignore) {
-                        totalRows = -1;
+                    if (where.isBlank() && profile.getType() == ConnectionProfile.DatabaseType.POSTGRESQL) {
+                        long estimate = MetadataService.estimateRowCount(profile, table);
+                        if (estimate >= 0) {
+                            totalRows = estimate;
+                            totalRowsExact = false;
+                        } else {
+                            try {
+                                totalRows = client.countRows(table.qualifiedName(), where);
+                                totalRowsExact = true;
+                            } catch (Exception ignore) {
+                                totalRows = -1;
+                            }
+                        }
+                    } else {
+                        try {
+                            totalRows = client.countRows(table.qualifiedName(), where);
+                            totalRowsExact = true;
+                        } catch (Exception ignore) {
+                            totalRows = -1;
+                        }
                     }
                 }
                 Platform.runLater(() -> {
-                    editManager.configure(table.qualifiedName(), pkColumns, result);
+                    editManager.configure(table.qualifiedName(), pkColumns, columnTypes, result);
                     grid.showResult(result);
-                    long from = (long) currentPage * PAGE_SIZE + 1;
-                    long to = from + result.getRows().size() - 1;
-                    pageLabel.setText(result.getRows().isEmpty()
-                            ? "0 rows"
-                            : from + "–" + to + (totalRows >= 0 ? " of " + totalRows : ""));
+                    refreshPageLabel();
                     statusLabel.setText(result.getRows().size() + " row(s) in "
                             + result.getExecutionMillis() + " ms"
                             + (editManager.isEditable()

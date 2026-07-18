@@ -53,6 +53,20 @@ public final class ClientRegistry {
         if (mongo != null) mongo.close();
     }
 
+    /**
+     * Closes only the pool for one database on this connection (e.g. before
+     * DROP DATABASE), leaving the rest of the connection's other pools open.
+     * Uses the same key logic as {@link #jdbc(ConnectionProfile, String)} so a
+     * database matching the profile's own default database closes the default
+     * pool rather than a nonexistent per-catalog one.
+     */
+    public static void disconnectCatalog(ConnectionProfile profile, String catalog) {
+        boolean isDefault = catalog == null || catalog.isBlank() || catalog.equals(profile.getDatabase());
+        String key = isDefault ? profile.getId() : profile.getId() + "::" + catalog;
+        JdbcClient client = jdbcClients.remove(key);
+        if (client != null) client.close();
+    }
+
     public static void closeAll() {
         jdbcClients.values().forEach(JdbcClient::close);
         jdbcClients.clear();

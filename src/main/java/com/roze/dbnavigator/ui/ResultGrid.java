@@ -20,15 +20,21 @@ import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
-import java.util.Set;
 
 /**
  * Spreadsheet-like grid used everywhere results are shown.
- * Supports multi-selection (Shift/Ctrl+click), optional inline editing with a
- * date picker for date/timestamp columns, and a pluggable row-delete action.
+ *
+ * Uses standard ROW selection (not cell selection) with MULTIPLE mode: this
+ * is the well-tested JavaFX pattern where a single click highlights an
+ * entire row, Shift/Ctrl+click extends the highlighted rows exactly like
+ * DataGrip, and double-clicking any individual cell still starts inline
+ * editing for just that cell — the two behaviors are independent in JavaFX
+ * and don't require cell-selection mode. (An earlier version of this class
+ * used cell-selection mode, which is fragile in combination with a custom
+ * editable cell factory and was the root cause of edits and multi-row
+ * selection being unreliable.)
  */
 public class ResultGrid extends TableView<List<String>> {
 
@@ -47,11 +53,13 @@ public class ResultGrid extends TableView<List<String>> {
         setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
         setPlaceholder(new Label("No data"));
 
-        getSelectionModel().setCellSelectionEnabled(true);
+        // Row selection (the JavaFX default) + MULTIPLE: click selects one row,
+        // Shift+click selects a contiguous range, Ctrl+click toggles individual
+        // rows — all highlighted across the full row, exactly like DataGrip.
         getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 
         MenuItem copyCell = new MenuItem("Copy Cell");
-        copyCell.setOnAction(e -> copySelectedCell());
+        copyCell.setOnAction(e -> copyFocusedCell());
         MenuItem copyRow = new MenuItem("Copy Row (TSV)");
         copyRow.setOnAction(e -> copySelectedRow());
         MenuItem deleteRows = new MenuItem("Delete Selected Row(s)");
@@ -80,15 +88,11 @@ public class ResultGrid extends TableView<List<String>> {
         this.deleteRowsAction = action;
     }
 
-    /** Distinct row indexes touched by the current (cell) selection, descending. */
+    /** Selected row indexes, descending (safe order for sequential removal). */
     public List<Integer> getSelectedRowIndexes() {
-        Set<Integer> rows = new LinkedHashSet<>();
-        for (TablePosition<?, ?> pos : getSelectionModel().getSelectedCells()) {
-            rows.add(pos.getRow());
-        }
-        List<Integer> sorted = new ArrayList<>(rows);
-        sorted.sort((a, b) -> b - a);
-        return sorted;
+        List<Integer> rows = new ArrayList<>(getSelectionModel().getSelectedIndices());
+        rows.sort((a, b) -> b - a);
+        return rows;
     }
 
     public void showResult(QueryResult result) {
@@ -142,6 +146,7 @@ public class ResultGrid extends TableView<List<String>> {
      * Text editor cell; date/timestamp columns additionally get a calendar
      * button that opens a DatePicker — picking a date replaces the date part
      * and keeps any time portion. Values can also be typed or pasted directly.
+     * Commits on Enter or when focus leaves the field; Escape cancels.
      */
     private class EditCell extends TableCell<List<String>, String> {
 
@@ -173,6 +178,13 @@ public class ResultGrid extends TableView<List<String>> {
             field.setOnAction(e -> commitEdit(field.getText()));
             field.setOnKeyPressed(e -> {
                 if (e.getCode() == KeyCode.ESCAPE) cancelEdit();
+            });
+            // Commit even if the user clicks elsewhere instead of pressing Enter —
+            // matches spreadsheet/DataGrip behavior where focus-out saves the cell.
+            field.focusedProperty().addListener((obs, wasFocused, isNowFocused) -> {
+                if (!isNowFocused && isEditing()) {
+                    commitEdit(field.getText());
+                }
             });
             HBox.setHgrow(field, javafx.scene.layout.Priority.ALWAYS);
             editor = new HBox(2, field);
@@ -246,12 +258,13 @@ public class ResultGrid extends TableView<List<String>> {
 
     // ---------------------------------------------------------- clipboard
 
-    private void copySelectedCell() {
-        TablePosition<?, ?> pos = getSelectionModel().getSelectedCells().stream()
-                .findFirst().orElse(null);
-        if (pos == null) return;
+    /** Copies the value of whatever cell last had focus (works in row-selection mode). */
+    private void copyFocusedCell() {
+        TablePosition<?, ?> pos = getFocusModel().getFocusedCell();
+        if (pos == null || pos.getRow() < 0 || pos.getTableColumn() == null) return;
         List<String> row = getItems().get(pos.getRow());
-        String value = pos.getColumn() < row.size() ? row.get(pos.getColumn()) : "";
+        int colIndex = getColumns().indexOf(pos.getTableColumn());
+        String value = (colIndex >= 0 && colIndex < row.size()) ? row.get(colIndex) : "";
         put(value == null ? "" : value);
     }
 

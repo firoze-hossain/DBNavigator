@@ -321,3 +321,13 @@
 .sql-editor .sql-string  { -fx-fill: #6a8759; }
 .sql-editor .sql-number  { -fx-fill: #6897bb; }
 .sql-editor .sql-comment { -fx-fill: #808080; -fx-font-style: italic; }
+
+/* ---------- approximate row count link ---------- */
+.exact-count-link {
+    -fx-text-fill: #6897bb;
+    -fx-underline: false;
+    -fx-font-size: 11px;
+    -fx-padding: 0 4 0 4;
+}
+.exact-count-link:hover { -fx-text-fill: #8ab4dd; -fx-underline: true; }
+

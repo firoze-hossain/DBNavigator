@@ -2,6 +2,7 @@ package com.roze.dbnavigator.ui;
 
 import com.roze.dbnavigator.db.ClientRegistry;
 import com.roze.dbnavigator.db.ConnectionStore;
+import com.roze.dbnavigator.db.DatabaseAdminService;
 import com.roze.dbnavigator.db.MetadataService;
 import com.roze.dbnavigator.model.ConnectionProfile;
 import com.roze.dbnavigator.model.DbObject;
@@ -18,7 +19,6 @@ import org.kordamp.ikonli.fontawesome5.FontAwesomeSolid;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Consumer;
 
 /**
  * The DataGrip-style "Database Explorer": all connections in one lazy tree.
@@ -251,6 +251,51 @@ public class SchemaTreePane extends VBox {
         });
     }
 
+    /**
+     * DataGrip-style destructive confirmation: warn, then require the user to
+     * type the exact database name before DROP DATABASE is executed.
+     */
+    private void confirmAndDeleteDatabase(ConnectionProfile profile, String databaseName) {
+        Alert warn = new Alert(Alert.AlertType.WARNING,
+                "This permanently deletes the database \"" + databaseName + "\" and everything in it. "
+                        + "This cannot be undone.",
+                ButtonType.YES, ButtonType.NO);
+        warn.setTitle("Delete Database");
+        warn.setHeaderText("Delete \"" + databaseName + "\"?");
+        warn.initOwner(getScene() == null ? null : getScene().getWindow());
+        if (warn.showAndWait().orElse(ButtonType.NO) != ButtonType.YES) return;
+
+        TextInputDialog confirm = new TextInputDialog();
+        confirm.setTitle("Confirm Deletion");
+        confirm.setHeaderText(null);
+        confirm.setContentText("Type the database name \"" + databaseName + "\" to confirm:");
+        confirm.initOwner(getScene() == null ? null : getScene().getWindow());
+        confirm.getDialogPane().setPrefWidth(420);
+
+        String typed = confirm.showAndWait().orElse("");
+        if (!typed.equals(databaseName)) {
+            if (!typed.isEmpty()) {
+                new Alert(Alert.AlertType.INFORMATION, "Name didn't match — deletion cancelled.")
+                        .showAndWait();
+            }
+            return;
+        }
+
+        AppExecutor.run(() -> {
+            try {
+                DatabaseAdminService.dropDatabase(profile, databaseName);
+                Platform.runLater(() -> {
+                    mainWindow.setStatus("Deleted database " + databaseName);
+                    reload();
+                });
+            } catch (Exception ex) {
+                String msg = ex.getMessage() == null ? ex.toString() : ex.getMessage();
+                Platform.runLater(() -> new Alert(Alert.AlertType.ERROR,
+                        "Could not delete database: " + msg).showAndWait());
+            }
+        });
+    }
+
     private static TreeItem<DbObject> loadingNode() {
         return new TreeItem<>(new DbObject("Loading…", Kind.MESSAGE));
     }
@@ -355,12 +400,21 @@ public class SchemaTreePane extends VBox {
                     newConsole.setOnAction(e ->
                             mainWindow.openQueryTab(profile, obj.getCatalog(), null));
                     MenuItem dump = new MenuItem("Dump Database to .sql…");
-                    dump.setOnAction(e -> DumpRestoreService.dumpDatabase(
-                            getScene().getWindow(), profile, obj.getName()));
+                    dump.setOnAction(e -> {
+                        if (profile.getType() == ConnectionProfile.DatabaseType.POSTGRESQL) {
+                            PgDumpDialog.show(getScene().getWindow(), profile, obj.getName());
+                        } else {
+                            DumpRestoreService.dumpDatabase(
+                                    getScene().getWindow(), profile, obj.getName());
+                        }
+                    });
                     MenuItem restore = new MenuItem("Restore .sql into This Database…");
                     restore.setOnAction(e -> DumpRestoreService.restoreDatabase(
                             getScene().getWindow(), profile, obj.getName()));
-                    menu.getItems().addAll(newConsole, new SeparatorMenuItem(), dump, restore);
+                    MenuItem deleteDb = new MenuItem("Delete Database…");
+                    deleteDb.setOnAction(e -> confirmAndDeleteDatabase(profile, obj.getName()));
+                    menu.getItems().addAll(newConsole, new SeparatorMenuItem(), dump, restore,
+                            new SeparatorMenuItem(), deleteDb);
                 }
                 default -> {
                     return null;

@@ -44,12 +44,26 @@ public class JdbcClient implements AutoCloseable {
 
     /** Executes any SQL statement; returns rows for SELECTs, update count otherwise. */
     public QueryResult execute(String sql, int maxRows) throws SQLException {
+        return execute(sql, maxRows, null);
+    }
+
+    /**
+     * Executes any SQL statement; returns rows for SELECTs, update count otherwise.
+     *
+     * @param statementHolder if non-null, the live Statement is published here the
+     *                        instant it's created so a "Cancel" button on another
+     *                        thread can call statement.cancel() to abort the query.
+     */
+    public QueryResult execute(String sql, int maxRows,
+                               java.util.concurrent.atomic.AtomicReference<Statement> statementHolder)
+            throws SQLException {
         QueryResult result = new QueryResult();
         long start = System.currentTimeMillis();
 
         try (Connection conn = getConnection();
              Statement stmt = conn.createStatement()) {
 
+            if (statementHolder != null) statementHolder.set(stmt);
             stmt.setMaxRows(maxRows);
             boolean hasResultSet = stmt.execute(sql);
 
@@ -64,6 +78,8 @@ public class JdbcClient implements AutoCloseable {
                         ? count + " row(s) affected"
                         : "Statement executed");
             }
+        } finally {
+            if (statementHolder != null) statementHolder.set(null);
         }
 
         result.setExecutionMillis(System.currentTimeMillis() - start);

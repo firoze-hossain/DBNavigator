@@ -2,6 +2,7 @@ package com.roze.dbnavigator.ui;
 
 import com.roze.dbnavigator.db.ClientRegistry;
 import com.roze.dbnavigator.db.MetadataService;
+import com.roze.dbnavigator.db.QueryHistoryStore;
 import com.roze.dbnavigator.model.ConnectionProfile;
 import com.roze.dbnavigator.model.ConnectionProfile.DatabaseType;
 import com.roze.dbnavigator.model.DbObject;
@@ -28,7 +29,9 @@ import org.kordamp.ikonli.fontawesome5.FontAwesomeSolid;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -46,10 +49,15 @@ public class QueryTab extends Tab {
     private final Label statusLabel = new Label("Ready");
     private final Spinner<Integer> limitSpinner = new Spinner<>(10, 100_000, 500, 100);
     private final Button runButton = new Button("Run");
+    private final Button cancelButton = new Button("Cancel");
+    private final Button historyButton = new Button();
     private final Button submitButton = new Button("Submit");
     private final Button revertButton = new Button("Revert");
     private final GridEditManager editManager;
 
+    private final AtomicReference<java.sql.Statement> runningStatement = new AtomicReference<>();
+    private final Popup historyPopup = new Popup();
+    private final ListView<QueryHistoryStore.Entry> historyList = new ListView<>();
     private String lastExecutedSql;
 
     // ---- autocomplete ----
@@ -69,6 +77,16 @@ public class QueryTab extends Tab {
         runButton.getStyleClass().add("run-button");
         runButton.setTooltip(new Tooltip("Execute (Ctrl+Enter)"));
         runButton.setOnAction(e -> execute());
+
+        cancelButton.setGraphic(Icons.of(FontAwesomeSolid.STOP_CIRCLE, "#e05555", 11));
+        cancelButton.setTooltip(new Tooltip("Cancel the running query"));
+        cancelButton.setVisible(false);
+        cancelButton.setManaged(false);
+        cancelButton.setOnAction(e -> cancelRunningQuery());
+
+        historyButton.setGraphic(Icons.of(FontAwesomeSolid.HISTORY, "#a9b7c6", 11));
+        historyButton.setTooltip(new Tooltip("Query History"));
+        historyButton.setOnAction(e -> showHistory());
 
         submitButton.setGraphic(Icons.of(FontAwesomeSolid.CHECK, "#57965c", 11));
         submitButton.setTooltip(new Tooltip("Commit pending result edits/deletes"));
@@ -92,7 +110,8 @@ public class QueryTab extends Tab {
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-        HBox toolbar = new HBox(8, runButton, submitButton, revertButton, exportButton,
+        HBox toolbar = new HBox(8, runButton, cancelButton, historyButton,
+                submitButton, revertButton, exportButton,
                 new Label("Limit:"), limitSpinner, spacer, connLabel);
         toolbar.setAlignment(Pos.CENTER_LEFT);
         toolbar.setPadding(new Insets(6, 10, 6, 10));
@@ -118,6 +137,7 @@ public class QueryTab extends Tab {
         setContent(root);
 
         setupCompletion();
+        setupHistory();
         CompletionService.preload(profile, catalog);
 
         root.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
@@ -279,6 +299,84 @@ public class QueryTab extends Tab {
         return editor.getText();
     }
 
+    // ------------------------------------------------------------- history
+
+    private void setupHistory() {
+        historyList.getStyleClass().add("completion-list");
+        historyList.setPrefSize(560, 260);
+        java.time.format.DateTimeFormatter fmt =
+                java.time.format.DateTimeFormatter.ofPattern("MMM d, HH:mm");
+        historyList.setCellFactory(list -> new ListCell<>() {
+            @Override
+            protected void updateItem(QueryHistoryStore.Entry item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) { setGraphic(null); setText(null); return; }
+                String when = java.time.Instant.ofEpochMilli(item.executedAtEpochMillis())
+                        .atZone(java.time.ZoneId.systemDefault()).format(fmt);
+                String sqlPreview = item.sql().replaceAll("\\s+", " ").strip();
+                if (sqlPreview.length() > 90) sqlPreview = sqlPreview.substring(0, 90) + "…";
+                Label sql = new Label(sqlPreview);
+                sql.getStyleClass().addAll("completion-name", "completion-table");
+                Label time = new Label(when);
+                time.getStyleClass().add("completion-detail");
+                Region gap = new Region();
+                HBox.setHgrow(gap, Priority.ALWAYS);
+                HBox box = new HBox(10, sql, gap, time);
+                box.setAlignment(Pos.CENTER_LEFT);
+                setGraphic(box);
+            }
+        });
+        historyPopup.getContent().add(historyList);
+        historyPopup.setAutoHide(true);
+        historyList.setOnMouseClicked(e -> { if (e.getClickCount() == 2) insertSelectedHistory(); });
+        historyList.setOnKeyPressed(e -> {
+            if (e.getCode() == KeyCode.ENTER) insertSelectedHistory();
+            else if (e.getCode() == KeyCode.ESCAPE) historyPopup.hide();
+        });
+    }
+
+    private void showHistory() {
+        List<QueryHistoryStore.Entry> entries = QueryHistoryStore.forConnection(profile.getId());
+        if (entries.isEmpty()) {
+            statusLabel.setText("No query history yet for this connection");
+            return;
+        }
+        historyList.getItems().setAll(entries);
+        historyList.getSelectionModel().selectFirst();
+        historyPopup.show(historyButton, historyButton.localToScreen(0, 0).getX(),
+                historyButton.localToScreen(0, 0).getY() + historyButton.getHeight() + 2);
+        historyList.requestFocus();
+    }
+
+    private void insertSelectedHistory() {
+        QueryHistoryStore.Entry selected = historyList.getSelectionModel().getSelectedItem();
+        if (selected == null) return;
+        setSql(selected.sql());
+        historyPopup.hide();
+        editor.requestFocus();
+    }
+
+    // ------------------------------------------------------------- cancel
+
+    private void cancelRunningQuery() {
+        java.sql.Statement stmt = runningStatement.get();
+        if (stmt == null) return;
+        statusLabel.setText("Cancelling…");
+        AppExecutor.run(() -> {
+            try {
+                stmt.cancel();
+            } catch (Exception ignored) {
+                // driver may not support cancel — the query will just run to completion
+            }
+        });
+    }
+
+    private void setRunningState(boolean running) {
+        runButton.setDisable(running);
+        cancelButton.setVisible(running);
+        cancelButton.setManaged(running);
+    }
+
     // ------------------------------------------------------------- execute
 
     private void execute() {
@@ -294,22 +392,24 @@ public class QueryTab extends Tab {
 
     private void executeSql(String sql) {
         lastExecutedSql = sql;
-        runButton.setDisable(true);
+        setRunningState(true);
         statusLabel.setText("Executing…");
         int limit = limitSpinner.getValue();
+        QueryHistoryStore.record(profile.getId(), sql);
 
         AppExecutor.run(() -> {
             try {
                 // Editable when this is a simple single-table SELECT with a usable PK
                 String editableTable = detectEditableTable(sql);
                 List<String> pkColumns = List.of();
+                Map<String, Integer> columnTypes = Map.of();
                 boolean viaCtid = false;
                 String sqlToRun = sql;
 
                 if (editableTable != null) {
+                    DbObject ref = tableRef(editableTable);
                     try {
-                        pkColumns = MetadataService.loadPrimaryKeys(
-                                profile, tableRef(editableTable));
+                        pkColumns = MetadataService.loadPrimaryKeys(profile, ref);
                     } catch (Exception ignored) {
                         pkColumns = List.of();
                     }
@@ -323,26 +423,36 @@ public class QueryTab extends Tab {
                         pkColumns = List.of("ctid");
                         viaCtid = true;
                     }
+                    if (!pkColumns.isEmpty()) {
+                        try {
+                            columnTypes = MetadataService.loadColumnTypes(profile, ref);
+                        } catch (Exception ignored) {
+                            columnTypes = Map.of();
+                        }
+                    }
                 }
 
                 QueryResult execResult;
                 try {
-                    execResult = ClientRegistry.jdbc(profile, catalog).execute(sqlToRun, limit);
+                    execResult = ClientRegistry.jdbc(profile, catalog)
+                            .execute(sqlToRun, limit, runningStatement);
                 } catch (Exception rewriteFailure) {
                     if (!viaCtid) throw rewriteFailure;
                     // views have no ctid — run the original query, read-only
-                    execResult = ClientRegistry.jdbc(profile, catalog).execute(sql, limit);
+                    execResult = ClientRegistry.jdbc(profile, catalog)
+                            .execute(sql, limit, runningStatement);
                     pkColumns = List.of();
                 }
 
                 final QueryResult result = execResult;
                 final String targetTable = editableTable;
                 final List<String> pk = pkColumns;
+                final Map<String, Integer> types = columnTypes;
 
                 Platform.runLater(() -> {
                     if (result.isResultSet()) {
                         if (targetTable != null && !pk.isEmpty()) {
-                            editManager.configure(targetTable, pk, result);
+                            editManager.configure(targetTable, pk, types, result);
                         } else {
                             editManager.configureReadOnly(result);
                         }
@@ -358,15 +468,17 @@ public class QueryTab extends Tab {
                         resultGrid.showResult(null);
                         statusLabel.setText(result.getMessage() + " in " + result.getExecutionMillis() + " ms");
                     }
-                    runButton.setDisable(false);
+                    setRunningState(false);
                 });
             } catch (Exception ex) {
+                boolean cancelled = ex.getMessage() != null
+                        && ex.getMessage().toLowerCase(Locale.ROOT).contains("cancel");
                 String msg = ex.getMessage() == null ? ex.toString() : ex.getMessage();
                 Platform.runLater(() -> {
                     editManager.configureReadOnly(null);
                     resultGrid.showResult(null);
-                    statusLabel.setText("Error: " + msg);
-                    runButton.setDisable(false);
+                    statusLabel.setText(cancelled ? "Query cancelled" : "Error: " + msg);
+                    setRunningState(false);
                 });
             }
         });

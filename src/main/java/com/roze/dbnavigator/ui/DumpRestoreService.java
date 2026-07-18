@@ -130,8 +130,13 @@ public final class DumpRestoreService {
 
     // ----------------------------------------------------------- process
 
-    private static void runProcess(Window owner, String title, List<String> command,
-                                   ConnectionProfile profile, File stdinFile) {
+    /**
+     * Runs a command with live streaming output in a small window. Package-visible
+     * so richer dialogs (e.g. PgDumpDialog) can reuse the same execution/output UI
+     * instead of duplicating it.
+     */
+    static void runProcess(Window owner, String title, List<String> command,
+                           ConnectionProfile profile, File stdinFile) {
         Stage stage = new Stage();
         stage.initOwner(owner);
         stage.initModality(Modality.NONE);

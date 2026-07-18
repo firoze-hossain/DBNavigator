@@ -7,12 +7,7 @@ import com.roze.dbnavigator.model.DbObject.Kind;
 import com.roze.dbnavigator.model.QueryResult;
 
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /** Loads schema tree children lazily for both JDBC and MongoDB connections. */
 public final class MetadataService {
@@ -500,6 +495,23 @@ public final class MetadataService {
         return result;
     }
 
+    /**
+     * JDBC type code (java.sql.Types) per column name — used so grid edits are
+     * bound as typed PreparedStatement parameters instead of raw SQL literals.
+     */
+    public static Map<String, Integer> loadColumnTypes(ConnectionProfile profile, DbObject table)
+            throws SQLException {
+        Map<String, Integer> types = new LinkedHashMap<>();
+        try (Connection conn = client(profile, table.getCatalog()).getConnection();
+             ResultSet rs = conn.getMetaData().getColumns(
+                     metaCatalog(profile, table.getCatalog()), table.getSchema(), table.getName(), "%")) {
+            while (rs.next()) {
+                types.put(rs.getString("COLUMN_NAME"), rs.getInt("DATA_TYPE"));
+            }
+        }
+        return types;
+    }
+
     /** Primary key column names of a table (used by the editable data grid). */
     public static List<String> loadPrimaryKeys(ConnectionProfile profile, DbObject table)
             throws SQLException {
@@ -571,6 +583,30 @@ public final class MetadataService {
             while (rs.next()) columns.add(rs.getString("COLUMN_NAME"));
         } catch (SQLException ignored) {}
         return columns;
+    }
+
+    /**
+     * Fast approximate row count from PostgreSQL's planner statistics
+     * (pg_class.reltuples) — avoids a full COUNT(*) scan on huge tables.
+     * Returns -1 when unavailable (non-Postgres, or stats never ANALYZEd).
+     */
+    public static long estimateRowCount(ConnectionProfile profile, DbObject table) {
+        if (profile.getType() != DatabaseType.POSTGRESQL) return -1;
+        String sql = "SELECT c.reltuples FROM pg_class c " +
+                "JOIN pg_namespace n ON n.oid = c.relnamespace " +
+                "WHERE n.nspname = ? AND c.relname = ?";
+        try (Connection conn = client(profile, table.getCatalog()).getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, table.getSchema());
+            stmt.setString(2, table.getName());
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    float estimate = rs.getFloat(1);
+                    return estimate < 0 ? -1 : Math.round(estimate);
+                }
+            }
+        } catch (SQLException ignored) {}
+        return -1;
     }
 
     /** Tables/views whose name contains the query — for Search Everywhere. */
