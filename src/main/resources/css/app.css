@@ -401,3 +401,20 @@
     -fx-padding: 2 4 2 4;
 }
 .task-cancel-button:hover { -fx-background-color: #3c4046; }
+
+/* ---------- segmented tool tabs (Restore dialog: pg_restore / psql) ---------- */
+.tool-tab {
+    -fx-background-color: transparent;
+    -fx-text-fill: -text-dim;
+    -fx-background-radius: 5;
+    -fx-border-radius: 5;
+    -fx-border-color: -border;
+    -fx-padding: 4 14 4 14;
+    -fx-font-size: 12px;
+}
+.tool-tab:selected {
+    -fx-background-color: #3c4046;
+    -fx-text-fill: -text;
+    -fx-border-color: #4a4d52;
+}
+.tool-tab:hover { -fx-background-color: #34373c; }

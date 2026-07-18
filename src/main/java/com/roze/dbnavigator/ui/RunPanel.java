@@ -168,8 +168,8 @@ public class RunPanel extends BorderPane {
             });
 
             Button saveButton = new Button();
-            saveButton.setGraphic(Icons.of(FontAwesomeSolid.SAVE, "#a9b7c6", 12));
-            saveButton.setTooltip(new Tooltip("Save output to file"));
+            saveButton.setGraphic(Icons.of(FontAwesomeSolid.PRINT, "#a9b7c6", 12));
+            saveButton.setTooltip(new Tooltip("Print / save output to file"));
             saveButton.setOnAction(e -> saveOutputToFile());
 
             Button clearButton = new Button();

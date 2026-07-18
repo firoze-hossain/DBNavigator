@@ -409,8 +409,13 @@ public class SchemaTreePane extends VBox {
                         }
                     });
                     MenuItem restore = new MenuItem("Restore .sql into This Database…");
-                    restore.setOnAction(e -> DumpRestoreService.restoreDatabase(
-                            mainWindow, profile, obj.getName()));
+                    restore.setOnAction(e -> {
+                        if (profile.getType() == ConnectionProfile.DatabaseType.POSTGRESQL) {
+                            RestoreDialog.show(mainWindow, profile, obj.getName());
+                        } else {
+                            DumpRestoreService.restoreDatabase(mainWindow, profile, obj.getName());
+                        }
+                    });
                     MenuItem deleteDb = new MenuItem("Delete Database…");
                     deleteDb.setOnAction(e -> confirmAndDeleteDatabase(profile, obj.getName()));
                     menu.getItems().addAll(newConsole, new SeparatorMenuItem(), dump, restore,
