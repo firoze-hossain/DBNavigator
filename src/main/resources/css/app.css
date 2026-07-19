@@ -193,7 +193,25 @@
     -fx-background-radius: 8;
     -fx-border-radius: 8;
 }
-.menu-item .label { -fx-text-fill: -text; }
+.context-menu .menu-item .label {
+    -fx-text-fill: #f2f4f8;
+}
+.context-menu .menu-item:disabled .label {
+    -fx-text-fill: #656a72;
+}
+.context-menu .menu-item:focused .label,
+.context-menu .menu-item:hover .label {
+    -fx-text-fill: #ffffff;
+}
+.context-menu .menu-item:focused, .context-menu .menu-item:hover {
+    -fx-background-color: #2e436e;
+}
+.context-menu .menu-item .accelerator-text {
+    -fx-fill: -text-dim;
+}
+.context-menu .menu > .arrow {
+    -fx-background-color: -text-dim;
+}
 .menu-item:focused { -fx-background-color: #2e436e; }
 
 /* ---------- scrollbars ---------- */
@@ -582,3 +600,19 @@
 
 /* ---------- Modify Table dialog ---------- */
 .table-row-cell:selected { -fx-background-color: #2e436e; }
+
+/* ---------- current-statement highlight (multi-statement consoles) ---------- */
+.current-statement-line {
+    -fx-background-color: rgba(87, 150, 92, 0.14);
+    -fx-border-color: transparent transparent transparent #57965c;
+    -fx-border-width: 0 0 0 3;
+}
+
+/* ---------- Statements quick-pick popup ---------- */
+.statements-popup {
+    -fx-background-color: -bg-mid;
+    -fx-border-color: -border;
+    -fx-border-width: 1;
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+}

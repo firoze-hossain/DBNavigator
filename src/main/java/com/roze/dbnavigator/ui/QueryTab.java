@@ -10,6 +10,7 @@ import com.roze.dbnavigator.model.DbObject;
 import com.roze.dbnavigator.model.QueryResult;
 import com.roze.dbnavigator.util.AppExecutor;
 import com.roze.dbnavigator.util.SqlReformatter;
+import com.roze.dbnavigator.util.SqlStatementSplitter;
 import javafx.application.Platform;
 import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
@@ -66,6 +67,7 @@ public class QueryTab extends Tab {
     private final Button runButton = new Button("Run");
     private final Button cancelButton = new Button("Cancel");
     private final Button historyButton = new Button();
+    private final Button statementsButton = new Button();
     private final Button submitButton = new Button("Submit");
     private final Button revertButton = new Button("Revert");
     private final GridEditManager editManager;
@@ -108,6 +110,10 @@ public class QueryTab extends Tab {
         historyButton.setTooltip(new Tooltip("Query History"));
         historyButton.setOnAction(e -> showHistory());
 
+        statementsButton.setGraphic(Icons.of(FontAwesomeSolid.LIST_UL, "#a9b7c6", 11));
+        statementsButton.setTooltip(new Tooltip("Choose Statement to Run"));
+        statementsButton.setOnAction(e -> showStatementsPopup());
+
         submitButton.setGraphic(Icons.of(FontAwesomeSolid.CHECK, "#57965c", 11));
         submitButton.setTooltip(new Tooltip("Commit pending result edits/deletes"));
         revertButton.setGraphic(Icons.of(FontAwesomeSolid.UNDO, "#e05555", 11));
@@ -130,7 +136,7 @@ public class QueryTab extends Tab {
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-        HBox toolbar = new HBox(8, runButton, cancelButton, historyButton,
+        HBox toolbar = new HBox(8, runButton, cancelButton, historyButton, statementsButton,
                 submitButton, revertButton, exportButton,
                 new Label("Limit:"), limitSpinner, spacer, connLabel);
         toolbar.setAlignment(Pos.CENTER_LEFT);
@@ -167,6 +173,8 @@ public class QueryTab extends Tab {
         setupCompletion();
         setupHistory();
         setupEditorContextMenu();
+        setupStatementHighlighting();
+        setupOutsideClickDismiss();
         CompletionService.preload(profile, catalog);
 
         root.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
@@ -361,9 +369,132 @@ public class QueryTab extends Tab {
         editor.setOnContextMenuRequested(this::showEditorContextMenu);
     }
 
+    // ---------------------------------------------------- statement highlight
+
+    private int highlightStartParagraph = -1;
+    private int highlightEndParagraph = -1;
+
+    /**
+     * Highlights the whole statement the caret is currently inside (a subtle
+     * background band across its lines, like the reference IDE) so it's
+     * clear which query Ctrl+Enter will run in a multi-statement console.
+     * Uses RichTextFX's per-paragraph style, which is independent of the
+     * character-level syntax-highlighting style spans, so the two don't
+     * fight each other.
+     */
+    private void setupStatementHighlighting() {
+        editor.caretPositionProperty().addListener((obs, o, n) -> refreshStatementHighlight());
+        editor.plainTextChanges().subscribe(c -> refreshStatementHighlight());
+        // Recompute after every mouse press (including right-clicks) too — a
+        // right-click's ContextMenuEvent can fire before the caret-position
+        // property listener has settled, which is why the wrong statement was
+        // sometimes still shown highlighted when the menu opened.
+        editor.addEventFilter(javafx.scene.input.MouseEvent.MOUSE_PRESSED,
+                e -> Platform.runLater(this::refreshStatementHighlight));
+        Platform.runLater(this::refreshStatementHighlight);
+    }
+
+    /**
+     * A click anywhere in the main window should dismiss any of this
+     * console's own popups/menus that happen to be open — completion,
+     * history, the Statements picker, and the editor's right-click menu.
+     * {@code Popup.setAutoHide(true)} / {@code ContextMenu} normally handle
+     * this on their own, but RichTextFX's editor appears to consume mouse
+     * presses at a level those built-in listeners never see, which is why
+     * Escape worked but clicking elsewhere didn't. This adds an explicit,
+     * reliable backstop: any press reaching the *main* scene is by
+     * definition outside these popups, since each one lives in its own
+     * separate window/scene.
+     */
+    private void setupOutsideClickDismiss() {
+        editor.sceneProperty().addListener((obs, oldScene, newScene) -> {
+            if (newScene != null) {
+                newScene.addEventFilter(javafx.scene.input.MouseEvent.MOUSE_PRESSED, e -> dismissTransientPopups());
+            }
+        });
+        if (editor.getScene() != null) {
+            editor.getScene().addEventFilter(javafx.scene.input.MouseEvent.MOUSE_PRESSED,
+                    e -> dismissTransientPopups());
+        }
+    }
+
+    private void dismissTransientPopups() {
+        if (editorMenu.isShowing()) editorMenu.hide();
+        if (completionPopup.isShowing()) completionPopup.hide();
+        if (historyPopup.isShowing()) historyPopup.hide();
+        if (statementsPopup.isShowing()) statementsPopup.hide();
+    }
+
+    private void refreshStatementHighlight() {
+        try {
+            clearStatementHighlight();
+
+            List<SqlStatementSplitter.Statement> statements = SqlStatementSplitter.split(editor.getText());
+            if (statements.size() < 2) return;   // nothing ambiguous to call out
+
+            SqlStatementSplitter.Statement stmt =
+                    SqlStatementSplitter.statementAt(statements, editor.getCaretPosition());
+            if (stmt == null) return;
+
+            // A statement's raw range includes any blank/whitespace lines that
+            // separate it from the previous one (that gap has to belong to
+            // *someone's* range, and it's attributed to the following statement).
+            // Trimming to the first/last non-whitespace character before mapping
+            // to paragraphs keeps the highlighted band on the statement's own
+            // lines only — otherwise a blank gap between two statements could
+            // get folded into the wrong one's paragraph range at the boundary.
+            String text = stmt.text();
+            int leadingWs = 0;
+            while (leadingWs < text.length() && Character.isWhitespace(text.charAt(leadingWs))) leadingWs++;
+            int trailingWs = 0;
+            while (trailingWs < text.length() - leadingWs
+                    && Character.isWhitespace(text.charAt(text.length() - 1 - trailingWs))) trailingWs++;
+            int trimmedStart = stmt.start() + leadingWs;
+            int trimmedEnd = stmt.end() - trailingWs;
+            if (trimmedStart >= trimmedEnd) return;
+
+            int paragraphCount = editor.getParagraphs().size();
+            int startPara = paragraphIndexOf(trimmedStart);
+            int endPara = paragraphIndexOf(trimmedEnd - 1);
+            startPara = Math.max(0, Math.min(startPara, paragraphCount - 1));
+            endPara = Math.max(0, Math.min(endPara, paragraphCount - 1));
+
+            for (int p = startPara; p <= endPara; p++) {
+                editor.setParagraphStyle(p, List.of("current-statement-line"));
+            }
+            highlightStartParagraph = startPara;
+            highlightEndParagraph = endPara;
+        } catch (Exception ignored) {
+            // Never let a highlight-computation edge case leave stale styling
+            // behind silently — clearStatementHighlight() already ran above.
+        }
+    }
+
+    private void clearStatementHighlight() {
+        if (highlightStartParagraph < 0) return;
+        int paragraphCount = editor.getParagraphs().size();
+        for (int p = highlightStartParagraph; p <= highlightEndParagraph && p < paragraphCount; p++) {
+            editor.setParagraphStyle(p, java.util.Collections.emptyList());
+        }
+        highlightStartParagraph = -1;
+        highlightEndParagraph = -1;
+    }
+
+    private int paragraphIndexOf(int charOffset) {
+        int clamped = Math.max(0, Math.min(charOffset, editor.getLength()));
+        return editor.offsetToPosition(clamped, org.fxmisc.richtext.model.TwoDimensional.Bias.Forward).getMajor();
+    }
+
+    /** Reused across right-clicks so a stale instance never lingers behind a new one. */
+    private final ContextMenu editorMenu = new ContextMenu();
+
     private void showEditorContextMenu(ContextMenuEvent event) {
+        editorMenu.hide();   // in case a previous one is still up for any reason
         boolean hasSelection = editor.getSelectedText() != null && !editor.getSelectedText().isBlank();
-        ContextMenu menu = new ContextMenu();
+        editorMenu.getItems().clear();
+        editorMenu.setAutoHide(true);
+        editorMenu.setHideOnEscape(true);
+        ContextMenu menu = editorMenu;
 
         menu.getItems().add(disabled("Show Context Actions",
                 new KeyCodeCombination(KeyCode.ENTER, KeyCombination.ALT_DOWN)));
@@ -453,9 +584,23 @@ public class QueryTab extends Tab {
         return menu;
     }
 
+    /**
+     * Resolves what "the current query" means for an action with no
+     * explicit target: an active text selection wins; otherwise the
+     * statement the caret is currently inside (multi-statement consoles);
+     * otherwise the whole editor as a last resort.
+     */
     private String selectedOrEditorText() {
         String selected = editor.getSelectedText();
-        return (selected != null && !selected.isBlank()) ? selected : editor.getText();
+        if (selected != null && !selected.isBlank()) return selected;
+        SqlStatementSplitter.Statement stmt = currentStatement();
+        if (stmt != null) return stmt.text();
+        return editor.getText();
+    }
+
+    private SqlStatementSplitter.Statement currentStatement() {
+        List<SqlStatementSplitter.Statement> statements = SqlStatementSplitter.split(editor.getText());
+        return SqlStatementSplitter.statementAt(statements, editor.getCaretPosition());
     }
 
     /** Reformats the selection if there is one, otherwise the whole editor. */
@@ -633,6 +778,87 @@ public class QueryTab extends Tab {
         editor.requestFocus();
     }
 
+    // ------------------------------------------------------- statements popup
+
+    /**
+     * Matches the reference IDE's "Statements" quick-pick: lists every
+     * statement currently in the console (not run history — this console's
+     * own text, split the same way Ctrl+Enter's caret-detection does) so an
+     * ambiguous or hard-to-click statement can still be chosen and run
+     * directly. Auto-hides on any outside click (default ContextMenu/Popup
+     * behavior — see also the editor context menu's own auto-hide).
+     */
+    /** Reused across invocations, and reachable by the app-wide dismiss-on-outside-click filter. */
+    private final Popup statementsPopup = new Popup();
+
+    private void showStatementsPopup() {
+        statementsPopup.hide();
+        statementsPopup.getContent().clear();
+
+        List<SqlStatementSplitter.Statement> statements = SqlStatementSplitter.split(editor.getText());
+        if (statements.isEmpty()) {
+            statusLabel.setText("No statements to choose from");
+            return;
+        }
+
+        ListView<SqlStatementSplitter.Statement> list = new ListView<>();
+        list.getStyleClass().add("completion-list");
+        list.setPrefWidth(420);
+        list.setPrefHeight(Math.min(220, 36.0 * statements.size() + 40));
+        list.getItems().setAll(statements);
+        list.setCellFactory(v -> new ListCell<>() {
+            @Override
+            protected void updateItem(SqlStatementSplitter.Statement stmt, boolean empty) {
+                super.updateItem(stmt, empty);
+                setText(empty || stmt == null ? null : previewOf(stmt.text()));
+            }
+        });
+        SqlStatementSplitter.Statement current =
+                SqlStatementSplitter.statementAt(statements, editor.getCaretPosition());
+        list.getSelectionModel().select(current != null ? current : statements.get(0));
+
+        Label title = new Label("Statements");
+        title.getStyleClass().add("panel-header");
+        Hyperlink customize = new Hyperlink("Customize");
+        customize.setOnAction(e -> statusLabel.setText(
+                "Customizing which statements are listed isn't supported yet"));
+
+        VBox box = new VBox(6, title, list, customize);
+        box.setPadding(new Insets(10));
+        box.getStyleClass().add("statements-popup");
+
+        Popup popup = statementsPopup;
+        popup.setAutoHide(true);
+        popup.setHideOnEscape(true);
+        popup.getContent().add(box);
+
+        list.setOnMouseClicked(e -> {
+            if (e.getClickCount() == 2) runChosenStatement(list, popup);
+        });
+        list.setOnKeyPressed(e -> {
+            if (e.getCode() == KeyCode.ENTER) runChosenStatement(list, popup);
+            else if (e.getCode() == KeyCode.ESCAPE) popup.hide();
+        });
+
+        var bounds = statementsButton.localToScreen(statementsButton.getBoundsInLocal());
+        popup.show(statementsButton, bounds.getMinX(), bounds.getMaxY() + 2);
+        list.requestFocus();
+    }
+
+    private void runChosenStatement(ListView<SqlStatementSplitter.Statement> list, Popup popup) {
+        SqlStatementSplitter.Statement chosen = list.getSelectionModel().getSelectedItem();
+        popup.hide();
+        if (chosen == null) return;
+        editor.moveTo(Math.min(chosen.start(), editor.getLength()));
+        editor.requestFollowCaret();
+        executeSql(chosen.text());
+    }
+
+    private static String previewOf(String sql) {
+        String flat = sql.replaceAll("\\s+", " ").strip();
+        return flat.length() > 70 ? flat.substring(0, 70) + "\u2026" : flat;
+    }
+
     // ------------------------------------------------------------- cancel
 
     private void cancelRunningQuery() {
@@ -658,7 +884,7 @@ public class QueryTab extends Tab {
 
     private void execute() {
         completionPopup.hide();
-        String sql = selectedOrAllText();
+        String sql = selectedOrEditorText();
         if (sql.isBlank()) return;
         executeSql(sql);
     }
@@ -803,8 +1029,4 @@ public class QueryTab extends Tab {
         return new DbObject(tableName, DbObject.Kind.TABLE, cat, schema);
     }
 
-    private String selectedOrAllText() {
-        String selected = editor.getSelectedText();
-        return (selected != null && !selected.isBlank()) ? selected : editor.getText();
-    }
 }
