@@ -496,7 +496,7 @@ public class MainWindow {
     /** @param catalog bind the console to a specific database of the connection (nullable). */
     public void openQueryTab(ConnectionProfile profile, String catalog, String initialSql) {
         if (!Passwords.ensure(profile, stage)) return;
-        QueryTab tab = new QueryTab(profile, catalog, "console " + (++consoleCounter));
+        QueryTab tab = new QueryTab(this, profile, catalog, "console " + (++consoleCounter));
         if (initialSql != null) tab.setSql(initialSql);
         addAndSelect(tab);
     }

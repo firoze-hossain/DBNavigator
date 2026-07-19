@@ -12,6 +12,14 @@ import javafx.scene.control.Dialog;
  * app) showing up unstyled.
  *
  * Call {@link #apply(Dialog)} right after constructing any such dialog.
+ *
+ * The generic bound here is deliberately {@code <D extends Dialog<?>>} — not
+ * {@code <T> Dialog<T>} — so calling apply(new Alert(...)) returns Alert
+ * itself rather than the supertype Dialog&lt;ButtonType&gt;. With the naive
+ * signature, assigning the result to a variable of type Alert or
+ * TextInputDialog requires an explicit cast (a real compile error otherwise,
+ * not just a style nit); this signature infers the concrete subtype so no
+ * cast is ever needed at the call site.
  */
 public final class DialogTheme {
 
@@ -21,7 +29,7 @@ public final class DialogTheme {
     private DialogTheme() {}
 
     /** Attaches the app's dark theme; returns the same dialog for fluent chaining. */
-    public static <T> Dialog<T> apply(Dialog<T> dialog) {
+    public static <D extends Dialog<?>> D apply(D dialog) {
         dialog.getDialogPane().getStylesheets().add(STYLESHEET);
         dialog.getDialogPane().getStyleClass().add("themed-dialog");
         return dialog;

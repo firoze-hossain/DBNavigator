@@ -9,12 +9,16 @@ import com.roze.dbnavigator.model.ConnectionProfile.DatabaseType;
 import com.roze.dbnavigator.model.DbObject;
 import com.roze.dbnavigator.model.QueryResult;
 import com.roze.dbnavigator.util.AppExecutor;
+import com.roze.dbnavigator.util.SqlReformatter;
 import javafx.application.Platform;
 import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.ClipboardContent;
+import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
@@ -23,16 +27,24 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import javafx.stage.FileChooser;
 import javafx.stage.Popup;
 import org.fxmisc.flowless.VirtualizedScrollPane;
 import org.fxmisc.richtext.CodeArea;
 import org.kordamp.ikonli.fontawesome5.FontAwesomeSolid;
 
+import java.io.File;
+import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -44,6 +56,7 @@ import java.util.regex.Pattern;
  */
 public class QueryTab extends Tab {
 
+    private final MainWindow mainWindow;
     private final ConnectionProfile profile;
     private final String catalog;   // nullable: default database of the profile
     private final CodeArea editor = SqlHighlighter.createEditor();
@@ -71,7 +84,8 @@ public class QueryTab extends Tab {
     private int tokenStart = -1;
     private boolean suppressCompletion = false;
 
-    public QueryTab(ConnectionProfile profile, String catalog, String title) {
+    public QueryTab(MainWindow mainWindow, ConnectionProfile profile, String catalog, String title) {
+        this.mainWindow = mainWindow;
         this.profile = profile;
         this.catalog = catalog;
         this.fileId = title;
@@ -152,6 +166,7 @@ public class QueryTab extends Tab {
 
         setupCompletion();
         setupHistory();
+        setupEditorContextMenu();
         CompletionService.preload(profile, catalog);
 
         root.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
@@ -327,6 +342,238 @@ public class QueryTab extends Tab {
     /** File → Local History → Put Label… */
     public void putLocalHistoryLabel(String label) {
         LocalHistoryStore.putLabel(fileId, editor.getText(), label);
+    }
+
+    // ------------------------------------------------------- editor context menu
+
+    /**
+     * DataGrip-style right-click menu on the editor, with a different item
+     * set depending on whether there's a selection — matching the reference
+     * IDE's own behavior. Items that are genuinely implemented here run real
+     * actions; items that would need a full SQL parser, an AI backend, or
+     * IDE-level refactoring/indexing (AI Actions, Column Selection Mode,
+     * Find in Files/Usages, Folding, Save as Live Template, Rename, Refactor,
+     * Generate, Open In, Edit as Table) are shown disabled — visibly
+     * unavailable rather than silently doing nothing, matching how the
+     * reference IDE itself grays out inapplicable items (e.g. Rename there).
+     */
+    private void setupEditorContextMenu() {
+        editor.setOnContextMenuRequested(this::showEditorContextMenu);
+    }
+
+    private void showEditorContextMenu(ContextMenuEvent event) {
+        boolean hasSelection = editor.getSelectedText() != null && !editor.getSelectedText().isBlank();
+        ContextMenu menu = new ContextMenu();
+
+        menu.getItems().add(disabled("Show Context Actions",
+                new KeyCodeCombination(KeyCode.ENTER, KeyCombination.ALT_DOWN)));
+        menu.getItems().add(disabledMenu("AI Actions"));
+        menu.getItems().add(new SeparatorMenuItem());
+
+        if (hasSelection) {
+            menu.getItems().add(action("Cut",
+                    new KeyCodeCombination(KeyCode.X, KeyCombination.SHORTCUT_DOWN), editor::cut));
+            menu.getItems().add(action("Copy",
+                    new KeyCodeCombination(KeyCode.C, KeyCombination.SHORTCUT_DOWN), editor::copy));
+        }
+        menu.getItems().add(action("Paste",
+                new KeyCodeCombination(KeyCode.V, KeyCombination.SHORTCUT_DOWN), editor::paste));
+        menu.getItems().add(disabledMenu("Copy / Paste Special"));
+        menu.getItems().add(disabled("Column Selection Mode",
+                new KeyCodeCombination(KeyCode.DIGIT8, KeyCombination.SHORTCUT_DOWN, KeyCombination.SHIFT_DOWN)));
+        menu.getItems().add(new SeparatorMenuItem());
+
+        if (hasSelection) {
+            menu.getItems().add(disabled("Find in Files",
+                    new KeyCodeCombination(KeyCode.F, KeyCombination.SHORTCUT_DOWN, KeyCombination.SHIFT_DOWN)));
+            menu.getItems().add(disabled("Find Usages", new KeyCodeCombination(KeyCode.F7, KeyCombination.ALT_DOWN)));
+        }
+        Menu goTo = new Menu("Go To");
+        goTo.getItems().add(action("Line\u2026", null, this::goToLine));
+        menu.getItems().add(goTo);
+        menu.getItems().add(disabledMenu("Folding"));
+        menu.getItems().add(disabled("Save as Live Template\u2026", null));
+        menu.getItems().add(action("Reformat Code",
+                new KeyCodeCombination(KeyCode.L, KeyCombination.SHORTCUT_DOWN, KeyCombination.ALT_DOWN),
+                this::reformatCode));
+        if (hasSelection) {
+            menu.getItems().add(disabled("Edit as Table", null));
+            menu.getItems().add(action("Search with Google", null, this::searchSelectionWithGoogle));
+        }
+        menu.getItems().add(new SeparatorMenuItem());
+
+        menu.getItems().add(disabled("Rename\u2026", new KeyCodeCombination(KeyCode.F6, KeyCombination.SHIFT_DOWN)));
+        menu.getItems().add(disabledMenu("Refactor"));
+        menu.getItems().add(disabled("Generate\u2026", new KeyCodeCombination(KeyCode.N, KeyCombination.SHORTCUT_DOWN)));
+        menu.getItems().add(new SeparatorMenuItem());
+
+        Menu explainPlan = new Menu("Explain Plan");
+        explainPlan.getItems().add(action("Show Execution Plan", null, this::showExecutionPlan));
+        menu.getItems().add(explainPlan);
+        menu.getItems().add(action("Execute",
+                new KeyCodeCombination(KeyCode.ENTER, KeyCombination.SHORTCUT_DOWN), this::execute));
+        if (hasSelection) {
+            menu.getItems().add(action("Execute to File\u2026", null, this::executeToFile));
+        }
+        menu.getItems().add(disabledMenu("Open In"));
+        menu.getItems().add(new SeparatorMenuItem());
+
+        Menu localHistory = new Menu("Local History");
+        localHistory.getItems().add(action("Show History\u2026", null,
+                () -> showLocalHistory(mainWindow.getOwnerWindow())));
+        menu.getItems().add(localHistory);
+        menu.getItems().add(action("Compare with Clipboard", null, this::compareWithClipboard));
+
+        Menu diagrams = new Menu("Diagrams");
+        diagrams.getItems().add(action("Show Diagram of Referenced Tables\u2026", null,
+                this::showDiagramOfReferencedTables));
+        menu.getItems().add(diagrams);
+
+        menu.show(editor, event.getScreenX(), event.getScreenY());
+        event.consume();
+    }
+
+    private static MenuItem action(String text, KeyCombination accelerator, Runnable action) {
+        MenuItem item = new MenuItem(text);
+        if (accelerator != null) item.setAccelerator(accelerator);
+        item.setOnAction(e -> action.run());
+        return item;
+    }
+
+    private static MenuItem disabled(String text, KeyCombination accelerator) {
+        MenuItem item = new MenuItem(text);
+        if (accelerator != null) item.setAccelerator(accelerator);
+        item.setDisable(true);
+        return item;
+    }
+
+    private static Menu disabledMenu(String text) {
+        Menu menu = new Menu(text);
+        menu.setDisable(true);
+        return menu;
+    }
+
+    private String selectedOrEditorText() {
+        String selected = editor.getSelectedText();
+        return (selected != null && !selected.isBlank()) ? selected : editor.getText();
+    }
+
+    /** Reformats the selection if there is one, otherwise the whole editor. */
+    private void reformatCode() {
+        String selected = editor.getSelectedText();
+        if (selected != null && !selected.isBlank()) {
+            editor.replaceSelection(SqlReformatter.reformat(selected));
+        } else {
+            int caret = editor.getCaretPosition();
+            editor.replaceText(SqlReformatter.reformat(editor.getText()));
+            editor.moveTo(Math.min(caret, editor.getLength()));
+        }
+    }
+
+    /** Runs the query and writes the result straight to a file instead of the grid. */
+    private void executeToFile() {
+        String sql = selectedOrEditorText();
+        if (sql.isBlank()) return;
+
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Execute to File");
+        chooser.setInitialFileName("result.csv");
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV files", "*.csv"));
+        File file = chooser.showSaveDialog(editor.getScene() == null ? null : editor.getScene().getWindow());
+        if (file == null) return;
+
+        statusLabel.setText("Executing to file\u2026");
+        AppExecutor.run(() -> {
+            try {
+                QueryResult result = ClientRegistry.jdbc(profile, catalog).execute(sql, 0);
+                StringBuilder csv = new StringBuilder();
+                csv.append(String.join(",", result.getColumns())).append('\n');
+                for (List<String> row : result.getRows()) {
+                    csv.append(String.join(",", row.stream().map(v -> v == null ? "" : v).toList())).append('\n');
+                }
+                java.nio.file.Files.writeString(file.toPath(), csv.toString(), StandardCharsets.UTF_8);
+                Platform.runLater(() -> statusLabel.setText(
+                        "\u2713 Wrote " + result.getRows().size() + " row(s) to " + file.getName()));
+            } catch (Exception ex) {
+                String msg = ex.getMessage() == null ? ex.toString() : ex.getMessage();
+                Platform.runLater(() -> statusLabel.setText("Execute to File failed: " + msg));
+            }
+        });
+    }
+
+    /** Runs EXPLAIN on the current statement and shows the plan in the result grid. */
+    private void showExecutionPlan() {
+        String sql = selectedOrEditorText();
+        if (sql.isBlank()) return;
+        String explainSql = "EXPLAIN " + sql.replaceAll(";\\s*$", "");
+        executeSql(explainSql);
+    }
+
+    private void compareWithClipboard() {
+        Clipboard clipboard = Clipboard.getSystemClipboard();
+        String clipboardText = clipboard.hasString() ? clipboard.getString() : "";
+        ClipboardCompareDialog.show(mainWindow.getOwnerWindow(), clipboardText, selectedOrEditorText());
+    }
+
+    private void goToLine() {
+        TextInputDialog dialog = DialogTheme.apply(new TextInputDialog());
+        dialog.initOwner(mainWindow.getOwnerWindow());
+        dialog.setTitle("Go to Line");
+        dialog.setHeaderText(null);
+        dialog.setContentText("Line number:");
+        dialog.showAndWait().ifPresent(text -> {
+            try {
+                int line = Math.max(1, Integer.parseInt(text.trim()));
+                int target = Math.min(line - 1, editor.getParagraphs().size() - 1);
+                editor.moveTo(target, 0);
+                editor.requestFollowCaret();
+                editor.requestFocus();
+            } catch (NumberFormatException ignored) {
+                // not a number — silently ignore rather than error on a trivial typo
+            }
+        });
+    }
+
+    private void searchSelectionWithGoogle() {
+        String selected = editor.getSelectedText();
+        if (selected == null || selected.isBlank()) return;
+        try {
+            String query = URLEncoder.encode(selected.strip(), StandardCharsets.UTF_8);
+            java.awt.Desktop.getDesktop().browse(new URI("https://www.google.com/search?q=" + query));
+        } catch (Exception ex) {
+            statusLabel.setText("Could not open browser: " + ex.getMessage());
+        }
+    }
+
+    /** Scans the query text for FROM/JOIN table names and opens a diagram for one of them. */
+    private void showDiagramOfReferencedTables() {
+        Set<String> tables = new LinkedHashSet<>();
+        Matcher matcher = Pattern.compile("(?i)\\b(?:FROM|JOIN)\\s+([A-Za-z_][A-Za-z0-9_.]*)")
+                .matcher(editor.getText());
+        while (matcher.find()) {
+            String token = matcher.group(1);
+            String simpleName = token.contains(".") ? token.substring(token.lastIndexOf('.') + 1) : token;
+            tables.add(simpleName);
+        }
+        if (tables.isEmpty()) {
+            statusLabel.setText("No table names found in this console's SQL");
+            return;
+        }
+
+        List<String> options = new ArrayList<>(tables);
+        String chosen = options.get(0);
+        if (options.size() > 1) {
+            ChoiceDialog<String> dialog = DialogTheme.apply(new ChoiceDialog<>(chosen, options));
+            dialog.initOwner(mainWindow.getOwnerWindow());
+            dialog.setTitle("Show Diagram");
+            dialog.setHeaderText(null);
+            dialog.setContentText("Diagram which table?");
+            Optional<String> picked = dialog.showAndWait();
+            if (picked.isEmpty()) return;
+            chosen = picked.get();
+        }
+        DbObject tableRef = new DbObject(chosen, DbObject.Kind.TABLE, catalog, null);
+        mainWindow.openDiagramTab(profile, tableRef);
     }
 
     // ------------------------------------------------------------- history
