@@ -24,6 +24,8 @@ import java.util.Map;
  * DataGrip-style table data view: breadcrumb showing exactly which
  * connection ▸ database ▸ schema ▸ table is open, paged grid with WHERE/ORDER BY,
  * inline editing (incl. date picker), multi-row delete, transactional Submit.
+ * Uses the same {@link ResultPager} component as the query console for a
+ * consistent look, with row numbers reflecting true absolute position.
  */
 public class DataTab extends Tab {
 
@@ -34,10 +36,8 @@ public class DataTab extends Tab {
     private final ResultGrid grid = new ResultGrid();
     private final TextField filterField = new TextField();
     private final TextField orderField = new TextField();
-    private final Label pageLabel = new Label();
+    private final ResultPager pager = new ResultPager();
     private final Label statusLabel = new Label("Loading…");
-    private final Button prevButton = new Button();
-    private final Button nextButton = new Button();
     private final Button submitButton = new Button("Submit");
     private final Button revertButton = new Button("Revert");
     private final GridEditManager editManager;
@@ -48,7 +48,6 @@ public class DataTab extends Tab {
     private int page = 0;
     private long totalRows = -1;
     private boolean totalRowsExact = false;
-    private final Hyperlink exactCountLink = new Hyperlink("(get exact count)");
 
     public DataTab(ConnectionProfile profile, DbObject table) {
         this.profile = profile;
@@ -87,21 +86,16 @@ public class DataTab extends Tab {
         exportButton.setTooltip(new Tooltip("Export current page to CSV"));
         exportButton.setOnAction(e -> grid.exportCsv());
 
-        prevButton.setGraphic(Icons.of(FontAwesomeSolid.CHEVRON_LEFT, "#a9b7c6", 11));
-        prevButton.setOnAction(e -> { if (page > 0) { page--; loadPage(); } });
-        nextButton.setGraphic(Icons.of(FontAwesomeSolid.CHEVRON_RIGHT, "#a9b7c6", 11));
-        nextButton.setOnAction(e -> { page++; loadPage(); });
-
-        exactCountLink.setVisible(false);
-        exactCountLink.setManaged(false);
-        exactCountLink.getStyleClass().add("exact-count-link");
-        exactCountLink.setOnAction(e -> fetchExactCount());
+        pager.setOnFirst(() -> { if (page != 0) { page = 0; loadPage(); } });
+        pager.setOnPrev(() -> { if (page > 0) { page--; loadPage(); } });
+        pager.setOnNext(() -> { page++; loadPage(); });
+        pager.setOnLast(this::jumpToLastPage);
+        pager.addOverflowItem("Get exact row count", this::fetchExactCount);
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
         HBox toolbar = new HBox(8, filterField, orderField, applyButton, refreshButton,
-                submitButton, revertButton, exportButton, spacer,
-                prevButton, pageLabel, exactCountLink, nextButton);
+                submitButton, revertButton, exportButton, spacer, pager);
         toolbar.setAlignment(Pos.CENTER_LEFT);
         toolbar.setPadding(new Insets(6, 10, 6, 10));
         toolbar.getStyleClass().add("console-toolbar");
@@ -164,10 +158,10 @@ public class DataTab extends Tab {
         loadPage();
     }
 
-    /** Runs a real COUNT(*) in the background and updates the page label. */
+    /** Runs a real COUNT(*) in the background and refreshes the pager. */
     private void fetchExactCount() {
         String where = filterField.getText().trim();
-        exactCountLink.setDisable(true);
+        statusLabel.setText("Counting rows\u2026");
         AppExecutor.run(() -> {
             try {
                 long exact = ClientRegistry.jdbc(profile, table.getCatalog())
@@ -175,27 +169,45 @@ public class DataTab extends Tab {
                 Platform.runLater(() -> {
                     totalRows = exact;
                     totalRowsExact = true;
-                    exactCountLink.setVisible(false);
-                    exactCountLink.setManaged(false);
-                    exactCountLink.setDisable(false);
-                    refreshPageLabel();
+                    refreshPager();
+                    statusLabel.setText("Exact count: " + exact + " row(s)");
                 });
             } catch (Exception ex) {
-                Platform.runLater(() -> exactCountLink.setDisable(false));
+                Platform.runLater(() -> statusLabel.setText("Could not count rows: " + ex.getMessage()));
             }
         });
     }
 
-    private void refreshPageLabel() {
-        long from = (long) page * PAGE_SIZE + 1;
+    /** Jumps straight to the last page if the exact total is known, otherwise counts first. */
+    private void jumpToLastPage() {
+        if (totalRowsExact) {
+            page = totalRows == 0 ? 0 : (int) ((totalRows - 1) / PAGE_SIZE);
+            loadPage();
+        } else {
+            String where = filterField.getText().trim();
+            statusLabel.setText("Counting rows\u2026");
+            AppExecutor.run(() -> {
+                try {
+                    long exact = ClientRegistry.jdbc(profile, table.getCatalog())
+                            .countRows(table.qualifiedName(), where);
+                    Platform.runLater(() -> {
+                        totalRows = exact;
+                        totalRowsExact = true;
+                        page = exact == 0 ? 0 : (int) ((exact - 1) / PAGE_SIZE);
+                        loadPage();
+                    });
+                } catch (Exception ex) {
+                    Platform.runLater(() -> statusLabel.setText("Could not count rows: " + ex.getMessage()));
+                }
+            });
+        }
+    }
+
+    private void refreshPager() {
         long shown = grid.getItems().size();
-        long to = from + shown - 1;
-        String countText = totalRows < 0 ? ""
-                : (totalRowsExact ? " of " + totalRows : " of ~" + totalRows);
-        pageLabel.setText(shown == 0 ? "0 rows" : from + "–" + to + countText);
-        boolean showLink = totalRows >= 0 && !totalRowsExact;
-        exactCountLink.setVisible(showLink);
-        exactCountLink.setManaged(showLink);
+        long from = shown == 0 ? 0 : (long) page * PAGE_SIZE + 1;
+        long to = shown == 0 ? 0 : from + shown - 1;
+        pager.update(from, to, totalRows, totalRowsExact);
     }
 
     private void loadPage() {
@@ -235,8 +247,17 @@ public class DataTab extends Tab {
                 }
                 Platform.runLater(() -> {
                     editManager.configure(table.qualifiedName(), pkColumns, columnTypes, result);
+                    grid.setRowNumberOffset(currentPage * PAGE_SIZE);
                     grid.showResult(result);
-                    refreshPageLabel();
+
+                    // Fewer rows than a full page means we've now directly observed the
+                    // true end, regardless of what an earlier estimate suggested.
+                    if (result.getRows().size() < PAGE_SIZE) {
+                        totalRows = (long) currentPage * PAGE_SIZE + result.getRows().size();
+                        totalRowsExact = true;
+                    }
+                    refreshPager();
+
                     statusLabel.setText(result.getRows().size() + " row(s) in "
                             + result.getExecutionMillis() + " ms"
                             + (editManager.isEditable()
@@ -244,8 +265,6 @@ public class DataTab extends Tab {
                                     ? "  ·  editable via row id (no primary key)"
                                     : "  ·  double-click a cell to edit, select rows + Delete to remove")
                                 : "  ·  read-only (no primary key)"));
-                    prevButton.setDisable(currentPage == 0);
-                    nextButton.setDisable(result.getRows().size() < PAGE_SIZE);
                 });
             } catch (Exception ex) {
                 String msg = ex.getMessage() == null ? ex.toString() : ex.getMessage();

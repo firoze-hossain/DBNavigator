@@ -77,6 +77,14 @@ public class QueryTab extends Tab {
     private final ListView<QueryHistoryStore.Entry> historyList = new ListView<>();
     private String lastExecutedSql;
 
+    // ---- pagination state (see PagedResultCursor) ----
+    private final ResultPager pager = new ResultPager();
+    private com.roze.dbnavigator.db.PagedResultCursor activeCursor;
+    private int currentPageStart = 0;
+    private String currentEditableTable;
+    private List<String> currentPkColumns = List.of();
+    private Map<String, Integer> currentColumnTypes = Map.of();
+
     /** Stable identity for this console's Local History (independent of catalog suffix in the tab label). */
     private final String fileId;
 
@@ -154,7 +162,19 @@ public class QueryTab extends Tab {
         editor.plainTextChanges()
                 .successionEnds(Duration.ofSeconds(3))
                 .subscribe(change -> LocalHistoryStore.record(fileId, editor.getText()));
-        setOnClosed(e -> LocalHistoryStore.record(fileId, editor.getText()));
+        setOnClosed(e -> {
+            LocalHistoryStore.record(fileId, editor.getText());
+            closeActiveCursor();
+        });
+
+        pager.setOnFirst(() -> { currentPageStart = 0; displayCurrentPage(); });
+        pager.setOnPrev(() -> {
+            currentPageStart = Math.max(0, currentPageStart - currentPageSize());
+            displayCurrentPage();
+        });
+        pager.setOnNext(this::pageForward);
+        pager.setOnLast(this::pageToLast);
+        pager.addOverflowItem("Refresh (re-run query)", this::rerunLastSql);
 
         // ---- Layout ----
         SplitPane split = new SplitPane(editorScroll, resultGrid);
@@ -162,7 +182,9 @@ public class QueryTab extends Tab {
         split.setDividerPositions(0.45);
 
         statusLabel.getStyleClass().add("console-status");
-        HBox statusBar = new HBox(statusLabel);
+        Region statusSpacer = new Region();
+        HBox.setHgrow(statusSpacer, Priority.ALWAYS);
+        HBox statusBar = new HBox(statusLabel, statusSpacer, pager);
         statusBar.setPadding(new Insets(4, 10, 4, 10));
         statusBar.getStyleClass().add("console-status-bar");
 
@@ -271,7 +293,7 @@ public class QueryTab extends Tab {
             return;
         }
         List<CompletionService.Suggestion> suggestions =
-                CompletionService.suggest(profile, catalog, token, context);
+                CompletionService.suggest(profile, catalog, editor.getText(), token, context);
         // Nothing useful, or the token is already the only completion → hide
         if (suggestions.isEmpty()
                 || (suggestions.size() == 1 && suggestions.get(0).text().equalsIgnoreCase(token))) {
@@ -920,7 +942,7 @@ public class QueryTab extends Tab {
         lastExecutedSql = sql;
         setRunningState(true);
         statusLabel.setText("Executing…");
-        int limit = limitSpinner.getValue();
+        int pageSize = limitSpinner.getValue();
         QueryHistoryStore.record(profile.getId(), sql);
 
         AppExecutor.run(() -> {
@@ -958,41 +980,39 @@ public class QueryTab extends Tab {
                     }
                 }
 
-                QueryResult execResult;
+                com.roze.dbnavigator.db.PagedResultCursor cursor =
+                        new com.roze.dbnavigator.db.PagedResultCursor(pageSize);
                 try {
-                    execResult = ClientRegistry.jdbc(profile, catalog)
-                            .execute(sqlToRun, limit, runningStatement);
+                    cursor.open(profile, catalog, sqlToRun, runningStatement);
                 } catch (Exception rewriteFailure) {
                     if (!viaCtid) throw rewriteFailure;
                     // views have no ctid — run the original query, read-only
-                    execResult = ClientRegistry.jdbc(profile, catalog)
-                            .execute(sql, limit, runningStatement);
+                    cursor = new com.roze.dbnavigator.db.PagedResultCursor(pageSize);
+                    cursor.open(profile, catalog, sql, runningStatement);
                     pkColumns = List.of();
                 }
 
-                final QueryResult result = execResult;
+                final com.roze.dbnavigator.db.PagedResultCursor finalCursor = cursor;
                 final String targetTable = editableTable;
                 final List<String> pk = pkColumns;
                 final Map<String, Integer> types = columnTypes;
 
                 Platform.runLater(() -> {
-                    if (result.isResultSet()) {
-                        if (targetTable != null && !pk.isEmpty()) {
-                            editManager.configure(targetTable, pk, types, result);
-                        } else {
-                            editManager.configureReadOnly(result);
-                        }
-                        resultGrid.showResult(result);
-                        statusLabel.setText(result.getRows().size() + " row(s) in "
-                                + result.getExecutionMillis() + " ms"
-                                + (result.getRows().size() >= limit ? "  (limited to " + limit + ")" : "")
-                                + (editManager.isEditable()
-                                    ? "  ·  editable — double-click cells, Delete removes rows"
-                                    : ""));
+                    closeActiveCursor();   // now that the new one opened successfully
+                    activeCursor = finalCursor;
+                    currentPageStart = 0;
+                    currentEditableTable = targetTable;
+                    currentPkColumns = pk;
+                    currentColumnTypes = types;
+
+                    if (finalCursor.isQueryResult()) {
+                        displayCurrentPage();
                     } else {
                         editManager.configureReadOnly(null);
                         resultGrid.showResult(null);
-                        statusLabel.setText(result.getMessage() + " in " + result.getExecutionMillis() + " ms");
+                        statusLabel.setText(finalCursor.getMessage() + " in "
+                                + finalCursor.getExecutionMillis() + " ms");
+                        pager.update(0, 0, -1, true);
                     }
                     setRunningState(false);
                 });
@@ -1008,6 +1028,93 @@ public class QueryTab extends Tab {
                 });
             }
         });
+    }
+
+    // ---------------------------------------------------------------- paging
+
+    private int currentPageSize() {
+        return activeCursor != null ? activeCursor.getPageSize() : limitSpinner.getValue();
+    }
+
+    /** Slices the cursor's in-memory cache to the current page and renders it — no fetch needed. */
+    private void displayCurrentPage() {
+        if (activeCursor == null) return;
+        List<List<String>> cached = activeCursor.getCachedRows();
+        int pageSize = activeCursor.getPageSize();
+        int from = Math.min(currentPageStart, cached.size());
+        int to = Math.min(from + pageSize, cached.size());
+        List<List<String>> pageRows = new ArrayList<>(cached.subList(from, to));
+
+        QueryResult pageResult = new QueryResult();
+        pageResult.getColumns().addAll(activeCursor.getColumns());
+        pageResult.getColumnTypes().addAll(activeCursor.getColumnTypes());
+        pageResult.getRows().addAll(pageRows);
+        pageResult.setExecutionMillis(activeCursor.getExecutionMillis());
+
+        if (currentEditableTable != null && !currentPkColumns.isEmpty()) {
+            editManager.configure(currentEditableTable, currentPkColumns, currentColumnTypes, pageResult);
+        } else {
+            editManager.configureReadOnly(pageResult);
+        }
+        resultGrid.setRowNumberOffset(currentPageStart);
+        resultGrid.showResult(pageResult);
+
+        long fromDisplay = pageRows.isEmpty() ? 0 : currentPageStart + 1L;
+        long toDisplay = currentPageStart + pageRows.size();
+        long total = cached.size();
+        boolean exact = activeCursor.isExhausted();
+        pager.update(fromDisplay, toDisplay, total, exact);
+
+        statusLabel.setText(pageRows.size() + " row(s) in " + activeCursor.getExecutionMillis() + " ms"
+                + (editManager.isEditable()
+                    ? "  ·  editable — double-click cells, Delete removes rows"
+                    : ""));
+    }
+
+    private void pageForward() {
+        if (activeCursor == null) return;
+        int newStart = currentPageStart + currentPageSize();
+        AppExecutor.run(() -> {
+            try {
+                activeCursor.ensureFetchedThrough(newStart);
+                Platform.runLater(() -> {
+                    currentPageStart = newStart;
+                    displayCurrentPage();
+                });
+            } catch (Exception ex) {
+                String msg = ex.getMessage() == null ? ex.toString() : ex.getMessage();
+                Platform.runLater(() -> statusLabel.setText("Could not fetch next page: " + msg));
+            }
+        });
+    }
+
+    /** Reads all remaining rows (bounded by the cursor's own safety cap) then jumps to the final page. */
+    private void pageToLast() {
+        if (activeCursor == null) return;
+        statusLabel.setText("Fetching remaining rows\u2026");
+        AppExecutor.run(() -> {
+            try {
+                while (!activeCursor.isExhausted()) {
+                    activeCursor.fetchMore(activeCursor.getPageSize());
+                }
+                Platform.runLater(() -> {
+                    int total = activeCursor.getCachedRows().size();
+                    int pageSize = activeCursor.getPageSize();
+                    currentPageStart = total == 0 ? 0 : ((total - 1) / pageSize) * pageSize;
+                    displayCurrentPage();
+                });
+            } catch (Exception ex) {
+                String msg = ex.getMessage() == null ? ex.toString() : ex.getMessage();
+                Platform.runLater(() -> statusLabel.setText("Could not fetch remaining rows: " + msg));
+            }
+        });
+    }
+
+    private void closeActiveCursor() {
+        if (activeCursor != null) {
+            activeCursor.close();
+            activeCursor = null;
+        }
     }
 
     // ------------------------------------------- editable-target detection

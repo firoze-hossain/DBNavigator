@@ -24,13 +24,31 @@ public final class SqlHighlighter {
             "FOREIGN", "REFERENCES", "DEFAULT", "UNIQUE", "CONSTRAINT", "ADD", "COLUMN",
             "TRUNCATE", "BEGIN", "COMMIT", "ROLLBACK", "TRANSACTION", "GRANT", "REVOKE",
             "WITH", "RETURNING", "IF", "REPLACE", "SHOW", "DESCRIBE", "EXPLAIN", "USE",
-            "COUNT", "SUM", "AVG", "MIN", "MAX", "CAST", "COALESCE", "ASC", "DESC",
-            "INT", "INTEGER", "BIGINT", "SMALLINT", "VARCHAR", "CHAR", "TEXT", "DATE",
-            "TIMESTAMP", "BOOLEAN", "DECIMAL", "NUMERIC", "FLOAT", "DOUBLE", "SERIAL"
+            "ASC", "DESC"
+    };
+
+    /** Data-type names get their own color, distinct from control-flow keywords. */
+    private static final String[] TYPES = {
+            "INT", "INTEGER", "BIGINT", "SMALLINT", "TINYINT", "VARCHAR", "CHAR", "TEXT",
+            "DATE", "TIME", "TIMESTAMP", "BOOLEAN", "BOOL", "DECIMAL", "NUMERIC",
+            "FLOAT", "DOUBLE", "REAL", "SERIAL", "BIGSERIAL", "UUID", "JSON", "JSONB", "BYTEA"
     };
 
     private static final Pattern PATTERN = Pattern.compile(
             "(?<KEYWORD>\\b(?i:" + String.join("|", KEYWORDS) + ")\\b)"
+            + "|(?<TYPE>\\b(?i:" + String.join("|", TYPES) + ")\\b)"
+            // :paramName (DataGrip-style parameter), but never the two colons of a ::cast
+            + "|(?<PARAMETER>(?<!:):(?!:)[A-Za-z_][A-Za-z0-9_]*)"
+            // any identifier immediately followed by an open parenthesis is a
+            // function call — generic on purpose, so it also colors
+            // user-defined functions, not just a fixed built-in list
+            + "|(?<FUNCTION>\\b[A-Za-z_][A-Za-z0-9_]*\\b(?=\\s*\\())"
+            // any identifier immediately followed by a dot is a table
+            // alias/reference — e.g. the "b" in "b.quantity" — colored
+            // distinctly from the column name after the dot, matching the
+            // reference IDE's semantic highlighting without needing to
+            // actually resolve whether it's a real alias
+            + "|(?<QUALIFIER>\\b[A-Za-z_][A-Za-z0-9_]*\\b(?=\\.))"
             + "|(?<STRING>'[^']*')"
             + "|(?<NUMBER>\\b\\d+(\\.\\d+)?\\b)"
             + "|(?<COMMENT>--[^\\n]*|/\\*(.|\\R)*?\\*/)"
@@ -55,10 +73,14 @@ public final class SqlHighlighter {
         StyleSpansBuilder<Collection<String>> spans = new StyleSpansBuilder<>();
         while (matcher.find()) {
             String styleClass =
-                    matcher.group("KEYWORD") != null ? "sql-keyword" :
-                    matcher.group("STRING")  != null ? "sql-string"  :
-                    matcher.group("NUMBER")  != null ? "sql-number"  :
-                    matcher.group("COMMENT") != null ? "sql-comment" : null;
+                    matcher.group("KEYWORD")   != null ? "sql-keyword" :
+                    matcher.group("TYPE")      != null ? "sql-type" :
+                    matcher.group("PARAMETER") != null ? "sql-parameter" :
+                    matcher.group("FUNCTION")  != null ? "sql-function" :
+                    matcher.group("QUALIFIER") != null ? "sql-qualifier" :
+                    matcher.group("STRING")    != null ? "sql-string"  :
+                    matcher.group("NUMBER")    != null ? "sql-number"  :
+                    matcher.group("COMMENT")   != null ? "sql-comment" : null;
             spans.add(Collections.emptyList(), matcher.start() - lastEnd);
             spans.add(Collections.singleton(styleClass), matcher.end() - matcher.start());
             lastEnd = matcher.end();
