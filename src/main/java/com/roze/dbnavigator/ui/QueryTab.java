@@ -1,6 +1,7 @@
 package com.roze.dbnavigator.ui;
 
 import com.roze.dbnavigator.db.ClientRegistry;
+import com.roze.dbnavigator.db.LocalHistoryStore;
 import com.roze.dbnavigator.db.MetadataService;
 import com.roze.dbnavigator.db.QueryHistoryStore;
 import com.roze.dbnavigator.model.ConnectionProfile;
@@ -27,6 +28,7 @@ import org.fxmisc.flowless.VirtualizedScrollPane;
 import org.fxmisc.richtext.CodeArea;
 import org.kordamp.ikonli.fontawesome5.FontAwesomeSolid;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -60,6 +62,9 @@ public class QueryTab extends Tab {
     private final ListView<QueryHistoryStore.Entry> historyList = new ListView<>();
     private String lastExecutedSql;
 
+    /** Stable identity for this console's Local History (independent of catalog suffix in the tab label). */
+    private final String fileId;
+
     // ---- autocomplete ----
     private final Popup completionPopup = new Popup();
     private final ListView<CompletionService.Suggestion> completionList = new ListView<>();
@@ -69,6 +74,7 @@ public class QueryTab extends Tab {
     public QueryTab(ConnectionProfile profile, String catalog, String title) {
         this.profile = profile;
         this.catalog = catalog;
+        this.fileId = title;
         setText(title + (catalog != null ? " [" + catalog + "]" : ""));
         setGraphic(Icons.of(FontAwesomeSolid.TERMINAL, "#6897bb", 11));
 
@@ -121,6 +127,14 @@ public class QueryTab extends Tab {
         editor.replaceText("-- " + profile.getType().getDisplayName()
                 + " console. Ctrl+Enter runs, Ctrl+Space completes.\n");
         VirtualizedScrollPane<CodeArea> editorScroll = new VirtualizedScrollPane<>(editor);
+
+        // Local History: first snapshot is the "Create" entry; further edits are
+        // auto-captured after a pause (avoids saving a snapshot per keystroke).
+        LocalHistoryStore.record(fileId, editor.getText());
+        editor.plainTextChanges()
+                .successionEnds(Duration.ofSeconds(3))
+                .subscribe(change -> LocalHistoryStore.record(fileId, editor.getText()));
+        setOnClosed(e -> LocalHistoryStore.record(fileId, editor.getText()));
 
         // ---- Layout ----
         SplitPane split = new SplitPane(editorScroll, resultGrid);
@@ -297,6 +311,22 @@ public class QueryTab extends Tab {
     /** Pre-filled console text accessor (used by File → Save Console As…). */
     public String getSqlText() {
         return editor.getText();
+    }
+
+    // -------------------------------------------------------- local history
+
+    public String getFileId() { return fileId; }
+
+    public String getDisplayFileName() { return fileId.replace(' ', '_') + ".sql"; }
+
+    /** File → Local History → Show History… / Show History for Selection… */
+    public void showLocalHistory(javafx.stage.Window owner) {
+        LocalHistoryDialog.showForFile(owner, fileId, getDisplayFileName(), editor::getText);
+    }
+
+    /** File → Local History → Put Label… */
+    public void putLocalHistoryLabel(String label) {
+        LocalHistoryStore.putLabel(fileId, editor.getText(), label);
     }
 
     // ------------------------------------------------------------- history

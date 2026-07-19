@@ -65,6 +65,13 @@ public final class CompletionService {
         });
     }
 
+    /** Used by "Invalidate Caches" — forces every table/column cache to reload on next use. */
+    public static void clearAllCaches() {
+        tableCache.clear();
+        allColumnsCache.clear();
+        columnCache.clear();
+    }
+
     /**
      * Ranked suggestions for the token under the caret.
      * Empty tokens are allowed when the context already narrows the answer
