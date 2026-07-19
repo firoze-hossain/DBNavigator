@@ -7,7 +7,12 @@ import com.roze.dbnavigator.model.DbObject.Kind;
 import com.roze.dbnavigator.model.QueryResult;
 
 import java.sql.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /** Loads schema tree children lazily for both JDBC and MongoDB connections. */
 public final class MetadataService {
@@ -510,6 +515,78 @@ public final class MetadataService {
             }
         }
         return types;
+    }
+
+    /** One column's full detail — used by Modify Table and the ER diagram. */
+    public record ColumnInfo(String name, String typeName, int size, boolean nullable,
+                             String defaultValue, boolean primaryKey) {}
+
+    public static List<ColumnInfo> loadColumnInfo(ConnectionProfile profile, DbObject table)
+            throws SQLException {
+        List<ColumnInfo> result = new ArrayList<>();
+        try (Connection conn = client(profile, table.getCatalog()).getConnection()) {
+            DatabaseMetaData meta = conn.getMetaData();
+            String cat = metaCatalog(profile, table.getCatalog());
+
+            Set<String> pk = new LinkedHashSet<>();
+            try (ResultSet rs = meta.getPrimaryKeys(cat, table.getSchema(), table.getName())) {
+                while (rs.next()) pk.add(rs.getString("COLUMN_NAME"));
+            }
+            try (ResultSet rs = meta.getColumns(cat, table.getSchema(), table.getName(), "%")) {
+                while (rs.next()) {
+                    String name = rs.getString("COLUMN_NAME");
+                    result.add(new ColumnInfo(
+                            name,
+                            rs.getString("TYPE_NAME"),
+                            rs.getInt("COLUMN_SIZE"),
+                            "YES".equalsIgnoreCase(rs.getString("IS_NULLABLE")),
+                            rs.getString("COLUMN_DEF"),
+                            pk.contains(name)));
+                }
+            }
+        }
+        return result;
+    }
+
+    /** One foreign-key relationship, direction-agnostic once resolved. */
+    public record ForeignKey(String fromSchema, String fromTable, String fromColumn,
+                             String toSchema, String toTable, String toColumn,
+                             String constraintName) {}
+
+    /**
+     * FK relationships one hop from a table: both the FKs it declares (this
+     * table \u2192 parent tables) and the FKs other tables declare against it
+     * (child tables \u2192 this table). Powers the ER diagram.
+     */
+    public static List<ForeignKey> loadRelatedForeignKeys(ConnectionProfile profile, DbObject table)
+            throws SQLException {
+        List<ForeignKey> result = new ArrayList<>();
+        try (Connection conn = client(profile, table.getCatalog()).getConnection()) {
+            DatabaseMetaData meta = conn.getMetaData();
+            String cat = metaCatalog(profile, table.getCatalog());
+
+            // This table's own FK columns -> the tables they reference
+            try (ResultSet rs = meta.getImportedKeys(cat, table.getSchema(), table.getName())) {
+                while (rs.next()) {
+                    result.add(new ForeignKey(
+                            rs.getString("FKTABLE_SCHEM"), rs.getString("FKTABLE_NAME"), rs.getString("FKCOLUMN_NAME"),
+                            rs.getString("PKTABLE_SCHEM"), rs.getString("PKTABLE_NAME"), rs.getString("PKCOLUMN_NAME"),
+                            rs.getString("FK_NAME")));
+                }
+            }
+            // Other tables' FK columns that reference this table
+            try (ResultSet rs = meta.getExportedKeys(cat, table.getSchema(), table.getName())) {
+                while (rs.next()) {
+                    String fkTable = rs.getString("FKTABLE_NAME");
+                    if (fkTable.equalsIgnoreCase(table.getName())) continue;   // avoid duplicate self-ref
+                    result.add(new ForeignKey(
+                            rs.getString("FKTABLE_SCHEM"), fkTable, rs.getString("FKCOLUMN_NAME"),
+                            rs.getString("PKTABLE_SCHEM"), rs.getString("PKTABLE_NAME"), rs.getString("PKCOLUMN_NAME"),
+                            rs.getString("FK_NAME")));
+                }
+            }
+        }
+        return result;
     }
 
     /** Primary key column names of a table (used by the editable data grid). */
