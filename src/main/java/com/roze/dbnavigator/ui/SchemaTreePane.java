@@ -279,6 +279,23 @@ public class SchemaTreePane extends VBox {
         });
     }
 
+    /** Renames how a connection is labeled locally in the explorer — doesn't touch the server. */
+    private void renameConnectionLabel(ConnectionProfile profile) {
+        TextInputDialog dialog = DialogTheme.apply(new TextInputDialog(profile.getName()));
+        dialog.initOwner(getScene() == null ? null : getScene().getWindow());
+        dialog.setTitle("Rename Connection");
+        dialog.setHeaderText(null);
+        dialog.setContentText("New name for this connection:");
+
+        dialog.showAndWait().ifPresent(newName -> {
+            String trimmed = newName.trim();
+            if (trimmed.isEmpty() || trimmed.equals(profile.getName())) return;
+            profile.setName(trimmed);
+            ConnectionStore.saveOrUpdate(profile);
+            reload();
+        });
+    }
+
     /** File → (database context menu) → Rename… */
     private void renameDatabase(ConnectionProfile profile, String currentName) {
         TextInputDialog dialog = DialogTheme.apply(new TextInputDialog(currentName));
@@ -399,6 +416,21 @@ public class SchemaTreePane extends VBox {
 
             switch (obj.getKind()) {
                 case CONNECTION -> {
+                    Menu newMenu = new Menu("New");
+                    MenuItem newDatabase = new MenuItem("Database\u2026");
+                    newDatabase.setOnAction(e -> CreateDatabaseDialog.show(mainWindow, profile));
+                    newMenu.getItems().add(newDatabase);
+
+                    MenuItem refreshConnection = new MenuItem("Refresh");
+                    refreshConnection.setOnAction(e -> {
+                        obj.setLoaded(false);
+                        getTreeItem().setExpanded(false);
+                        mainWindow.setStatus("Refreshed " + profile.getName());
+                    });
+
+                    MenuItem renameConnection = new MenuItem("Rename\u2026");
+                    renameConnection.setOnAction(e -> renameConnectionLabel(profile));
+
                     MenuItem newConsole = new MenuItem("New Query Console");
                     newConsole.setOnAction(e -> mainWindow.openQueryTab(profile, null, null));
                     MenuItem filterDbs = new MenuItem("Show / Hide Databases…");
@@ -423,6 +455,11 @@ public class SchemaTreePane extends VBox {
                             }
                         });
                     });
+                    if (profile.getType().isRelational()) {
+                        menu.getItems().add(newMenu);
+                    }
+                    menu.getItems().addAll(refreshConnection, new SeparatorMenuItem(), renameConnection,
+                            new SeparatorMenuItem());
                     if (profile.getType().isRelational()) {
                         menu.getItems().addAll(newConsole, new SeparatorMenuItem());
                     }
