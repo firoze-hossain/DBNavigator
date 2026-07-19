@@ -136,8 +136,12 @@ public class MainWindow {
         saveSql.setOnAction(e -> saveConsoleAs());
 
         // ---- Local History submenu ----
+        // Only "Show History…" is wired reliably right now (it always gives
+        // visible feedback — an Alert — instead of silently doing nothing).
+        // The other four items are left as-is per request; they'll get the
+        // same treatment in a follow-up.
         MenuItem showHistory = new MenuItem("Show History…");
-        showHistory.setOnAction(e -> withCurrentConsole(tab -> tab.showLocalHistory(stage)));
+        showHistory.setOnAction(e -> showLocalHistoryForCurrentConsole());
         MenuItem showHistoryForSelection = new MenuItem("Show History for Selection…");
         showHistoryForSelection.setOnAction(e -> withCurrentConsole(tab -> {
             setStatus("Selection-scoped history isn't tracked separately yet — showing full file history");
@@ -256,6 +260,32 @@ public class MainWindow {
             setStatus("Saved " + file.getName());
         } catch (Exception ex) {
             setStatus("Could not save file: " + ex.getMessage());
+        }
+    }
+
+    /**
+     * File → Local History — Show History…
+     * Always gives visible feedback: an Alert if no console is selected, or
+     * if opening the diff view fails for any reason — never a silent no-op.
+     */
+    private void showLocalHistoryForCurrentConsole() {
+        Tab selected = tabPane.getSelectionModel().getSelectedItem();
+        if (!(selected instanceof QueryTab tab)) {
+            Alert alert = new Alert(Alert.AlertType.INFORMATION,
+                    "Open or select a query console tab first, then use Local History on it.");
+            alert.initOwner(stage);
+            alert.setHeaderText("No console selected");
+            alert.showAndWait();
+            return;
+        }
+        try {
+            tab.showLocalHistory(stage);
+        } catch (Exception ex) {
+            String msg = ex.getMessage() == null ? ex.toString() : ex.getMessage();
+            Alert alert = new Alert(Alert.AlertType.ERROR, msg);
+            alert.initOwner(stage);
+            alert.setHeaderText("Could not open Local History");
+            alert.showAndWait();
         }
     }
 
