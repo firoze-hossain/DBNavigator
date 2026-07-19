@@ -619,7 +619,10 @@ public class QueryTab extends Tab {
     private void executeToFile() {
         String sql = selectedOrEditorText();
         if (sql.isBlank()) return;
+        resolveParametersThenRun(sql, this::runExecuteToFile);
+    }
 
+    private void runExecuteToFile(String sql) {
         FileChooser chooser = new FileChooser();
         chooser.setTitle("Execute to File");
         chooser.setInitialFileName("result.csv");
@@ -650,8 +653,8 @@ public class QueryTab extends Tab {
     private void showExecutionPlan() {
         String sql = selectedOrEditorText();
         if (sql.isBlank()) return;
-        String explainSql = "EXPLAIN " + sql.replaceAll(";\\s*$", "");
-        executeSql(explainSql);
+        resolveParametersThenRun(sql, resolved ->
+                executeSql("EXPLAIN " + resolved.replaceAll(";\\s*$", "")));
     }
 
     private void compareWithClipboard() {
@@ -851,7 +854,7 @@ public class QueryTab extends Tab {
         if (chosen == null) return;
         editor.moveTo(Math.min(chosen.start(), editor.getLength()));
         editor.requestFollowCaret();
-        executeSql(chosen.text());
+        resolveParametersThenRun(chosen.text(), this::executeSql);
     }
 
     private static String previewOf(String sql) {
@@ -886,7 +889,27 @@ public class QueryTab extends Tab {
         completionPopup.hide();
         String sql = selectedOrEditorText();
         if (sql.isBlank()) return;
-        executeSql(sql);
+        resolveParametersThenRun(sql, this::executeSql);
+    }
+
+    /**
+     * DataGrip-style named-parameter flow: if the SQL has no {@code :name}
+     * placeholders, runs {@code onReady} immediately with the text unchanged.
+     * Otherwise shows the Parameters dialog first; only on Execute does
+     * {@code onReady} get called, with each placeholder substituted for its
+     * typed value (closing the dialog without Execute aborts — nothing runs).
+     */
+    private void resolveParametersThenRun(String sql, java.util.function.Consumer<String> onReady) {
+        List<com.roze.dbnavigator.util.SqlParameters.Parameter> params =
+                com.roze.dbnavigator.util.SqlParameters.detect(sql);
+        if (params.isEmpty()) {
+            onReady.accept(sql);
+            return;
+        }
+        ParametersDialog.show(mainWindow.getOwnerWindow(), params).ifPresent(values -> {
+            String resolved = com.roze.dbnavigator.util.SqlParameters.substitute(sql, values);
+            onReady.accept(resolved);
+        });
     }
 
     private void rerunLastSql() {
