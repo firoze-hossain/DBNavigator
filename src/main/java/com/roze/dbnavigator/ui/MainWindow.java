@@ -509,6 +509,10 @@ public class MainWindow {
         addAndSelect(new StructureTab(profile, table));
     }
 
+    public void openDiagramTab(ConnectionProfile profile, DbObject table) {
+        addAndSelect(new DiagramTab(profile, table));
+    }
+
     public void openMongoTab(ConnectionProfile profile, DbObject collection) {
         addAndSelect(new MongoCollectionTab(profile, collection));
     }

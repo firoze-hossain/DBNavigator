@@ -252,6 +252,33 @@ public class SchemaTreePane extends VBox {
         });
     }
 
+    private static final int EXPORT_ROW_CAP = 5000;
+
+    /**
+     * Fetches up to {@link #EXPORT_ROW_CAP} rows fresh from the table and opens
+     * the Export Data dialog on the result. Capped rather than unbounded so a
+     * quick "export this table" click can't accidentally try to pull millions
+     * of rows into memory — for anything larger, open the data view and export
+     * from a filtered/paged query instead.
+     */
+    private void exportTableData(ConnectionProfile profile, DbObject table) {
+        mainWindow.setStatus("Preparing export for " + table.getName() + "\u2026");
+        AppExecutor.run(() -> {
+            try {
+                var client = ClientRegistry.jdbc(profile, table.getCatalog());
+                var result = client.fetchTablePage(table.qualifiedName(), 0, EXPORT_ROW_CAP, null, null);
+                Platform.runLater(() -> {
+                    mainWindow.setStatus("Ready");
+                    ExportDataDialog.show(mainWindow.getOwnerWindow(), profile, table, result);
+                });
+            } catch (Exception ex) {
+                String msg = ex.getMessage() == null ? ex.toString() : ex.getMessage();
+                Platform.runLater(() -> DialogTheme.apply(new Alert(Alert.AlertType.ERROR,
+                        "Could not load data to export: " + msg)).showAndWait());
+            }
+        });
+    }
+
     /**
      * DataGrip-style destructive confirmation: warn, then require the user to
      * type the exact database name before DROP DATABASE is executed.
@@ -380,15 +407,51 @@ public class SchemaTreePane extends VBox {
                 case TABLE, VIEW, PARTITION -> {
                     MenuItem openData = new MenuItem("Open Data");
                     openData.setOnAction(e -> mainWindow.openDataTab(profile, obj));
+                    MenuItem editData = new MenuItem("Edit Data");
+                    editData.setOnAction(e -> mainWindow.openDataTab(profile, obj));
                     MenuItem structure = new MenuItem("Show Structure");
                     structure.setOnAction(e -> mainWindow.openStructureTab(profile, obj));
+                    MenuItem modifyTable = new MenuItem("Modify Table\u2026");
+                    modifyTable.setOnAction(e -> ModifyTableDialog.show(mainWindow, profile, obj));
+                    MenuItem refreshTable = new MenuItem("Refresh");
+                    refreshTable.setOnAction(e -> {
+                        obj.setLoaded(false);
+                        getTreeItem().setExpanded(false);
+                        mainWindow.setStatus("Refreshed " + obj.getName());
+                    });
+
+                    Menu importExportMenu = new Menu("Import/Export");
+                    MenuItem exportData = new MenuItem("Export Data to File\u2026");
+                    exportData.setOnAction(e -> exportTableData(profile, obj));
+                    MenuItem importData = new MenuItem("Import Data from File(s)\u2026");
+                    importData.setOnAction(e -> ImportDataDialog.show(mainWindow, profile, obj));
+                    importExportMenu.getItems().addAll(exportData, importData);
+                    if (profile.getType() == ConnectionProfile.DatabaseType.POSTGRESQL) {
+                        MenuItem exportWithPgDump = new MenuItem("Export with 'pg_dump'\u2026");
+                        exportWithPgDump.setOnAction(e -> PgDumpDialog.show(mainWindow, profile,
+                                obj.getCatalog() != null ? obj.getCatalog() : profile.getDatabase()));
+                        MenuItem restoreWithPgRestore = new MenuItem("Restore with 'pg_restore'\u2026");
+                        restoreWithPgRestore.setOnAction(e -> RestoreDialog.show(mainWindow, profile,
+                                obj.getCatalog() != null ? obj.getCatalog() : profile.getDatabase()));
+                        importExportMenu.getItems().addAll(new SeparatorMenuItem(),
+                                exportWithPgDump, restoreWithPgRestore);
+                    }
+
+                    Menu diagramsMenu = new Menu("Diagrams");
+                    MenuItem showDiagram = new MenuItem("Show Diagram\u2026");
+                    showDiagram.setOnAction(e -> mainWindow.openDiagramTab(profile, obj));
+                    diagramsMenu.getItems().add(showDiagram);
+
                     MenuItem select = new MenuItem("New Query: SELECT *");
                     select.setOnAction(e -> mainWindow.openQueryTab(profile, obj.getCatalog(),
                             "SELECT * FROM " + obj.qualifiedName() + " LIMIT 100;"));
                     MenuItem count = new MenuItem("New Query: COUNT(*)");
                     count.setOnAction(e -> mainWindow.openQueryTab(profile, obj.getCatalog(),
                             "SELECT COUNT(*) FROM " + obj.qualifiedName() + ";"));
-                    menu.getItems().addAll(openData, structure, new SeparatorMenuItem(), select, count);
+
+                    menu.getItems().addAll(openData, editData, structure, new SeparatorMenuItem(),
+                            modifyTable, refreshTable, new SeparatorMenuItem(),
+                            importExportMenu, diagramsMenu, new SeparatorMenuItem(), select, count);
                 }
                 case COLLECTION -> {
                     MenuItem openDocs = new MenuItem("Open Documents");
