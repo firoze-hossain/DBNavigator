@@ -616,3 +616,37 @@
     -fx-background-radius: 8;
     -fx-border-radius: 8;
 }
+
+/* ---------- extended SQL syntax colors (types, functions, parameters) ---------- */
+.sql-editor .sql-type      { -fx-fill: #c77dbb; }
+.sql-editor .sql-function  { -fx-fill: #56b6b0; -fx-font-style: italic; }
+.sql-editor .sql-parameter { -fx-fill: #e0a44c; -fx-font-weight: bold; }
+.sql-editor .sql-qualifier { -fx-fill: #82aaff; }
+
+/* ---------- serial/row-number column ---------- */
+.result-grid .serial-cell {
+    -fx-text-fill: #6f7680;
+    -fx-alignment: CENTER-RIGHT;
+    -fx-background-color: #1e1f22;
+    -fx-font-size: 11px;
+}
+
+/* ---------- result pager (DataGrip-style "1-500 of 501+") ---------- */
+.result-pager { -fx-spacing: 2; }
+.result-pager-button {
+    -fx-background-color: transparent;
+    -fx-border-width: 0;
+    -fx-padding: 3 6 3 6;
+}
+.result-pager-button:hover { -fx-background-color: #3c4046; }
+.result-pager-label {
+    -fx-text-fill: -text-dim;
+    -fx-font-size: 12px;
+    -fx-padding: 0 6 0 6;
+}
+.result-pager-overflow {
+    -fx-background-color: transparent;
+    -fx-border-width: 0;
+    -fx-padding: 3 4 3 4;
+}
+.result-pager-overflow > .arrow { -fx-background-color: transparent; -fx-padding: 0; }

@@ -76,20 +76,27 @@ public final class CompletionService {
      * Ranked suggestions for the token under the caret.
      * Empty tokens are allowed when the context already narrows the answer
      * (e.g. right after "FROM " every table is a valid suggestion).
+     *
+     * @param fullText the console's entire SQL text, used to resolve a table
+     *                 alias (e.g. "b." after "FROM bcharge b") to its real
+     *                 table's columns — not just a literal table name.
      */
     public static List<Suggestion> suggest(ConnectionProfile profile, String catalog,
-                                           String token, Context context) {
+                                           String fullText, String token, Context context) {
         if (token == null) token = "";
 
-        // "users.na" → columns of users
+        // "users.na" or "b.na" (alias) → columns of the real table
         int dot = token.lastIndexOf('.');
         if (dot > 0) {
-            String table = token.substring(0, dot);
+            String aliasOrTable = token.substring(0, dot);
             String prefix = token.substring(dot + 1).toLowerCase(Locale.ROOT);
+            String resolvedTable = com.roze.dbnavigator.util.SqlAliases.resolve(fullText)
+                    .getOrDefault(aliasOrTable.toLowerCase(Locale.ROOT), aliasOrTable);
+
             List<Suggestion> matches = new ArrayList<>();
-            for (String col : columnsOf(profile, catalog, table)) {
+            for (String col : columnsOf(profile, catalog, resolvedTable)) {
                 if (col.toLowerCase(Locale.ROOT).startsWith(prefix)) {
-                    matches.add(new Suggestion(table + "." + col, Kind.COLUMN, "column of " + table));
+                    matches.add(new Suggestion(aliasOrTable + "." + col, Kind.COLUMN, "column of " + resolvedTable));
                     if (matches.size() >= MAX_SUGGESTIONS) break;
                 }
             }

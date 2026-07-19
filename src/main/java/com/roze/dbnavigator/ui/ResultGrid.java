@@ -95,10 +95,33 @@ public class ResultGrid extends TableView<List<String>> {
         return rows;
     }
 
+    private int rowNumberOffset = 0;
+
+    /** Lets a paginated view show true overall row numbers (e.g. page 2 starts at 501, not 1). */
+    public void setRowNumberOffset(int offset) {
+        this.rowNumberOffset = offset;
+    }
+
     public void showResult(QueryResult result) {
         getColumns().clear();
         getItems().clear();
         if (result == null || !result.isResultSet()) return;
+
+        TableColumn<List<String>, Void> serialCol = new TableColumn<>("#");
+        serialCol.setSortable(false);
+        serialCol.setPrefWidth(56);
+        serialCol.getStyleClass().add("serial-column");
+        serialCol.setCellFactory(col -> new TableCell<>() {
+            {
+                getStyleClass().add("serial-cell");
+            }
+            @Override
+            protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty ? null : String.valueOf(getIndex() + 1 + rowNumberOffset));
+            }
+        });
+        getColumns().add(serialCol);
 
         this.columnTypes = result.getColumnTypes();
         List<String> columnNames = result.getColumns();
@@ -263,8 +286,9 @@ public class ResultGrid extends TableView<List<String>> {
         TablePosition<?, ?> pos = getFocusModel().getFocusedCell();
         if (pos == null || pos.getRow() < 0 || pos.getTableColumn() == null) return;
         List<String> row = getItems().get(pos.getRow());
-        int colIndex = getColumns().indexOf(pos.getTableColumn());
-        String value = (colIndex >= 0 && colIndex < row.size()) ? row.get(colIndex) : "";
+        int colIndex = getColumns().indexOf(pos.getTableColumn()) - 1;   // -1: serial column is index 0
+        if (colIndex < 0) return;   // the serial column itself has nothing meaningful to copy
+        String value = (colIndex < row.size()) ? row.get(colIndex) : "";
         put(value == null ? "" : value);
     }
 
