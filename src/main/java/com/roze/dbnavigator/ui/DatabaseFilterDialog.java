@@ -23,6 +23,7 @@ public class DatabaseFilterDialog extends Dialog<List<String>> {
     private final Map<String, CheckBox> databaseBoxes = new LinkedHashMap<>();
 
     public DatabaseFilterDialog(ConnectionProfile profile, List<String> allDatabases) {
+        DialogTheme.apply(this);
         setTitle("Show / Hide Databases");
         setHeaderText("Choose which databases appear under " + profile.getName());
         getDialogPane().setPrefWidth(420);

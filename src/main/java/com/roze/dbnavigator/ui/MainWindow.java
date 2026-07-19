@@ -153,7 +153,7 @@ public class MainWindow {
         recentChanges.setOnAction(e -> ProjectHistoryDialog.showRecentChanges(stage, this::openHistoryEntry));
         MenuItem putLabel = new MenuItem("Put Label…");
         putLabel.setOnAction(e -> withCurrentConsole(tab -> {
-            TextInputDialog dialog = new TextInputDialog();
+            TextInputDialog dialog = (TextInputDialog) DialogTheme.apply(new TextInputDialog());
             dialog.initOwner(stage);
             dialog.setTitle("Put Label");
             dialog.setHeaderText(null);
@@ -197,9 +197,9 @@ public class MainWindow {
         // ---- Help ----
         MenuItem about = new MenuItem("About DBNavigator Pro");
         about.setOnAction(e -> {
-            Alert alert = new Alert(Alert.AlertType.INFORMATION,
+            Alert alert = (Alert) DialogTheme.apply(new Alert(Alert.AlertType.INFORMATION,
                     "DBNavigator Pro 3.2\nA DataGrip-style database IDE built with JavaFX.\n"
-                    + "MySQL · MariaDB · PostgreSQL · SQL Server · Oracle · SQLite · MongoDB");
+                    + "MySQL · MariaDB · PostgreSQL · SQL Server · Oracle · SQLite · MongoDB"));
             alert.setHeaderText("DBNavigator Pro");
             alert.initOwner(stage);
             alert.showAndWait();
@@ -233,7 +233,7 @@ public class MainWindow {
                 openQueryTab(profiles.get(0), null, sql);
                 return;
             }
-            ChoiceDialog<ConnectionProfile> dialog = new ChoiceDialog<>(profiles.get(0), profiles);
+            ChoiceDialog<ConnectionProfile> dialog = (ChoiceDialog<ConnectionProfile>) DialogTheme.apply(new ChoiceDialog<>(profiles.get(0), profiles));
             dialog.setTitle("Open SQL File");
             dialog.setHeaderText(null);
             dialog.setContentText("Run against connection:");
@@ -271,8 +271,8 @@ public class MainWindow {
     private void showLocalHistoryForCurrentConsole() {
         Tab selected = tabPane.getSelectionModel().getSelectedItem();
         if (!(selected instanceof QueryTab tab)) {
-            Alert alert = new Alert(Alert.AlertType.INFORMATION,
-                    "Open or select a query console tab first, then use Local History on it.");
+            Alert alert = (Alert) DialogTheme.apply(new Alert(Alert.AlertType.INFORMATION,
+                    "Open or select a query console tab first, then use Local History on it."));
             alert.initOwner(stage);
             alert.setHeaderText("No console selected");
             alert.showAndWait();
@@ -282,7 +282,7 @@ public class MainWindow {
             tab.showLocalHistory(stage);
         } catch (Exception ex) {
             String msg = ex.getMessage() == null ? ex.toString() : ex.getMessage();
-            Alert alert = new Alert(Alert.AlertType.ERROR, msg);
+            Alert alert = (Alert) DialogTheme.apply(new Alert(Alert.AlertType.ERROR, msg));
             alert.initOwner(stage);
             alert.setHeaderText("Could not open Local History");
             alert.showAndWait();
@@ -457,7 +457,7 @@ public class MainWindow {
                 String msg = ex.getMessage() == null ? ex.toString() : ex.getMessage();
                 Platform.runLater(() -> {
                     setStatus("Connection failed");
-                    Alert alert = new Alert(Alert.AlertType.ERROR);
+                    Alert alert = (Alert) DialogTheme.apply(new Alert(Alert.AlertType.ERROR));
                     alert.setTitle("Connection Error");
                     alert.setHeaderText("Could not connect to " + profile.getName());
                     alert.setContentText(msg);
@@ -482,7 +482,7 @@ public class MainWindow {
             return;
         }
         ChoiceDialog<ConnectionProfile> dialog =
-                new ChoiceDialog<>(profiles.get(0), profiles);
+                (ChoiceDialog<ConnectionProfile>) DialogTheme.apply(new ChoiceDialog<>(profiles.get(0), profiles));
         dialog.setTitle("New Console");
         dialog.setHeaderText(null);
         dialog.setContentText("Connection:");

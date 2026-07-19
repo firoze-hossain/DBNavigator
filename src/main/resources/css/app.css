@@ -487,3 +487,59 @@
     -fx-underline: false;
 }
 .link-button:hover { -fx-underline: true; }
+
+/* ---------- themed built-in Dialog/Alert (fixes native white-dialog look) ---------- */
+.themed-dialog {
+    -fx-background-color: -bg-dark;
+}
+.themed-dialog > .header-panel {
+    -fx-background-color: -bg-mid;
+}
+.themed-dialog > .header-panel .label {
+    -fx-text-fill: -text;
+    -fx-font-size: 15px;
+}
+.themed-dialog .content.label,
+.themed-dialog .content {
+    -fx-text-fill: -text;
+}
+.themed-dialog .button-bar .button {
+    -fx-background-color: -bg-light;
+    -fx-text-fill: -text;
+}
+.themed-dialog .list-view,
+.themed-dialog .combo-box-popup .list-view {
+    -fx-background-color: -bg-darkest;
+    -fx-control-inner-background: -bg-darkest;
+}
+
+/* ---------- New/Edit Data Source dialog ---------- */
+.connection-dialog-header {
+    -fx-background-color: -bg-mid;
+    -fx-border-color: transparent transparent -border transparent;
+}
+.connection-dialog-icon {
+    -fx-background-radius: 8;
+}
+.connection-dialog-title {
+    -fx-text-fill: -text;
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+}
+.connection-dialog-subtitle {
+    -fx-text-fill: -text-dim;
+    -fx-font-size: 11px;
+}
+.connection-section-label {
+    -fx-text-fill: -accent;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-padding: 6 0 0 0;
+}
+.connection-field-label {
+    -fx-text-fill: -text-dim;
+    -fx-font-size: 12px;
+}
+.connection-test-result { -fx-font-size: 12px; }
+.connection-test-result.test-ok   { -fx-text-fill: #57965c; }
+.connection-test-result.test-fail { -fx-text-fill: #e05555; }

@@ -300,7 +300,7 @@ public class ResultGrid extends TableView<List<String>> {
                         .reduce((a, b) -> a + "," + b).orElse(""));
             }
         } catch (IOException e) {
-            new Alert(Alert.AlertType.ERROR, "Export failed: " + e.getMessage()).showAndWait();
+            DialogTheme.apply(new Alert(Alert.AlertType.ERROR, "Export failed: " + e.getMessage())).showAndWait();
         }
     }
 

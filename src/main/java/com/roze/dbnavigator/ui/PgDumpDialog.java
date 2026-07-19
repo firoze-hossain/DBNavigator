@@ -304,11 +304,11 @@ public final class PgDumpDialog {
 
     private void runDump() {
         if (pathField.getText().isBlank()) {
-            new Alert(Alert.AlertType.WARNING, "Enter the path to the pg_dump executable.").showAndWait();
+            DialogTheme.apply(new Alert(Alert.AlertType.WARNING, "Enter the path to the pg_dump executable.")).showAndWait();
             return;
         }
         if (outputField.getText().isBlank()) {
-            new Alert(Alert.AlertType.WARNING, "Enter an output file path.").showAndWait();
+            DialogTheme.apply(new Alert(Alert.AlertType.WARNING, "Enter an output file path.")).showAndWait();
             return;
         }
 

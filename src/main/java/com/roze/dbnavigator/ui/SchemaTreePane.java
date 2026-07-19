@@ -246,8 +246,8 @@ public class SchemaTreePane extends VBox {
                 });
             } catch (Exception ex) {
                 String msg = ex.getMessage() == null ? ex.toString() : ex.getMessage();
-                Platform.runLater(() -> new Alert(Alert.AlertType.ERROR,
-                        "Could not list databases: " + msg).showAndWait());
+                Platform.runLater(() -> DialogTheme.apply(new Alert(Alert.AlertType.ERROR,
+                        "Could not list databases: " + msg)).showAndWait());
             }
         });
     }
@@ -257,16 +257,16 @@ public class SchemaTreePane extends VBox {
      * type the exact database name before DROP DATABASE is executed.
      */
     private void confirmAndDeleteDatabase(ConnectionProfile profile, String databaseName) {
-        Alert warn = new Alert(Alert.AlertType.WARNING,
+        Alert warn = (Alert) DialogTheme.apply(new Alert(Alert.AlertType.WARNING,
                 "This permanently deletes the database \"" + databaseName + "\" and everything in it. "
                         + "This cannot be undone.",
-                ButtonType.YES, ButtonType.NO);
+                ButtonType.YES, ButtonType.NO));
         warn.setTitle("Delete Database");
         warn.setHeaderText("Delete \"" + databaseName + "\"?");
         warn.initOwner(getScene() == null ? null : getScene().getWindow());
         if (warn.showAndWait().orElse(ButtonType.NO) != ButtonType.YES) return;
 
-        TextInputDialog confirm = new TextInputDialog();
+        TextInputDialog confirm = (TextInputDialog) DialogTheme.apply(new TextInputDialog());
         confirm.setTitle("Confirm Deletion");
         confirm.setHeaderText(null);
         confirm.setContentText("Type the database name \"" + databaseName + "\" to confirm:");
@@ -276,7 +276,7 @@ public class SchemaTreePane extends VBox {
         String typed = confirm.showAndWait().orElse("");
         if (!typed.equals(databaseName)) {
             if (!typed.isEmpty()) {
-                new Alert(Alert.AlertType.INFORMATION, "Name didn't match — deletion cancelled.")
+                DialogTheme.apply(new Alert(Alert.AlertType.INFORMATION, "Name didn't match — deletion cancelled."))
                         .showAndWait();
             }
             return;
@@ -291,8 +291,8 @@ public class SchemaTreePane extends VBox {
                 });
             } catch (Exception ex) {
                 String msg = ex.getMessage() == null ? ex.toString() : ex.getMessage();
-                Platform.runLater(() -> new Alert(Alert.AlertType.ERROR,
-                        "Could not delete database: " + msg).showAndWait());
+                Platform.runLater(() -> DialogTheme.apply(new Alert(Alert.AlertType.ERROR,
+                        "Could not delete database: " + msg)).showAndWait());
             }
         });
     }
@@ -358,9 +358,9 @@ public class SchemaTreePane extends VBox {
                     });
                     MenuItem delete = new MenuItem("Remove Connection");
                     delete.setOnAction(e -> {
-                        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
+                        Alert confirm = (Alert) DialogTheme.apply(new Alert(Alert.AlertType.CONFIRMATION,
                                 "Remove connection \"" + profile.getName() + "\"?",
-                                ButtonType.YES, ButtonType.NO);
+                                ButtonType.YES, ButtonType.NO));
                         confirm.showAndWait().ifPresent(bt -> {
                             if (bt == ButtonType.YES) {
                                 ClientRegistry.disconnect(profile);

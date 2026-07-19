@@ -101,10 +101,10 @@ public final class DumpRestoreService {
         File file = chooser.showOpenDialog(owner);
         if (file == null) return;
 
-        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
+        Alert confirm = (Alert) DialogTheme.apply(new Alert(Alert.AlertType.CONFIRMATION,
                 "Restore \"" + file.getName() + "\" into database \"" + database
                         + "\"?\nExisting objects with the same names may be overwritten or conflict.",
-                ButtonType.YES, ButtonType.NO);
+                ButtonType.YES, ButtonType.NO));
         confirm.initOwner(owner);
         if (confirm.showAndWait().orElse(ButtonType.NO) != ButtonType.YES) return;
 
@@ -205,7 +205,7 @@ public final class DumpRestoreService {
 
     private static TextInputDialog toolPathDialog(Window owner, String defaultTool,
                                                   String title, String prompt) {
-        TextInputDialog dialog = new TextInputDialog(defaultTool);
+        TextInputDialog dialog = (TextInputDialog) DialogTheme.apply(new TextInputDialog(defaultTool));
         dialog.initOwner(owner);
         dialog.setTitle(title);
         dialog.setHeaderText(null);
@@ -215,7 +215,7 @@ public final class DumpRestoreService {
     }
 
     private static void info(Window owner, String message) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION, message);
+        Alert alert = (Alert) DialogTheme.apply(new Alert(Alert.AlertType.INFORMATION, message));
         alert.initOwner(owner);
         alert.setHeaderText(null);
         alert.showAndWait();
