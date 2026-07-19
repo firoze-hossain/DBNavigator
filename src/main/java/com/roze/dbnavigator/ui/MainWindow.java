@@ -96,6 +96,11 @@ public class MainWindow {
 
     public RunPanel getRunPanel() { return runPanel; }
 
+    /** Lets dialogs outside SchemaTreePane (e.g. after modifying a database) trigger a reload. */
+    public void refreshSchemaExplorer() {
+        schemaPane.reload();
+    }
+
     /** Shows the docked Run panel, expanding it if it was collapsed. */
     public void showRunPanel() {
         if (!runPanelVisible) {
@@ -511,6 +516,10 @@ public class MainWindow {
 
     public void openDiagramTab(ConnectionProfile profile, DbObject table) {
         addAndSelect(new DiagramTab(profile, table));
+    }
+
+    public void openDatabaseDiagramTab(ConnectionProfile profile, String catalog) {
+        addAndSelect(new DatabaseDiagramTab(profile, catalog));
     }
 
     public void openMongoTab(ConnectionProfile profile, DbObject collection) {

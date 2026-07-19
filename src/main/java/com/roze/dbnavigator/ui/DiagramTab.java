@@ -64,12 +64,15 @@ public class DiagramTab extends Tab {
         Button zoomOut = toolbarButton(FontAwesomeSolid.SEARCH_MINUS, "Zoom out", () -> zoomBy(1 / 1.15));
         Button resetZoom = toolbarButton(FontAwesomeSolid.EXPAND, "Reset zoom", this::resetZoom);
         Button refresh = toolbarButton(FontAwesomeSolid.SYNC_ALT, "Refresh", this::reload);
+        Button exportPng = toolbarButton(FontAwesomeSolid.FILE_IMAGE, "Export as PNG",
+                () -> DiagramExport.exportToPng(diagramPane.getScene() == null ? null : diagramPane.getScene().getWindow(),
+                        zoomGroup, rootTable.getName() + "-diagram"));
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
         Label hint = new Label("Scroll to pan \u00b7 Ctrl+Scroll to zoom");
         hint.getStyleClass().add("console-status");
-        HBox toolbar = new HBox(6, zoomIn, zoomOut, resetZoom, refresh, spacer, hint);
+        HBox toolbar = new HBox(6, zoomIn, zoomOut, resetZoom, refresh, exportPng, spacer, hint);
         toolbar.setPadding(new Insets(6, 10, 6, 10));
         toolbar.getStyleClass().add("console-toolbar");
 
@@ -236,37 +239,7 @@ public class DiagramTab extends Tab {
     }
 
     private VBox buildTableBox(String tableName, List<MetadataService.ColumnInfo> columns, boolean isRoot) {
-        VBox box = new VBox();
-        box.setPrefWidth(BOX_WIDTH);
-        box.getStyleClass().add(isRoot ? "diagram-table-box-root" : "diagram-table-box");
-
-        HBox header = new HBox(6, Icons.of(FontAwesomeSolid.TABLE, "#4a88c7", 12), new Label(tableName));
-        header.getStyleClass().add("diagram-table-header");
-        header.setAlignment(Pos.CENTER_LEFT);
-        header.setPadding(new Insets(6, 8, 6, 8));
-        box.getChildren().add(header);
-
-        for (MetadataService.ColumnInfo col : columns) {
-            HBox row = new HBox(6);
-            row.getStyleClass().add("diagram-column-row");
-            row.setAlignment(Pos.CENTER_LEFT);
-            row.setPadding(new Insets(2, 8, 2, 8));
-            row.getChildren().add(col.primaryKey()
-                    ? Icons.of(FontAwesomeSolid.KEY, "#e0a44c", 10)
-                    : Icons.of(FontAwesomeSolid.COLUMNS, "#6f7680", 10));
-            Label nameLabel = new Label(col.name());
-            nameLabel.getStyleClass().add(col.primaryKey() ? "diagram-column-pk" : "diagram-column-name");
-            Region gap = new Region();
-            HBox.setHgrow(gap, Priority.ALWAYS);
-            Label typeLabel = new Label(col.typeName().toLowerCase(java.util.Locale.ROOT));
-            typeLabel.getStyleClass().add("diagram-column-type");
-            row.getChildren().addAll(nameLabel, gap, typeLabel);
-            box.getChildren().add(row);
-
-            columnAnchors.put(tableName.toLowerCase(java.util.Locale.ROOT) + "."
-                    + col.name().toLowerCase(java.util.Locale.ROOT), nameLabel);
-        }
-        return box;
+        return DiagramBoxRenderer.buildTableBox(tableName, columns, isRoot, BOX_WIDTH, columnAnchors);
     }
 
     private void drawConnectors(List<MetadataService.ForeignKey> relationships) {
@@ -275,17 +248,20 @@ public class DiagramTab extends Tab {
                     + fk.fromColumn().toLowerCase(java.util.Locale.ROOT));
             Label to = columnAnchors.get(fk.toTable().toLowerCase(java.util.Locale.ROOT) + "."
                     + fk.toColumn().toLowerCase(java.util.Locale.ROOT));
-            if (from == null || to == null) continue;
+            if (from == null || to == null || from.getScene() == null || to.getScene() == null) continue;
 
-            var fromBounds = from.localToParent(from.getBoundsInLocal());
-            var fromRoot = from.getParent().localToParent(fromBounds);
-            var toBounds = to.localToParent(to.getBoundsInLocal());
-            var toRoot = to.getParent().localToParent(toBounds);
+            // Going through scene coordinates (rather than chaining .localToParent()
+            // one level at a time) correctly handles any nesting depth between the
+            // column Label and diagramPane — a manual parent-by-parent chain here
+            // was the bug: it only converted Label -> row, missing row -> table box
+            // -> diagramPane, which threw every line off by that box's own position.
+            var fromBounds = diagramPane.sceneToLocal(from.localToScene(from.getBoundsInLocal()));
+            var toBounds = diagramPane.sceneToLocal(to.localToScene(to.getBoundsInLocal()));
 
-            double x1 = fromRoot.getMinX() - diagramPane.getLayoutX();
-            double y1 = fromRoot.getCenterY() - diagramPane.getLayoutY();
-            double x2 = toRoot.getMinX() - diagramPane.getLayoutX();
-            double y2 = toRoot.getCenterY() - diagramPane.getLayoutY();
+            double x1 = fromBounds.getMinX();
+            double y1 = fromBounds.getCenterY();
+            double x2 = toBounds.getMinX();
+            double y2 = toBounds.getCenterY();
 
             boolean fromLeftOfTo = x1 < x2;
             Line line = new Line(fromLeftOfTo ? x1 : x1 + BOX_WIDTH, y1,

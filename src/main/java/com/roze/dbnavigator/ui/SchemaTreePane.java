@@ -279,6 +279,33 @@ public class SchemaTreePane extends VBox {
         });
     }
 
+    /** File → (database context menu) → Rename… */
+    private void renameDatabase(ConnectionProfile profile, String currentName) {
+        TextInputDialog dialog = DialogTheme.apply(new TextInputDialog(currentName));
+        dialog.initOwner(getScene() == null ? null : getScene().getWindow());
+        dialog.setTitle("Rename Database");
+        dialog.setHeaderText(null);
+        dialog.setContentText("New name for \"" + currentName + "\":");
+
+        dialog.showAndWait().ifPresent(newName -> {
+            String trimmed = newName.trim();
+            if (trimmed.isEmpty() || trimmed.equals(currentName)) return;
+            AppExecutor.run(() -> {
+                try {
+                    DatabaseAdminService.renameDatabase(profile, currentName, trimmed);
+                    Platform.runLater(() -> {
+                        mainWindow.setStatus("Renamed " + currentName + " to " + trimmed);
+                        reload();
+                    });
+                } catch (Exception ex) {
+                    String msg = ex.getMessage() == null ? ex.toString() : ex.getMessage();
+                    Platform.runLater(() -> DialogTheme.apply(new Alert(Alert.AlertType.ERROR,
+                            "Could not rename database: " + msg)).showAndWait());
+                }
+            });
+        });
+    }
+
     /**
      * DataGrip-style destructive confirmation: warn, then require the user to
      * type the exact database name before DROP DATABASE is executed.
@@ -460,6 +487,18 @@ public class SchemaTreePane extends VBox {
                 }
                 case DATABASE -> {
                     if (profile.getType() == ConnectionProfile.DatabaseType.MONGODB) return null;
+
+                    MenuItem modifyDb = new MenuItem("Modify Database\u2026");
+                    modifyDb.setOnAction(e -> ModifyDatabaseDialog.show(mainWindow, profile, obj.getName()));
+                    MenuItem refreshDb = new MenuItem("Refresh");
+                    refreshDb.setOnAction(e -> {
+                        obj.setLoaded(false);
+                        getTreeItem().setExpanded(false);
+                        mainWindow.setStatus("Refreshed " + obj.getName());
+                    });
+                    MenuItem renameDb = new MenuItem("Rename\u2026");
+                    renameDb.setOnAction(e -> renameDatabase(profile, obj.getName()));
+
                     MenuItem newConsole = new MenuItem("New Query Console on " + obj.getName());
                     newConsole.setOnAction(e ->
                             mainWindow.openQueryTab(profile, obj.getCatalog(), null));
@@ -479,9 +518,18 @@ public class SchemaTreePane extends VBox {
                             DumpRestoreService.restoreDatabase(mainWindow, profile, obj.getName());
                         }
                     });
-                    MenuItem deleteDb = new MenuItem("Delete Database…");
+
+                    Menu diagramsMenu = new Menu("Diagrams");
+                    MenuItem showDiagram = new MenuItem("Show Diagram\u2026");
+                    showDiagram.setOnAction(e -> mainWindow.openDatabaseDiagramTab(profile, obj.getCatalog()));
+                    diagramsMenu.getItems().add(showDiagram);
+
+                    MenuItem deleteDb = new MenuItem("Drop\u2026");
                     deleteDb.setOnAction(e -> confirmAndDeleteDatabase(profile, obj.getName()));
-                    menu.getItems().addAll(newConsole, new SeparatorMenuItem(), dump, restore,
+
+                    menu.getItems().addAll(modifyDb, refreshDb, new SeparatorMenuItem(),
+                            renameDb, new SeparatorMenuItem(),
+                            newConsole, dump, restore, diagramsMenu,
                             new SeparatorMenuItem(), deleteDb);
                 }
                 default -> {
