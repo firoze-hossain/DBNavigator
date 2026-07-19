@@ -1,7 +1,6 @@
 package com.roze.dbnavigator.ui;
 
 import com.roze.dbnavigator.db.LocalHistoryStore;
-import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -21,10 +20,17 @@ import java.util.List;
  * "Invalidate Caches" dialog, matching the reference IDE's wording and
  * layout. Honest simplification: "VCS Log caches" and "embedded browser
  * cache" don't apply to this app (no VCS integration, no embedded browser),
- * so those two checkboxes are shown for visual parity but disabled. Restart
- * is best-effort — it tries to relaunch the same JVM command; if that isn't
- * possible in the current run configuration (IDE run vs. packaged jar vs.
- * `mvn javafx:run`), it falls back to asking the person to restart manually.
+ * so those two checkboxes are shown for visual parity but disabled.
+ *
+ * Restart is deliberately NOT automated. An earlier version tried to
+ * relaunch the same java command and then call Platform.exit() — but a
+ * modular JavaFX app launched via an IDE run configuration (IntelliJ, in
+ * particular) often can't be faithfully re-invoked from inside itself: the
+ * classpath/module-path the IDE built isn't fully visible to the running
+ * process, so the relaunch attempt would silently fail after the app had
+ * already exited, leaving nothing running. Rather than risk closing the app
+ * with no way back, both buttons here clear caches (if selected) and then
+ * simply tell the person to restart manually — the app is never force-closed.
  */
 public final class InvalidateCachesDialog {
 
@@ -66,7 +72,7 @@ public final class InvalidateCachesDialog {
         justRestart.getStyleClass().add("link-button");
         justRestart.setOnAction(e -> {
             stage.close();
-            restart(owner, List.of());
+            tellPersonToRestart(owner, List.of());
         });
 
         Button cancel = new Button("Cancel");
@@ -83,7 +89,7 @@ public final class InvalidateCachesDialog {
                 CompletionService.clearAllCaches();
                 cleared.add("file system cache and Local History");
             }
-            restart(owner, cleared);
+            tellPersonToRestart(owner, cleared);
         });
 
         Region spacer = new Region();
@@ -102,50 +108,21 @@ public final class InvalidateCachesDialog {
         stage.show();
     }
 
-    private static void restart(Window owner, List<String> clearedItems) {
-        boolean relaunched = attemptRelaunch();
-        if (relaunched) {
-            Platform.exit();
-            return;
-        }
-
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+    /**
+     * Never closes the app automatically — see the class javadoc for why an
+     * automated relaunch isn't safe to attempt here.
+     */
+    private static void tellPersonToRestart(Window owner, List<String> clearedItems) {
+        Alert alert = (Alert) DialogTheme.apply(new Alert(Alert.AlertType.INFORMATION));
         alert.initOwner(owner);
         alert.setHeaderText("Restart needed");
         String message = clearedItems.isEmpty()
-                ? "Couldn't automatically relaunch in this run configuration — "
-                  + "please restart DBNavigator Pro manually."
+                ? "Please restart DBNavigator Pro manually (e.g. rerun it from IntelliJ) "
+                  + "for this to take effect."
                 : "Cleared: " + String.join(", ", clearedItems) + ".\n\n"
-                  + "Couldn't automatically relaunch in this run configuration — "
-                  + "please restart DBNavigator Pro manually.";
+                  + "Please restart DBNavigator Pro manually (e.g. rerun it from IntelliJ) "
+                  + "to finish.";
         alert.setContentText(message);
         alert.showAndWait();
-        Platform.exit();
-    }
-
-    /**
-     * Best-effort: re-launches the same java command that started this JVM.
-     * This works when run from a plain classpath (e.g. a packaged jar); it
-     * may not succeed under every IDE run configuration or build-tool wrapper,
-     * which is why the caller falls back to asking for a manual restart.
-     */
-    private static boolean attemptRelaunch() {
-        try {
-            String javaBin = System.getProperty("java.home") + java.io.File.separator
-                    + "bin" + java.io.File.separator + "java";
-            String classpath = System.getProperty("java.class.path");
-            if (classpath == null || classpath.isBlank()) return false;
-
-            List<String> command = new ArrayList<>();
-            command.add(javaBin);
-            command.add("-cp");
-            command.add(classpath);
-            command.add("com.roze.dbnavigator.Main");
-
-            new ProcessBuilder(command).start();
-            return true;
-        } catch (Exception e) {
-            return false;
-        }
     }
 }

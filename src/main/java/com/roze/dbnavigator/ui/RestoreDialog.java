@@ -318,21 +318,21 @@ public final class RestoreDialog {
 
     private void runRestore() {
         if (pathField.getText().isBlank()) {
-            new Alert(Alert.AlertType.WARNING, "Enter the path to the executable.").showAndWait();
+            DialogTheme.apply(new Alert(Alert.AlertType.WARNING, "Enter the path to the executable.")).showAndWait();
             return;
         }
         if (dumpPathField.getText().isBlank()) {
-            new Alert(Alert.AlertType.WARNING, "Choose a dump file to restore.").showAndWait();
+            DialogTheme.apply(new Alert(Alert.AlertType.WARNING, "Choose a dump file to restore.")).showAndWait();
             return;
         }
 
         String database = databaseField.getText();
         String dumpPath = dumpPathField.getText();
 
-        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
+        Alert confirm = (Alert) DialogTheme.apply(new Alert(Alert.AlertType.CONFIRMATION,
                 "Restore \"" + new File(dumpPath).getName() + "\" into database \"" + database
                         + "\"?\nExisting objects with the same names may be overwritten or conflict.",
-                ButtonType.YES, ButtonType.NO);
+                ButtonType.YES, ButtonType.NO));
         confirm.initOwner(stage);
         if (confirm.showAndWait().orElse(ButtonType.NO) != ButtonType.YES) return;
 
