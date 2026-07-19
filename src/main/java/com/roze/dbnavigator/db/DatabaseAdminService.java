@@ -70,6 +70,58 @@ public final class DatabaseAdminService {
         }
     }
 
+    /**
+     * Renames a database. PostgreSQL supports this directly with
+     * ALTER DATABASE ... RENAME TO ...; it still requires no other
+     * connection be using the database being renamed, same as DROP.
+     * MySQL/MariaDB have no equivalent statement (the common workaround is
+     * dump + recreate + restore), so that's reported as unsupported rather
+     * than attempted.
+     */
+    public static void renameDatabase(ConnectionProfile profile, String oldName, String newName) throws Exception {
+        if (profile.getType() != DatabaseType.POSTGRESQL) {
+            throw new UnsupportedOperationException(
+                    profile.getType().getDisplayName() + " has no direct \"rename database\" statement — "
+                    + "the usual workaround is dump, create a new database, and restore into it.");
+        }
+        ClientRegistry.disconnectCatalog(profile, oldName);
+        String adminCatalog = oldName.equals(profile.getDatabase()) ? "postgres" : profile.getDatabase();
+        try (Connection conn = ClientRegistry.jdbc(profile, adminCatalog).getConnection();
+             Statement stmt = conn.createStatement()) {
+            stmt.execute("ALTER DATABASE " + quotePostgres(oldName) + " RENAME TO " + quotePostgres(newName));
+        }
+        if (oldName.equals(profile.getDatabase())) {
+            profile.setDatabase(newName);
+        }
+    }
+
+    /** Changes a PostgreSQL database's owner role. */
+    public static void changeOwner(ConnectionProfile profile, String database, String newOwner) throws Exception {
+        if (profile.getType() != DatabaseType.POSTGRESQL) {
+            throw new UnsupportedOperationException(
+                    "Changing a database's owner isn't supported for " + profile.getType().getDisplayName() + " here.");
+        }
+        try (Connection conn = ClientRegistry.jdbc(profile, database).getConnection();
+             Statement stmt = conn.createStatement()) {
+            stmt.execute("ALTER DATABASE " + quotePostgres(database) + " OWNER TO " + quotePostgres(newOwner));
+        }
+    }
+
+    /** Current owner role of a PostgreSQL database, or null if unavailable/not Postgres. */
+    public static String currentOwner(ConnectionProfile profile, String database) {
+        if (profile.getType() != DatabaseType.POSTGRESQL) return null;
+        String sql = "SELECT pg_catalog.pg_get_userbyid(datdba) FROM pg_database WHERE datname = ?";
+        try (Connection conn = ClientRegistry.jdbc(profile, database).getConnection();
+             java.sql.PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, database);
+            try (java.sql.ResultSet rs = stmt.executeQuery()) {
+                return rs.next() ? rs.getString(1) : null;
+            }
+        } catch (SQLException e) {
+            return null;
+        }
+    }
+
     private static String quotePostgres(String name) {
         if (name.matches("[A-Za-z_][A-Za-z0-9_]*")) return name;
         return "\"" + name.replace("\"", "\"\"") + "\"";

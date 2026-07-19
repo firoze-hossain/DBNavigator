@@ -2,6 +2,7 @@ module com.roze.dbnavigator {
     // JavaFX
     requires javafx.controls;
     requires javafx.graphics;
+    requires javafx.swing;
 
     // JDBC API
     requires java.sql;

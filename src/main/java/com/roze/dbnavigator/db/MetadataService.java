@@ -686,6 +686,53 @@ public final class MetadataService {
         return -1;
     }
 
+    /**
+     * Every table across every non-system schema in this database — used by
+     * the database-wide ER diagram. Unlike the Tables-folder listing, this
+     * intentionally does not filter out PostgreSQL partition children: a
+     * whole-database overview is meant to show every physical table, and
+     * partitions rarely have FKs of their own anyway.
+     */
+    public static List<DbObject> loadDatabaseTables(ConnectionProfile profile, String catalog)
+            throws SQLException {
+        List<DbObject> result = new ArrayList<>();
+        try (Connection conn = client(profile, catalog).getConnection();
+             ResultSet rs = conn.getMetaData().getTables(
+                     metaCatalog(profile, catalog), null, "%", new String[]{"TABLE"})) {
+            while (rs.next()) {
+                String schema = rs.getString("TABLE_SCHEM");
+                if (schema != null && PG_SYSTEM_SCHEMAS.contains(schema)) continue;
+                result.add(new DbObject(rs.getString("TABLE_NAME"), Kind.TABLE, catalog, schema));
+            }
+        }
+        return result;
+    }
+
+    /** Every FK relationship among the given tables — used by the database-wide ER diagram. */
+    public static List<ForeignKey> loadForeignKeysForTables(ConnectionProfile profile, String catalog,
+                                                            List<DbObject> tables) {
+        List<ForeignKey> result = new ArrayList<>();
+        try (Connection conn = client(profile, catalog).getConnection()) {
+            DatabaseMetaData meta = conn.getMetaData();
+            String cat = metaCatalog(profile, catalog);
+            for (DbObject table : tables) {
+                try (ResultSet rs = meta.getImportedKeys(cat, table.getSchema(), table.getName())) {
+                    while (rs.next()) {
+                        result.add(new ForeignKey(
+                                rs.getString("FKTABLE_SCHEM"), rs.getString("FKTABLE_NAME"), rs.getString("FKCOLUMN_NAME"),
+                                rs.getString("PKTABLE_SCHEM"), rs.getString("PKTABLE_NAME"), rs.getString("PKCOLUMN_NAME"),
+                                rs.getString("FK_NAME")));
+                    }
+                } catch (SQLException ignored) {
+                    // some drivers/tables can't report FKs — skip rather than fail the whole diagram
+                }
+            }
+        } catch (SQLException ignored) {
+            return result;
+        }
+        return result;
+    }
+
     /** Tables/views whose name contains the query — for Search Everywhere. */
     public static List<DbObject> searchTables(ConnectionProfile profile, String catalog,
                                               String query, int limit) {
