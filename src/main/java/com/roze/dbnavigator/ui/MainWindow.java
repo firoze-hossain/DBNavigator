@@ -2,6 +2,7 @@ package com.roze.dbnavigator.ui;
 
 import com.roze.dbnavigator.db.ClientRegistry;
 import com.roze.dbnavigator.db.ConnectionStore;
+import com.roze.dbnavigator.db.LocalHistoryStore;
 import com.roze.dbnavigator.model.ConnectionProfile;
 import com.roze.dbnavigator.model.DbObject;
 import com.roze.dbnavigator.util.AppExecutor;
@@ -27,6 +28,7 @@ import org.kordamp.ikonli.fontawesome5.FontAwesomeSolid;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.function.Consumer;
 
 /**
  * Top-level layout: menu bar + toolbar (top), explorer (left), tabs (center),
@@ -133,11 +135,44 @@ public class MainWindow {
         saveSql.setAccelerator(new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN));
         saveSql.setOnAction(e -> saveConsoleAs());
 
+        // ---- Local History submenu ----
+        MenuItem showHistory = new MenuItem("Show History…");
+        showHistory.setOnAction(e -> withCurrentConsole(tab -> tab.showLocalHistory(stage)));
+        MenuItem showHistoryForSelection = new MenuItem("Show History for Selection…");
+        showHistoryForSelection.setOnAction(e -> withCurrentConsole(tab -> {
+            setStatus("Selection-scoped history isn't tracked separately yet — showing full file history");
+            tab.showLocalHistory(stage);
+        }));
+        MenuItem showProjectHistory = new MenuItem("Show Project History…");
+        showProjectHistory.setOnAction(e -> ProjectHistoryDialog.showProjectWide(stage, this::openHistoryEntry));
+        MenuItem recentChanges = new MenuItem("Recent Changes");
+        recentChanges.setOnAction(e -> ProjectHistoryDialog.showRecentChanges(stage, this::openHistoryEntry));
+        MenuItem putLabel = new MenuItem("Put Label…");
+        putLabel.setOnAction(e -> withCurrentConsole(tab -> {
+            TextInputDialog dialog = new TextInputDialog();
+            dialog.initOwner(stage);
+            dialog.setTitle("Put Label");
+            dialog.setHeaderText(null);
+            dialog.setContentText("Label for this point in " + tab.getDisplayFileName() + ":");
+            dialog.showAndWait().ifPresent(label -> {
+                if (!label.isBlank()) {
+                    tab.putLocalHistoryLabel(label);
+                    setStatus("Labeled current state of " + tab.getDisplayFileName() + " as \"" + label + "\"");
+                }
+            });
+        }));
+        Menu localHistoryMenu = new Menu("Local History", null, showHistory, showHistoryForSelection,
+                showProjectHistory, recentChanges, new SeparatorMenuItem(), putLabel);
+
+        MenuItem invalidateCaches = new MenuItem("Invalidate Caches…");
+        invalidateCaches.setOnAction(e -> InvalidateCachesDialog.show(stage));
+
         MenuItem exit = new MenuItem("Exit");
         exit.setOnAction(e -> stage.close());
 
         Menu fileMenu = new Menu("File", null, newDataSource, newConsole,
-                new SeparatorMenuItem(), openSql, saveSql, new SeparatorMenuItem(), exit);
+                new SeparatorMenuItem(), openSql, saveSql, new SeparatorMenuItem(), localHistoryMenu,
+                new SeparatorMenuItem(), invalidateCaches, new SeparatorMenuItem(), exit);
 
         // ---- View ----
         MenuItem refreshExplorer = new MenuItem("Refresh Database Explorer");
@@ -222,6 +257,35 @@ public class MainWindow {
         } catch (Exception ex) {
             setStatus("Could not save file: " + ex.getMessage());
         }
+    }
+
+    /** Runs an action on the currently selected console tab, or reports there isn't one. */
+    private void withCurrentConsole(Consumer<QueryTab> action) {
+        Tab selected = tabPane.getSelectionModel().getSelectedItem();
+        if (selected instanceof QueryTab tab) {
+            action.accept(tab);
+        } else {
+            setStatus("Select a query console tab first");
+        }
+    }
+
+    /** Opens the Local History diff dialog for an entry picked from a project-wide/recent list. */
+    private void openHistoryEntry(String fileId, LocalHistoryStore.Entry entry) {
+        String displayName = fileId.replace(' ', '_') + ".sql";
+        QueryTab openTab = findOpenConsole(fileId);
+        if (openTab != null) {
+            LocalHistoryDialog.showForFileAtEntry(stage, fileId, displayName, openTab.getSqlText(), entry);
+        } else {
+            setStatus("Console \"" + displayName + "\" is no longer open — showing snapshot only");
+            LocalHistoryDialog.showForFileAtEntry(stage, fileId, displayName, entry.content(), entry);
+        }
+    }
+
+    private QueryTab findOpenConsole(String fileId) {
+        for (Tab t : tabPane.getTabs()) {
+            if (t instanceof QueryTab qt && qt.getFileId().equals(fileId)) return qt;
+        }
+        return null;
     }
 
     private HBox buildToolbar() {

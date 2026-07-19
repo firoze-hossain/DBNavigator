@@ -418,3 +418,72 @@
     -fx-border-color: #4a4d52;
 }
 .tool-tab:hover { -fx-background-color: #34373c; }
+
+/* ---------- Local History ---------- */
+.history-list {
+    -fx-background-color: -bg-mid;
+    -fx-control-inner-background: -bg-mid;
+}
+.history-list .list-cell {
+    -fx-background-color: transparent;
+}
+.history-list .list-cell:selected { -fx-background-color: #2e436e; }
+.history-list .list-cell:hover { -fx-background-color: #34373c; }
+.history-entry-title { -fx-text-fill: -text; -fx-font-size: 12px; -fx-font-weight: bold; }
+.history-entry-file  { -fx-text-fill: #6897bb; -fx-font-size: 11px; }
+.history-entry-time  { -fx-text-fill: -text-dim; -fx-font-size: 11px; }
+
+.diff-header-row {
+    -fx-background-color: -bg-mid;
+    -fx-border-color: transparent transparent -border transparent;
+}
+.diff-header-label { -fx-text-fill: -text-dim; -fx-font-size: 12px; -fx-font-weight: bold; }
+
+.diff-toolbar-pill {
+    -fx-text-fill: -text-dim;
+    -fx-background-color: -bg-light;
+    -fx-background-radius: 4;
+    -fx-padding: 3 8 3 8;
+    -fx-font-size: 11px;
+}
+
+.diff-scroll { -fx-background-color: -bg-darkest; }
+.diff-scroll .viewport { -fx-background-color: -bg-darkest; }
+.diff-grid { -fx-background-color: -bg-darkest; }
+
+.diff-lineno {
+    -fx-text-fill: #5c6064;
+    -fx-font-family: "JetBrains Mono", "Consolas", monospace;
+    -fx-font-size: 11px;
+    -fx-alignment: center-right;
+    -fx-padding: 2 8 2 0;
+}
+.diff-content {
+    -fx-padding: 2 8 2 8;
+    -fx-column-halignment: left;
+}
+.diff-segment {
+    -fx-text-fill: #c8ccd4;
+    -fx-font-family: "JetBrains Mono", "Consolas", monospace;
+    -fx-font-size: 12px;
+    -fx-padding: 0;
+}
+.diff-segment-changed {
+    -fx-background-color: #5a3a6b;
+    -fx-text-fill: #f0d8ff;
+    -fx-background-radius: 2;
+}
+
+.diff-row-equal   { -fx-background-color: -bg-darkest; }
+.diff-row-changed { -fx-background-color: #262a38; }
+.diff-row-added   { -fx-background-color: #1e3324; }
+.diff-row-removed { -fx-background-color: #3a2020; }
+
+/* ---------- Invalidate Caches dialog ---------- */
+.link-button {
+    -fx-background-color: transparent;
+    -fx-border-width: 0;
+    -fx-text-fill: #5b9bd5;
+    -fx-underline: false;
+}
+.link-button:hover { -fx-underline: true; }
