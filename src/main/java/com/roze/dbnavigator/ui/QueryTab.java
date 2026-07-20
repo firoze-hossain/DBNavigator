@@ -76,6 +76,8 @@ public class QueryTab extends Tab {
     private final Popup historyPopup = new Popup();
     private final ListView<QueryHistoryStore.Entry> historyList = new ListView<>();
     private String lastExecutedSql;
+    private double currentEditorFontSize;
+    private String currentEditorFontFamily;
 
     // ---- pagination state (see PagedResultCursor) ----
     private final ResultPager pager = new ResultPager();
@@ -155,6 +157,8 @@ public class QueryTab extends Tab {
         editor.replaceText("-- " + profile.getType().getDisplayName()
                 + " console. Ctrl+Enter runs, Ctrl+Space completes.\n");
         VirtualizedScrollPane<CodeArea> editorScroll = new VirtualizedScrollPane<>(editor);
+        applyEditorFontFromSettings();
+        setupCtrlScrollFontZoom(editorScroll);
 
         // Local History: first snapshot is the "Create" entry; further edits are
         // auto-captured after a pause (avoids saving a snapshot per keystroke).
@@ -404,6 +408,41 @@ public class QueryTab extends Tab {
      * character-level syntax-highlighting style spans, so the two don't
      * fight each other.
      */
+    /** File → Settings → Editor → Font, applied here and re-applied after Apply/OK. */
+    public void applyEditorFontFromSettings() {
+        var settings = com.roze.dbnavigator.db.AppSettingsStore.load();
+        currentEditorFontFamily = settings.getEditorFontFamily();
+        currentEditorFontSize = settings.getEditorFontSize();
+        updateEditorFontStyle();
+    }
+
+    private void updateEditorFontStyle() {
+        editor.setStyle("-fx-font-family: '" + currentEditorFontFamily + "'; -fx-font-size: "
+                + currentEditorFontSize + "px;");
+    }
+
+    /**
+     * File → Settings → Editor → General → "Change font size with Ctrl+Mouse Wheel".
+     *
+     * Registered on the wrapping VirtualizedScrollPane rather than the CodeArea
+     * itself: filters fire top-down during the capture phase, so a filter on
+     * the parent runs before the event ever reaches the CodeArea's own
+     * internal scroll-panning handling. That handling appears to special-case
+     * scrolling up at the top of a short document (nothing left to pan to),
+     * which was swallowing the upward gesture before the CodeArea-level
+     * filter's zoom-in logic ever got a reliable chance to run — registering
+     * one level higher sidesteps that regardless of scroll direction.
+     */
+    private void setupCtrlScrollFontZoom(VirtualizedScrollPane<CodeArea> scrollPane) {
+        scrollPane.addEventFilter(javafx.scene.input.ScrollEvent.SCROLL, e -> {
+            if (!e.isControlDown()) return;
+            if (!com.roze.dbnavigator.db.AppSettingsStore.load().isCtrlScrollZoomEnabled()) return;
+            currentEditorFontSize = Math.max(8, Math.min(48, currentEditorFontSize + (e.getDeltaY() > 0 ? 1 : -1)));
+            updateEditorFontStyle();
+            e.consume();
+        });
+    }
+
     private void setupStatementHighlighting() {
         editor.caretPositionProperty().addListener((obs, o, n) -> refreshStatementHighlight());
         editor.plainTextChanges().subscribe(c -> refreshStatementHighlight());

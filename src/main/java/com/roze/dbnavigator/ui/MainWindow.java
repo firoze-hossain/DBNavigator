@@ -101,6 +101,24 @@ public class MainWindow {
         schemaPane.reload();
     }
 
+    /** Toolbar gear button's quick Theme submenu — switches and persists in one step. */
+    private void quickSwitchTheme(com.roze.dbnavigator.db.AppSettingsStore.Theme theme) {
+        com.roze.dbnavigator.db.AppSettingsStore.Settings settings = com.roze.dbnavigator.db.AppSettingsStore.load();
+        settings.setTheme(theme);
+        com.roze.dbnavigator.db.AppSettingsStore.save(settings);
+        ThemeManager.setTheme(theme);
+        setStatus("Theme switched to " + theme);
+    }
+
+    /** Re-applies the saved editor font to every currently open console — called after Settings > Apply/OK. */
+    public void applyEditorFontToOpenConsoles() {
+        for (Tab tab : tabPane.getTabs()) {
+            if (tab instanceof QueryTab queryTab) {
+                queryTab.applyEditorFontFromSettings();
+            }
+        }
+    }
+
     /** Shows the docked Run panel, expanding it if it was collapsed. */
     public void showRunPanel() {
         if (!runPanelVisible) {
@@ -176,12 +194,17 @@ public class MainWindow {
         MenuItem invalidateCaches = new MenuItem("Invalidate Caches…");
         invalidateCaches.setOnAction(e -> InvalidateCachesDialog.show(stage));
 
+        MenuItem settingsMenuItem = new MenuItem("Settings…");
+        settingsMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.COMMA,
+                KeyCombination.SHORTCUT_DOWN, KeyCombination.ALT_DOWN));
+        settingsMenuItem.setOnAction(e -> SettingsDialog.show(this));
+
         MenuItem exit = new MenuItem("Exit");
         exit.setOnAction(e -> stage.close());
 
         Menu fileMenu = new Menu("File", null, newDataSource, newConsole,
                 new SeparatorMenuItem(), openSql, saveSql, new SeparatorMenuItem(), localHistoryMenu,
-                new SeparatorMenuItem(), invalidateCaches, new SeparatorMenuItem(), exit);
+                new SeparatorMenuItem(), invalidateCaches, settingsMenuItem, new SeparatorMenuItem(), exit);
 
         // ---- View ----
         MenuItem refreshExplorer = new MenuItem("Refresh Database Explorer");
@@ -353,11 +376,22 @@ public class MainWindow {
         settingsButton.setGraphic(Icons.of(FontAwesomeSolid.COG, "#a9b7c6", 13));
         settingsButton.setTooltip(new Tooltip("Settings"));
         ContextMenu settingsMenu = new ContextMenu();
+        MenuItem openSettings = new MenuItem("Settings…");
+        openSettings.setOnAction(e -> SettingsDialog.show(this));
+        MenuItem openPlugins = new MenuItem("Plugins…");
+        openPlugins.setOnAction(e -> SettingsDialog.show(this));
+        Menu themeMenu = new Menu("Theme");
+        MenuItem darkTheme = new MenuItem("Dark");
+        darkTheme.setOnAction(e -> quickSwitchTheme(com.roze.dbnavigator.db.AppSettingsStore.Theme.DARK));
+        MenuItem lightTheme = new MenuItem("Light");
+        lightTheme.setOnAction(e -> quickSwitchTheme(com.roze.dbnavigator.db.AppSettingsStore.Theme.LIGHT));
+        themeMenu.getItems().addAll(darkTheme, lightTheme);
         MenuItem dataSources = new MenuItem("Data Sources…");
         dataSources.setOnAction(e -> showNewConnectionDialog());
         MenuItem refresh = new MenuItem("Refresh Database Explorer");
         refresh.setOnAction(e -> schemaPane.reload());
-        settingsMenu.getItems().addAll(dataSources, refresh);
+        settingsMenu.getItems().addAll(openSettings, openPlugins, new SeparatorMenuItem(),
+                themeMenu, new SeparatorMenuItem(), dataSources, refresh);
         settingsButton.setOnAction(e ->
                 settingsMenu.show(settingsButton, javafx.geometry.Side.BOTTOM, 0, 4));
 

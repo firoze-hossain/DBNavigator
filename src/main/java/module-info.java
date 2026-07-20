@@ -43,6 +43,10 @@ module com.roze.dbnavigator {
     // Jackson reads/writes ConnectionProfile reflectively
     opens com.roze.dbnavigator.model to com.fasterxml.jackson.databind;
 
+    // Jackson also (de)serializes AppSettingsStore.Settings and the query/local
+    // history entry records, which live in this package
+    opens com.roze.dbnavigator.db to com.fasterxml.jackson.databind;
+
     exports com.roze.dbnavigator;
     exports com.roze.dbnavigator.model;
     exports com.roze.dbnavigator.ui;

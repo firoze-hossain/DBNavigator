@@ -1,0 +1,783 @@
+/*!* ============================================================*/
+/*   DBNavigator Pro — LIGHT theme*/
+/*   Built from the dark theme's structure: most rules already use the*/
+/*   -bg-*!-text*!-accent* root variables above and re-theme automatically.*/
+/*   Everything below this point overrides the rules that had a hardcoded*/
+/*   dark-specific color baked in (selection highlights, hovers, syntax-adjacent*/
+/*   colors, diff/diagram accents) so they read correctly on a light background.*/
+/*   ============================================================ *!*/
+
+.root {
+    -bg-darkest:   #ffffff;
+    -bg-dark:      #f5f5f7;
+    -bg-mid:       #ebebef;
+    -bg-light:     #e0e0e6;
+    -border:       #d0d0d6;
+    -text:         #1a1a1e;
+    -text-dim:     #6e6e76;
+    -accent:       #3574f0;
+    -accent-green: #2e7d32;
+
+    -fx-base: -bg-dark;
+    -fx-background: -bg-dark;
+    -fx-control-inner-background: -bg-darkest;
+    -fx-text-fill: -text;
+    -fx-font-family: "Segoe UI", "SF Pro Text", "Ubuntu", sans-serif;
+    -fx-font-size: 13px;
+    -fx-accent: -accent;
+    -fx-focus-color: -accent;
+    -fx-faint-focus-color: transparent;
+}
+
+.app-root { -fx-background-color: -bg-dark; }
+
+/* ---------- toolbar ---------- */
+.app-toolbar {
+    -fx-background-color: -bg-mid;
+    -fx-border-color: transparent transparent -border transparent;
+}
+.brand-label {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -text;
+    -fx-graphic-text-gap: 8;
+}
+
+/* ---------- buttons ---------- */
+.button {
+    -fx-background-color: -bg-light;
+    -fx-text-fill: -text;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-border-color: -border;
+    -fx-padding: 4 12 4 12;
+    -fx-cursor: hand;
+}
+.button:hover  { -fx-background-color: #4a4d52; }
+.button:pressed{ -fx-background-color: #55585e; }
+.run-button    { -fx-border-color: -accent-green; }
+
+/* ---------- text inputs ---------- */
+.text-field, .password-field, .combo-box, .spinner, .choice-box {
+    -fx-background-color: -bg-darkest;
+    -fx-text-fill: -text;
+    -fx-prompt-text-fill: -text-dim;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-border-color: -border;
+}
+.text-field:focused, .password-field:focused { -fx-border-color: -accent; }
+.combo-box .list-cell { -fx-text-fill: -text; }
+
+/* ---------- split panes ---------- */
+.split-pane { -fx-background-color: -bg-dark; -fx-padding: 0; }
+.split-pane-divider {
+    -fx-background-color: -border;
+    -fx-padding: 0 1 0 1;
+}
+
+/* ---------- explorer panel ---------- */
+.schema-pane { -fx-background-color: -bg-mid; }
+.panel-header-box {
+    -fx-background-color: -bg-mid;
+    -fx-border-color: transparent transparent -border transparent;
+}
+.panel-header {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -text-dim;
+}
+.schema-tree {
+    -fx-background-color: -bg-mid;
+    -fx-border-width: 0;
+}
+.schema-tree .tree-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: -text;
+    -fx-padding: 3 4 3 4;
+}
+.schema-tree .tree-cell:hover    { -fx-background-color: #393c40; }
+.schema-tree .tree-cell:selected { -fx-background-color: #2e436e; }
+.schema-tree .tree-cell .arrow   { -fx-background-color: -text-dim; }
+
+/* ---------- tabs ---------- */
+.main-tabs .tab-header-area .tab-header-background { -fx-background-color: -bg-mid; }
+.main-tabs .tab {
+    -fx-background-color: -bg-mid;
+    -fx-background-radius: 0;
+    -fx-padding: 5 12 5 12;
+    -fx-border-color: transparent;
+}
+.main-tabs .tab:selected {
+    -fx-background-color: -bg-dark;
+    -fx-border-color: -accent transparent transparent transparent;
+    -fx-border-width: 2 0 0 0;
+}
+.main-tabs .tab .tab-label { -fx-text-fill: -text-dim; }
+.main-tabs .tab:selected .tab-label { -fx-text-fill: -text; }
+
+.structure-tabs .tab-header-area .tab-header-background { -fx-background-color: -bg-mid; }
+
+/* ---------- console ---------- */
+.console-toolbar {
+    -fx-background-color: -bg-mid;
+    -fx-border-color: transparent transparent -border transparent;
+}
+.console-status-bar {
+    -fx-background-color: -bg-mid;
+    -fx-border-color: -border transparent transparent transparent;
+}
+.console-status { -fx-text-fill: -text-dim; -fx-font-size: 12px; }
+.console-connection-label { -fx-text-fill: -text-dim; -fx-graphic-text-gap: 6; }
+
+/* ---------- SQL editor (RichTextFX) ---------- */
+.sql-editor {
+    -fx-background-color: -bg-darkest;
+    -fx-font-family: "JetBrains Mono", "Consolas", "Menlo", monospace;
+    -fx-font-size: 14px;
+}
+.sql-editor .text { -fx-fill: #a9b7c6; }
+.sql-editor .caret { -fx-stroke: #dfe1e5; }
+.sql-editor .selection { -fx-fill: #214283; }
+.sql-editor .lineno {
+    -fx-background-color: -bg-darkest;
+    -fx-text-fill: #5c6064;
+    -fx-font-size: 12px;
+}
+.sql-keyword { -fx-fill: #cc7832; -fx-font-weight: bold; }
+.sql-string  { -fx-fill: #6a8759; }
+.sql-number  { -fx-fill: #6897bb; }
+.sql-comment { -fx-fill: #808080; -fx-font-style: italic; }
+
+/* ---------- result grid ---------- */
+.result-grid {
+    -fx-background-color: -bg-darkest;
+    -fx-border-width: 0;
+}
+.result-grid .column-header-background {
+    -fx-background-color: -bg-mid;
+    -fx-border-color: transparent transparent -border transparent;
+}
+.result-grid .column-header .label {
+    -fx-text-fill: -text;
+    -fx-font-weight: bold;
+    -fx-font-size: 12px;
+}
+.result-grid .table-row-cell {
+    -fx-background-color: -bg-darkest;
+    -fx-text-fill: -text;
+    -fx-border-color: transparent;
+}
+.result-grid .table-row-cell:odd      { -fx-background-color: #232428; }
+.result-grid .table-row-cell:hover    { -fx-background-color: #2e3033; }
+.result-grid .table-row-cell:selected { -fx-background-color: #2e436e; }
+.result-grid .table-cell {
+    -fx-text-fill: #c8ccd4;
+    -fx-font-family: "JetBrains Mono", "Consolas", monospace;
+    -fx-font-size: 12px;
+    -fx-border-color: transparent #2c2e32 transparent transparent;
+}
+
+/* ---------- status bar ---------- */
+.app-status-bar {
+    -fx-background-color: -bg-mid;
+    -fx-border-color: -border transparent transparent transparent;
+}
+.status-text { -fx-text-fill: -text-dim; -fx-font-size: 12px; }
+
+/* ---------- welcome ---------- */
+.welcome-title { -fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: -text; }
+.welcome-hint  { -fx-text-fill: -text-dim; -fx-font-size: 13px; -fx-line-spacing: 4; }
+
+/* ---------- dialogs / menus ---------- */
+.dialog-pane { -fx-background-color: -bg-dark; }
+.dialog-pane .label { -fx-text-fill: -text; }
+.context-menu {
+    -fx-background-color: -bg-mid;
+    -fx-border-color: -border;
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+}
+.context-menu .menu-item .label {
+    -fx-text-fill: #f2f4f8;
+}
+.context-menu .menu-item:disabled .label {
+    -fx-text-fill: #656a72;
+}
+.context-menu .menu-item:focused .label,
+.context-menu .menu-item:hover .label {
+    -fx-text-fill: #ffffff;
+}
+.context-menu .menu-item:focused, .context-menu .menu-item:hover {
+    -fx-background-color: #2e436e;
+}
+.context-menu .menu-item .accelerator-text {
+    -fx-fill: -text-dim;
+}
+.context-menu .menu > .arrow {
+    -fx-background-color: -text-dim;
+}
+.menu-item:focused { -fx-background-color: #2e436e; }
+
+/* ---------- scrollbars ---------- */
+.scroll-bar { -fx-background-color: transparent; }
+.scroll-bar .thumb { -fx-background-color: #4a4d52; -fx-background-radius: 6; }
+.scroll-bar .thumb:hover { -fx-background-color: #5a5e64; }
+.scroll-bar .increment-button, .scroll-bar .decrement-button { -fx-padding: 2; }
+
+.check-box .box {
+    -fx-background-color: -bg-darkest;
+    -fx-border-color: -border;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+}
+.check-box:selected .mark { -fx-background-color: -accent; }
+.tooltip { -fx-background-color: -bg-light; -fx-text-fill: -text; }
+
+
+/* ---------- schema tree detail (counts, column types) ---------- */
+.tree-name   { -fx-text-fill: -text; }
+.tree-detail { -fx-text-fill: #6f7680; -fx-font-size: 11px; }
+.schema-tree .tree-cell:selected .tree-name   { -fx-text-fill: white; }
+.schema-tree .tree-cell:selected .tree-detail { -fx-text-fill: #b9c4d4; }
+
+/* ---------- autocomplete popup ---------- */
+.completion-list {
+    -fx-background-color: -bg-mid;
+    -fx-border-color: -border;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-font-family: "JetBrains Mono", "Consolas", monospace;
+    -fx-font-size: 13px;
+}
+.completion-list .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: -text;
+    -fx-padding: 3 10 3 10;
+}
+.completion-list .list-cell:filled:selected { -fx-background-color: #2e436e; }
+.completion-list .list-cell:filled:hover    { -fx-background-color: #393c40; }
+
+/* ---------- dump/restore process output ---------- */
+.process-output {
+    -fx-control-inner-background: -bg-darkest;
+    -fx-font-family: "JetBrains Mono", "Consolas", monospace;
+    -fx-font-size: 12px;
+    -fx-text-fill: #a9b7c6;
+}
+
+/* ---------- editable data grid ---------- */
+.result-grid .text-field {
+    -fx-background-color: #1a2c47;
+    -fx-text-fill: white;
+    -fx-border-color: -accent;
+}
+
+/* ---------- database filter dialog ---------- */
+.database-filter-scroll {
+    -fx-background-color: -bg-dark;
+    -fx-background: -bg-dark;
+    -fx-border-width: 0;
+}
+.database-filter-scroll .viewport { -fx-background-color: -bg-dark; }
+
+/* ---------- breadcrumb (which db ▸ schema ▸ table is open) ---------- */
+.breadcrumb-bar {
+    -fx-background-color: -bg-mid;
+    -fx-border-color: transparent transparent -border transparent;
+}
+.breadcrumb {
+    -fx-text-fill: #9aa4b0;
+    -fx-font-size: 12px;
+    -fx-graphic-text-gap: 6;
+}
+
+/* ---------- inline cell editor + date picker button ---------- */
+.cell-editor {
+    -fx-background-color: #1a2c47;
+    -fx-text-fill: white;
+    -fx-border-color: -accent;
+    -fx-background-radius: 3;
+    -fx-border-radius: 3;
+    -fx-padding: 1 4 1 4;
+}
+.calendar-button {
+    -fx-padding: 1 6 1 6;
+    -fx-background-color: -bg-light;
+}
+.date-picker-popup {
+    -fx-background-color: -bg-mid;
+}
+.date-picker .arrow-button { -fx-background-color: -bg-light; }
+
+/* ---------- menu bar ---------- */
+.app-menu-bar { -fx-background-color: -bg-mid; }
+.app-menu-bar .menu .label { -fx-text-fill: -text; }
+.app-menu-bar .menu:hover, .app-menu-bar .menu:showing { -fx-background-color: #3c4046; }
+
+/* ---------- colored completion entries (DataGrip style) ---------- */
+.completion-name    { -fx-font-family: "JetBrains Mono", "Consolas", monospace; -fx-font-size: 13px; }
+.completion-keyword { -fx-text-fill: #cc7832; -fx-font-weight: bold; }
+.completion-table   { -fx-text-fill: #4a88c7; }
+.completion-column  { -fx-text-fill: #6a8759; }
+.completion-detail  { -fx-text-fill: #6f7680; -fx-font-size: 11px; }
+
+/* ---------- search everywhere ---------- */
+.search-dialog {
+    -fx-background-color: -bg-mid;
+    -fx-border-color: -border;
+    -fx-border-width: 1;
+    -fx-background-radius: 10;
+    -fx-border-radius: 10;
+}
+.search-field {
+    -fx-font-size: 14px;
+    -fx-background-color: -bg-darkest;
+}
+
+
+/* ---------- syntax color fix ----------
+   ".sql-editor .text" (2 classes) was beating ".sql-keyword" (1 class),
+   leaving keywords bold but white. These equal-specificity rules are
+   declared last, so they win. */
+.sql-editor .sql-keyword { -fx-fill: #cc7832; -fx-font-weight: bold; }
+.sql-editor .sql-string  { -fx-fill: #6a8759; }
+.sql-editor .sql-number  { -fx-fill: #6897bb; }
+.sql-editor .sql-comment { -fx-fill: #808080; -fx-font-style: italic; }
+
+/* ---------- approximate row count link ---------- */
+.exact-count-link {
+    -fx-text-fill: #6897bb;
+    -fx-underline: false;
+    -fx-font-size: 11px;
+    -fx-padding: 0 4 0 4;
+}
+.exact-count-link:hover { -fx-text-fill: #8ab4dd; -fx-underline: true; }
+
+
+/* ---------- docked Run panel (bottom, resizable via SplitPane divider) ---------- */
+.run-panel {
+    -fx-background-color: -bg-dark;
+    -fx-border-color: -border transparent transparent transparent;
+    -fx-border-width: 1 0 0 0;
+}
+.run-panel-header {
+    -fx-background-color: -bg-mid;
+    -fx-border-color: transparent transparent -border transparent;
+    -fx-min-height: 30px;
+}
+.run-panel-title {
+    -fx-text-fill: -text;
+    -fx-font-weight: bold;
+    -fx-font-size: 12px;
+    -fx-padding: 0 8 0 0;
+}
+.run-panel-chrome-button {
+    -fx-background-color: transparent;
+    -fx-border-width: 0;
+    -fx-padding: 4 6 4 6;
+}
+.run-panel-chrome-button:hover { -fx-background-color: #3c4046; }
+
+.run-tabs { -fx-background-color: transparent; }
+.run-tabs .tab-header-area { -fx-padding: 0; }
+.run-tabs .tab-header-area .tab-header-background { -fx-background-color: transparent; }
+.run-tabs .tab {
+    -fx-background-color: transparent;
+    -fx-background-radius: 0;
+    -fx-padding: 4 10 4 10;
+    -fx-border-color: transparent;
+}
+.run-tabs .tab:selected {
+    -fx-background-color: -bg-dark;
+    -fx-border-color: -accent transparent transparent transparent;
+    -fx-border-width: 2 0 0 0;
+}
+.run-tabs .tab .tab-label { -fx-text-fill: -text-dim; -fx-font-size: 12px; }
+.run-tabs .tab:selected .tab-label { -fx-text-fill: -text; }
+
+.run-tab-content { -fx-background-color: -bg-darkest; }
+.run-tab-rail {
+    -fx-background-color: -bg-mid;
+    -fx-border-color: transparent -border transparent transparent;
+}
+.run-tab-rail .button {
+    -fx-background-color: transparent;
+    -fx-border-width: 0;
+    -fx-background-radius: 4;
+    -fx-padding: 5;
+    -fx-pref-width: 28px;
+    -fx-alignment: center;
+}
+.run-tab-rail .button:hover { -fx-background-color: #3c4046; }
+.run-tab-rail .separator {
+    -fx-padding: 2 0 2 0;
+}
+
+/* ---------- status bar task indicator ---------- */
+.task-indicator { -fx-cursor: hand; }
+.task-breadcrumb { -fx-text-fill: -text-dim; -fx-font-size: 12px; }
+.task-name { -fx-text-fill: -text; -fx-font-size: 12px; }
+.task-cancel-button {
+    -fx-background-color: transparent;
+    -fx-border-width: 0;
+    -fx-padding: 2 4 2 4;
+}
+.task-cancel-button:hover { -fx-background-color: #3c4046; }
+
+/* ---------- segmented tool tabs (Restore dialog: pg_restore / psql) ---------- */
+.tool-tab {
+    -fx-background-color: transparent;
+    -fx-text-fill: -text-dim;
+    -fx-background-radius: 5;
+    -fx-border-radius: 5;
+    -fx-border-color: -border;
+    -fx-padding: 4 14 4 14;
+    -fx-font-size: 12px;
+}
+.tool-tab:selected {
+    -fx-background-color: #3c4046;
+    -fx-text-fill: -text;
+    -fx-border-color: #4a4d52;
+}
+.tool-tab:hover { -fx-background-color: #34373c; }
+
+/* ---------- Local History ---------- */
+.history-list {
+    -fx-background-color: -bg-mid;
+    -fx-control-inner-background: -bg-mid;
+}
+.history-list .list-cell {
+    -fx-background-color: transparent;
+}
+.history-list .list-cell:selected { -fx-background-color: #2e436e; }
+.history-list .list-cell:hover { -fx-background-color: #34373c; }
+.history-entry-title { -fx-text-fill: -text; -fx-font-size: 12px; -fx-font-weight: bold; }
+.history-entry-file  { -fx-text-fill: #6897bb; -fx-font-size: 11px; }
+.history-entry-time  { -fx-text-fill: -text-dim; -fx-font-size: 11px; }
+
+.diff-header-row {
+    -fx-background-color: -bg-mid;
+    -fx-border-color: transparent transparent -border transparent;
+}
+.diff-header-label { -fx-text-fill: -text-dim; -fx-font-size: 12px; -fx-font-weight: bold; }
+
+.diff-toolbar-pill {
+    -fx-text-fill: -text-dim;
+    -fx-background-color: -bg-light;
+    -fx-background-radius: 4;
+    -fx-padding: 3 8 3 8;
+    -fx-font-size: 11px;
+}
+
+.diff-scroll { -fx-background-color: -bg-darkest; }
+.diff-scroll .viewport { -fx-background-color: -bg-darkest; }
+.diff-grid { -fx-background-color: -bg-darkest; }
+
+.diff-lineno {
+    -fx-text-fill: #5c6064;
+    -fx-font-family: "JetBrains Mono", "Consolas", monospace;
+    -fx-font-size: 11px;
+    -fx-alignment: center-right;
+    -fx-padding: 2 8 2 0;
+}
+.diff-content {
+    -fx-padding: 2 8 2 8;
+    -fx-column-halignment: left;
+}
+.diff-segment {
+    -fx-text-fill: #c8ccd4;
+    -fx-font-family: "JetBrains Mono", "Consolas", monospace;
+    -fx-font-size: 12px;
+    -fx-padding: 0;
+}
+.diff-segment-changed {
+    -fx-background-color: #5a3a6b;
+    -fx-text-fill: #f0d8ff;
+    -fx-background-radius: 2;
+}
+
+.diff-row-equal   { -fx-background-color: -bg-darkest; }
+.diff-row-changed { -fx-background-color: #262a38; }
+.diff-row-added   { -fx-background-color: #1e3324; }
+.diff-row-removed { -fx-background-color: #3a2020; }
+
+/* ---------- Invalidate Caches dialog ---------- */
+.link-button {
+    -fx-background-color: transparent;
+    -fx-border-width: 0;
+    -fx-text-fill: #5b9bd5;
+    -fx-underline: false;
+}
+.link-button:hover { -fx-underline: true; }
+
+/* ---------- themed built-in Dialog/Alert (fixes native white-dialog look) ---------- */
+.themed-dialog {
+    -fx-background-color: -bg-dark;
+}
+.themed-dialog > .header-panel {
+    -fx-background-color: -bg-mid;
+}
+.themed-dialog > .header-panel .label {
+    -fx-text-fill: -text;
+    -fx-font-size: 15px;
+}
+.themed-dialog .content.label,
+.themed-dialog .content {
+    -fx-text-fill: -text;
+}
+.themed-dialog .button-bar .button {
+    -fx-background-color: -bg-light;
+    -fx-text-fill: -text;
+}
+.themed-dialog .list-view,
+.themed-dialog .combo-box-popup .list-view {
+    -fx-background-color: -bg-darkest;
+    -fx-control-inner-background: -bg-darkest;
+}
+
+/* ---------- New/Edit Data Source dialog ---------- */
+.connection-dialog-header {
+    -fx-background-color: -bg-mid;
+    -fx-border-color: transparent transparent -border transparent;
+}
+.connection-dialog-icon {
+    -fx-background-radius: 8;
+}
+.connection-dialog-title {
+    -fx-text-fill: -text;
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+}
+.connection-dialog-subtitle {
+    -fx-text-fill: -text-dim;
+    -fx-font-size: 11px;
+}
+.connection-section-label {
+    -fx-text-fill: -accent;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-padding: 6 0 0 0;
+}
+.connection-field-label {
+    -fx-text-fill: -text-dim;
+    -fx-font-size: 12px;
+}
+.connection-test-result { -fx-font-size: 12px; }
+.connection-test-result.test-ok   { -fx-text-fill: #57965c; }
+.connection-test-result.test-fail { -fx-text-fill: #e05555; }
+
+/* ---------- ER diagram ---------- */
+.diagram-pane { -fx-background-color: -bg-darkest; }
+.diagram-scroll { -fx-background-color: -bg-darkest; }
+.diagram-scroll .viewport { -fx-background-color: -bg-darkest; }
+
+.diagram-table-box, .diagram-table-box-root {
+    -fx-background-color: -bg-mid;
+    -fx-border-color: -border;
+    -fx-border-width: 1;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+}
+.diagram-table-box-root {
+    -fx-border-color: -accent;
+    -fx-border-width: 2;
+}
+.diagram-table-header {
+    -fx-background-color: #33363c;
+    -fx-background-radius: 6 6 0 0;
+    -fx-text-fill: -text;
+    -fx-font-weight: bold;
+}
+.diagram-table-header .label { -fx-text-fill: -text; -fx-font-weight: bold; -fx-font-size: 12px; }
+.diagram-column-row { -fx-border-color: transparent transparent #2c2e32 transparent; }
+.diagram-column-row:hover { -fx-background-color: #2e3033; }
+.diagram-column-name { -fx-text-fill: #c8ccd4; -fx-font-size: 11px; }
+.diagram-column-pk   { -fx-text-fill: #e0a44c; -fx-font-size: 11px; -fx-font-weight: bold; }
+.diagram-column-type { -fx-text-fill: #6f7680; -fx-font-size: 10px; }
+.diagram-connector   { -fx-stroke: #5b8ec4; -fx-stroke-width: 1.5; }
+.diagram-connector-label {
+    -fx-text-fill: #8fa8c4;
+    -fx-font-size: 10px;
+    -fx-background-color: -bg-darkest;
+    -fx-padding: 1 3 1 3;
+}
+
+/* ---------- Modify Table dialog ---------- */
+.table-row-cell:selected { -fx-background-color: #2e436e; }
+
+/* ---------- current-statement highlight (multi-statement consoles) ---------- */
+.current-statement-line {
+    -fx-background-color: rgba(87, 150, 92, 0.14);
+    -fx-border-color: transparent transparent transparent #57965c;
+    -fx-border-width: 0 0 0 3;
+}
+
+/* ---------- Statements quick-pick popup ---------- */
+.statements-popup {
+    -fx-background-color: -bg-mid;
+    -fx-border-color: -border;
+    -fx-border-width: 1;
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+}
+
+/* ---------- extended SQL syntax colors (types, functions, parameters) ---------- */
+.sql-editor .sql-type      { -fx-fill: #c77dbb; }
+.sql-editor .sql-function  { -fx-fill: #56b6b0; -fx-font-style: italic; }
+.sql-editor .sql-parameter { -fx-fill: #e0a44c; -fx-font-weight: bold; }
+.sql-editor .sql-qualifier { -fx-fill: #82aaff; }
+
+/* ---------- serial/row-number column ---------- */
+.result-grid .serial-cell {
+    -fx-text-fill: #6f7680;
+    -fx-alignment: CENTER-RIGHT;
+    -fx-background-color: #1e1f22;
+    -fx-font-size: 11px;
+}
+
+/* ---------- result pager (DataGrip-style "1-500 of 501+") ---------- */
+.result-pager { -fx-spacing: 2; }
+.result-pager-button {
+    -fx-background-color: transparent;
+    -fx-border-width: 0;
+    -fx-padding: 3 6 3 6;
+}
+.result-pager-button:hover { -fx-background-color: #3c4046; }
+.result-pager-label {
+    -fx-text-fill: -text-dim;
+    -fx-font-size: 12px;
+    -fx-padding: 0 6 0 6;
+}
+.result-pager-overflow {
+    -fx-background-color: transparent;
+    -fx-border-width: 0;
+    -fx-padding: 3 4 3 4;
+}
+.result-pager-overflow > .arrow { -fx-background-color: transparent; -fx-padding: 0; }
+
+/* ============================================================
+   Light-theme overrides for hardcoded (non-variable) dark colors
+   ============================================================ */
+
+.button:hover  { -fx-background-color: #dcdce2; }
+.button:pressed{ -fx-background-color: #cccdd4; }
+
+.schema-tree .tree-cell:hover    { -fx-background-color: #e7edfb; }
+.schema-tree .tree-cell:selected { -fx-background-color: #3574f0; }
+.schema-tree .tree-cell:selected .tree-name   { -fx-text-fill: white; }
+.schema-tree .tree-cell:selected .tree-detail { -fx-text-fill: #dce8ff; }
+.tree-detail { -fx-text-fill: #6e6e76; }
+
+.diff-lineno { -fx-text-fill: #9a9aa2; }
+
+.result-grid .table-row-cell:odd      { -fx-background-color: #f2f2f5; }
+.result-grid .table-row-cell:hover    { -fx-background-color: #e9edf9; }
+.result-grid .table-row-cell:selected { -fx-background-color: #3574f0; }
+.result-grid .table-cell { -fx-text-fill: #1a1a1e; }
+
+.context-menu .menu-item .label { -fx-text-fill: #1a1a1e; }
+.context-menu .menu-item:disabled .label { -fx-text-fill: #a0a0a6; }
+.context-menu .menu-item:focused .label,
+.context-menu .menu-item:hover .label { -fx-text-fill: #ffffff; }
+.context-menu .menu-item:focused, .context-menu .menu-item:hover { -fx-background-color: #3574f0; }
+.menu-item:focused { -fx-background-color: #3574f0; }
+
+.scroll-bar .thumb { -fx-background-color: #c4c4cc; }
+.scroll-bar .thumb:hover { -fx-background-color: #aeaeb8; }
+
+.completion-list .list-cell:filled:selected { -fx-background-color: #3574f0; }
+.completion-list .list-cell:filled:hover    { -fx-background-color: #e7edfb; }
+.completion-name { -fx-text-fill: #1a1a1e; }
+.console-connection-label { -fx-text-fill: #55555c; }
+
+.cell-editor {
+    -fx-background-color: #eaf1ff;
+    -fx-text-fill: #1a1a1e;
+    -fx-border-color: -accent;
+}
+
+.breadcrumb { -fx-text-fill: #55555c; }
+
+.app-menu-bar .menu:hover, .app-menu-bar .menu:showing { -fx-background-color: #e0e0e6; }
+.app-menu-bar .menu .label { -fx-text-fill: #1a1a1e; }
+
+.exact-count-link { -fx-text-fill: #1a56c4; }
+.exact-count-link:hover { -fx-text-fill: #0d3d94; }
+
+.run-panel-chrome-button:hover { -fx-background-color: #e0e0e6; }
+.run-tab-rail .button:hover { -fx-background-color: #e0e0e6; }
+.task-cancel-button:hover { -fx-background-color: #e0e0e6; }
+.result-pager-button:hover { -fx-background-color: #e0e0e6; }
+
+.tool-tab { -fx-text-fill: #55555c; -fx-border-color: -border; }
+.tool-tab:selected { -fx-background-color: #dbe6ff; -fx-text-fill: #1a1a1e; -fx-border-color: #3574f0; }
+.tool-tab:hover { -fx-background-color: #eef1f8; }
+
+.history-list .list-cell:selected { -fx-background-color: #3574f0; }
+.history-list .list-cell:hover { -fx-background-color: #e7edfb; }
+.history-entry-title { -fx-text-fill: #1a1a1e; }
+.history-entry-file  { -fx-text-fill: #1a56c4; }
+.history-entry-time  { -fx-text-fill: #7a7a82; }
+
+.diff-content { -fx-text-fill: #1a1a1e; }
+.diff-segment { -fx-text-fill: #1a1a1e; }
+.diff-segment-changed { -fx-background-color: #f0dcff; -fx-text-fill: #5a3a6b; }
+.diff-row-equal   { -fx-background-color: #ffffff; }
+.diff-row-changed { -fx-background-color: #eaeefb; }
+.diff-row-added   { -fx-background-color: #e6f7e8; }
+.diff-row-removed { -fx-background-color: #fcebeb; }
+.diff-header-label { -fx-text-fill: #55555c; }
+.diff-toolbar-pill { -fx-text-fill: #55555c; -fx-background-color: #e0e0e6; }
+
+.link-button { -fx-text-fill: #1a56c4; }
+
+.diagram-table-header { -fx-background-color: #e6e9f0; }
+.diagram-table-header .label { -fx-text-fill: #1a1a1e; }
+.diagram-column-row:hover { -fx-background-color: #eef1f8; }
+.diagram-column-name { -fx-text-fill: #33333a; }
+.diagram-column-type { -fx-text-fill: #8a8a92; }
+.diagram-connector-label { -fx-text-fill: #2a4a80; -fx-background-color: #ffffff; }
+.diagram-table-box, .diagram-table-box-root { -fx-background-color: #fafafc; }
+
+.table-row-cell:selected { -fx-background-color: #3574f0; }
+
+.serial-cell { -fx-text-fill: #8a8a92; -fx-background-color: #f7f7fa; }
+
+.connection-test-result.test-ok   { -fx-text-fill: #2e7d32; }
+.connection-test-result.test-fail { -fx-text-fill: #c62828; }
+.connection-field-label { -fx-text-fill: #55555c; }
+.connection-section-label { -fx-text-fill: -accent; }
+.connection-dialog-title { -fx-text-fill: #1a1a1e; }
+.connection-dialog-subtitle { -fx-text-fill: #7a7a82; }
+
+.task-breadcrumb { -fx-text-fill: #55555c; }
+.task-name { -fx-text-fill: #1a1a1e; }
+
+.status-text { -fx-text-fill: #55555c; }
+.console-status { -fx-text-fill: #6e6e76; }
+.welcome-hint { -fx-text-fill: #55555c; }
+.welcome-title { -fx-text-fill: #1a1a1e; }
+
+/* Syntax colors: switched to a set tuned for a light background
+   (IntelliJ "Light" scheme conventions) rather than reusing the dark
+   theme's neon-on-black palette, which would look washed out here. */
+.sql-editor .text { -fx-fill: #1a1a1e; }
+.sql-editor .lineno { -fx-background-color: -bg-darkest; -fx-text-fill: #a0a0a8; }
+.sql-editor .selection { -fx-fill: #cfe0fa; }
+.sql-editor .sql-keyword  { -fx-fill: #0033b3; -fx-font-weight: bold; }
+.sql-editor .sql-string   { -fx-fill: #008000; }
+.sql-editor .sql-number   { -fx-fill: #1750eb; }
+.sql-editor .sql-comment  { -fx-fill: #8c8c8c; -fx-font-style: italic; }
+.sql-editor .sql-type      { -fx-fill: #7a3e9d; }
+.sql-editor .sql-function  { -fx-fill: #00838f; -fx-font-style: italic; }
+.sql-editor .sql-parameter { -fx-fill: #a56000; -fx-font-weight: bold; }
+.sql-editor .sql-qualifier { -fx-fill: #1a56c4; }
+.current-statement-line {
+    -fx-background-color: rgba(46, 125, 50, 0.10);
+    -fx-border-color: transparent transparent transparent #2e7d32;
+    -fx-border-width: 0 0 0 3;
+}
+
+.process-output { -fx-control-inner-background: #ffffff; -fx-text-fill: #1a1a1e; }
+.statements-popup { -fx-background-color: #f5f5f7; -fx-border-color: -border; }
