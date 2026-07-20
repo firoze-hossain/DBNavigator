@@ -151,7 +151,9 @@ public final class SettingsDialog {
         CheckBox ctrlScrollCheck = new CheckBox("Change font size with Ctrl+Mouse Wheel in the editor");
         ctrlScrollCheck.setSelected(settings.isCtrlScrollZoomEnabled());
 
-        Label hint = new Label("Scroll with Ctrl held over any SQL console to zoom that editor's text in or out.");
+        Label hint = new Label("Scroll with Ctrl held over any SQL console to zoom that editor's text in or out. "
+                + "Ctrl+Plus / Ctrl+Minus always work too, regardless of this setting or your OS's own "
+                + "scroll-gesture settings.");
         hint.getStyleClass().add("console-status");
         hint.setWrapText(true);
         hint.setMaxWidth(420);

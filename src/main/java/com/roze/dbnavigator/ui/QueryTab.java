@@ -159,6 +159,7 @@ public class QueryTab extends Tab {
         VirtualizedScrollPane<CodeArea> editorScroll = new VirtualizedScrollPane<>(editor);
         applyEditorFontFromSettings();
         setupCtrlScrollFontZoom(editorScroll);
+        setupKeyboardFontZoom();
 
         // Local History: first snapshot is the "Create" entry; further edits are
         // auto-captured after a pause (avoids saving a snapshot per keystroke).
@@ -419,6 +420,26 @@ public class QueryTab extends Tab {
     private void updateEditorFontStyle() {
         editor.setStyle("-fx-font-family: '" + currentEditorFontFamily + "'; -fx-font-size: "
                 + currentEditorFontSize + "px;");
+    }
+
+    /**
+     * Ctrl+= / Ctrl+Plus (numpad or main keyboard) makes the font bigger;
+     * Ctrl+- / Ctrl+Minus makes it smaller. A keyboard shortcut has none of
+     * the scroll-direction ambiguity the wheel-based zoom can run into (OS-
+     * level gesture handling can intercept Ctrl+Scroll before it ever
+     * reaches the app, particularly upward scrolls on some platforms) — this
+     * is the reliable fallback if that's happening.
+     */
+    private void setupKeyboardFontZoom() {
+        editor.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
+            if (!e.isControlDown()) return;
+            boolean zoomIn = e.getCode() == KeyCode.PLUS || e.getCode() == KeyCode.EQUALS || e.getCode() == KeyCode.ADD;
+            boolean zoomOut = e.getCode() == KeyCode.MINUS || e.getCode() == KeyCode.SUBTRACT;
+            if (!zoomIn && !zoomOut) return;
+            currentEditorFontSize = Math.max(8, Math.min(48, currentEditorFontSize + (zoomIn ? 1 : -1)));
+            updateEditorFontStyle();
+            e.consume();
+        });
     }
 
     /**
