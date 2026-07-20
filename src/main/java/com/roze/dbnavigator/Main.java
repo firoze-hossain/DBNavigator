@@ -1,7 +1,9 @@
 package com.roze.dbnavigator;
 
+import com.roze.dbnavigator.db.AppSettingsStore;
 import com.roze.dbnavigator.db.ClientRegistry;
 import com.roze.dbnavigator.ui.MainWindow;
+import com.roze.dbnavigator.ui.ThemeManager;
 import com.roze.dbnavigator.util.AppExecutor;
 import javafx.application.Application;
 import javafx.scene.Scene;
@@ -13,7 +15,7 @@ public class Main extends Application {
     public void start(Stage stage) {
         MainWindow window = new MainWindow(stage);
         Scene scene = new Scene(window.getRoot(), 1440, 900);
-        scene.getStylesheets().add(getClass().getResource("/css/app.css").toExternalForm());
+        ThemeManager.init(scene, AppSettingsStore.load().getTheme());
 
         stage.setTitle("DBNavigator Pro");
         stage.setScene(scene);
