@@ -60,30 +60,52 @@ public class JdbcClient implements AutoCloseable {
         QueryResult result = new QueryResult();
         long start = System.currentTimeMillis();
 
-        try (Connection conn = getConnection();
-             Statement stmt = conn.createStatement()) {
-
-            if (statementHolder != null) statementHolder.set(stmt);
-            stmt.setMaxRows(maxRows);
-            boolean hasResultSet = stmt.execute(sql);
-
-            if (hasResultSet) {
-                try (ResultSet rs = stmt.getResultSet()) {
-                    readResultSet(rs, result, maxRows);
+        try (Connection conn = getConnection()) {
+            // Same fix as PagedResultCursor: without this, PostgreSQL's driver
+            // ignores setFetchSize and eagerly buffers the ENTIRE result set
+            // client-side during execute() — for an unbounded query (maxRows=0,
+            // e.g. "Execute to File" on a large table) that risks the same
+            // memory-pressure freeze/crash regardless of how the rows are
+            // consumed afterward.
+            boolean supportsCursor = trySetAutoCommitFalse(conn);
+            try (Statement stmt = conn.createStatement()) {
+                if (supportsCursor) {
+                    stmt.setFetchSize(maxRows > 0 ? Math.min(maxRows, 1000) : 1000);
                 }
-            } else {
-                int count = stmt.getUpdateCount();
-                result.setUpdateCount(Math.max(count, 0));
-                result.setMessage(count >= 0
-                        ? count + " row(s) affected"
-                        : "Statement executed");
+                if (statementHolder != null) statementHolder.set(stmt);
+                stmt.setMaxRows(maxRows);
+                boolean hasResultSet = stmt.execute(sql);
+
+                if (hasResultSet) {
+                    try (ResultSet rs = stmt.getResultSet()) {
+                        readResultSet(rs, result, maxRows);
+                    }
+                } else {
+                    int count = stmt.getUpdateCount();
+                    result.setUpdateCount(Math.max(count, 0));
+                    result.setMessage(count >= 0
+                            ? count + " row(s) affected"
+                            : "Statement executed");
+                }
+            } finally {
+                if (statementHolder != null) statementHolder.set(null);
+                if (supportsCursor) {
+                    try { conn.commit(); conn.setAutoCommit(true); } catch (SQLException ignored) {}
+                }
             }
-        } finally {
-            if (statementHolder != null) statementHolder.set(null);
         }
 
         result.setExecutionMillis(System.currentTimeMillis() - start);
         return result;
+    }
+
+    private static boolean trySetAutoCommitFalse(Connection conn) {
+        try {
+            conn.setAutoCommit(false);
+            return true;
+        } catch (SQLException e) {
+            return false;
+        }
     }
 
     /** Paged read of a whole table. */

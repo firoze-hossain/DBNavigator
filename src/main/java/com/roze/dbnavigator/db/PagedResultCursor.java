@@ -29,6 +29,7 @@ public class PagedResultCursor implements AutoCloseable {
     private Connection connection;
     private Statement statement;
     private ResultSet resultSet;
+    private boolean autoCommitDisabled = false;
 
     private final List<String> columns = new ArrayList<>();
     private final List<String> columnTypes = new ArrayList<>();
@@ -60,7 +61,23 @@ public class PagedResultCursor implements AutoCloseable {
         long start = System.currentTimeMillis();
 
         connection = ClientRegistry.jdbc(profile, catalog).getConnection();
+        // Critical for PostgreSQL: its JDBC driver only honors setFetchSize()
+        // (i.e. uses a real server-side cursor, streaming small batches) when
+        // the connection is NOT in autocommit mode. In the default autocommit
+        // mode it ignores fetchSize entirely and eagerly pulls the WHOLE
+        // result set into client memory during execute() — regardless of how
+        // few rows the caller actually reads afterward. For an unbounded
+        // query (no LIMIT, e.g. an ORDER BY over a large table or a join)
+        // that can mean the entire table lands in RAM in one shot, which is
+        // exactly what was freezing/crashing the app: the resulting GC
+        // pressure stalls the whole JVM, including the UI thread, not just
+        // whatever background thread issued the query.
+        boolean supportsCursor = trySetAutoCommitFalse(connection);
+        autoCommitDisabled = supportsCursor;
         statement = connection.createStatement();
+        if (supportsCursor) {
+            statement.setFetchSize(pageSize + 1);
+        }
         if (statementHolder != null) statementHolder.set(statement);
         try {
             isQueryResult = statement.execute(sql);
@@ -90,6 +107,21 @@ public class PagedResultCursor implements AutoCloseable {
             return meta.getColumnTypeName(i);
         } catch (SQLException e) {
             return "";
+        }
+    }
+
+    /**
+     * Best-effort: not every engine/driver needs or supports this the same
+     * way, and some environments (e.g. a connection already mid-transaction)
+     * may reject it — falling back to ordinary fetching rather than failing
+     * the whole query is the right behavior for those cases.
+     */
+    private static boolean trySetAutoCommitFalse(Connection conn) {
+        try {
+            conn.setAutoCommit(false);
+            return true;
+        } catch (SQLException e) {
+            return false;
         }
     }
 
@@ -132,10 +164,23 @@ public class PagedResultCursor implements AutoCloseable {
     public void close() {
         try { if (resultSet != null) resultSet.close(); } catch (SQLException ignored) {}
         try { if (statement != null) statement.close(); } catch (SQLException ignored) {}
+        try {
+            if (connection != null && autoCommitDisabled) {
+                // Nothing was ever written through this cursor (it's read-only
+                // browsing), so either commit or rollback is fine here — this
+                // just closes out the transaction cleanly before the
+                // connection goes back to the pool with autocommit restored.
+                connection.commit();
+                connection.setAutoCommit(true);
+            }
+        } catch (SQLException ignored) {
+            // best-effort cleanup — the connection is about to be closed/pooled anyway
+        }
         try { if (connection != null) connection.close(); } catch (SQLException ignored) {}
         resultSet = null;
         statement = null;
         connection = null;
+        autoCommitDisabled = false;
         columns.clear();
         columnTypes.clear();
         cachedRows.clear();
