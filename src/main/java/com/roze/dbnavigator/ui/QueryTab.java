@@ -398,17 +398,36 @@ public class QueryTab extends Tab {
 
     // ---------------------------------------------------- statement highlight
 
-    private int highlightStartParagraph = -1;
-    private int highlightEndParagraph = -1;
-
     /**
-     * Highlights the whole statement the caret is currently inside (a subtle
-     * background band across its lines, like the reference IDE) so it's
-     * clear which query Ctrl+Enter will run in a multi-statement console.
-     * Uses RichTextFX's per-paragraph style, which is independent of the
-     * character-level syntax-highlighting style spans, so the two don't
-     * fight each other.
+     * Highlights the character range of the statement the caret is inside —
+     * not the whole line(s) it's on — so two statements sharing one line
+     * (e.g. "SELECT ...; SELECT ...;" typed on a single line) each get their
+     * own precise highlight instead of the shared line lighting up for both,
+     * matching the reference IDE. Implemented as an overlay merged with the
+     * syntax-highlighting style spans (RichTextFX combines the style-class
+     * sets per character via {@code StyleSpans.overlay}), rather than a
+     * paragraph-level style — that's what makes sub-line precision possible.
+     *
+     * This recomputes and re-applies syntax highlighting itself rather than
+     * relying solely on {@link SqlHighlighter}'s own auto-highlighting
+     * subscription (still active, since {@code StructureTab}'s read-only DDL
+     * viewer also uses {@code SqlHighlighter.createEditor()} and needs it) —
+     * registered after that one, this pass's result is simply what's
+     * actually shown once both have run for a given change.
      */
+    private void setupStatementHighlighting() {
+        editor.multiPlainChanges()
+                .successionEnds(Duration.ofMillis(120))
+                .subscribe(ignore -> refreshEditorStyling());
+        editor.caretPositionProperty().addListener((obs, o, n) -> refreshEditorStyling());
+        // Recompute after every mouse press (including right-clicks) too — a
+        // right-click's ContextMenuEvent can fire before the caret-position
+        // property listener has settled, which is why the wrong statement was
+        // sometimes still shown highlighted when the menu opened.
+        editor.addEventFilter(javafx.scene.input.MouseEvent.MOUSE_PRESSED,
+                e -> Platform.runLater(this::refreshEditorStyling));
+        Platform.runLater(this::refreshEditorStyling);
+    }
     /** File → Settings → Editor → Font, applied here and re-applied after Apply/OK. */
     public void applyEditorFontFromSettings() {
         var settings = com.roze.dbnavigator.db.AppSettingsStore.load();
@@ -464,18 +483,6 @@ public class QueryTab extends Tab {
         });
     }
 
-    private void setupStatementHighlighting() {
-        editor.caretPositionProperty().addListener((obs, o, n) -> refreshStatementHighlight());
-        editor.plainTextChanges().subscribe(c -> refreshStatementHighlight());
-        // Recompute after every mouse press (including right-clicks) too — a
-        // right-click's ContextMenuEvent can fire before the caret-position
-        // property listener has settled, which is why the wrong statement was
-        // sometimes still shown highlighted when the menu opened.
-        editor.addEventFilter(javafx.scene.input.MouseEvent.MOUSE_PRESSED,
-                e -> Platform.runLater(this::refreshStatementHighlight));
-        Platform.runLater(this::refreshStatementHighlight);
-    }
-
     /**
      * A click anywhere in the main window should dismiss any of this
      * console's own popups/menus that happen to be open — completion,
@@ -507,64 +514,64 @@ public class QueryTab extends Tab {
         if (statementsPopup.isShowing()) statementsPopup.hide();
     }
 
-    private void refreshStatementHighlight() {
+    /** Recomputes syntax highlighting and overlays the current-statement highlight in one combined pass. */
+    private void refreshEditorStyling() {
         try {
-            clearStatementHighlight();
+            String text = editor.getText();
+            org.fxmisc.richtext.model.StyleSpans<java.util.Collection<String>> syntax =
+                    SqlHighlighter.computeHighlighting(text);
+            int[] range = currentStatementCharRange(text);
 
-            List<SqlStatementSplitter.Statement> statements = SqlStatementSplitter.split(editor.getText());
-            if (statements.size() < 2) return;   // nothing ambiguous to call out
-
-            SqlStatementSplitter.Statement stmt =
-                    SqlStatementSplitter.statementAt(statements, editor.getCaretPosition());
-            if (stmt == null) return;
-
-            // A statement's raw range includes any blank/whitespace lines that
-            // separate it from the previous one (that gap has to belong to
-            // *someone's* range, and it's attributed to the following statement).
-            // Trimming to the first/last non-whitespace character before mapping
-            // to paragraphs keeps the highlighted band on the statement's own
-            // lines only — otherwise a blank gap between two statements could
-            // get folded into the wrong one's paragraph range at the boundary.
-            String text = stmt.text();
-            int leadingWs = 0;
-            while (leadingWs < text.length() && Character.isWhitespace(text.charAt(leadingWs))) leadingWs++;
-            int trailingWs = 0;
-            while (trailingWs < text.length() - leadingWs
-                    && Character.isWhitespace(text.charAt(text.length() - 1 - trailingWs))) trailingWs++;
-            int trimmedStart = stmt.start() + leadingWs;
-            int trimmedEnd = stmt.end() - trailingWs;
-            if (trimmedStart >= trimmedEnd) return;
-
-            int paragraphCount = editor.getParagraphs().size();
-            int startPara = paragraphIndexOf(trimmedStart);
-            int endPara = paragraphIndexOf(trimmedEnd - 1);
-            startPara = Math.max(0, Math.min(startPara, paragraphCount - 1));
-            endPara = Math.max(0, Math.min(endPara, paragraphCount - 1));
-
-            for (int p = startPara; p <= endPara; p++) {
-                editor.setParagraphStyle(p, List.of("current-statement-line"));
+            if (range == null) {
+                editor.setStyleSpans(0, syntax);
+                return;
             }
-            highlightStartParagraph = startPara;
-            highlightEndParagraph = endPara;
+
+            var spansBuilder = new org.fxmisc.richtext.model.StyleSpansBuilder<java.util.Collection<String>>();
+            if (range[0] > 0) spansBuilder.add(java.util.Collections.emptyList(), range[0]);
+            spansBuilder.add(java.util.Collections.singleton("current-statement-line"), range[1] - range[0]);
+            if (range[1] < text.length()) spansBuilder.add(java.util.Collections.emptyList(), text.length() - range[1]);
+            var highlight = spansBuilder.create();
+
+            var merged = syntax.overlay(highlight, (base, extra) -> {
+                if (extra.isEmpty()) return base;
+                LinkedHashSet<String> combined = new LinkedHashSet<>(base);
+                combined.addAll(extra);
+                return combined;
+            });
+            editor.setStyleSpans(0, merged);
         } catch (Exception ignored) {
-            // Never let a highlight-computation edge case leave stale styling
-            // behind silently — clearStatementHighlight() already ran above.
+            // Never let a highlight-computation edge case leave stale/broken styling behind.
         }
     }
 
-    private void clearStatementHighlight() {
-        if (highlightStartParagraph < 0) return;
-        int paragraphCount = editor.getParagraphs().size();
-        for (int p = highlightStartParagraph; p <= highlightEndParagraph && p < paragraphCount; p++) {
-            editor.setParagraphStyle(p, java.util.Collections.emptyList());
-        }
-        highlightStartParagraph = -1;
-        highlightEndParagraph = -1;
-    }
+    /**
+     * Start/end character offsets of the statement at the caret, trimmed of
+     * surrounding whitespace — or null if there's nothing ambiguous to call out (a
+     * single-statement console, or the caret isn't inside any statement).
+     * A statement's raw range includes any blank/whitespace lines separating
+     * it from the previous one (that gap has to belong to *someone's*
+     * range) — trimming to the first/last non-whitespace character keeps the
+     * highlight on the statement's own text only.
+     */
+    private int[] currentStatementCharRange(String text) {
+        List<SqlStatementSplitter.Statement> statements = SqlStatementSplitter.split(text);
+        if (statements.size() < 2) return null;
 
-    private int paragraphIndexOf(int charOffset) {
-        int clamped = Math.max(0, Math.min(charOffset, editor.getLength()));
-        return editor.offsetToPosition(clamped, org.fxmisc.richtext.model.TwoDimensional.Bias.Forward).getMajor();
+        SqlStatementSplitter.Statement stmt =
+                SqlStatementSplitter.statementAt(statements, editor.getCaretPosition());
+        if (stmt == null) return null;
+
+        String stmtText = stmt.text();
+        int leadingWs = 0;
+        while (leadingWs < stmtText.length() && Character.isWhitespace(stmtText.charAt(leadingWs))) leadingWs++;
+        int trailingWs = 0;
+        while (trailingWs < stmtText.length() - leadingWs
+                && Character.isWhitespace(stmtText.charAt(stmtText.length() - 1 - trailingWs))) trailingWs++;
+        int trimmedStart = stmt.start() + leadingWs;
+        int trimmedEnd = stmt.end() - trailingWs;
+        if (trimmedStart >= trimmedEnd) return null;
+        return new int[]{trimmedStart, trimmedEnd};
     }
 
     /** Reused across right-clicks so a stale instance never lingers behind a new one. */

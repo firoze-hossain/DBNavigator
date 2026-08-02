@@ -603,9 +603,7 @@
 
 /* ---------- current-statement highlight (multi-statement consoles) ---------- */
 .current-statement-line {
-    -fx-background-color: rgba(87, 150, 92, 0.14);
-    -fx-border-color: transparent transparent transparent #57965c;
-    -fx-border-width: 0 0 0 3;
+    -rtfx-background-color: rgba(87, 150, 92, 0.28);
 }
 
 /* ---------- Statements quick-pick popup ---------- */
