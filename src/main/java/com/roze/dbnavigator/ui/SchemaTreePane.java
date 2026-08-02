@@ -214,7 +214,7 @@ public class SchemaTreePane extends VBox {
             case TABLE, PARTITION -> MetadataService.loadTableChildren(profile, obj);
             case TABLES_FOLDER, VIEWS_FOLDER, PROCEDURES_FOLDER, FUNCTIONS_FOLDER,
                  SEQUENCES_FOLDER, COLLECTIONS_FOLDER,
-                 COLUMNS_FOLDER, INDEXES_FOLDER, PARTITIONS_FOLDER
+                 COLUMNS_FOLDER, INDEXES_FOLDER, PARTITIONS_FOLDER, KEYS_FOLDER, FOREIGN_KEYS_FOLDER
                           -> MetadataService.loadFolderChildren(profile, obj);
             default -> List.of();
         };
@@ -224,7 +224,8 @@ public class SchemaTreePane extends VBox {
         return switch (kind) {
             case DATABASE, SCHEMA, TABLES_FOLDER, VIEWS_FOLDER, PROCEDURES_FOLDER,
                  FUNCTIONS_FOLDER, SEQUENCES_FOLDER, COLLECTIONS_FOLDER,
-                 TABLE, PARTITION, COLUMNS_FOLDER, INDEXES_FOLDER, PARTITIONS_FOLDER -> true;
+                 TABLE, PARTITION, COLUMNS_FOLDER, INDEXES_FOLDER, PARTITIONS_FOLDER,
+                 KEYS_FOLDER, FOREIGN_KEYS_FOLDER -> true;
             default -> false;
         };
     }
@@ -490,15 +491,22 @@ public class SchemaTreePane extends VBox {
                     MenuItem importData = new MenuItem("Import Data from File(s)\u2026");
                     importData.setOnAction(e -> ImportDataDialog.show(mainWindow, profile, obj));
                     importExportMenu.getItems().addAll(exportData, importData);
+                    String tableDatabase = obj.getCatalog() != null ? obj.getCatalog() : profile.getDatabase();
                     if (profile.getType() == ConnectionProfile.DatabaseType.POSTGRESQL) {
                         MenuItem exportWithPgDump = new MenuItem("Export with 'pg_dump'\u2026");
-                        exportWithPgDump.setOnAction(e -> PgDumpDialog.show(mainWindow, profile,
-                                obj.getCatalog() != null ? obj.getCatalog() : profile.getDatabase()));
+                        exportWithPgDump.setOnAction(e -> PgDumpDialog.show(mainWindow, profile, tableDatabase));
                         MenuItem restoreWithPgRestore = new MenuItem("Restore with 'pg_restore'\u2026");
-                        restoreWithPgRestore.setOnAction(e -> RestoreDialog.show(mainWindow, profile,
-                                obj.getCatalog() != null ? obj.getCatalog() : profile.getDatabase()));
+                        restoreWithPgRestore.setOnAction(e -> RestoreDialog.show(mainWindow, profile, tableDatabase));
                         importExportMenu.getItems().addAll(new SeparatorMenuItem(),
                                 exportWithPgDump, restoreWithPgRestore);
+                    } else if (profile.getType() == ConnectionProfile.DatabaseType.MYSQL
+                            || profile.getType() == ConnectionProfile.DatabaseType.MARIADB) {
+                        MenuItem exportWithMysqldump = new MenuItem("Export with 'mysqldump'\u2026");
+                        exportWithMysqldump.setOnAction(e -> MySqlDumpDialog.show(mainWindow, profile, tableDatabase));
+                        MenuItem restoreWithMysql = new MenuItem("Restore with 'mysql'\u2026");
+                        restoreWithMysql.setOnAction(e -> MySqlRestoreDialog.show(mainWindow, profile, tableDatabase));
+                        importExportMenu.getItems().addAll(new SeparatorMenuItem(),
+                                exportWithMysqldump, restoreWithMysql);
                     }
 
                     Menu diagramsMenu = new Menu("Diagrams");
@@ -543,6 +551,9 @@ public class SchemaTreePane extends VBox {
                     dump.setOnAction(e -> {
                         if (profile.getType() == ConnectionProfile.DatabaseType.POSTGRESQL) {
                             PgDumpDialog.show(mainWindow, profile, obj.getName());
+                        } else if (profile.getType() == ConnectionProfile.DatabaseType.MYSQL
+                                || profile.getType() == ConnectionProfile.DatabaseType.MARIADB) {
+                            MySqlDumpDialog.show(mainWindow, profile, obj.getName());
                         } else {
                             DumpRestoreService.dumpDatabase(mainWindow, profile, obj.getName());
                         }
@@ -551,6 +562,9 @@ public class SchemaTreePane extends VBox {
                     restore.setOnAction(e -> {
                         if (profile.getType() == ConnectionProfile.DatabaseType.POSTGRESQL) {
                             RestoreDialog.show(mainWindow, profile, obj.getName());
+                        } else if (profile.getType() == ConnectionProfile.DatabaseType.MYSQL
+                                || profile.getType() == ConnectionProfile.DatabaseType.MARIADB) {
+                            MySqlRestoreDialog.show(mainWindow, profile, obj.getName());
                         } else {
                             DumpRestoreService.restoreDatabase(mainWindow, profile, obj.getName());
                         }

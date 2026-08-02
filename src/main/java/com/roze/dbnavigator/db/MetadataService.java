@@ -196,6 +196,8 @@ public final class MetadataService {
             case SEQUENCES_FOLDER  -> loadSequences(profile, catalog, schema);
             case COLUMNS_FOLDER    -> loadColumns(profile, dbFolder);
             case INDEXES_FOLDER    -> loadIndexes(profile, dbFolder);
+            case KEYS_FOLDER         -> loadKeys(profile, dbFolder);
+            case FOREIGN_KEYS_FOLDER -> loadForeignKeysFolder(profile, dbFolder);
             case PARTITIONS_FOLDER -> loadPartitions(profile, dbFolder);
             default -> List.of();
         };
@@ -302,6 +304,8 @@ public final class MetadataService {
 
         int columnCount = 0;
         Set<String> indexNames = new LinkedHashSet<>();
+        int primaryKeyColumnCount = 0;
+        Set<String> foreignKeyNames = new LinkedHashSet<>();
         try (Connection conn = client(profile, table.getCatalog()).getConnection()) {
             DatabaseMetaData meta = conn.getMetaData();
             String cat = metaCatalog(profile, table.getCatalog());
@@ -314,11 +318,33 @@ public final class MetadataService {
                     if (name != null) indexNames.add(name);
                 }
             } catch (SQLException ignored) { /* some drivers can't */ }
+            try (ResultSet rs = meta.getPrimaryKeys(cat, table.getSchema(), table.getName())) {
+                while (rs.next()) primaryKeyColumnCount++;
+            } catch (SQLException ignored) { /* some drivers can't */ }
+            try (ResultSet rs = meta.getImportedKeys(cat, table.getSchema(), table.getName())) {
+                while (rs.next()) {
+                    String name = rs.getString("FK_NAME");
+                    foreignKeyNames.add(name != null ? name : rs.getString("FKCOLUMN_NAME"));
+                }
+            } catch (SQLException ignored) { /* some drivers can't */ }
         }
 
         DbObject columns = childFolder("columns", Kind.COLUMNS_FOLDER, table);
         columns.setDetail(String.valueOf(columnCount));
         result.add(columns);
+
+        // Matches the reference: these two folders only appear when the
+        // table actually has a primary key / foreign keys, not as empty folders.
+        if (primaryKeyColumnCount > 0) {
+            DbObject keys = childFolder("keys", Kind.KEYS_FOLDER, table);
+            keys.setDetail("1");
+            result.add(keys);
+        }
+        if (!foreignKeyNames.isEmpty()) {
+            DbObject foreignKeys = childFolder("foreign keys", Kind.FOREIGN_KEYS_FOLDER, table);
+            foreignKeys.setDetail(String.valueOf(foreignKeyNames.size()));
+            result.add(foreignKeys);
+        }
 
         DbObject indexes = childFolder("indexes", Kind.INDEXES_FOLDER, table);
         indexes.setDetail(String.valueOf(indexNames.size()));
@@ -356,6 +382,58 @@ public final class MetadataService {
         } catch (SQLException e) {
             return 0;
         }
+    }
+
+    /** The table's primary key, as a single "keys" folder entry — a table has at most one. */
+    private static List<DbObject> loadKeys(ConnectionProfile profile, DbObject folder)
+            throws SQLException {
+        Map<Integer, String> columnsBySeq = new java.util.TreeMap<>();
+        String pkName = null;
+        try (Connection conn = client(profile, folder.getCatalog()).getConnection();
+             ResultSet rs = conn.getMetaData().getPrimaryKeys(
+                     metaCatalog(profile, folder.getCatalog()), folder.getSchema(), folder.getTableName())) {
+            while (rs.next()) {
+                columnsBySeq.put(rs.getInt("KEY_SEQ"), rs.getString("COLUMN_NAME"));
+                pkName = rs.getString("PK_NAME");
+            }
+        }
+        if (columnsBySeq.isEmpty()) return List.of();
+
+        DbObject key = new DbObject(pkName != null && !pkName.isBlank() ? pkName : "PRIMARY", Kind.KEY,
+                folder.getCatalog(), folder.getSchema());
+        key.setTableName(folder.getTableName());
+        key.setDetail("(" + String.join(", ", columnsBySeq.values()) + ")");
+        return List.of(key);
+    }
+
+    /** Every foreign key this table declares, one entry per constraint (which may span multiple columns). */
+    private static List<DbObject> loadForeignKeysFolder(ConnectionProfile profile, DbObject folder)
+            throws SQLException {
+        Map<String, List<String>> localColumns = new LinkedHashMap<>();
+        Map<String, List<String>> foreignColumns = new LinkedHashMap<>();
+        Map<String, String> foreignTable = new LinkedHashMap<>();
+
+        try (Connection conn = client(profile, folder.getCatalog()).getConnection();
+             ResultSet rs = conn.getMetaData().getImportedKeys(
+                     metaCatalog(profile, folder.getCatalog()), folder.getSchema(), folder.getTableName())) {
+            while (rs.next()) {
+                String name = rs.getString("FK_NAME");
+                if (name == null) name = rs.getString("FKCOLUMN_NAME") + "_fk";
+                localColumns.computeIfAbsent(name, k -> new ArrayList<>()).add(rs.getString("FKCOLUMN_NAME"));
+                foreignColumns.computeIfAbsent(name, k -> new ArrayList<>()).add(rs.getString("PKCOLUMN_NAME"));
+                foreignTable.putIfAbsent(name, rs.getString("PKTABLE_NAME"));
+            }
+        }
+
+        List<DbObject> result = new ArrayList<>();
+        for (String name : localColumns.keySet()) {
+            DbObject fk = new DbObject(name, Kind.FOREIGN_KEY, folder.getCatalog(), folder.getSchema());
+            fk.setTableName(folder.getTableName());
+            fk.setDetail("(" + String.join(", ", localColumns.get(name)) + ")  \u2192  "
+                    + foreignTable.get(name) + " (" + String.join(", ", foreignColumns.get(name)) + ")");
+            result.add(fk);
+        }
+        return result;
     }
 
     private static List<DbObject> loadColumns(ConnectionProfile profile, DbObject folder)
