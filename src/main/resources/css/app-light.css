@@ -608,9 +608,7 @@
 
 /* ---------- current-statement highlight (multi-statement consoles) ---------- */
 .current-statement-line {
-    -fx-background-color: rgba(87, 150, 92, 0.14);
-    -fx-border-color: transparent transparent transparent #57965c;
-    -fx-border-width: 0 0 0 3;
+    -rtfx-background-color: rgba(87, 150, 92, 0.28);
 }
 
 /* ---------- Statements quick-pick popup ---------- */
@@ -774,9 +772,7 @@
 .sql-editor .sql-parameter { -fx-fill: #a56000; -fx-font-weight: bold; }
 .sql-editor .sql-qualifier { -fx-fill: #1a56c4; }
 .current-statement-line {
-    -fx-background-color: rgba(46, 125, 50, 0.10);
-    -fx-border-color: transparent transparent transparent #2e7d32;
-    -fx-border-width: 0 0 0 3;
+    -rtfx-background-color: rgba(46, 125, 50, 0.30);
 }
 
 .process-output { -fx-control-inner-background: #ffffff; -fx-text-fill: #1a1a1e; }

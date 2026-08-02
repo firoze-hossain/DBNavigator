@@ -56,19 +56,45 @@ public class ConnectionProfile {
     /**
      * JDBC URL, optionally pointing at a different database on the same server.
      * Used to browse every database under one PostgreSQL/SQL Server connection.
+     *
+     * The Database field is optional when creating a connection — most engines
+     * don't actually require picking one upfront, since the schema tree lets
+     * you browse every database on the server anyway. Each engine's own
+     * convention for "no database specified" is used rather than passing an
+     * empty string straight into the URL, which several drivers/servers
+     * reject outright as an invalid database name.
      */
     @JsonIgnore
     public String getJdbcUrl(String databaseOverride) {
         String database = (databaseOverride != null && !databaseOverride.isBlank())
                 ? databaseOverride : this.database;
+        boolean blank = database == null || database.isBlank();
+
         return switch (type) {
-            case MYSQL      -> "jdbc:mysql://%s:%d/%s?useSSL=%s&allowPublicKeyRetrieval=true&serverTimezone=UTC"
-                                   .formatted(host, port, database, useSsl);
-            case MARIADB    -> "jdbc:mariadb://%s:%d/%s".formatted(host, port, database);
+            // PostgreSQL's protocol always needs a real database name — "postgres"
+            // is the near-universal administrative database every installation
+            // has, and is exactly what psql itself falls back to by convention.
             case POSTGRESQL -> "jdbc:postgresql://%s:%d/%s%s"
-                                   .formatted(host, port, database, useSsl ? "?ssl=true" : "");
-            case SQLSERVER  -> "jdbc:sqlserver://%s:%d;databaseName=%s;encrypt=%s;trustServerCertificate=true"
-                                   .formatted(host, port, database, useSsl);
+                                   .formatted(host, port, blank ? "postgres" : database, useSsl ? "?ssl=true" : "");
+            // MySQL/MariaDB can omit the database segment entirely and still
+            // connect — you just won't have a schema selected until you USE one.
+            case MYSQL      -> blank
+                    ? "jdbc:mysql://%s:%d?useSSL=%s&allowPublicKeyRetrieval=true&serverTimezone=UTC"
+                          .formatted(host, port, useSsl)
+                    : "jdbc:mysql://%s:%d/%s?useSSL=%s&allowPublicKeyRetrieval=true&serverTimezone=UTC"
+                          .formatted(host, port, database, useSsl);
+            case MARIADB    -> blank
+                    ? "jdbc:mariadb://%s:%d".formatted(host, port)
+                    : "jdbc:mariadb://%s:%d/%s".formatted(host, port, database);
+            // SQL Server: simply omit databaseName= and it connects to the
+            // login's own default database.
+            case SQLSERVER  -> blank
+                    ? "jdbc:sqlserver://%s:%d;encrypt=%s;trustServerCertificate=true".formatted(host, port, useSsl)
+                    : "jdbc:sqlserver://%s:%d;databaseName=%s;encrypt=%s;trustServerCertificate=true"
+                          .formatted(host, port, database, useSsl);
+            // Oracle and SQLite genuinely need a specific identifier (a
+            // service name/SID, or a file path) — there's no meaningful
+            // "default" to substitute, so these still require a value.
             case ORACLE     -> "jdbc:oracle:thin:@//%s:%d/%s".formatted(host, port, database);
             case SQLITE     -> "jdbc:sqlite:%s".formatted(database);
             case MONGODB    -> throw new IllegalStateException("MongoDB does not use JDBC");
