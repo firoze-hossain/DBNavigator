@@ -19,7 +19,7 @@ public class JdbcClient implements AutoCloseable {
         this(profile, null);
     }
 
-    /** @param catalogOverride connect to a different database on the same server (PostgreSQL). */
+    /** @param catalogOverride connect to a different database on the same server. */
     public JdbcClient(ConnectionProfile profile, String catalogOverride) {
         this.profile = profile;
         HikariConfig config = new HikariConfig();

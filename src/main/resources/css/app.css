@@ -648,3 +648,7 @@
     -fx-padding: 3 4 3 4;
 }
 .result-pager-overflow > .arrow { -fx-background-color: transparent; -fx-padding: 0; }
+
+/* ---------- pinned tab (right-click > Pin Tab) ---------- */
+.pinned-tab { -fx-font-style: italic; }
+.pinned-tab .tab-label { -fx-font-style: italic; }
