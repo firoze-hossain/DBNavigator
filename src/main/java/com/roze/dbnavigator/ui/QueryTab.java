@@ -366,6 +366,8 @@ public class QueryTab extends Tab {
     // -------------------------------------------------------- local history
 
     public String getFileId() { return fileId; }
+    public ConnectionProfile getProfile() { return profile; }
+    public String getCatalog() { return catalog; }
 
     public String getDisplayFileName() { return fileId.replace(' ', '_') + ".sql"; }
 

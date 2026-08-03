@@ -33,6 +33,11 @@ public class DataTab extends Tab {
 
     private final ConnectionProfile profile;
     private final DbObject table;
+
+    /** Used by TabContextMenu's "Copy Path/Reference…". */
+    public String getQualifiedTableReference() {
+        return profile.getName() + "/" + table.qualifiedName();
+    }
     private final ResultGrid grid = new ResultGrid();
     private final TextField filterField = new TextField();
     private final TextField orderField = new TextField();

@@ -40,6 +40,7 @@ public class MainWindow {
     private final Stage stage;
     private final BorderPane root = new BorderPane();
     private final TabPane tabPane = new TabPane();
+    private final java.util.Deque<java.util.function.Supplier<Tab>> closedTabStack = new java.util.ArrayDeque<>();
     private final SchemaTreePane schemaPane;
     private final RunPanel runPanel = new RunPanel();
     private final SplitPane verticalSplit = new SplitPane();
@@ -563,6 +564,37 @@ public class MainWindow {
     private void addAndSelect(Tab tab) {
         tabPane.getTabs().add(tab);
         tabPane.getSelectionModel().select(tab);
+        TabContextMenu.install(tabPane, tab, this);
+
+        // Reopen Closed Tab currently only restores consoles (with their SQL
+        // text intact) — the highest-value case. Other tab types (data view,
+        // diagrams, etc.) aren't captured here; closing one of those doesn't
+        // push anything, so Reopen Closed Tab simply skips to the next
+        // console-type entry, or stays disabled if there isn't one.
+        if (tab instanceof QueryTab queryTab) {
+            tab.addEventHandler(Tab.CLOSED_EVENT, e -> {
+                ConnectionProfile p = queryTab.getProfile();
+                String catalog = queryTab.getCatalog();
+                String sql = queryTab.getSqlText();
+                String title = tab.getText();
+                closedTabStack.push(() -> {
+                    QueryTab reopened = new QueryTab(this, p, catalog, title);
+                    reopened.setSql(sql);
+                    return reopened;
+                });
+            });
+        }
+    }
+
+    /** Used by TabContextMenu to enable/disable "Reopen Closed Tab". */
+    public boolean hasClosedTabToReopen() {
+        return !closedTabStack.isEmpty();
+    }
+
+    /** Tab context menu → Reopen Closed Tab — restores the most recently closed console. */
+    public void reopenLastClosedTab() {
+        if (closedTabStack.isEmpty()) return;
+        addAndSelect(closedTabStack.pop().get());
     }
 
     public void setStatus(String text) {

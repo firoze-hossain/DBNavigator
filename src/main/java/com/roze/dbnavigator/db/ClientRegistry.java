@@ -6,7 +6,7 @@ import com.roze.dbnavigator.model.ConnectionProfile.DatabaseType;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-/** Keeps live clients per connection profile (and per database for PostgreSQL). */
+/** Keeps live clients per connection profile, and per database when a query targets one specifically. */
 public final class ClientRegistry {
 
     private static final Map<String, JdbcClient> jdbcClients = new ConcurrentHashMap<>();
@@ -19,13 +19,22 @@ public final class ClientRegistry {
     }
 
     /**
-     * Client for a specific database on the profile's server. Only PostgreSQL
-     * needs a distinct physical connection per database; every other engine
-     * reaches all its catalogs through the default connection.
+     * Client for a specific database on the profile's server.
+     *
+     * Every engine needs its own connection pool for a catalog that differs
+     * from the profile's own configured database — not just PostgreSQL. This
+     * matters especially now that the Database field is optional when
+     * creating a connection (see ConnectionProfile.getJdbcUrl): a MySQL/
+     * MariaDB/SQL Server connection created with no default database has no
+     * ambient schema context at all, so an unqualified query against a
+     * *specific* database (e.g. "bagisto") needs its own connection whose
+     * JDBC URL actually points at that database — reusing the connection-
+     * level pool (which has no database selected) fails with exactly
+     * MySQL's own "No database selected" error, since there's nothing for
+     * an unqualified table reference to resolve against.
      */
     public static JdbcClient jdbc(ConnectionProfile profile, String catalog) {
         boolean perCatalog = catalog != null && !catalog.isBlank()
-                && profile.getType() == DatabaseType.POSTGRESQL
                 && !catalog.equals(profile.getDatabase());
         String key = perCatalog ? profile.getId() + "::" + catalog : profile.getId();
         String override = perCatalog ? catalog : null;
