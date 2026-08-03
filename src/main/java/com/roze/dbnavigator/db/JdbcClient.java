@@ -60,6 +60,35 @@ public class JdbcClient implements AutoCloseable {
         QueryResult result = new QueryResult();
         long start = System.currentTimeMillis();
 
+        try {
+            executeOnce(sql, maxRows, statementHolder, result, true);
+        } catch (SQLException ex) {
+            if (isTransactionBlockError(ex)) {
+                // Some statements (CREATE DATABASE, DROP DATABASE, VACUUM,
+                // ALTER SYSTEM, etc.) are only valid outside any transaction
+                // on PostgreSQL — the autocommit(false) used below for
+                // cursor-based fetching puts every statement inside an
+                // implicit one. Retry once without it; none of these
+                // statements return large result sets anyway.
+                executeOnce(sql, maxRows, statementHolder, result, false);
+            } else {
+                throw ex;
+            }
+        }
+
+        result.setExecutionMillis(System.currentTimeMillis() - start);
+        return result;
+    }
+
+    private static boolean isTransactionBlockError(SQLException ex) {
+        String msg = ex.getMessage();
+        return msg != null
+                && msg.toLowerCase(java.util.Locale.ROOT).contains("cannot run inside a transaction block");
+    }
+
+    private void executeOnce(String sql, int maxRows,
+                             java.util.concurrent.atomic.AtomicReference<Statement> statementHolder,
+                             QueryResult result, boolean useCursor) throws SQLException {
         try (Connection conn = getConnection()) {
             // Same fix as PagedResultCursor: without this, PostgreSQL's driver
             // ignores setFetchSize and eagerly buffers the ENTIRE result set
@@ -67,7 +96,7 @@ public class JdbcClient implements AutoCloseable {
             // e.g. "Execute to File" on a large table) that risks the same
             // memory-pressure freeze/crash regardless of how the rows are
             // consumed afterward.
-            boolean supportsCursor = trySetAutoCommitFalse(conn);
+            boolean supportsCursor = useCursor && trySetAutoCommitFalse(conn);
             try (Statement stmt = conn.createStatement()) {
                 if (supportsCursor) {
                     stmt.setFetchSize(maxRows > 0 ? Math.min(maxRows, 1000) : 1000);
@@ -90,13 +119,20 @@ public class JdbcClient implements AutoCloseable {
             } finally {
                 if (statementHolder != null) statementHolder.set(null);
                 if (supportsCursor) {
-                    try { conn.commit(); conn.setAutoCommit(true); } catch (SQLException ignored) {}
+                    // commit() is the normal path (also persists any writes the
+                    // statement made); it only fails when the transaction was
+                    // already left in an aborted state by a thrown exception,
+                    // in which case rollback is the only thing that can recover
+                    // the connection cleanly before it's returned to the pool.
+                    try {
+                        conn.commit();
+                    } catch (SQLException commitFailed) {
+                        try { conn.rollback(); } catch (SQLException ignored) {}
+                    }
+                    try { conn.setAutoCommit(true); } catch (SQLException ignored) {}
                 }
             }
         }
-
-        result.setExecutionMillis(System.currentTimeMillis() - start);
-        return result;
     }
 
     private static boolean trySetAutoCommitFalse(Connection conn) {

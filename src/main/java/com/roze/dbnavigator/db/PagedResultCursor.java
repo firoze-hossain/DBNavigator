@@ -80,7 +80,26 @@ public class PagedResultCursor implements AutoCloseable {
         }
         if (statementHolder != null) statementHolder.set(statement);
         try {
-            isQueryResult = statement.execute(sql);
+            try {
+                isQueryResult = statement.execute(sql);
+            } catch (SQLException ex) {
+                if (autoCommitDisabled && isTransactionBlockError(ex)) {
+                    // Some statements — CREATE DATABASE, DROP DATABASE, VACUUM,
+                    // ALTER SYSTEM, CREATE INDEX CONCURRENTLY, and a few others
+                    // — are only valid outside any transaction; PostgreSQL
+                    // rejects them explicitly rather than silently ignoring
+                    // the restriction. The autocommit(false) used above for
+                    // cursor-based fetching puts every statement inside an
+                    // implicit transaction, which is exactly what trips this.
+                    // Retry once on a plain, default-autocommit connection
+                    // instead of failing outright — none of these statements
+                    // return large result sets anyway, so there's nothing
+                    // lost by skipping the cursor optimization for them.
+                    reopenWithoutCursor(profile, catalog, sql, statementHolder);
+                } else {
+                    throw ex;
+                }
+            }
         } finally {
             if (statementHolder != null) statementHolder.set(null);
         }
@@ -100,6 +119,40 @@ public class PagedResultCursor implements AutoCloseable {
             message = count >= 0 ? count + " row(s) affected" : "Statement executed";
         }
         executionMillis = System.currentTimeMillis() - start;
+    }
+
+    /**
+     * Cleans up the failed cursor-based attempt (rolling back first, since a
+     * failed statement leaves a PostgreSQL transaction in an aborted state
+     * that must be rolled back before the connection can be reused or
+     * closed cleanly) and retries the same statement on a fresh connection
+     * with default autocommit — no transaction, no fetchSize tuning.
+     */
+    private void reopenWithoutCursor(ConnectionProfile profile, String catalog, String sql,
+                                     java.util.concurrent.atomic.AtomicReference<Statement> statementHolder)
+            throws SQLException {
+        try { if (statement != null) statement.close(); } catch (SQLException ignored) {}
+        try {
+            if (autoCommitDisabled) {
+                connection.rollback();
+                connection.setAutoCommit(true);
+            }
+        } catch (SQLException ignored) {
+            // best-effort — the connection is about to be closed either way
+        }
+        try { if (connection != null) connection.close(); } catch (SQLException ignored) {}
+
+        connection = ClientRegistry.jdbc(profile, catalog).getConnection();
+        autoCommitDisabled = false;
+        statement = connection.createStatement();
+        if (statementHolder != null) statementHolder.set(statement);
+        isQueryResult = statement.execute(sql);
+    }
+
+    private static boolean isTransactionBlockError(SQLException ex) {
+        String msg = ex.getMessage();
+        return msg != null
+                && msg.toLowerCase(java.util.Locale.ROOT).contains("cannot run inside a transaction block");
     }
 
     private static String safeTypeName(ResultSetMetaData meta, int i) {
