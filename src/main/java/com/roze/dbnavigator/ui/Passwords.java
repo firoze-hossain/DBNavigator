@@ -17,6 +17,19 @@ public final class Passwords {
     private Passwords() {}
 
     /**
+     * Once the user has answered the prompt this session — even by
+     * submitting a genuinely blank password, e.g. for a trust-auth local
+     * server — there's no way to tell "not yet asked" apart from "asked,
+     * and there really is no password" just by looking at
+     * profile.getPassword() being empty. Without tracking this separately,
+     * every fresh connection (every schema expand, every new console) looked
+     * like an unanswered prompt again and asked again. Session-scoped only,
+     * matching the reference IDE: resets on app restart, not persisted
+     * unless "Save password" was actually checked.
+     */
+    private static final java.util.Set<String> answeredThisSession = new java.util.HashSet<>();
+
+    /**
      * Makes sure the profile has a usable password, prompting the user if not.
      * Must be called on the FX application thread.
      *
@@ -24,6 +37,7 @@ public final class Passwords {
      */
     public static boolean ensure(ConnectionProfile profile, Window owner) {
         if (!needsPassword(profile)) return true;
+        if (answeredThisSession.contains(profile.getId())) return true;
 
         Dialog<ButtonType> dialog = new Dialog<>();
         dialog.initOwner(owner);
@@ -51,6 +65,10 @@ public final class Passwords {
         if (result.isEmpty() || result.get() != ButtonType.OK) return false;
 
         profile.setPassword(passwordField.getText());
+        // Remember the answer for the rest of this session regardless of
+        // whether what was submitted was blank — that's exactly what stops
+        // the dialog from reappearing on every subsequent connection.
+        answeredThisSession.add(profile.getId());
         if (saveBox.isSelected()) {
             profile.setSavePassword(true);
             ConnectionStore.saveOrUpdate(profile);

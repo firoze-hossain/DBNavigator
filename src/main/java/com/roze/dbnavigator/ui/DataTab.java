@@ -38,6 +38,10 @@ public class DataTab extends Tab {
     public String getQualifiedTableReference() {
         return profile.getName() + "/" + table.qualifiedName();
     }
+
+    /** Used by MainWindow's Split Right/Down to reopen the same table in a new pane. */
+    public ConnectionProfile getProfileForReopen() { return profile; }
+    public DbObject getTableForReopen() { return table; }
     private final ResultGrid grid = new ResultGrid();
     private final TextField filterField = new TextField();
     private final TextField orderField = new TextField();
