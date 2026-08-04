@@ -781,3 +781,10 @@
 /* ---------- pinned tab (right-click > Pin Tab) ---------- */
 .pinned-tab { -fx-font-style: italic; }
 .pinned-tab .tab-label { -fx-font-style: italic; }
+
+/* ---------- bookmarked line (right-click tab > Bookmarks > Toggle Bookmark) ---------- */
+.bookmarked-line {
+    -fx-background-color: rgba(224, 164, 76, 0.22);
+    -fx-border-color: transparent transparent transparent #a56000;
+    -fx-border-width: 0 0 0 3;
+}

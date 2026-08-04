@@ -17,16 +17,25 @@ import java.util.function.Predicate;
  * Split Right/Down and their "and Move" variants (a single side-by-side or
  * stacked split — not recursively nested), Open Tab in New Window, Pin/
  * Unpin, Reopen Closed Tab (console tabs only — see
- * {@link MainWindow#reopenLastClosedTab()}), Rename Tab, and Local History
- * (for consoles). "Configure Editor Tabs…" opens Settings, since this app
- * doesn't have a dedicated tab-behavior settings page to land on yet.
+ * {@link MainWindow#reopenLastClosedTab()}), Rename Tab, Local History (for
+ * consoles), and for consoles specifically:
+ * <ul>
+ *   <li><b>Bookmarks</b> — Toggle Bookmark marks the line the caret is on;
+ *       Show Bookmarks… lists every bookmarked line across every open
+ *       console, jump to any of them from there.</li>
+ *   <li><b>Override File Type</b> — SQL (syntax highlighting, the default)
+ *       or Plain Text (none) for that specific console.</li>
+ *   <li><b>Open In</b> — reveals or opens the console's saved file, once
+ *       it's actually been saved via File → Save Console As…; before that,
+ *       explains what to do instead of just sitting there disabled.</li>
+ * </ul>
+ * "Configure Editor Tabs…" opens Settings, since this app doesn't have a
+ * dedicated tab-behavior settings page to land on yet.
  *
- * Honest scope note: Bookmarks, Override File Type, and Open In are
- * project-IDE-specific concepts that don't apply here (no line-level
- * bookmarking, no other language interpretations for SQL consoles, and no
- * meaningful external "open in" targets for in-memory consoles) — those
- * stay disabled for visual parity rather than omitted outright or silently
- * doing nothing if clicked.
+ * Honest scope note: Bookmarks/Override File Type/Open In are console-only
+ * — other tab types (data views, diagrams) don't have an editable text
+ * buffer, a syntax mode, or a backing file to act on, so those three stay
+ * disabled for anything that isn't a {@link QueryTab}.
  */
 public final class TabContextMenu {
 
@@ -101,9 +110,50 @@ public final class TabContextMenu {
         CheckMenuItem shortenTitles = new CheckMenuItem("Shorten Tab Titles");
         shortenTitles.setSelected(true);
         shortenTitles.setDisable(true);
-        Menu bookmarks = disabledMenu("Bookmarks");
-        MenuItem overrideFileType = disabled("Override File Type");
-        Menu openIn = disabledMenu("Open In");
+
+        Menu bookmarks;
+        MenuItem overrideFileType;
+        Menu openIn;
+        if (tab instanceof QueryTab queryTab) {
+            bookmarks = new Menu("Bookmarks");
+            MenuItem toggleBookmark = new MenuItem("Toggle Bookmark");
+            toggleBookmark.setOnAction(e -> queryTab.toggleBookmarkAtCaret());
+            MenuItem showBookmarks = new MenuItem("Show Bookmarks\u2026");
+            showBookmarks.setOnAction(e -> mainWindow.showBookmarksDialog());
+            bookmarks.getItems().addAll(toggleBookmark, showBookmarks);
+
+            Menu fileTypeMenu = new Menu("Override File Type");
+            RadioMenuItem sqlType = new RadioMenuItem("SQL");
+            RadioMenuItem plainType = new RadioMenuItem("Plain Text");
+            ToggleGroup fileTypeGroup = new ToggleGroup();
+            sqlType.setToggleGroup(fileTypeGroup);
+            plainType.setToggleGroup(fileTypeGroup);
+            sqlType.setSelected(!queryTab.isPlainTextMode());
+            plainType.setSelected(queryTab.isPlainTextMode());
+            sqlType.setOnAction(e -> queryTab.setPlainTextMode(false));
+            plainType.setOnAction(e -> queryTab.setPlainTextMode(true));
+            fileTypeMenu.getItems().addAll(sqlType, plainType);
+            overrideFileType = fileTypeMenu;
+
+            openIn = new Menu("Open In");
+            java.io.File savedFile = queryTab.getSavedFile();
+            if (savedFile != null) {
+                MenuItem reveal = new MenuItem("File Manager");
+                reveal.setOnAction(e -> openInFileManager(savedFile, mainWindow));
+                MenuItem openApp = new MenuItem("Default Application");
+                openApp.setOnAction(e -> openInDefaultApp(savedFile, mainWindow));
+                openIn.getItems().addAll(reveal, openApp);
+            } else {
+                MenuItem notSaved = new MenuItem("Save Console As\u2026 first");
+                notSaved.setOnAction(e -> mainWindow.setStatus(
+                        "This console isn't saved to a file yet — use File \u2192 Save Console As\u2026"));
+                openIn.getItems().add(notSaved);
+            }
+        } else {
+            bookmarks = disabledMenu("Bookmarks");
+            overrideFileType = disabled("Override File Type");
+            openIn = disabledMenu("Open In");
+        }
 
         Menu localHistory = new Menu("Local History");
         if (tab instanceof QueryTab queryTab) {
@@ -198,6 +248,27 @@ public final class TabContextMenu {
         ClipboardContent content = new ClipboardContent();
         content.putString(text);
         Clipboard.getSystemClipboard().setContent(content);
+    }
+
+    private static void openInFileManager(java.io.File file, MainWindow mainWindow) {
+        try {
+            java.awt.Desktop desktop = java.awt.Desktop.getDesktop();
+            if (desktop.isSupported(java.awt.Desktop.Action.BROWSE_FILE_DIR)) {
+                desktop.browseFileDirectory(file);
+            } else {
+                desktop.open(file.getParentFile());
+            }
+        } catch (Exception ex) {
+            mainWindow.setStatus("Could not open file manager: " + ex.getMessage());
+        }
+    }
+
+    private static void openInDefaultApp(java.io.File file, MainWindow mainWindow) {
+        try {
+            java.awt.Desktop.getDesktop().open(file);
+        } catch (Exception ex) {
+            mainWindow.setStatus("Could not open " + file.getName() + ": " + ex.getMessage());
+        }
     }
 
     private static void renameTab(Tab tab, MainWindow mainWindow) {
