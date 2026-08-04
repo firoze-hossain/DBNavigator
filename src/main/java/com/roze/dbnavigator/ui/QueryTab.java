@@ -79,6 +79,11 @@ public class QueryTab extends Tab {
     private double currentEditorFontSize;
     private String currentEditorFontFamily;
 
+    // ---- tab context menu: Bookmarks / Override File Type / Open In ----
+    private final Set<Integer> bookmarkedLines = new java.util.TreeSet<>();
+    private boolean plainTextMode = false;
+    private File savedFile;
+
     // ---- pagination state (see PagedResultCursor) ----
     private final ResultPager pager = new ResultPager();
     private com.roze.dbnavigator.db.PagedResultCursor activeCursor;
@@ -521,31 +526,96 @@ public class QueryTab extends Tab {
         try {
             String text = editor.getText();
             org.fxmisc.richtext.model.StyleSpans<java.util.Collection<String>> syntax =
-                    SqlHighlighter.computeHighlighting(text);
+                    plainTextMode ? emptySpans(text.length()) : SqlHighlighter.computeHighlighting(text);
             int[] range = currentStatementCharRange(text);
 
             if (range == null) {
                 editor.setStyleSpans(0, syntax);
-                return;
+            } else {
+                var spansBuilder = new org.fxmisc.richtext.model.StyleSpansBuilder<java.util.Collection<String>>();
+                if (range[0] > 0) spansBuilder.add(java.util.Collections.emptyList(), range[0]);
+                spansBuilder.add(java.util.Collections.singleton("current-statement-line"), range[1] - range[0]);
+                if (range[1] < text.length()) {
+                    spansBuilder.add(java.util.Collections.emptyList(), text.length() - range[1]);
+                }
+                var highlight = spansBuilder.create();
+
+                var merged = syntax.overlay(highlight, (base, extra) -> {
+                    if (extra.isEmpty()) return base;
+                    LinkedHashSet<String> combined = new LinkedHashSet<>(base);
+                    combined.addAll(extra);
+                    return combined;
+                });
+                editor.setStyleSpans(0, merged);
             }
-
-            var spansBuilder = new org.fxmisc.richtext.model.StyleSpansBuilder<java.util.Collection<String>>();
-            if (range[0] > 0) spansBuilder.add(java.util.Collections.emptyList(), range[0]);
-            spansBuilder.add(java.util.Collections.singleton("current-statement-line"), range[1] - range[0]);
-            if (range[1] < text.length()) spansBuilder.add(java.util.Collections.emptyList(), text.length() - range[1]);
-            var highlight = spansBuilder.create();
-
-            var merged = syntax.overlay(highlight, (base, extra) -> {
-                if (extra.isEmpty()) return base;
-                LinkedHashSet<String> combined = new LinkedHashSet<>(base);
-                combined.addAll(extra);
-                return combined;
-            });
-            editor.setStyleSpans(0, merged);
+            refreshBookmarkParagraphStyles();
         } catch (Exception ignored) {
             // Never let a highlight-computation edge case leave stale/broken styling behind.
         }
     }
+
+    private static org.fxmisc.richtext.model.StyleSpans<java.util.Collection<String>> emptySpans(int length) {
+        var builder = new org.fxmisc.richtext.model.StyleSpansBuilder<java.util.Collection<String>>();
+        builder.add(java.util.Collections.emptyList(), length);
+        return builder.create();
+    }
+
+    // ----------------------------------------------------------- bookmarks
+
+    /** Whole-line markers (paragraph-level, independent of the character-range statement highlight above). */
+    private void refreshBookmarkParagraphStyles() {
+        int count = editor.getParagraphs().size();
+        for (int i = 0; i < count; i++) {
+            boolean bookmarked = bookmarkedLines.contains(i);
+            editor.setParagraphStyle(i, bookmarked ? List.of("bookmarked-line") : List.of());
+        }
+    }
+
+    /** Tab context menu → Bookmarks → Toggle Bookmark. */
+    public void toggleBookmarkAtCaret() {
+        int line = editor.getCurrentParagraph();
+        if (!bookmarkedLines.remove(line)) {
+            bookmarkedLines.add(line);
+        }
+        refreshEditorStyling();
+    }
+
+    public boolean isBookmarkedAtCaret() {
+        return bookmarkedLines.contains(editor.getCurrentParagraph());
+    }
+
+    /** Used by MainWindow's "Show Bookmarks…" to build the cross-console list. */
+    public List<Integer> getBookmarkedLines() {
+        return new ArrayList<>(bookmarkedLines);
+    }
+
+    public String getLineText(int line) {
+        return line >= 0 && line < editor.getParagraphs().size() ? editor.getParagraph(line).getText() : "";
+    }
+
+    public void jumpToLine(int line) {
+        int clamped = Math.max(0, Math.min(line, editor.getParagraphs().size() - 1));
+        editor.moveTo(clamped, 0);
+        editor.requestFollowCaret();
+        editor.requestFocus();
+    }
+
+    // ----------------------------------------------------- override file type
+
+    public boolean isPlainTextMode() { return plainTextMode; }
+
+    /** Tab context menu → Override File Type → SQL / Plain Text. */
+    public void setPlainTextMode(boolean plainText) {
+        this.plainTextMode = plainText;
+        refreshEditorStyling();
+    }
+
+    // ----------------------------------------------------------- open in
+
+    public File getSavedFile() { return savedFile; }
+
+    /** Set by MainWindow once "Save Console As…" succeeds, so "Open In" has a real file to act on. */
+    public void setSavedFile(File file) { this.savedFile = file; }
 
     /**
      * Start/end character offsets of the statement at the caret, trimmed of

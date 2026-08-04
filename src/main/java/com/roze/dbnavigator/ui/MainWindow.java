@@ -289,6 +289,7 @@ public class MainWindow {
         if (file == null) return;
         try {
             Files.writeString(file.toPath(), queryTab.getSqlText(), StandardCharsets.UTF_8);
+            queryTab.setSavedFile(file);
             setStatus("Saved " + file.getName());
         } catch (Exception ex) {
             setStatus("Could not save file: " + ex.getMessage());
@@ -705,6 +706,26 @@ public class MainWindow {
         }
         newStage.setScene(scene);
         newStage.show();
+    }
+
+    /** Selects a tab, switching to whichever pane (primary or split-secondary) actually hosts it. */
+    public void selectTab(Tab tab) {
+        TabPane owner = tab.getTabPane();
+        if (owner != null) owner.getSelectionModel().select(tab);
+    }
+
+    /** Tab context menu → Bookmarks → Show Bookmarks… */
+    public void showBookmarksDialog() {
+        java.util.List<QueryTab> consoles = new java.util.ArrayList<>();
+        for (Tab t : tabPane.getTabs()) {
+            if (t instanceof QueryTab qt) consoles.add(qt);
+        }
+        if (secondaryTabPane != null) {
+            for (Tab t : secondaryTabPane.getTabs()) {
+                if (t instanceof QueryTab qt) consoles.add(qt);
+            }
+        }
+        BookmarksDialog.show(this, consoles);
     }
 
     public void setStatus(String text) {
