@@ -11,6 +11,7 @@ import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
@@ -40,6 +41,8 @@ public class MainWindow {
     private final Stage stage;
     private final BorderPane root = new BorderPane();
     private final TabPane tabPane = new TabPane();
+    private TabPane secondaryTabPane;      // created lazily on first Split Right/Down; null when not split
+    private SplitPane editorSplit;         // wraps tabPane + secondaryTabPane while split; null otherwise
     private final java.util.Deque<java.util.function.Supplier<Tab>> closedTabStack = new java.util.ArrayDeque<>();
     private final SchemaTreePane schemaPane;
     private final RunPanel runPanel = new RunPanel();
@@ -595,6 +598,113 @@ public class MainWindow {
     public void reopenLastClosedTab() {
         if (closedTabStack.isEmpty()) return;
         addAndSelect(closedTabStack.pop().get());
+    }
+
+    // ------------------------------------------------------------- split view
+
+    /**
+     * DataGrip-style split editor: at most one split (not recursively nested)
+     * — a second TabPane appears alongside the first, side by side or
+     * stacked. Splitting again while already split just re-orients the
+     * existing split rather than creating a third pane; the secondary pane
+     * automatically collapses back to a single view once its last tab closes.
+     */
+    public void splitRight(Tab tab) { split(tab, false, Orientation.HORIZONTAL); }
+    public void splitAndMoveRight(Tab tab) { split(tab, true, Orientation.HORIZONTAL); }
+    public void splitDown(Tab tab) { split(tab, false, Orientation.VERTICAL); }
+    public void splitAndMoveDown(Tab tab) { split(tab, true, Orientation.VERTICAL); }
+
+    private void split(Tab sourceTab, boolean move, Orientation orientation) {
+        ensureSplit(orientation);
+
+        Tab targetTab;
+        if (move) {
+            TabPane owner = sourceTab.getTabPane();
+            if (owner != null) owner.getTabs().remove(sourceTab);
+            targetTab = sourceTab;
+        } else {
+            Tab duplicate = duplicateTab(sourceTab);
+            if (duplicate == null) {
+                // This tab type can't be meaningfully duplicated (no separate
+                // content to reopen) — fall back to moving it instead of
+                // silently doing nothing.
+                TabPane owner = sourceTab.getTabPane();
+                if (owner != null) owner.getTabs().remove(sourceTab);
+                targetTab = sourceTab;
+            } else {
+                targetTab = duplicate;
+            }
+        }
+
+        secondaryTabPane.getTabs().add(targetTab);
+        secondaryTabPane.getSelectionModel().select(targetTab);
+        // Always rebind — a moved tab's existing context menu closure still
+        // points at its *previous* pane's tab list (stale "Close Other Tabs"
+        // etc.), and a duplicated tab never had one installed at all.
+        TabContextMenu.install(secondaryTabPane, targetTab, this);
+    }
+
+    private void ensureSplit(Orientation orientation) {
+        if (editorSplit == null) {
+            secondaryTabPane = new TabPane();
+            editorSplit = new SplitPane(tabPane, secondaryTabPane);
+            editorSplit.setOrientation(orientation);
+            int idx = centerSplit.getItems().indexOf(tabPane);
+            centerSplit.getItems().set(idx, editorSplit);
+
+            secondaryTabPane.getTabs().addListener((javafx.collections.ListChangeListener<Tab>) c -> {
+                if (secondaryTabPane.getTabs().isEmpty()) collapseSplit();
+            });
+        } else {
+            editorSplit.setOrientation(orientation);
+        }
+    }
+
+    private void collapseSplit() {
+        if (editorSplit == null) return;
+        int idx = centerSplit.getItems().indexOf(editorSplit);
+        if (idx >= 0) centerSplit.getItems().set(idx, tabPane);
+        editorSplit = null;
+        secondaryTabPane = null;
+    }
+
+    /**
+     * A best-effort copy of a tab's content for "Split Right/Down" (as
+     * opposed to "and Move…", which relocates the original instead of
+     * copying it). Consoles reopen with their SQL text intact; data views
+     * reopen the same table. Other tab types don't have a clean way to
+     * duplicate their content here, so {@link #split} falls back to moving
+     * them instead of silently doing nothing.
+     */
+    private Tab duplicateTab(Tab tab) {
+        if (tab instanceof QueryTab queryTab) {
+            QueryTab copy = new QueryTab(this, queryTab.getProfile(), queryTab.getCatalog(), tab.getText());
+            copy.setSql(queryTab.getSqlText());
+            return copy;
+        }
+        if (tab instanceof DataTab dataTab) {
+            return new DataTab(dataTab.getProfileForReopen(), dataTab.getTableForReopen());
+        }
+        return null;
+    }
+
+    /** Moves a tab out of whichever pane it's in and into its own top-level window. */
+    public void openTabInNewWindow(Tab tab) {
+        TabPane owner = tab.getTabPane();
+        if (owner != null) owner.getTabs().remove(tab);
+
+        TabPane newPane = new TabPane();
+        newPane.getTabs().add(tab);
+        TabContextMenu.install(newPane, tab, this);
+
+        Stage newStage = new Stage();
+        newStage.setTitle(tab.getText() + " \u2014 DBNavigator Pro");
+        Scene scene = new Scene(newPane, 900, 650);
+        if (stage.getScene() != null) {
+            scene.getStylesheets().addAll(stage.getScene().getStylesheets());
+        }
+        newStage.setScene(scene);
+        newStage.show();
     }
 
     public void setStatus(String text) {

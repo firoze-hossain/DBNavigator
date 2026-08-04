@@ -14,16 +14,19 @@ import java.util.function.Predicate;
 /**
  * DataGrip-style tab right-click menu. Real, working functionality for the
  * items that make sense in this app: Close variants, Copy Path/Reference,
- * Pin/Unpin, Reopen Closed Tab (console tabs only — see
+ * Split Right/Down and their "and Move" variants (a single side-by-side or
+ * stacked split — not recursively nested), Open Tab in New Window, Pin/
+ * Unpin, Reopen Closed Tab (console tabs only — see
  * {@link MainWindow#reopenLastClosedTab()}), Rename Tab, and Local History
- * (for consoles).
+ * (for consoles). "Configure Editor Tabs…" opens Settings, since this app
+ * doesn't have a dedicated tab-behavior settings page to land on yet.
  *
- * Honest scope note: the reference IDE's split-editor family (Split Right/
- * Down and their "and Move" variants, Open Tab in New Window) needs a multi-
- * pane editor layout this app doesn't have; those, plus a few project-IDE
- * specific items that don't apply here (Bookmarks, Override File Type,
- * Open In, Configure Editor Tabs), are shown disabled for visual parity
- * rather than omitted outright or silently doing nothing if clicked.
+ * Honest scope note: Bookmarks, Override File Type, and Open In are
+ * project-IDE-specific concepts that don't apply here (no line-level
+ * bookmarking, no other language interpretations for SQL consoles, and no
+ * meaningful external "open in" targets for in-memory consoles) — those
+ * stay disabled for visual parity rather than omitted outright or silently
+ * doing nothing if clicked.
  */
 public final class TabContextMenu {
 
@@ -83,12 +86,18 @@ public final class TabContextMenu {
         MenuItem rename = new MenuItem("Rename Tab\u2026");
         rename.setOnAction(e -> renameTab(tab, mainWindow));
 
-        MenuItem splitRight = disabled("Split Right");
-        MenuItem splitMoveRight = disabled("Split and Move Right");
-        MenuItem splitDown = disabled("Split Down");
-        MenuItem splitMoveDown = disabled("Split and Move Down");
-        MenuItem openNewWindow = disabled("Open Tab in New Window");
-        MenuItem configureTabs = disabled("Configure Editor Tabs\u2026");
+        MenuItem splitRight = new MenuItem("Split Right");
+        splitRight.setOnAction(e -> mainWindow.splitRight(tab));
+        MenuItem splitMoveRight = new MenuItem("Split and Move Right");
+        splitMoveRight.setOnAction(e -> mainWindow.splitAndMoveRight(tab));
+        MenuItem splitDown = new MenuItem("Split Down");
+        splitDown.setOnAction(e -> mainWindow.splitDown(tab));
+        MenuItem splitMoveDown = new MenuItem("Split and Move Down");
+        splitMoveDown.setOnAction(e -> mainWindow.splitAndMoveDown(tab));
+        MenuItem openNewWindow = new MenuItem("Open Tab in New Window");
+        openNewWindow.setOnAction(e -> mainWindow.openTabInNewWindow(tab));
+        MenuItem configureTabs = new MenuItem("Configure Editor Tabs\u2026");
+        configureTabs.setOnAction(e -> SettingsDialog.show(mainWindow));
         CheckMenuItem shortenTitles = new CheckMenuItem("Shorten Tab Titles");
         shortenTitles.setSelected(true);
         shortenTitles.setDisable(true);
