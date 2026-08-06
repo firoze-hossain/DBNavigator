@@ -568,9 +568,10 @@ public class MainWindow {
     }
 
     private void addAndSelect(Tab tab) {
-        tabPane.getTabs().add(tab);
-        tabPane.getSelectionModel().select(tab);
-        TabContextMenu.install(tabPane, tab, this);
+        TabPane targetPane = activeEditorTabPane();
+        targetPane.getTabs().add(tab);
+        targetPane.getSelectionModel().select(tab);
+        TabContextMenu.install(targetPane, tab, this);
 
         // Reopen Closed Tab currently only restores consoles (with their SQL
         // text intact) — the highest-value case. Other tab types (data view,
@@ -746,7 +747,66 @@ public class MainWindow {
         pane.focusedProperty().addListener((obs, wasFocused, focused) -> {
             if (focused) activeTabPane = pane;
         });
+        // A close/move can leave a leaf pane empty. Defer cleanup until the
+        // tab move finishes, then promote its non-empty sibling(s).
+        pane.getTabs().addListener((javafx.collections.ListChangeListener<Tab>) change ->
+                Platform.runLater(this::collapseEmptyEditorGroups));
         if (activeTabPane == null) activeTabPane = pane;
+    }
+
+    private TabPane activeEditorTabPane() {
+        java.util.List<TabPane> panes = editorTabPanes();
+        if (activeTabPane != null && panes.contains(activeTabPane)) return activeTabPane;
+        if (!panes.isEmpty()) {
+            activeTabPane = panes.get(0);
+            return activeTabPane;
+        }
+        // The layout always keeps one empty editor pane available, but retain
+        // this fallback for safety while a split is being normalized.
+        activeTabPane = tabPane;
+        return tabPane;
+    }
+
+    /** Removes empty leaf groups and recursively promotes the surviving editor group. */
+    private void collapseEmptyEditorGroups() {
+        if (centerSplit.getItems().size() < 2) return;
+        Node currentRoot = centerSplit.getItems().get(1);
+        Node collapsed = collapseEmptyEditorNode(currentRoot);
+        if (collapsed == null) {
+            // All groups were closed: retain one empty main pane for the next
+            // New Console action instead of leaving the center split empty.
+            collapsed = tabPane;
+        }
+        if (collapsed != currentRoot) centerSplit.getItems().set(1, collapsed);
+        if (activeTabPane == null || !editorTabPanes().contains(activeTabPane)) {
+            activeEditorTabPane();
+        }
+    }
+
+    private Node collapseEmptyEditorNode(Node node) {
+        if (node instanceof TabPane pane) {
+            return pane.getTabs().isEmpty() ? null : pane;
+        }
+        if (!(node instanceof SplitPane split)) return node;
+
+        java.util.List<Node> survivors = new java.util.ArrayList<>();
+        for (Node child : java.util.List.copyOf(split.getItems())) {
+            Node survivor = collapseEmptyEditorNode(child);
+            if (survivor != null) survivors.add(survivor);
+        }
+        // Detach first, then attach survivors. This avoids JavaFX trying to
+        // place a node in both the old nested split and its promoted parent.
+        split.getItems().clear();
+        split.getItems().addAll(survivors);
+        return switch (survivors.size()) {
+            case 0 -> null;
+            case 1 -> {
+                Node only = survivors.get(0);
+                split.getItems().clear();
+                yield only;
+            }
+            default -> split;
+        };
     }
 
     private Tab currentSelectedTab() {
