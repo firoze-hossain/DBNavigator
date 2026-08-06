@@ -62,6 +62,7 @@ public class QueryTab extends Tab {
     private final String catalog;   // nullable: default database of the profile
     private final CodeArea editor = SqlHighlighter.createEditor();
     private final ResultGrid resultGrid = new ResultGrid();
+    private final SplitPane editorResultSplit = new SplitPane();
     private final Label statusLabel = new Label("Ready");
     private final Spinner<Integer> limitSpinner = new Spinner<>(10, 100_000, 500, 100);
     private final Button runButton = new Button("Run");
@@ -187,9 +188,9 @@ public class QueryTab extends Tab {
         pager.addOverflowItem("Refresh (re-run query)", this::rerunLastSql);
 
         // ---- Layout ----
-        SplitPane split = new SplitPane(editorScroll, resultGrid);
-        split.setOrientation(Orientation.VERTICAL);
-        split.setDividerPositions(0.45);
+        editorResultSplit.getItems().addAll(editorScroll, resultGrid);
+        editorResultSplit.setOrientation(Orientation.VERTICAL);
+        editorResultSplit.setDividerPositions(0.45);
 
         statusLabel.getStyleClass().add("console-status");
         Region statusSpacer = new Region();
@@ -198,8 +199,8 @@ public class QueryTab extends Tab {
         statusBar.setPadding(new Insets(4, 10, 4, 10));
         statusBar.getStyleClass().add("console-status-bar");
 
-        VBox root = new VBox(toolbar, split, statusBar);
-        VBox.setVgrow(split, Priority.ALWAYS);
+        VBox root = new VBox(toolbar, editorResultSplit, statusBar);
+        VBox.setVgrow(editorResultSplit, Priority.ALWAYS);
         setContent(root);
 
         setupCompletion();
@@ -1084,9 +1085,9 @@ public class QueryTab extends Tab {
         statusLabel.setText("Executing…");
         int pageSize = limitSpinner.getValue();
         QueryHistoryStore.record(profile.getId(), sql);
-        RunPanel.RunHandle output = mainWindow.getRunPanel().openConsoleOutput(fileId, getText());
-        mainWindow.showRunPanel();
-        output.appendLine(connectionLabel() + "> " + compactSql(sql));
+        boolean likelyDataQuery = isLikelyDataQuery(sql);
+        RunPanel.RunHandle output = likelyDataQuery ? null : openRunOutput(sql);
+        if (likelyDataQuery) mainWindow.hideRunPanel();
 
         AppExecutor.run(() -> {
             try {
@@ -1149,10 +1150,11 @@ public class QueryTab extends Tab {
                     currentColumnTypes = types;
 
                     if (finalCursor.isQueryResult()) {
+                        showDataPanel(true);
+                        mainWindow.hideRunPanel();
                         displayCurrentPage();
-                        output.appendLine("Completed successfully in " + finalCursor.getExecutionMillis()
-                                + " ms; " + finalCursor.getCachedRows().size() + " row(s) fetched.");
                     } else {
+                        showDataPanel(false);
                         editManager.configureReadOnly(null);
                         resultGrid.showResult(null);
                         String completion = "Completed successfully: " + finalCursor.getMessage()
@@ -1161,7 +1163,7 @@ public class QueryTab extends Tab {
                         pager.update(0, 0, -1, true);
                         output.appendLine(completion);
                     }
-                    output.markFinished(0);
+                    if (output != null) output.markFinished(0);
                     setRunningState(false);
                 });
             } catch (Exception ex) {
@@ -1169,15 +1171,40 @@ public class QueryTab extends Tab {
                         && ex.getMessage().toLowerCase(Locale.ROOT).contains("cancel");
                 String msg = executionErrorMessage(ex, sql);
                 Platform.runLater(() -> {
+                    showDataPanel(false);
                     editManager.configureReadOnly(null);
                     resultGrid.showResult(null);
                     statusLabel.setText(cancelled ? "Query cancelled" : "Error: " + msg);
-                    output.appendLine(cancelled ? "Query cancelled." : "ERROR: " + msg);
-                    output.markFinished(-1);
+                    RunPanel.RunHandle errorOutput = output == null ? openRunOutput(sql) : output;
+                    errorOutput.appendLine(cancelled ? "Query cancelled." : "ERROR: " + msg);
+                    errorOutput.markFinished(-1);
                     setRunningState(false);
                 });
             }
         });
+    }
+
+    /** Row-producing statements use the result grid; commands use the Run console. */
+    private static boolean isLikelyDataQuery(String sql) {
+        return sql.stripLeading().matches("(?is)^(select|with|values|show|describe|explain)\\b.*");
+    }
+
+    private RunPanel.RunHandle openRunOutput(String sql) {
+        RunPanel.RunHandle output = mainWindow.getRunPanel().openConsoleOutput(fileId, getText());
+        mainWindow.showRunPanel();
+        output.appendLine(connectionLabel() + "> " + compactSql(sql));
+        return output;
+    }
+
+    /** Adds/removes the actual grid from the split so commands never leave a blank data area. */
+    private void showDataPanel(boolean show) {
+        boolean isShown = editorResultSplit.getItems().contains(resultGrid);
+        if (show && !isShown) {
+            editorResultSplit.getItems().add(resultGrid);
+            editorResultSplit.setDividerPositions(0.45);
+        } else if (!show && isShown) {
+            editorResultSplit.getItems().remove(resultGrid);
+        }
     }
 
     private String connectionLabel() {
