@@ -13,16 +13,17 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * DataGrip-style contextual completion:
  *   after FROM / JOIN / UPDATE / INTO  → tables
+ *   after CREATE / ALTER / DROP SEQUENCE → sequences
  *   after SELECT / WHERE / ON / SET …  → columns first
  *   "tableName."                       → that table's columns
  * Each suggestion carries a kind + description so the popup can color it.
  */
 public final class CompletionService {
 
-    public enum Kind { KEYWORD, TABLE, COLUMN }
+    public enum Kind { KEYWORD, TABLE, COLUMN, SEQUENCE }
 
     /** What the previous word tells us the user is about to type. */
-    public enum Context { ANY, TABLES, COLUMNS }
+    public enum Context { ANY, TABLES, COLUMNS, SEQUENCES }
 
     public record Suggestion(String text, Kind kind, String detail) {
         @Override public String toString() { return text; }
@@ -37,13 +38,16 @@ public final class CompletionService {
             "LIKE", "EXISTS", "CASE", "WHEN", "THEN", "ELSE", "END", "AS",
             "COUNT(*)", "SUM(", "AVG(", "MIN(", "MAX(", "COALESCE(", "CAST(",
             "PRIMARY KEY", "FOREIGN KEY", "REFERENCES", "DEFAULT", "UNIQUE",
-            "BEGIN", "COMMIT", "ROLLBACK", "TRUNCATE TABLE", "ASC", "DESC");
+            "BEGIN", "COMMIT", "ROLLBACK", "TRUNCATE TABLE", "ASC", "DESC",
+            "SEQUENCE", "CREATE SEQUENCE", "ALTER SEQUENCE", "DROP SEQUENCE",
+            "NEXTVAL(", "CURRVAL(", "SETVAL(");
 
     private static final int MAX_SUGGESTIONS = 20;
 
     /** cacheKey = profileId::catalog */
     private static final Map<String, List<String>> tableCache = new ConcurrentHashMap<>();
     private static final Map<String, List<String>> allColumnsCache = new ConcurrentHashMap<>();
+    private static final Map<String, List<String>> sequenceCache = new ConcurrentHashMap<>();
     /** cacheKey = profileId::catalog::table */
     private static final Map<String, List<String>> columnCache = new ConcurrentHashMap<>();
 
@@ -53,15 +57,17 @@ public final class CompletionService {
         return profile.getId() + "::" + (catalog == null ? "" : catalog);
     }
 
-    /** Kick off background loading of table and column names for a console. */
+    /** Kick off background loading of table, column, and sequence names for a console. */
     public static void preload(ConnectionProfile profile, String catalog) {
         String key = key(profile, catalog);
         if (tableCache.containsKey(key)) return;
         tableCache.put(key, List.of());        // marker so we only load once
         allColumnsCache.put(key, List.of());
+        sequenceCache.put(key, List.of());
         AppExecutor.run(() -> {
             tableCache.put(key, MetadataService.listAllTables(profile, catalog));
             allColumnsCache.put(key, MetadataService.listAllColumns(profile, catalog));
+            sequenceCache.put(key, MetadataService.listAllSequences(profile, catalog));
         });
     }
 
@@ -69,6 +75,7 @@ public final class CompletionService {
     public static void clearAllCaches() {
         tableCache.clear();
         allColumnsCache.clear();
+        sequenceCache.clear();
         columnCache.clear();
     }
 
@@ -118,9 +125,14 @@ public final class CompletionService {
                 addKeywords(prefix, matches);
                 addTables(profile, catalog, prefix, matches);
             }
+            case SEQUENCES -> {
+                addSequences(profile, catalog, prefix, matches);
+                addKeywords(prefix, matches);
+            }
             case ANY -> {
                 addTables(profile, catalog, prefix, matches);
                 addColumns(profile, catalog, prefix, matches);
+                addSequences(profile, catalog, prefix, matches);
                 addKeywords(prefix, matches);
             }
         }
@@ -143,6 +155,16 @@ public final class CompletionService {
             if (matches.size() >= MAX_SUGGESTIONS) return;
             if (column.toLowerCase(Locale.ROOT).startsWith(prefix) && notPresent(matches, column)) {
                 matches.add(new Suggestion(column, Kind.COLUMN, "column"));
+            }
+        }
+    }
+
+    private static void addSequences(ConnectionProfile profile, String catalog,
+                                     String prefix, List<Suggestion> matches) {
+        for (String sequence : sequenceCache.getOrDefault(key(profile, catalog), List.of())) {
+            if (matches.size() >= MAX_SUGGESTIONS) return;
+            if (sequence.toLowerCase(Locale.ROOT).startsWith(prefix) && notPresent(matches, sequence)) {
+                matches.add(new Suggestion(sequence, Kind.SEQUENCE, "sequence"));
             }
         }
     }

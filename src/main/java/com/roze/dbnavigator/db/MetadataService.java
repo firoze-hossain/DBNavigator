@@ -714,6 +714,31 @@ public final class MetadataService {
         return tables;
     }
 
+    /** All user-defined sequence names visible in a database — used for autocomplete. */
+    public static List<String> listAllSequences(ConnectionProfile profile, String catalog) {
+        List<String> sequences = new ArrayList<>();
+        if (profile.getType() == DatabaseType.POSTGRESQL) {
+            String sql = "SELECT c.relname FROM pg_class c " +
+                    "JOIN pg_namespace n ON n.oid = c.relnamespace " +
+                    "WHERE c.relkind = 'S' " +
+                    "AND n.nspname NOT IN ('pg_catalog', 'information_schema', 'pg_toast') " +
+                    "ORDER BY c.relname";
+            try (Connection conn = client(profile, catalog).getConnection();
+                 Statement stmt = conn.createStatement();
+                 ResultSet rs = stmt.executeQuery(sql)) {
+                while (rs.next()) sequences.add(rs.getString(1));
+            } catch (SQLException ignored) {}
+            return sequences;
+        }
+
+        try (Connection conn = client(profile, catalog).getConnection();
+             ResultSet rs = conn.getMetaData().getTables(
+                     metaCatalog(profile, catalog), null, "%", new String[]{"SEQUENCE"})) {
+            while (rs.next()) sequences.add(rs.getString("TABLE_NAME"));
+        } catch (SQLException ignored) {}
+        return sequences;
+    }
+
     /** Distinct column names of every user table — global autocomplete pool. */
     public static List<String> listAllColumns(ConnectionProfile profile, String catalog) {
         Set<String> columns = new LinkedHashSet<>();

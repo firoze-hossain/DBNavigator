@@ -357,6 +357,7 @@ public class QueryTab extends Tab {
         String word = text.substring(i + 1, end).toLowerCase(Locale.ROOT);
         return switch (word) {
             case "from", "join", "update", "into", "table" -> CompletionService.Context.TABLES;
+            case "sequence" -> CompletionService.Context.SEQUENCES;
             case "select", "where", "on", "and", "or", "by", "set",
                  "having", "between", "like", "when", "then" -> CompletionService.Context.COLUMNS;
             default -> CompletionService.Context.ANY;
