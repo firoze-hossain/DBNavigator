@@ -18,6 +18,8 @@ import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Docked "Run" tool window (bottom panel): one tab per execution (dump,
@@ -41,6 +43,8 @@ public class RunPanel extends BorderPane {
     }
 
     private final TabPane tabs = new TabPane();
+    /** One persistent output tab per SQL console, keyed by its stable console id. */
+    private final Map<String, RunTabContent> consoleOutputs = new HashMap<>();
     private Runnable onMinimize;
 
     public RunPanel() {
@@ -98,6 +102,28 @@ public class RunPanel extends BorderPane {
         tabs.getTabs().add(tab);
         tabs.getSelectionModel().select(tab);
 
+        return content;
+    }
+
+    /**
+     * Returns the persistent Run output for a SQL console and brings it to
+     * the foreground. The rail's trash button clears this console's history
+     * without affecting any other console or external-tool run.
+     */
+    public RunHandle openConsoleOutput(String consoleId, String title) {
+        RunTabContent content = consoleOutputs.get(consoleId);
+        if (content == null || content.owningTab == null || content.owningTab.getTabPane() == null) {
+            evictOldestUnpinnedIfFull();
+            content = new RunTabContent();
+            Tab tab = new Tab(title, content);
+            tab.setGraphic(Icons.of(FontAwesomeSolid.TERMINAL, "#6897bb", 10));
+            content.owningTab = tab;
+            RunTabContent finalContent = content;
+            tab.setOnClosed(e -> consoleOutputs.remove(consoleId, finalContent));
+            consoleOutputs.put(consoleId, content);
+            tabs.getTabs().add(tab);
+        }
+        tabs.getSelectionModel().select(content.owningTab);
         return content;
     }
 
