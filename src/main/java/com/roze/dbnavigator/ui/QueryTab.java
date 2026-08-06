@@ -1084,6 +1084,9 @@ public class QueryTab extends Tab {
         statusLabel.setText("Executing…");
         int pageSize = limitSpinner.getValue();
         QueryHistoryStore.record(profile.getId(), sql);
+        RunPanel.RunHandle output = mainWindow.getRunPanel().openConsoleOutput(fileId, getText());
+        mainWindow.showRunPanel();
+        output.appendLine(connectionLabel() + "> " + compactSql(sql));
 
         AppExecutor.run(() -> {
             try {
@@ -1147,27 +1150,74 @@ public class QueryTab extends Tab {
 
                     if (finalCursor.isQueryResult()) {
                         displayCurrentPage();
+                        output.appendLine("Completed successfully in " + finalCursor.getExecutionMillis()
+                                + " ms; " + finalCursor.getCachedRows().size() + " row(s) fetched.");
                     } else {
                         editManager.configureReadOnly(null);
                         resultGrid.showResult(null);
-                        statusLabel.setText(finalCursor.getMessage() + " in "
-                                + finalCursor.getExecutionMillis() + " ms");
+                        String completion = "Completed successfully: " + finalCursor.getMessage()
+                                + " in " + finalCursor.getExecutionMillis() + " ms.";
+                        statusLabel.setText(completion);
                         pager.update(0, 0, -1, true);
+                        output.appendLine(completion);
                     }
+                    output.markFinished(0);
                     setRunningState(false);
                 });
             } catch (Exception ex) {
                 boolean cancelled = ex.getMessage() != null
                         && ex.getMessage().toLowerCase(Locale.ROOT).contains("cancel");
-                String msg = ex.getMessage() == null ? ex.toString() : ex.getMessage();
+                String msg = executionErrorMessage(ex, sql);
                 Platform.runLater(() -> {
                     editManager.configureReadOnly(null);
                     resultGrid.showResult(null);
                     statusLabel.setText(cancelled ? "Query cancelled" : "Error: " + msg);
+                    output.appendLine(cancelled ? "Query cancelled." : "ERROR: " + msg);
+                    output.markFinished(-1);
                     setRunningState(false);
                 });
             }
         });
+    }
+
+    private String connectionLabel() {
+        String database = catalog == null || catalog.isBlank() ? profile.getDatabase() : catalog;
+        String target = database == null || database.isBlank() ? profile.getName() : database;
+        return profile.getType() == DatabaseType.POSTGRESQL ? target + ".public" : target;
+    }
+
+    private static String compactSql(String sql) {
+        return sql.replaceAll("\\s+", " ").trim();
+    }
+
+    /** Formats database errors compactly while retaining the SQLSTATE when the driver provides it. */
+    private static String executionErrorMessage(Exception ex, String sql) {
+        Throwable cause = ex;
+        while (cause != null) {
+            if (cause instanceof java.sql.SQLException sqlException) {
+                String state = sqlException.getSQLState();
+                String message = sqlException.getMessage();
+                String detail = message == null ? sqlException.toString() : message;
+                if ("42P01".equals(state)) {
+                    Matcher object = DDL_OBJECT.matcher(sql);
+                    if (object.find()) {
+                        String kind = object.group(1).equalsIgnoreCase("sequence") ? "Sequence" : "Table";
+                        detail = kind + " " + object.group(2) + " does not exist.";
+                    }
+                } else if ("42601".equals(state)) {
+                    Matcher duplicateKeyword = DUPLICATE_DDL_KEYWORD.matcher(sql);
+                    if (duplicateKeyword.find()) {
+                        String kind = duplicateKeyword.group(1).toUpperCase(Locale.ROOT);
+                        String objectName = duplicateKeyword.group(2).trim();
+                        detail = "Invalid DROP " + kind + " statement: " + kind
+                                + " is repeated. Use: DROP " + kind + " " + objectName + ";";
+                    }
+                }
+                return (state == null || state.isBlank() ? "" : "[" + state + "] ") + detail;
+            }
+            cause = cause.getCause();
+        }
+        return ex.getMessage() == null ? ex.toString() : ex.getMessage();
     }
 
     // ---------------------------------------------------------------- paging
@@ -1262,6 +1312,14 @@ public class QueryTab extends Tab {
     private static final Pattern SIMPLE_SELECT = Pattern.compile(
             "^\\s*select\\s+.+?\\s+from\\s+([A-Za-z0-9_.\"]+)(.*)$",
             Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+    /** Identifies the object in a DDL statement for friendly PostgreSQL missing-object errors. */
+    private static final Pattern DDL_OBJECT = Pattern.compile(
+            "(?is)^\\s*(?:drop|alter|truncate)\\s+(table|sequence)\\s+"
+                    + "(?:if\\s+exists\\s+)?((?:\"[^\"]+\"|[A-Za-z_][A-Za-z0-9_$]*)"
+                    + "(?:\\s*\\.\\s*(?:\"[^\"]+\"|[A-Za-z_][A-Za-z0-9_$]*))?)");
+    /** Catches accidental completion/input such as {@code DROP TABLE table orders}. */
+    private static final Pattern DUPLICATE_DDL_KEYWORD = Pattern.compile(
+            "(?is)^\\s*drop\\s+(table|sequence)\\s+\\1\\s+(.+?)\\s*;?\\s*$");
 
     /**
      * Returns the target table token when the query is a plain single-table
