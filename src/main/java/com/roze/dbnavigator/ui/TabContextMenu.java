@@ -14,8 +14,8 @@ import java.util.function.Predicate;
 /**
  * DataGrip-style tab right-click menu. Real, working functionality for the
  * items that make sense in this app: Close variants, Copy Path/Reference,
- * Split Right/Down and their "and Move" variants (a single side-by-side or
- * stacked split — not recursively nested), Open Tab in New Window, Pin/
+ * Split Right/Down and their "and Move" variants (which can be nested to
+ * create any number of side-by-side or stacked editor groups), Open Tab in New Window, Pin/
  * Unpin, Reopen Closed Tab (console tabs only — see
  * {@link MainWindow#reopenLastClosedTab()}), Rename Tab, Local History (for
  * consoles), and for consoles specifically:
