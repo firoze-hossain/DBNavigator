@@ -10,6 +10,7 @@ import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
@@ -41,8 +42,8 @@ public class MainWindow {
     private final Stage stage;
     private final BorderPane root = new BorderPane();
     private final TabPane tabPane = new TabPane();
-    private TabPane secondaryTabPane;      // created lazily on first Split Right/Down; null when not split
-    private SplitPane editorSplit;         // wraps tabPane + secondaryTabPane while split; null otherwise
+    /** The most recently used editor group; menu/toolbar actions use this group. */
+    private TabPane activeTabPane;
     private final java.util.Deque<java.util.function.Supplier<Tab>> closedTabStack = new java.util.ArrayDeque<>();
     private final SchemaTreePane schemaPane;
     private final RunPanel runPanel = new RunPanel();
@@ -77,6 +78,7 @@ public class MainWindow {
 
         tabPane.getStyleClass().add("main-tabs");
         tabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.ALL_TABS);
+        configureEditorTabPane(tabPane);
         showWelcomeTab();
 
         centerSplit = new SplitPane(schemaPane, tabPane);
@@ -116,11 +118,9 @@ public class MainWindow {
 
     /** Re-applies the saved editor font to every currently open console — called after Settings > Apply/OK. */
     public void applyEditorFontToOpenConsoles() {
-        for (Tab tab : tabPane.getTabs()) {
-            if (tab instanceof QueryTab queryTab) {
-                queryTab.applyEditorFontFromSettings();
-            }
-        }
+        forEachEditorTab(tab -> {
+            if (tab instanceof QueryTab queryTab) queryTab.applyEditorFontFromSettings();
+        });
     }
 
     /** Shows the docked Run panel, expanding it if it was collapsed. */
@@ -276,7 +276,7 @@ public class MainWindow {
     }
 
     private void saveConsoleAs() {
-        Tab selected = tabPane.getSelectionModel().getSelectedItem();
+        Tab selected = currentSelectedTab();
         if (!(selected instanceof QueryTab queryTab)) {
             setStatus("Select a query console tab first");
             return;
@@ -302,7 +302,7 @@ public class MainWindow {
      * if opening the diff view fails for any reason — never a silent no-op.
      */
     private void showLocalHistoryForCurrentConsole() {
-        Tab selected = tabPane.getSelectionModel().getSelectedItem();
+        Tab selected = currentSelectedTab();
         if (!(selected instanceof QueryTab tab)) {
             Alert alert = (Alert) DialogTheme.apply(new Alert(Alert.AlertType.INFORMATION,
                     "Open or select a query console tab first, then use Local History on it."));
@@ -324,7 +324,7 @@ public class MainWindow {
 
     /** Runs an action on the currently selected console tab, or reports there isn't one. */
     private void withCurrentConsole(Consumer<QueryTab> action) {
-        Tab selected = tabPane.getSelectionModel().getSelectedItem();
+        Tab selected = currentSelectedTab();
         if (selected instanceof QueryTab tab) {
             action.accept(tab);
         } else {
@@ -345,8 +345,10 @@ public class MainWindow {
     }
 
     private QueryTab findOpenConsole(String fileId) {
-        for (Tab t : tabPane.getTabs()) {
-            if (t instanceof QueryTab qt && qt.getFileId().equals(fileId)) return qt;
+        for (TabPane pane : editorTabPanes()) {
+            for (Tab t : pane.getTabs()) {
+                if (t instanceof QueryTab qt && qt.getFileId().equals(fileId)) return qt;
+            }
         }
         return null;
     }
@@ -603,25 +605,26 @@ public class MainWindow {
 
     // ------------------------------------------------------------- split view
 
-    /**
-     * DataGrip-style split editor: at most one split (not recursively nested)
-     * — a second TabPane appears alongside the first, side by side or
-     * stacked. Splitting again while already split just re-orients the
-     * existing split rather than creating a third pane; the secondary pane
-     * automatically collapses back to a single view once its last tab closes.
-     */
+    /** DataGrip-style editor splitting. Every editor group can be split again. */
     public void splitRight(Tab tab) { split(tab, false, Orientation.HORIZONTAL); }
     public void splitAndMoveRight(Tab tab) { split(tab, true, Orientation.HORIZONTAL); }
     public void splitDown(Tab tab) { split(tab, false, Orientation.VERTICAL); }
     public void splitAndMoveDown(Tab tab) { split(tab, true, Orientation.VERTICAL); }
 
     private void split(Tab sourceTab, boolean move, Orientation orientation) {
-        ensureSplit(orientation);
+        TabPane sourcePane = sourceTab.getTabPane();
+        if (sourcePane == null) return;
+
+        TabPane targetPane = createEditorTabPane();
+        SplitPane split = new SplitPane();
+        split.setOrientation(orientation);
+        split.setDividerPositions(0.5);
+        replaceEditorNode(sourcePane, split);
+        split.getItems().addAll(sourcePane, targetPane);
 
         Tab targetTab;
         if (move) {
-            TabPane owner = sourceTab.getTabPane();
-            if (owner != null) owner.getTabs().remove(sourceTab);
+            sourcePane.getTabs().remove(sourceTab);
             targetTab = sourceTab;
         } else {
             Tab duplicate = duplicateTab(sourceTab);
@@ -629,44 +632,54 @@ public class MainWindow {
                 // This tab type can't be meaningfully duplicated (no separate
                 // content to reopen) — fall back to moving it instead of
                 // silently doing nothing.
-                TabPane owner = sourceTab.getTabPane();
-                if (owner != null) owner.getTabs().remove(sourceTab);
+                sourcePane.getTabs().remove(sourceTab);
                 targetTab = sourceTab;
             } else {
                 targetTab = duplicate;
             }
         }
 
-        secondaryTabPane.getTabs().add(targetTab);
-        secondaryTabPane.getSelectionModel().select(targetTab);
+        targetPane.getTabs().add(targetTab);
+        targetPane.getSelectionModel().select(targetTab);
         // Always rebind — a moved tab's existing context menu closure still
         // points at its *previous* pane's tab list (stale "Close Other Tabs"
         // etc.), and a duplicated tab never had one installed at all.
-        TabContextMenu.install(secondaryTabPane, targetTab, this);
+        TabContextMenu.install(targetPane, targetTab, this);
     }
 
-    private void ensureSplit(Orientation orientation) {
-        if (editorSplit == null) {
-            secondaryTabPane = new TabPane();
-            editorSplit = new SplitPane(tabPane, secondaryTabPane);
-            editorSplit.setOrientation(orientation);
-            int idx = centerSplit.getItems().indexOf(tabPane);
-            centerSplit.getItems().set(idx, editorSplit);
+    private TabPane createEditorTabPane() {
+        TabPane pane = new TabPane();
+        pane.getStyleClass().add("main-tabs");
+        pane.setTabClosingPolicy(TabPane.TabClosingPolicy.ALL_TABS);
+        configureEditorTabPane(pane);
+        return pane;
+    }
 
-            secondaryTabPane.getTabs().addListener((javafx.collections.ListChangeListener<Tab>) c -> {
-                if (secondaryTabPane.getTabs().isEmpty()) collapseSplit();
-            });
-        } else {
-            editorSplit.setOrientation(orientation);
+    /** Replaces one editor leaf with a nested split, whether it is top-level or already nested. */
+    private void replaceEditorNode(Node oldNode, Node newNode) {
+        if (!replaceNodeInSplit(centerSplit, oldNode, newNode)) {
+            throw new IllegalStateException("Editor group was not found in the editor layout");
         }
     }
 
-    private void collapseSplit() {
-        if (editorSplit == null) return;
-        int idx = centerSplit.getItems().indexOf(editorSplit);
-        if (idx >= 0) centerSplit.getItems().set(idx, tabPane);
-        editorSplit = null;
-        secondaryTabPane = null;
+    /**
+     * SplitPane wraps its children in skin nodes, so Node#getParent() cannot
+     * be used to find the logical layout parent. Traverse SplitPane items
+     * instead; this also works for arbitrarily nested editor splits.
+     */
+    private boolean replaceNodeInSplit(SplitPane container, Node oldNode, Node newNode) {
+        int index = container.getItems().indexOf(oldNode);
+        if (index >= 0) {
+            container.getItems().set(index, newNode);
+            return true;
+        }
+        for (Node child : container.getItems()) {
+            if (child instanceof SplitPane nested
+                    && replaceNodeInSplit(nested, oldNode, newNode)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -708,24 +721,64 @@ public class MainWindow {
         newStage.show();
     }
 
-    /** Selects a tab, switching to whichever pane (primary or split-secondary) actually hosts it. */
+    /** Selects a tab in whichever editor group currently hosts it. */
     public void selectTab(Tab tab) {
         TabPane owner = tab.getTabPane();
-        if (owner != null) owner.getSelectionModel().select(tab);
+        if (owner != null) {
+            owner.getSelectionModel().select(tab);
+            activeTabPane = owner;
+        }
     }
 
     /** Tab context menu → Bookmarks → Show Bookmarks… */
     public void showBookmarksDialog() {
         java.util.List<QueryTab> consoles = new java.util.ArrayList<>();
-        for (Tab t : tabPane.getTabs()) {
-            if (t instanceof QueryTab qt) consoles.add(qt);
-        }
-        if (secondaryTabPane != null) {
-            for (Tab t : secondaryTabPane.getTabs()) {
+        forEachEditorTab(t -> {
                 if (t instanceof QueryTab qt) consoles.add(qt);
-            }
-        }
+        });
         BookmarksDialog.show(this, consoles);
+    }
+
+    private void configureEditorTabPane(TabPane pane) {
+        pane.getSelectionModel().selectedItemProperty().addListener((obs, oldTab, newTab) -> {
+            if (newTab != null) activeTabPane = pane;
+        });
+        pane.focusedProperty().addListener((obs, wasFocused, focused) -> {
+            if (focused) activeTabPane = pane;
+        });
+        if (activeTabPane == null) activeTabPane = pane;
+    }
+
+    private Tab currentSelectedTab() {
+        if (activeTabPane != null) {
+            Tab selected = activeTabPane.getSelectionModel().getSelectedItem();
+            if (selected != null) return selected;
+        }
+        for (TabPane pane : editorTabPanes()) {
+            Tab selected = pane.getSelectionModel().getSelectedItem();
+            if (selected != null) return selected;
+        }
+        return null;
+    }
+
+    private java.util.List<TabPane> editorTabPanes() {
+        java.util.List<TabPane> panes = new java.util.ArrayList<>();
+        collectEditorTabPanes(centerSplit.getItems().get(1), panes);
+        return panes;
+    }
+
+    private void collectEditorTabPanes(Node node, java.util.List<TabPane> panes) {
+        if (node instanceof TabPane pane) {
+            panes.add(pane);
+        } else if (node instanceof SplitPane split) {
+            for (Node child : split.getItems()) collectEditorTabPanes(child, panes);
+        }
+    }
+
+    private void forEachEditorTab(Consumer<Tab> action) {
+        for (TabPane pane : editorTabPanes()) {
+            for (Tab tab : pane.getTabs()) action.accept(tab);
+        }
     }
 
     public void setStatus(String text) {
