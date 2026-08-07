@@ -334,6 +334,28 @@ public class QueryTab extends Tab {
         return text.substring(start, caret);
     }
 
+    private static final Pattern COMPLETION_CONTEXT_KEYWORD = Pattern.compile(
+            "(?i)\\b(select|from|join|update|into|table|sequence|where|on|and|or|by|set|having|between|like|when|then)\\b");
+
+    private CompletionService.Context contextAt(int position) {
+        String text = editor.getText();
+        int pos = Math.min(position, text.length());
+        String before = text.substring(0, pos).toLowerCase(Locale.ROOT);
+        Matcher matcher = COMPLETION_CONTEXT_KEYWORD.matcher(before);
+        String lastKeyword = null;
+        while (matcher.find()) {
+            lastKeyword = matcher.group(1);
+        }
+        if (lastKeyword == null) return CompletionService.Context.ANY;
+        return switch (lastKeyword) {
+            case "from", "join", "update", "into", "table" -> CompletionService.Context.TABLES;
+            case "sequence" -> CompletionService.Context.SEQUENCES;
+            case "select", "where", "on", "and", "or", "by", "set",
+                 "having", "between", "like", "when", "then" -> CompletionService.Context.COLUMNS;
+            default -> CompletionService.Context.ANY;
+        };
+    }
+
     private void insertSelectedCompletion() {
         CompletionService.Suggestion selected =
                 completionList.getSelectionModel().getSelectedItem();
@@ -346,23 +368,6 @@ public class QueryTab extends Tab {
         suppressCompletion = false;
         completionPopup.hide();
         editor.requestFocus();
-    }
-
-    /** Context from the previous significant word: FROM → tables, WHERE → columns … */
-    private CompletionService.Context contextAt(int position) {
-        String text = editor.getText();
-        int i = Math.min(position, text.length()) - 1;
-        while (i >= 0 && Character.isWhitespace(text.charAt(i))) i--;
-        int end = i + 1;
-        while (i >= 0 && (Character.isLetterOrDigit(text.charAt(i)) || text.charAt(i) == '_')) i--;
-        String word = text.substring(i + 1, end).toLowerCase(Locale.ROOT);
-        return switch (word) {
-            case "from", "join", "update", "into", "table" -> CompletionService.Context.TABLES;
-            case "sequence" -> CompletionService.Context.SEQUENCES;
-            case "select", "where", "on", "and", "or", "by", "set",
-                 "having", "between", "like", "when", "then" -> CompletionService.Context.COLUMNS;
-            default -> CompletionService.Context.ANY;
-        };
     }
 
     /** Pre-filled console text accessor (used by File → Save Console As…). */
@@ -1105,18 +1110,27 @@ public class QueryTab extends Tab {
                     } catch (Exception ignored) {
                         pkColumns = List.of();
                     }
-                    // PostgreSQL table without a PK (e.g. a partition) + plain
-                    // "SELECT *": silently select ctid too so edits still work.
-                    // The ctid column stays hidden in the grid.
-                    if (pkColumns.isEmpty()
-                            && profile.getType() == DatabaseType.POSTGRESQL
-                            && sql.matches("(?is)\\s*select\\s+\\*\\s+from\\s+.*")) {
-                        sqlToRun = sql.replaceFirst("(?is)^(\\s*select\\s+)\\*", "$1ctid, *");
-                        pkColumns = List.of("ctid");
-                        viaCtid = true;
-                    }
                     if (!pkColumns.isEmpty()) {
+                        sqlToRun = addMissingPrimaryKeyColumns(sqlToRun, pkColumns);
                         try {
+                            columnTypes = MetadataService.loadColumnTypes(profile, ref);
+                        } catch (Exception ignored) {
+                            columnTypes = Map.of();
+                        }
+                    }
+                    // PostgreSQL table without a PK (e.g. a partition) + plain
+                    // single-table SELECT: silently select its physical row
+                    // identity so edits target the correct child partition.
+                    // These columns stay hidden in the grid.
+                    else if (profile.getType() == DatabaseType.POSTGRESQL
+                            && isSimpleSingleTableSelect(sql)) {
+                        sqlToRun = addRowIdentityToSelect(sqlToRun);
+                        pkColumns = List.of("tableoid", "ctid");
+                        viaCtid = true;
+                        try {
+                            // The hidden physical identity has no JDBC metadata,
+                            // but edited table columns still need their actual
+                            // types (e.g. bigint rather than varchar) on commit.
                             columnTypes = MetadataService.loadColumnTypes(profile, ref);
                         } catch (Exception ignored) {
                             columnTypes = Map.of();
@@ -1167,16 +1181,22 @@ public class QueryTab extends Tab {
                     setRunningState(false);
                 });
             } catch (Exception ex) {
-                boolean cancelled = ex.getMessage() != null
-                        && ex.getMessage().toLowerCase(Locale.ROOT).contains("cancel");
+                boolean cancelled = isCancellation(ex);
+                boolean timedOut = isTimeout(ex);
                 String msg = executionErrorMessage(ex, sql);
                 Platform.runLater(() -> {
                     showDataPanel(false);
                     editManager.configureReadOnly(null);
                     resultGrid.showResult(null);
-                    statusLabel.setText(cancelled ? "Query cancelled" : "Error: " + msg);
+                    if (cancelled) {
+                        statusLabel.setText("Query cancelled by user");
+                    } else if (timedOut) {
+                        statusLabel.setText("Query timed out after 120 seconds");
+                    } else {
+                        statusLabel.setText("Error: " + msg);
+                    }
                     RunPanel.RunHandle errorOutput = output == null ? openRunOutput(sql) : output;
-                    errorOutput.appendLine(cancelled ? "Query cancelled." : "ERROR: " + msg);
+                    errorOutput.appendLine(cancelled ? "Query cancelled by user." : timedOut ? "Query timed out after 120 seconds." : "ERROR: " + msg);
                     errorOutput.markFinished(-1);
                     setRunningState(false);
                 });
@@ -1219,6 +1239,9 @@ public class QueryTab extends Tab {
 
     /** Formats database errors compactly while retaining the SQLSTATE when the driver provides it. */
     private static String executionErrorMessage(Exception ex, String sql) {
+        if (isTimeout(ex)) {
+            return "Query timed out after 120 seconds.";
+        }
         Throwable cause = ex;
         while (cause != null) {
             if (cause instanceof java.sql.SQLException sqlException) {
@@ -1245,6 +1268,34 @@ public class QueryTab extends Tab {
             cause = cause.getCause();
         }
         return ex.getMessage() == null ? ex.toString() : ex.getMessage();
+    }
+
+    private static boolean isTimeout(Throwable ex) {
+        Throwable cause = ex;
+        while (cause != null) {
+            if (cause instanceof java.sql.SQLTimeoutException) return true;
+            if (cause instanceof java.sql.SQLException sqlEx) {
+                String state = sqlEx.getSQLState();
+                if ("57014".equals(state) || "40001".equals(state)) return true;
+            }
+            cause = cause.getCause();
+        }
+        return false;
+    }
+
+    private static boolean isCancellation(Throwable ex) {
+        Throwable cause = ex;
+        while (cause != null) {
+            if (cause instanceof java.sql.SQLTimeoutException) return false;
+            if (cause instanceof java.sql.SQLException sqlEx) {
+                String message = sqlEx.getMessage();
+                if (message != null && message.toLowerCase(Locale.ROOT).contains("cancel")) {
+                    return true;
+                }
+            }
+            cause = cause.getCause();
+        }
+        return false;
     }
 
     // ---------------------------------------------------------------- paging
@@ -1382,6 +1433,34 @@ public class QueryTab extends Tab {
             }
         }
         return new DbObject(tableName, DbObject.Kind.TABLE, cat, schema);
+    }
+
+    private static String addMissingPrimaryKeyColumns(String sql, List<String> pkColumns) {
+        String lower = sql.toLowerCase(Locale.ROOT);
+        if (!lower.matches("(?is)^\\s*select\\s+.+?\\s+from\\s+.+")) return sql;
+        int fromIndex = lower.indexOf(" from ");
+        if (fromIndex < 0) return sql;
+        String selectPart = sql.substring(0, fromIndex);
+        String rest = sql.substring(fromIndex);
+        for (String pk : pkColumns) {
+            if (!selectPart.toLowerCase(Locale.ROOT).contains(pk.toLowerCase(Locale.ROOT))) {
+                selectPart = selectPart.replaceFirst("(?i)select\\s+", "$0" + pk + ", ");
+            }
+        }
+        return selectPart + rest;
+    }
+
+    private static boolean isSimpleSingleTableSelect(String sql) {
+        // Console queries normally end in a semicolon. Treat it as syntax
+        // decoration rather than evidence that this is a complex query, so a
+        // plain "SELECT * FROM partition;" remains editable.
+        return sql.matches("(?is)^\\s*select\\s+.+?\\s+from\\s+[A-Za-z0-9_.\\\"]+"
+                + "\\s*(where\\b.*)?\\s*;?\\s*$");
+    }
+
+    private static String addRowIdentityToSelect(String sql) {
+        return sql.replaceFirst("(?is)^(\\s*select\\s+)",
+                "$1tableoid::text AS tableoid, ctid, ");
     }
 
 }

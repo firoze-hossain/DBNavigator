@@ -28,9 +28,11 @@ public class JdbcClient implements AutoCloseable {
             config.setUsername(profile.getUsername());
             config.setPassword(profile.getPassword() == null ? "" : profile.getPassword());
         }
-        config.setMaximumPoolSize(5);
-        config.setMinimumIdle(1);
+        config.setMaximumPoolSize(10);
+        config.setMinimumIdle(2);
         config.setConnectionTimeout(10_000);
+        config.setIdleTimeout(60_000);
+        config.setMaxLifetime(600_000);
         config.setPoolName("DBNav-" + profile.getName()
                 + (catalogOverride == null ? "" : "-" + catalogOverride));
         this.dataSource = new HikariDataSource(config);
@@ -54,6 +56,8 @@ public class JdbcClient implements AutoCloseable {
      *                        instant it's created so a "Cancel" button on another
      *                        thread can call statement.cancel() to abort the query.
      */
+    private static final int DEFAULT_QUERY_TIMEOUT_SECONDS = 120;
+
     public QueryResult execute(String sql, int maxRows,
                                java.util.concurrent.atomic.AtomicReference<Statement> statementHolder)
             throws SQLException {
@@ -100,6 +104,11 @@ public class JdbcClient implements AutoCloseable {
             try (Statement stmt = conn.createStatement()) {
                 if (supportsCursor) {
                     stmt.setFetchSize(maxRows > 0 ? Math.min(maxRows, 1000) : 1000);
+                }
+                try {
+                    stmt.setQueryTimeout(DEFAULT_QUERY_TIMEOUT_SECONDS);
+                } catch (SQLException ignored) {
+                    // Some drivers may not support query timeout; best-effort only.
                 }
                 if (statementHolder != null) statementHolder.set(stmt);
                 stmt.setMaxRows(maxRows);
@@ -151,15 +160,16 @@ public class JdbcClient implements AutoCloseable {
     }
 
     /**
-     * @param includeCtid PostgreSQL only: select the physical row id (ctid) so
-     *                    tables WITHOUT a primary key — e.g. partitions — can
-     *                    still be edited and have rows deleted.
+     * @param includeCtid PostgreSQL only: select the physical row identity
+     *                    (tableoid + ctid) so tables WITHOUT a primary key —
+     *                    e.g. partitions — can still be edited safely.
      */
     public QueryResult fetchTablePage(String qualifiedTable, int offset, int pageSize,
                                       String whereClause, String orderBy,
                                       boolean includeCtid) throws SQLException {
         StringBuilder sql = new StringBuilder(includeCtid
-                ? "SELECT ctid, * FROM " : "SELECT * FROM ").append(qualifiedTable);
+                ? "SELECT tableoid::text AS tableoid, ctid, * FROM "
+                : "SELECT * FROM ").append(qualifiedTable);
         if (whereClause != null && !whereClause.isBlank()) sql.append(" WHERE ").append(whereClause);
         if (orderBy != null && !orderBy.isBlank()) sql.append(" ORDER BY ").append(orderBy);
 

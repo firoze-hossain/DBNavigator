@@ -24,6 +24,7 @@ import java.util.List;
 public class PagedResultCursor implements AutoCloseable {
 
     private static final int SAFETY_CAP = 50_000;
+    private static final int DEFAULT_QUERY_TIMEOUT_SECONDS = 120;
 
     private final int pageSize;
     private Connection connection;
@@ -78,27 +79,26 @@ public class PagedResultCursor implements AutoCloseable {
         if (supportsCursor) {
             statement.setFetchSize(pageSize + 1);
         }
+        try {
+            statement.setQueryTimeout(DEFAULT_QUERY_TIMEOUT_SECONDS);
+        } catch (SQLException ignored) {
+            // best-effort if the driver does not support query timeouts
+        }
         if (statementHolder != null) statementHolder.set(statement);
         try {
-            try {
-                isQueryResult = statement.execute(sql);
-            } catch (SQLException ex) {
-                if (autoCommitDisabled && isTransactionBlockError(ex)) {
-                    // Some statements — CREATE DATABASE, DROP DATABASE, VACUUM,
-                    // ALTER SYSTEM, CREATE INDEX CONCURRENTLY, and a few others
-                    // — are only valid outside any transaction; PostgreSQL
-                    // rejects them explicitly rather than silently ignoring
-                    // the restriction. The autocommit(false) used above for
-                    // cursor-based fetching puts every statement inside an
-                    // implicit transaction, which is exactly what trips this.
-                    // Retry once on a plain, default-autocommit connection
-                    // instead of failing outright — none of these statements
-                    // return large result sets anyway, so there's nothing
-                    // lost by skipping the cursor optimization for them.
-                    reopenWithoutCursor(profile, catalog, sql, statementHolder);
-                } else {
-                    throw ex;
-                }
+            isQueryResult = statement.execute(sql);
+        } catch (SQLException ex) {
+            if (autoCommitDisabled && isTransactionBlockError(ex)) {
+                // Some statements — CREATE DATABASE, DROP DATABASE, VACUUM,
+                // ALTER SYSTEM, CREATE INDEX CONCURRENTLY, and a few others
+                // are only valid outside any transaction; PostgreSQL
+                // rejects them explicitly rather than silently ignoring
+                // the restriction. The autocommit(false) used above for
+                // cursor-based fetching puts every statement inside an
+                // implicit transaction, which is exactly what trips this.
+                reopenWithoutCursor(profile, catalog, sql, statementHolder);
+            } else {
+                throw ex;
             }
         } finally {
             if (statementHolder != null) statementHolder.set(null);

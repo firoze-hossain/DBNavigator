@@ -1,6 +1,9 @@
 package com.roze.dbnavigator.util;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -18,6 +21,9 @@ public final class SqlAliases {
 
     private static final Pattern FROM_OR_JOIN = Pattern.compile(
             "(?i)\\b(?:FROM|JOIN)\\s+([A-Za-z_][A-Za-z0-9_.]*)\\s+(?:AS\\s+)?([A-Za-z_][A-Za-z0-9_]*)\\b");
+
+    private static final Pattern FROM_OR_JOIN_TABLE = Pattern.compile(
+            "(?i)\\b(?:FROM|JOIN)\\s+([A-Za-z_][A-Za-z0-9_.\\\"]*)(?:\\s+(?:AS\\s+)?([A-Za-z_][A-Za-z0-9_]*))?\\b");
 
     // Words that can legally follow a table name without being an alias
     // (e.g. "FROM users WHERE ..." must not treat WHERE as an alias for users).
@@ -43,5 +49,23 @@ public final class SqlAliases {
             aliases.putIfAbsent(alias.toLowerCase(Locale.ROOT), simpleName);
         }
         return aliases;
+    }
+
+    /**
+     * Returns the list of referenced table names from FROM/JOIN clauses, useful
+     * for scoped autocomplete in queries that already reference one or more tables.
+     */
+    public static List<String> referencedTables(String sql) {
+        Set<String> tables = new LinkedHashSet<>();
+        if (sql == null || sql.isBlank()) return List.of();
+
+        Matcher matcher = FROM_OR_JOIN_TABLE.matcher(sql);
+        while (matcher.find()) {
+            String table = matcher.group(1);
+            String simpleName = table.contains(".") ? table.substring(table.lastIndexOf('.') + 1) : table;
+            simpleName = simpleName.replace("\"", "");
+            tables.add(simpleName);
+        }
+        return new ArrayList<>(tables);
     }
 }

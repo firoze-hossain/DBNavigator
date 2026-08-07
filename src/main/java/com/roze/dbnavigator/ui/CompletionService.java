@@ -5,9 +5,11 @@ import com.roze.dbnavigator.model.ConnectionProfile;
 import com.roze.dbnavigator.util.AppExecutor;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -121,9 +123,8 @@ public final class CompletionService {
                 addKeywords(prefix, matches);      // e.g. FROM (SELECT …
             }
             case COLUMNS -> {
-                addColumns(profile, catalog, prefix, matches);
+                addScopedColumns(profile, catalog, fullText, prefix, matches);
                 addKeywords(prefix, matches);
-                addTables(profile, catalog, prefix, matches);
             }
             case SEQUENCES -> {
                 addSequences(profile, catalog, prefix, matches);
@@ -131,7 +132,7 @@ public final class CompletionService {
             }
             case ANY -> {
                 addTables(profile, catalog, prefix, matches);
-                addColumns(profile, catalog, prefix, matches);
+                addScopedColumns(profile, catalog, fullText, prefix, matches);
                 addSequences(profile, catalog, prefix, matches);
                 addKeywords(prefix, matches);
             }
@@ -147,6 +148,27 @@ public final class CompletionService {
                 matches.add(new Suggestion(table, Kind.TABLE, "table"));
             }
         }
+    }
+
+    private static void addScopedColumns(ConnectionProfile profile, String catalog,
+                                         String fullText, String prefix, List<Suggestion> matches) {
+        Set<String> seenColumns = new HashSet<>();
+        List<String> tables = com.roze.dbnavigator.util.SqlAliases.referencedTables(fullText);
+        if (!tables.isEmpty()) {
+            // Prefer columns from tables already referenced in the query.
+            for (String table : tables) {
+                for (String col : columnsOf(profile, catalog, table)) {
+                    if (matches.size() >= MAX_SUGGESTIONS) return;
+                    if (col.toLowerCase(Locale.ROOT).startsWith(prefix)) {
+                        String text = col;
+                        if (notPresent(matches, text) && seenColumns.add(text.toLowerCase(Locale.ROOT))) {
+                            matches.add(new Suggestion(text, Kind.COLUMN, "column of " + table));
+                        }
+                    }
+                }
+            }
+        }
+        addColumns(profile, catalog, prefix, matches);
     }
 
     private static void addColumns(ConnectionProfile profile, String catalog,
