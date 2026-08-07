@@ -31,8 +31,9 @@ public class GridEditManager {
 
     private record Update(Map<String, String> pkValues, String column, String newValue) {}
 
-    /** Sentinel JDBC type meaning "this is PostgreSQL's ctid row id, cast as ::tid". */
+    /** Sentinel JDBC types for PostgreSQL's physical row identity columns. */
     private static final int CTID_PSEUDO_TYPE = Integer.MIN_VALUE;
+    private static final int TABLEOID_PSEUDO_TYPE = Integer.MIN_VALUE + 1;
 
     private final ConnectionProfile profile;
     private final String catalog;
@@ -243,7 +244,9 @@ public class GridEditManager {
         for (String column : pkValues.keySet()) {
             if (!first) sb.append(" AND ");
             sb.append(DbObject.quote(column));
-            sb.append(typeOf(column) == CTID_PSEUDO_TYPE ? " = ?::tid" : " = ?");
+            int type = typeOf(column);
+            sb.append(type == CTID_PSEUDO_TYPE ? " = ?::tid"
+                    : type == TABLEOID_PSEUDO_TYPE ? " = ?::oid" : " = ?");
             first = false;
         }
         return sb.toString();
@@ -263,8 +266,8 @@ public class GridEditManager {
         int index = startIndex;
         for (var pk : pkValues.entrySet()) {
             int type = typeOf(pk.getKey());
-            if (type == CTID_PSEUDO_TYPE) {
-                stmt.setString(index, pk.getValue());   // cast to ::tid is in the SQL text
+            if (type == CTID_PSEUDO_TYPE || type == TABLEOID_PSEUDO_TYPE) {
+                stmt.setString(index, pk.getValue());   // casts are in the SQL text
             } else {
                 SqlValueBinder.bind(stmt, index, type == 0 ? null : type, pk.getValue());
             }
@@ -275,6 +278,9 @@ public class GridEditManager {
     private int typeOf(String column) {
         if (column.equalsIgnoreCase("ctid") && !columnTypes.containsKey(column)) {
             return CTID_PSEUDO_TYPE;
+        }
+        if (column.equalsIgnoreCase("tableoid") && !columnTypes.containsKey(column)) {
+            return TABLEOID_PSEUDO_TYPE;
         }
         return columnTypes.getOrDefault(column, 0);
     }

@@ -9,6 +9,7 @@ import javafx.scene.control.*;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.MouseButton;
 import javafx.scene.layout.HBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Popup;
@@ -72,6 +73,25 @@ public class ResultGrid extends TableView<List<String>> {
                 e.consume();
             }
         });
+
+        setOnMouseClicked(e -> {
+            if (e.getButton() != MouseButton.PRIMARY || e.getClickCount() != 2
+                    || isEditingCell() || !isEditable()) return;
+
+            // Use the cell under the pointer instead of the focused cell. The
+            // focus model can still point at the previous row while JavaFX is
+            // processing a double-click, which made edits appear to do nothing
+            // (or target a different cell).
+            javafx.scene.Node node = e.getPickResult().getIntersectedNode();
+            while (node != null && !(node instanceof TableCell<?, ?>)) node = node.getParent();
+            if (!(node instanceof TableCell<?, ?> cell) || cell.isEmpty()
+                    || cell.getTableColumn() == null || cell.getIndex() < 0) return;
+
+            @SuppressWarnings({"rawtypes", "unchecked"})
+            TableColumn<List<String>, ?> column = (TableColumn) cell.getTableColumn();
+            // Column zero is the generated row number, not a database value.
+            if (getColumns().indexOf(column) > 0) edit(cell.getIndex(), column);
+        });
     }
 
     private boolean isEditingCell() {
@@ -134,7 +154,8 @@ public class ResultGrid extends TableView<List<String>> {
                 return new ReadOnlyStringWrapper(value == null ? "NULL" : value);
             });
             col.setPrefWidth(Math.max(90, Math.min(280, columnNames.get(i).length() * 12 + 40)));
-            if (columnNames.get(i).equalsIgnoreCase("ctid")) col.setVisible(false);
+            if (columnNames.get(i).equalsIgnoreCase("ctid")
+                    || columnNames.get(i).equalsIgnoreCase("tableoid")) col.setVisible(false);
 
             if (editListener != null) {
                 col.setCellFactory(c -> new EditCell(index, isDateColumn(index)));

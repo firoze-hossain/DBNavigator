@@ -150,10 +150,12 @@ public class DataTab extends Tab {
                 columnTypes = MetadataService.loadColumnTypes(profile, table);
             } catch (Exception ignored) {}
             // PostgreSQL tables without a PK (typically partitions) are still
-            // editable through the physical row id (ctid) — DataGrip does the same
+            // editable through their physical row identity. Both values are
+            // needed because ctid can repeat in different child partitions.
             if (pkColumns.isEmpty()
                     && profile.getType() == ConnectionProfile.DatabaseType.POSTGRESQL) {
                 useCtid = true;
+                pkColumns.add("tableoid");
                 pkColumns.add("ctid");
             }
             Platform.runLater(this::loadPage);
