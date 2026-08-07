@@ -64,6 +64,16 @@
 .text-field:focused, .password-field:focused { -fx-border-color: -accent; }
 .combo-box .list-cell { -fx-text-fill: -text; }
 
+/* ---------- table data WHERE / ORDER BY controls ---------- */
+.data-clause-label {
+    -fx-text-fill: -text-dim;
+    -fx-font-family: "JetBrains Mono", "Consolas", monospace;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+}
+.data-clause-label:clause-active { -fx-text-fill: #e0a44c; }
+.data-clause-field { -fx-font-family: "JetBrains Mono", "Consolas", monospace; }
+
 /* ---------- split panes ---------- */
 .split-pane { -fx-background-color: -bg-dark; -fx-padding: 0; }
 .split-pane-divider {

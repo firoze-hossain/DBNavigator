@@ -10,15 +10,19 @@ import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
+import javafx.scene.input.KeyCode;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import javafx.stage.Popup;
 import org.kordamp.ikonli.fontawesome5.FontAwesomeSolid;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 /**
  * DataGrip-style table data view: breadcrumb showing exactly which
@@ -45,6 +49,10 @@ public class DataTab extends Tab {
     private final ResultGrid grid = new ResultGrid();
     private final TextField filterField = new TextField();
     private final TextField orderField = new TextField();
+    private final Label whereLabel = new Label("WHERE");
+    private final Label orderLabel = new Label("ORDER BY");
+    private final Popup clauseCompletionPopup = new Popup();
+    private final ListView<String> clauseCompletionList = new ListView<>();
     private final ResultPager pager = new ResultPager();
     private final Label statusLabel = new Label("Loading…");
     private final Button submitButton = new Button("Submit");
@@ -74,13 +82,15 @@ public class DataTab extends Tab {
         editManager = new GridEditManager(profile, table.getCatalog(), grid,
                 submitButton, revertButton, this::loadPage, statusLabel::setText);
 
-        filterField.setPromptText("WHERE …  (e.g. status = 'active')");
-        filterField.setPrefWidth(240);
+        filterField.setPromptText("condition…  (e.g. status = 'active')");
+        filterField.setPrefWidth(210);
         filterField.setOnAction(e -> reloadFromStart());
 
-        orderField.setPromptText("ORDER BY …  (e.g. id DESC)");
-        orderField.setPrefWidth(170);
+        orderField.setPromptText("column…  (e.g. id DESC)");
+        orderField.setPrefWidth(160);
         orderField.setOnAction(e -> reloadFromStart());
+
+        setupClauseControls();
 
         Button applyButton = new Button("Apply");
         applyButton.setOnAction(e -> reloadFromStart());
@@ -103,7 +113,14 @@ public class DataTab extends Tab {
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-        HBox toolbar = new HBox(8, filterField, orderField, applyButton, refreshButton,
+        HBox whereControl = new HBox(5, whereLabel, filterField);
+        whereControl.getStyleClass().add("data-clause-control");
+        whereControl.setAlignment(Pos.CENTER_LEFT);
+        HBox orderControl = new HBox(5, orderLabel, orderField);
+        orderControl.getStyleClass().add("data-clause-control");
+        orderControl.setAlignment(Pos.CENTER_LEFT);
+
+        HBox toolbar = new HBox(8, whereControl, orderControl, applyButton, refreshButton,
                 submitButton, revertButton, exportButton, spacer, pager);
         toolbar.setAlignment(Pos.CENTER_LEFT);
         toolbar.setPadding(new Insets(6, 10, 6, 10));
@@ -127,6 +144,99 @@ public class DataTab extends Tab {
         setContent(root);
 
         detectPrimaryKeyThenLoad();
+    }
+
+    /** DataGrip-like WHERE / ORDER BY controls with local table-column completion. */
+    private void setupClauseControls() {
+        whereLabel.getStyleClass().add("data-clause-label");
+        orderLabel.getStyleClass().add("data-clause-label");
+        filterField.getStyleClass().add("data-clause-field");
+        orderField.getStyleClass().add("data-clause-field");
+
+        clauseCompletionList.getStyleClass().add("completion-list");
+        clauseCompletionList.setPrefSize(300, 180);
+        clauseCompletionPopup.getContent().add(clauseCompletionList);
+        clauseCompletionPopup.setAutoHide(true);
+        clauseCompletionList.setOnMouseClicked(e -> acceptClauseCompletion());
+        clauseCompletionList.setOnKeyPressed(e -> {
+            switch (e.getCode()) {
+                case ENTER, TAB -> { acceptClauseCompletion(); e.consume(); }
+                case ESCAPE -> { clauseCompletionPopup.hide(); e.consume(); }
+                default -> {}
+            }
+        });
+
+        configureClauseField(filterField, whereLabel, false);
+        configureClauseField(orderField, orderLabel, true);
+    }
+
+    private void configureClauseField(TextField field, Label label, boolean orderBy) {
+        field.textProperty().addListener((obs, oldText, newText) -> {
+            label.pseudoClassStateChanged(javafx.css.PseudoClass.getPseudoClass("clause-active"),
+                    !newText.isBlank());
+            if (field.isFocused()) showClauseCompletions(field, orderBy);
+        });
+        field.focusedProperty().addListener((obs, oldFocus, focused) -> {
+            if (focused) showClauseCompletions(field, orderBy);
+            else if (!clauseCompletionList.isFocused()) clauseCompletionPopup.hide();
+        });
+        field.setOnKeyPressed(e -> {
+            if (!clauseCompletionPopup.isShowing()) return;
+            switch (e.getCode()) {
+                case DOWN -> { clauseCompletionList.getSelectionModel().selectNext(); e.consume(); }
+                case UP -> { clauseCompletionList.getSelectionModel().selectPrevious(); e.consume(); }
+                case ENTER, TAB -> { acceptClauseCompletion(); e.consume(); }
+                case ESCAPE -> { clauseCompletionPopup.hide(); e.consume(); }
+                default -> { }
+            }
+        });
+    }
+
+    private void showClauseCompletions(TextField field, boolean orderBy) {
+        String token = trailingIdentifier(field.getText(), field.getCaretPosition());
+        if (token.isBlank() || columnTypes.isEmpty()) {
+            clauseCompletionPopup.hide();
+            return;
+        }
+        String prefix = token.toLowerCase(java.util.Locale.ROOT);
+        Stream<String> columns = columnTypes.keySet().stream()
+                .filter(name -> name.toLowerCase(java.util.Locale.ROOT).startsWith(prefix));
+        List<String> matches = Stream.concat(columns, orderBy
+                        ? Stream.of("ASC", "DESC").filter(word -> word.toLowerCase(java.util.Locale.ROOT).startsWith(prefix))
+                        : Stream.empty())
+                .sorted(Comparator.comparing(String::toLowerCase))
+                .limit(20)
+                .toList();
+        if (matches.isEmpty() || (matches.size() == 1 && matches.getFirst().equalsIgnoreCase(token))) {
+            clauseCompletionPopup.hide();
+            return;
+        }
+        clauseCompletionList.getItems().setAll(matches);
+        clauseCompletionList.getSelectionModel().selectFirst();
+        var bounds = field.localToScreen(field.getBoundsInLocal());
+        if (bounds != null) clauseCompletionPopup.show(field, bounds.getMinX(), bounds.getMaxY() + 2);
+    }
+
+    private void acceptClauseCompletion() {
+        String selected = clauseCompletionList.getSelectionModel().getSelectedItem();
+        if (selected == null || !(clauseCompletionPopup.getOwnerNode() instanceof TextField field)) return;
+        int end = field.getCaretPosition();
+        int start = end;
+        while (start > 0 && isIdentifierPart(field.getText().charAt(start - 1))) start--;
+        field.replaceText(start, end, selected);
+        field.positionCaret(start + selected.length());
+        clauseCompletionPopup.hide();
+        field.requestFocus();
+    }
+
+    private static String trailingIdentifier(String text, int caret) {
+        int start = Math.min(caret, text.length());
+        while (start > 0 && isIdentifierPart(text.charAt(start - 1))) start--;
+        return text.substring(start, Math.min(caret, text.length()));
+    }
+
+    private static boolean isIdentifierPart(char character) {
+        return Character.isLetterOrDigit(character) || character == '_' || character == '.';
     }
 
     private String breadcrumbText() {
