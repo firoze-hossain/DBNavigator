@@ -799,3 +799,7 @@
     -fx-border-color: transparent transparent transparent #a56000;
     -fx-border-width: 0 0 0 3;
 }
+
+/* ---------- sortable column header (DataGrip-style sort icon) ---------- */
+.grid-header-label { -fx-text-fill: #1a1a1e; -fx-font-weight: bold; }
+.grid-sort-icon { -fx-cursor: hand; }

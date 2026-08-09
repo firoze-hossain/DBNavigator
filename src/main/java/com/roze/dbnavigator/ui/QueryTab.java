@@ -77,6 +77,13 @@ public class QueryTab extends Tab {
     private final Popup historyPopup = new Popup();
     private final ListView<QueryHistoryStore.Entry> historyList = new ListView<>();
     private String lastExecutedSql;
+    // The true original statement a result grid's rows came from — kept
+    // separate from lastExecutedSql so re-sorting always wraps the real
+    // base query, never an already-sort-wrapped one (which would otherwise
+    // nest deeper on every click).
+    private String baseSqlForSort;
+    private String currentSortColumn;
+    private String currentSortDirection;
     private double currentEditorFontSize;
     private String currentEditorFontFamily;
 
@@ -166,6 +173,7 @@ public class QueryTab extends Tab {
         applyEditorFontFromSettings();
         setupCtrlScrollFontZoom(editorScroll);
         setupKeyboardFontZoom();
+        resultGrid.setSortRequestListener(this::sortByColumn);
 
         // Local History: first snapshot is the "Create" entry; further edits are
         // auto-captured after a pause (avoids saving a snapshot per keystroke).
@@ -822,7 +830,7 @@ public class QueryTab extends Tab {
         String sql = selectedOrEditorText();
         if (sql.isBlank()) return;
         resolveParametersThenRun(sql, resolved ->
-                executeSql("EXPLAIN " + resolved.replaceAll(";\\s*$", "")));
+                executeSql("EXPLAIN " + resolved.replaceAll(";\\s*$", ""), false));
     }
 
     private void compareWithClipboard() {
@@ -1085,7 +1093,22 @@ public class QueryTab extends Tab {
     }
 
     private void executeSql(String sql) {
+        executeSql(sql, true);
+    }
+
+    /**
+     * @param isNewBaseQuery false for internal re-executions (sort-by-column,
+     *                        EXPLAIN) that shouldn't become the "base" the
+     *                        next sort click wraps — only a genuinely new
+     *                        statement the user ran should reset that.
+     */
+    private void executeSql(String sql, boolean isNewBaseQuery) {
         lastExecutedSql = sql;
+        if (isNewBaseQuery) {
+            baseSqlForSort = sql;
+            currentSortColumn = null;
+            currentSortDirection = null;
+        }
         setRunningState(true);
         statusLabel.setText("Executing…");
         int pageSize = limitSpinner.getValue();
@@ -1305,6 +1328,31 @@ public class QueryTab extends Tab {
     }
 
     /** Slices the cursor's in-memory cache to the current page and renders it — no fetch needed. */
+    /**
+     * DataGrip-style column-header sort: wraps the *original* base query
+     * (not whatever's currently displayed, which might already be a
+     * previous sort's wrapped version) in a subquery with an ORDER BY, and
+     * re-executes it through the normal paged-cursor path — this sorts the
+     * complete result set on the server, not just whatever rows happen to
+     * be loaded in memory already. Works regardless of how complex the
+     * original query is (joins, subqueries, CTEs) since it never has to
+     * parse or modify the original SQL, only wrap it.
+     */
+    private void sortByColumn(String columnName, String direction) {
+        if (baseSqlForSort == null || baseSqlForSort.isBlank()) return;
+        currentSortColumn = columnName;
+        currentSortDirection = direction;
+
+        if (direction == null) {
+            executeSql(baseSqlForSort, false);
+            return;
+        }
+        String trimmedBase = baseSqlForSort.strip().replaceAll(";\\s*$", "");
+        String wrapped = "SELECT * FROM (" + trimmedBase + ") AS sort_wrapper ORDER BY "
+                + DbObject.quote(columnName) + " " + direction;
+        executeSql(wrapped, false);
+    }
+
     private void displayCurrentPage() {
         if (activeCursor == null) return;
         List<List<String>> cached = activeCursor.getCachedRows();
@@ -1325,6 +1373,7 @@ public class QueryTab extends Tab {
             editManager.configureReadOnly(pageResult);
         }
         resultGrid.setRowNumberOffset(currentPageStart);
+        resultGrid.setCurrentSort(currentSortColumn, currentSortDirection);
         resultGrid.showResult(pageResult);
 
         long fromDisplay = pageRows.isEmpty() ? 0 : currentPageStart + 1L;

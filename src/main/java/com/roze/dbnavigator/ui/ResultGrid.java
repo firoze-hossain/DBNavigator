@@ -14,6 +14,7 @@ import javafx.scene.layout.HBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Popup;
 import org.kordamp.ikonli.fontawesome5.FontAwesomeSolid;
+import org.kordamp.ikonli.javafx.FontIcon;
 
 import java.io.File;
 import java.io.IOException;
@@ -115,6 +116,25 @@ public class ResultGrid extends TableView<List<String>> {
         return rows;
     }
 
+    /** How the owner (QueryTab/DataTab) should re-fetch when a sort icon is clicked — see class javadoc. */
+    public interface SortRequestListener {
+        void onSortRequested(String columnName, String direction);
+    }
+
+    private SortRequestListener sortRequestListener;
+    private String currentSortColumn;
+    private String currentSortDirection;   // "ASC", "DESC", or null
+
+    public void setSortRequestListener(SortRequestListener listener) {
+        this.sortRequestListener = listener;
+    }
+
+    /** Called by the owner once it knows what's actually applied, so the right column's icon reflects it. */
+    public void setCurrentSort(String columnName, String direction) {
+        this.currentSortColumn = columnName;
+        this.currentSortDirection = direction;
+    }
+
     private int rowNumberOffset = 0;
 
     /** Lets a paginated view show true overall row numbers (e.g. page 2 starts at 501, not 1). */
@@ -147,7 +167,8 @@ public class ResultGrid extends TableView<List<String>> {
         List<String> columnNames = result.getColumns();
         for (int i = 0; i < columnNames.size(); i++) {
             final int index = i;
-            TableColumn<List<String>, String> col = new TableColumn<>(columnNames.get(i));
+            String columnName = columnNames.get(i);
+            TableColumn<List<String>, String> col = new TableColumn<>(columnName);
             col.setCellValueFactory(data -> {
                 List<String> row = data.getValue();
                 String value = index < row.size() ? row.get(index) : null;
@@ -156,6 +177,18 @@ public class ResultGrid extends TableView<List<String>> {
             col.setPrefWidth(Math.max(90, Math.min(280, columnNames.get(i).length() * 12 + 40)));
             if (columnNames.get(i).equalsIgnoreCase("ctid")
                     || columnNames.get(i).equalsIgnoreCase("tableoid")) col.setVisible(false);
+
+            // JavaFX's own click-to-sort only reorders whatever rows are
+            // currently loaded in memory (a page, or whatever's been fetched
+            // so far by the console's cursor) — silently wrong for anything
+            // that isn't the complete result. Sorting for real means
+            // re-fetching from the database with an ORDER BY, which is what
+            // the sort icon below actually does; the built-in mechanism is
+            // switched off so a stray header click can't trigger the wrong
+            // (in-memory-only) kind of sort instead.
+            col.setSortable(false);
+            col.setText(null);
+            col.setGraphic(buildSortableHeader(columnName));
 
             if (editListener != null) {
                 col.setCellFactory(c -> new EditCell(index, isDateColumn(index)));
@@ -176,6 +209,38 @@ public class ResultGrid extends TableView<List<String>> {
 
         ObservableList<List<String>> items = FXCollections.observableArrayList(result.getRows());
         setItems(items);
+    }
+
+    /**
+     * DataGrip-style sort control: a name label plus a small icon that always
+     * shows a stacked up/down arrow, brightening the relevant arrow when this
+     * column is the active sort. Clicking cycles none → ascending →
+     * descending → none, each step calling {@link #sortRequestListener} so
+     * the owner can actually re-fetch sorted data — the icon itself never
+     * reorders anything on its own.
+     */
+    private HBox buildSortableHeader(String columnName) {
+        Label nameLabel = new Label(columnName);
+        nameLabel.getStyleClass().add("grid-header-label");
+
+        boolean isActive = columnName.equals(currentSortColumn);
+        String activeDirection = isActive ? currentSortDirection : null;
+
+        FontIcon sortIcon = Icons.of(
+                "DESC".equals(activeDirection) ? FontAwesomeSolid.SORT_DOWN
+                        : "ASC".equals(activeDirection) ? FontAwesomeSolid.SORT_UP
+                        : FontAwesomeSolid.SORT,
+                isActive ? "#6897bb" : "#6f7680", 12);
+        sortIcon.getStyleClass().add("grid-sort-icon");
+
+        HBox box = new HBox(6, nameLabel, sortIcon);
+        box.setAlignment(Pos.CENTER_LEFT);
+        box.setOnMouseClicked(e -> {
+            if (sortRequestListener == null) return;
+            String next = "ASC".equals(activeDirection) ? "DESC" : isActive ? null : "ASC";
+            sortRequestListener.onSortRequested(columnName, next);
+        });
+        return box;
     }
 
     private boolean isDateColumn(int index) {

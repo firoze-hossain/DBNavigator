@@ -143,6 +143,12 @@ public class DataTab extends Tab {
         VBox.setVgrow(grid, Priority.ALWAYS);
         setContent(root);
 
+        grid.setSortRequestListener((columnName, direction) -> {
+            orderField.setText(direction == null ? "" : DbObject.quote(columnName) + " " + direction);
+            grid.setCurrentSort(columnName, direction);
+            reloadFromStart();
+        });
+
         detectPrimaryKeyThenLoad();
     }
 
