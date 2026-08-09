@@ -31,6 +31,8 @@ public class MongoCollectionTab extends Tab {
 
     private int page = 0;
     private long totalDocs = -1;
+    private String sortField;
+    private String sortDirection;   // "ASC", "DESC", or null
 
     public MongoCollectionTab(ConnectionProfile profile, DbObject collection) {
         this.profile = profile;
@@ -38,6 +40,13 @@ public class MongoCollectionTab extends Tab {
 
         setText(collection.getCatalog() + "." + collection.getName());
         setGraphic(Icons.of(FontAwesomeSolid.LEAF, "#57965c", 11));
+
+        grid.setSortRequestListener((columnName, direction) -> {
+            sortField = direction == null ? null : columnName;
+            sortDirection = direction;
+            grid.setCurrentSort(columnName, direction);
+            reloadFromStart();
+        });
 
         filterField.setPromptText("Filter JSON, e.g. {\"status\": \"active\", \"age\": {\"$gt\": 21}}");
         HBox.setHgrow(filterField, Priority.ALWAYS);
@@ -91,7 +100,7 @@ public class MongoCollectionTab extends Tab {
             try {
                 var client = ClientRegistry.mongo(profile);
                 QueryResult result = client.find(collection.getCatalog(), collection.getName(),
-                        filter, currentPage * PAGE_SIZE, PAGE_SIZE);
+                        filter, sortField, "DESC".equals(sortDirection), currentPage * PAGE_SIZE, PAGE_SIZE);
                 if (totalDocs < 0) {
                     try {
                         totalDocs = client.countDocuments(

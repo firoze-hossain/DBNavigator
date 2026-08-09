@@ -52,12 +52,28 @@ public class MongoDbClient implements AutoCloseable {
      */
     public QueryResult find(String database, String collection, String jsonFilter,
                             int skip, int limit) {
+        return find(database, collection, jsonFilter, null, false, skip, limit);
+    }
+
+    /**
+     * @param sortField null for no sort (natural order); otherwise a real
+     *                  server-side {@code .sort({field: 1|-1})} — this sorts
+     *                  the complete collection, not just whatever page is
+     *                  currently loaded, same principle as the SQL grids.
+     */
+    public QueryResult find(String database, String collection, String jsonFilter,
+                            String sortField, boolean descending, int skip, int limit) {
         long start = System.currentTimeMillis();
         MongoCollection<Document> coll = client.getDatabase(database).getCollection(collection);
         Document filter = parseFilter(jsonFilter);
 
+        var cursor = coll.find(filter);
+        if (sortField != null && !sortField.isBlank()) {
+            cursor = cursor.sort(new Document(sortField, descending ? -1 : 1));
+        }
+
         List<Document> docs = new ArrayList<>();
-        coll.find(filter).skip(skip).limit(limit).forEach(docs::add);
+        cursor.skip(skip).limit(limit).forEach(docs::add);
 
         QueryResult result = new QueryResult();
         Set<String> keys = new LinkedHashSet<>();
@@ -137,6 +153,54 @@ public class MongoDbClient implements AutoCloseable {
             result.add(new IndexInfo(name, "(" + keyDescription + ")" + (unique ? " UNIQUE" : "")));
         }
         return result;
+    }
+
+    /** Result of a write/admin operation, for the console's Output log — no rows to show, just a summary. */
+    public record CommandResult(String message) {}
+
+    public CommandResult insertOne(String database, String collection, String docJson) {
+        MongoCollection<Document> coll = client.getDatabase(database).getCollection(collection);
+        Document doc = Document.parse(docJson);
+        coll.insertOne(doc);
+        Object id = doc.get("_id");
+        return new CommandResult("Inserted 1 document" + (id != null ? " (_id: " + id + ")" : ""));
+    }
+
+    public CommandResult insertMany(String database, String collection, List<Document> docs) {
+        MongoCollection<Document> coll = client.getDatabase(database).getCollection(collection);
+        coll.insertMany(docs);
+        return new CommandResult("Inserted " + docs.size() + " document(s)");
+    }
+
+    public CommandResult updateOne(String database, String collection, String filterJson, String updateJson) {
+        MongoCollection<Document> coll = client.getDatabase(database).getCollection(collection);
+        var result = coll.updateOne(Document.parse(filterJson), Document.parse(updateJson));
+        return new CommandResult("Matched " + result.getMatchedCount()
+                + ", modified " + result.getModifiedCount() + " document(s)");
+    }
+
+    public CommandResult updateMany(String database, String collection, String filterJson, String updateJson) {
+        MongoCollection<Document> coll = client.getDatabase(database).getCollection(collection);
+        var result = coll.updateMany(Document.parse(filterJson), Document.parse(updateJson));
+        return new CommandResult("Matched " + result.getMatchedCount()
+                + ", modified " + result.getModifiedCount() + " document(s)");
+    }
+
+    public CommandResult deleteOne(String database, String collection, String filterJson) {
+        MongoCollection<Document> coll = client.getDatabase(database).getCollection(collection);
+        var result = coll.deleteOne(Document.parse(filterJson));
+        return new CommandResult("Deleted " + result.getDeletedCount() + " document(s)");
+    }
+
+    public CommandResult deleteMany(String database, String collection, String filterJson) {
+        MongoCollection<Document> coll = client.getDatabase(database).getCollection(collection);
+        var result = coll.deleteMany(Document.parse(filterJson));
+        return new CommandResult("Deleted " + result.getDeletedCount() + " document(s)");
+    }
+
+    public CommandResult drop(String database, String collection) {
+        client.getDatabase(database).getCollection(collection).drop();
+        return new CommandResult("Dropped collection \"" + collection + "\"");
     }
 
     private static String bsonTypeName(Object value) {
