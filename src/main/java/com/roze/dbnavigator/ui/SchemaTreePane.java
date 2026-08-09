@@ -532,22 +532,31 @@ public class SchemaTreePane extends VBox {
                     menu.getItems().add(openDocs);
                 }
                 case DATABASE -> {
-                    if (profile.getType() == ConnectionProfile.DatabaseType.MONGODB) return null;
-
-                    MenuItem modifyDb = new MenuItem("Modify Database\u2026");
-                    modifyDb.setOnAction(e -> ModifyDatabaseDialog.show(mainWindow, profile, obj.getName()));
                     MenuItem refreshDb = new MenuItem("Refresh");
                     refreshDb.setOnAction(e -> {
                         obj.setLoaded(false);
                         getTreeItem().setExpanded(false);
                         mainWindow.setStatus("Refreshed " + obj.getName());
                     });
-                    MenuItem renameDb = new MenuItem("Rename\u2026");
-                    renameDb.setOnAction(e -> renameDatabase(profile, obj.getName()));
-
                     MenuItem newConsole = new MenuItem("New Query Console on " + obj.getName());
                     newConsole.setOnAction(e ->
                             mainWindow.openQueryTab(profile, obj.getCatalog(), null));
+
+                    if (profile.getType() == ConnectionProfile.DatabaseType.MONGODB) {
+                        // MongoDB has no ALTER DATABASE-style properties to modify, no
+                        // rename-database operation, and dump/restore here would need
+                        // shelling out to mongodump/mongorestore (a separate feature,
+                        // not built yet) — so this stays a smaller, honestly-scoped
+                        // menu rather than showing SQL-only items that would fail.
+                        menu.getItems().addAll(newConsole, new SeparatorMenuItem(), refreshDb);
+                        return menu;
+                    }
+
+                    MenuItem modifyDb = new MenuItem("Modify Database\u2026");
+                    modifyDb.setOnAction(e -> ModifyDatabaseDialog.show(mainWindow, profile, obj.getName()));
+                    MenuItem renameDb = new MenuItem("Rename\u2026");
+                    renameDb.setOnAction(e -> renameDatabase(profile, obj.getName()));
+
                     MenuItem dump = new MenuItem("Dump Database to .sql…");
                     dump.setOnAction(e -> {
                         if (profile.getType() == ConnectionProfile.DatabaseType.POSTGRESQL) {
