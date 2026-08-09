@@ -24,7 +24,7 @@ public final class Icons {
             case SCHEMA     -> of(FontAwesomeSolid.FOLDER_OPEN, "#c77dbb", 12);
             case TABLES_FOLDER, VIEWS_FOLDER, PROCEDURES_FOLDER,
                  FUNCTIONS_FOLDER, SEQUENCES_FOLDER, COLLECTIONS_FOLDER,
-                 COLUMNS_FOLDER, INDEXES_FOLDER, PARTITIONS_FOLDER, KEYS_FOLDER, FOREIGN_KEYS_FOLDER
+                 COLUMNS_FOLDER, INDEXES_FOLDER, PARTITIONS_FOLDER, KEYS_FOLDER, FOREIGN_KEYS_FOLDER, FIELDS_FOLDER
                             -> of(FontAwesomeSolid.FOLDER, "#e0a44c", 12);
             case TABLE      -> of(FontAwesomeSolid.TABLE, "#4a88c7", 12);
             case VIEW       -> of(FontAwesomeSolid.EYE, "#57965c", 12);
@@ -37,6 +37,13 @@ public final class Icons {
             case PARTITION  -> of(FontAwesomeSolid.TABLE, "#4a88c7", 12);
             case KEY         -> of(FontAwesomeSolid.KEY, "#e0a44c", 11);
             case FOREIGN_KEY -> of(FontAwesomeSolid.KEY, "#4a88c7", 11);
+            // _id is the collection's de-facto primary key — same gold key
+            // icon as a real primary key, matching the reference exactly;
+            // every other (schema-less, inferred) field gets a generic
+            // document-field icon instead.
+            case FIELD -> "_id".equals(obj.getName())
+                    ? of(FontAwesomeSolid.KEY, "#e0a44c", 11)
+                    : of(FontAwesomeSolid.CODE, "#6897bb", 11);
             case MESSAGE    -> of(FontAwesomeSolid.INFO_CIRCLE, "#868a91", 11);
         };
     }

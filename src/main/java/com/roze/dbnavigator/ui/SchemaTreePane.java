@@ -212,9 +212,10 @@ public class SchemaTreePane extends VBox {
             case DATABASE -> MetadataService.loadDatabaseChildren(profile, obj);
             case SCHEMA   -> MetadataService.loadSchemaChildren(obj);
             case TABLE, PARTITION -> MetadataService.loadTableChildren(profile, obj);
+            case COLLECTION -> MetadataService.loadCollectionChildren(profile, obj);
             case TABLES_FOLDER, VIEWS_FOLDER, PROCEDURES_FOLDER, FUNCTIONS_FOLDER,
                  SEQUENCES_FOLDER, COLLECTIONS_FOLDER,
-                 COLUMNS_FOLDER, INDEXES_FOLDER, PARTITIONS_FOLDER, KEYS_FOLDER, FOREIGN_KEYS_FOLDER
+                 COLUMNS_FOLDER, INDEXES_FOLDER, PARTITIONS_FOLDER, KEYS_FOLDER, FOREIGN_KEYS_FOLDER, FIELDS_FOLDER
                           -> MetadataService.loadFolderChildren(profile, obj);
             default -> List.of();
         };
@@ -225,7 +226,7 @@ public class SchemaTreePane extends VBox {
             case DATABASE, SCHEMA, TABLES_FOLDER, VIEWS_FOLDER, PROCEDURES_FOLDER,
                  FUNCTIONS_FOLDER, SEQUENCES_FOLDER, COLLECTIONS_FOLDER,
                  TABLE, PARTITION, COLUMNS_FOLDER, INDEXES_FOLDER, PARTITIONS_FOLDER,
-                 KEYS_FOLDER, FOREIGN_KEYS_FOLDER -> true;
+                 KEYS_FOLDER, FOREIGN_KEYS_FOLDER, COLLECTION, FIELDS_FOLDER -> true;
             default -> false;
         };
     }

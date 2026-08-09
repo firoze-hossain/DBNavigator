@@ -195,7 +195,9 @@ public final class MetadataService {
             case FUNCTIONS_FOLDER  -> loadRoutines(profile, catalog, schema, false);
             case SEQUENCES_FOLDER  -> loadSequences(profile, catalog, schema);
             case COLUMNS_FOLDER    -> loadColumns(profile, dbFolder);
-            case INDEXES_FOLDER    -> loadIndexes(profile, dbFolder);
+            case INDEXES_FOLDER    -> profile.getType() == DatabaseType.MONGODB
+                    ? loadMongoIndexes(profile, dbFolder) : loadIndexes(profile, dbFolder);
+            case FIELDS_FOLDER       -> loadMongoFields(profile, dbFolder);
             case KEYS_FOLDER         -> loadKeys(profile, dbFolder);
             case FOREIGN_KEYS_FOLDER -> loadForeignKeysFolder(profile, dbFolder);
             case PARTITIONS_FOLDER -> loadPartitions(profile, dbFolder);
@@ -298,6 +300,50 @@ public final class MetadataService {
      * Children of a TABLE node: "columns N", "indexes N" (and "partitions N"
      * for PostgreSQL) folders with counts in the detail text.
      */
+    /** A MongoDB collection's children: fields (inferred schema) and indexes — always both, unlike SQL's conditional Keys/Foreign Keys. */
+    public static List<DbObject> loadCollectionChildren(ConnectionProfile profile, DbObject collection)
+            throws Exception {
+        List<DbObject> result = new ArrayList<>();
+
+        DbObject fields = childFolder("fields", Kind.FIELDS_FOLDER, collection);
+        int fieldCount = ClientRegistry.mongo(profile)
+                .inferFields(collection.getCatalog(), collection.getName(), 100).size();
+        fields.setDetail(String.valueOf(fieldCount));
+        result.add(fields);
+
+        DbObject indexes = childFolder("indexes", Kind.INDEXES_FOLDER, collection);
+        int indexCount = ClientRegistry.mongo(profile)
+                .listIndexes(collection.getCatalog(), collection.getName()).size();
+        indexes.setDetail(String.valueOf(indexCount));
+        result.add(indexes);
+
+        return result;
+    }
+
+    private static List<DbObject> loadMongoFields(ConnectionProfile profile, DbObject folder) {
+        List<DbObject> result = new ArrayList<>();
+        for (MongoDbClient.FieldInfo field
+                : ClientRegistry.mongo(profile).inferFields(folder.getCatalog(), folder.getTableName(), 100)) {
+            DbObject obj = new DbObject(field.name(), Kind.FIELD, folder.getCatalog(), null);
+            obj.setTableName(folder.getTableName());
+            obj.setDetail(field.type());
+            result.add(obj);
+        }
+        return result;
+    }
+
+    private static List<DbObject> loadMongoIndexes(ConnectionProfile profile, DbObject folder) {
+        List<DbObject> result = new ArrayList<>();
+        for (MongoDbClient.IndexInfo index
+                : ClientRegistry.mongo(profile).listIndexes(folder.getCatalog(), folder.getTableName())) {
+            DbObject obj = new DbObject(index.name(), Kind.INDEX, folder.getCatalog(), null);
+            obj.setTableName(folder.getTableName());
+            obj.setDetail(index.detail());
+            result.add(obj);
+        }
+        return result;
+    }
+
     public static List<DbObject> loadTableChildren(ConnectionProfile profile, DbObject table)
             throws SQLException {
         List<DbObject> result = new ArrayList<>();

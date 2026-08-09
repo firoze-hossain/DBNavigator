@@ -9,8 +9,10 @@ import com.roze.dbnavigator.model.QueryResult;
 import org.bson.Document;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /** MongoDB client — browses databases/collections and runs JSON filter queries. */
@@ -91,6 +93,65 @@ public class MongoDbClient implements AutoCloseable {
 
     public void ping() {
         client.getDatabase("admin").runCommand(new Document("ping", 1));
+    }
+
+    /** One inferred field, from sampling documents — Mongo has no fixed schema, so this is a best effort. */
+    public record FieldInfo(String name, String type) {}
+
+    /**
+     * Infers a collection's top-level fields and their types by sampling
+     * documents, since MongoDB collections have no fixed schema to read
+     * directly. The first type seen for each field name wins if documents
+     * disagree — good enough for the tree view's purposes; the actual data
+     * grid already shows each document's real values regardless.
+     */
+    public List<FieldInfo> inferFields(String database, String collection, int sampleSize) {
+        Map<String, String> typeByField = new LinkedHashMap<>();
+        typeByField.put("_id", "ObjectId");   // present on virtually every document; guarantee it's first
+
+        MongoCollection<Document> coll = client.getDatabase(database).getCollection(collection);
+        for (Document doc : coll.find().limit(sampleSize)) {
+            for (String key : doc.keySet()) {
+                typeByField.putIfAbsent(key, bsonTypeName(doc.get(key)));
+            }
+        }
+
+        List<FieldInfo> result = new ArrayList<>();
+        for (Map.Entry<String, String> entry : typeByField.entrySet()) {
+            result.add(new FieldInfo(entry.getKey(), entry.getValue()));
+        }
+        return result;
+    }
+
+    /** One index, with a DataGrip-style "(keys) UNIQUE" detail string ready to display. */
+    public record IndexInfo(String name, String detail) {}
+
+    public List<IndexInfo> listIndexes(String database, String collection) {
+        List<IndexInfo> result = new ArrayList<>();
+        MongoCollection<Document> coll = client.getDatabase(database).getCollection(collection);
+        for (Document index : coll.listIndexes()) {
+            String name = index.getString("name");
+            Document key = index.get("key", Document.class);
+            String keyDescription = key == null ? "" : String.join(", ", key.keySet());
+            boolean unique = Boolean.TRUE.equals(index.getBoolean("unique"));
+            result.add(new IndexInfo(name, "(" + keyDescription + ")" + (unique ? " UNIQUE" : "")));
+        }
+        return result;
+    }
+
+    private static String bsonTypeName(Object value) {
+        if (value == null) return "Null";
+        if (value instanceof org.bson.types.ObjectId) return "ObjectId";
+        if (value instanceof String) return "String";
+        if (value instanceof Integer) return "Int32";
+        if (value instanceof Long) return "Int64";
+        if (value instanceof Double) return "Double";
+        if (value instanceof Boolean) return "Boolean";
+        if (value instanceof java.util.Date || value instanceof java.time.Instant) return "ISODate";
+        if (value instanceof org.bson.types.Decimal128) return "Decimal128";
+        if (value instanceof List) return "Array";
+        if (value instanceof Document) return "Object";
+        return value.getClass().getSimpleName();
     }
 
     private static Document parseFilter(String jsonFilter) {
