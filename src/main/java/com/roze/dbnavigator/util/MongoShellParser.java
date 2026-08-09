@@ -24,44 +24,82 @@ public final class MongoShellParser {
 
     private static final Pattern USE_PATTERN =
             Pattern.compile("(?i)^use\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*;?\\s*$");
+    // The optional trailing ".pretty()" is a purely cosmetic shell convenience
+    // (just formats the printed output) — matched here so it can be silently
+    // discarded rather than breaking the parse the way any unrecognized
+    // trailing method chain would.
     private static final Pattern COMMAND_PATTERN =
             Pattern.compile("(?s)^db\\s*\\.\\s*([A-Za-z_][A-Za-z0-9_.]*)\\s*\\.\\s*"
-                    + "([A-Za-z_][A-Za-z0-9_]*)\\s*\\((.*)\\)\\s*;?\\s*$");
+                    + "([A-Za-z_][A-Za-z0-9_]*)\\s*\\((.*?)\\)"
+                    + "(?:\\s*\\.\\s*pretty\\s*\\(\\s*\\))?\\s*;?\\s*$");
 
-    /** Splits a console's whole script into individual statements, respecting nested {}/[]/strings/comments. */
+    /**
+     * Splits a console's whole script into individual statements, respecting
+     * nested {@code {}}/{@code []}/{@code ()}, string literals, and comments
+     * — and strips line/block comments out of the returned statement text
+     * entirely, not just skipping over them while scanning for the next
+     * {@code ;}. Leaving comment text glued to the statement that follows it
+     * broke the "use"/"db.collection.method(...)" pattern match below,
+     * since a statement starting with a comment no longer starts with
+     * "use" or "db" once the comment is (correctly) not stripped.
+     */
     public static List<String> splitStatements(String script) {
         List<String> statements = new ArrayList<>();
         if (script == null) return statements;
         int n = script.length();
         int depth = 0;
-        int start = 0;
         boolean inSingle = false, inDouble = false, inLineComment = false, inBlockComment = false;
+        StringBuilder current = new StringBuilder();
 
         int i = 0;
         while (i < n) {
             char c = script.charAt(i);
             char next = i + 1 < n ? script.charAt(i + 1) : '\0';
 
-            if (inLineComment) { if (c == '\n') inLineComment = false; i++; continue; }
-            if (inBlockComment) { if (c == '*' && next == '/') { inBlockComment = false; i += 2; continue; } i++; continue; }
-            if (inSingle) { if (c == '\\') { i += 2; continue; } if (c == '\'') inSingle = false; i++; continue; }
-            if (inDouble) { if (c == '\\') { i += 2; continue; } if (c == '"') inDouble = false; i++; continue; }
+            if (inLineComment) {
+                if (c == '\n') inLineComment = false;
+                i++;
+                continue;
+            }
+            if (inBlockComment) {
+                if (c == '*' && next == '/') { inBlockComment = false; i += 2; continue; }
+                i++;
+                continue;
+            }
+            if (inSingle) {
+                if (c == '\\') { current.append(c).append(next); i += 2; continue; }
+                if (c == '\'') inSingle = false;
+                current.append(c);
+                i++;
+                continue;
+            }
+            if (inDouble) {
+                if (c == '\\') { current.append(c).append(next); i += 2; continue; }
+                if (c == '"') inDouble = false;
+                current.append(c);
+                i++;
+                continue;
+            }
 
             if (c == '/' && next == '/') { inLineComment = true; i += 2; continue; }
             if (c == '/' && next == '*') { inBlockComment = true; i += 2; continue; }
-            if (c == '\'') { inSingle = true; i++; continue; }
-            if (c == '"') { inDouble = true; i++; continue; }
-            if (c == '{' || c == '[' || c == '(') { depth++; i++; continue; }
-            if (c == '}' || c == ']' || c == ')') { depth--; i++; continue; }
+            if (c == '\'') { inSingle = true; current.append(c); i++; continue; }
+            if (c == '"') { inDouble = true; current.append(c); i++; continue; }
+            if (c == '{' || c == '[' || c == '(') { depth++; current.append(c); i++; continue; }
+            if (c == '}' || c == ']' || c == ')') { depth--; current.append(c); i++; continue; }
 
             if (c == ';' && depth == 0) {
-                String stmt = script.substring(start, i).strip();
+                String stmt = current.toString().strip();
                 if (!stmt.isEmpty()) statements.add(stmt);
-                start = i + 1;
+                current.setLength(0);
+                i++;
+                continue;
             }
+
+            current.append(c);
             i++;
         }
-        String tail = script.substring(start).strip();
+        String tail = current.toString().strip();
         if (!tail.isEmpty()) statements.add(tail);
         return statements;
     }

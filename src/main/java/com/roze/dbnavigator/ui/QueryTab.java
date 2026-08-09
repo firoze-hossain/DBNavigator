@@ -1491,6 +1491,17 @@ public class QueryTab extends Tab {
         if (fromIndex < 0) return sql;
         String selectPart = sql.substring(0, fromIndex);
         String rest = sql.substring(fromIndex);
+
+        // A bare "*" (optionally table-qualified, e.g. "t.*") already
+        // includes every column, the primary key included — inserting an
+        // explicit PK name in front of it produces invalid syntax on
+        // MySQL specifically (an unqualified "*" generally can't be mixed
+        // with other column names in the same select list there), so a
+        // wildcard select is left completely untouched.
+        if (selectPart.strip().matches("(?i)select\\s+([A-Za-z_][A-Za-z0-9_]*\\.)?\\*\\s*")) {
+            return sql;
+        }
+
         for (String pk : pkColumns) {
             if (!selectPart.toLowerCase(Locale.ROOT).contains(pk.toLowerCase(Locale.ROOT))) {
                 selectPart = selectPart.replaceFirst("(?i)select\\s+", "$0" + pk + ", ");
