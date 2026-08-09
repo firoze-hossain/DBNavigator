@@ -15,7 +15,11 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import org.kordamp.ikonli.fontawesome5.FontAwesomeSolid;
 
-/** MongoDB collection viewer: JSON filter, pagination, flattened document grid. */
+/**
+ * MongoDB collection viewer: JSON filter, pagination, flattened document
+ * grid, real column sorting, and editable cells with a Submit/Revert
+ * pattern — same shape as the SQL data view, via {@link MongoGridEditManager}.
+ */
 public class MongoCollectionTab extends Tab {
 
     private static final int PAGE_SIZE = 200;
@@ -23,17 +27,19 @@ public class MongoCollectionTab extends Tab {
     private final ConnectionProfile profile;
     private final DbObject collection;
     private final ResultGrid grid = new ResultGrid();
+    private final MongoGridEditManager editManager;
     private final TextField filterField = new TextField();
     private final Label pageLabel = new Label();
     private final Label statusLabel = new Label("Loading…");
     private final Button prevButton = new Button();
     private final Button nextButton = new Button();
+    private final Button submitButton = new Button("Submit");
+    private final Button revertButton = new Button("Revert");
 
     private int page = 0;
     private long totalDocs = -1;
     private String sortField;
     private String sortDirection;   // "ASC", "DESC", or null
-    private QueryResult lastResult;
 
     public MongoCollectionTab(ConnectionProfile profile, DbObject collection) {
         this.profile = profile;
@@ -48,8 +54,12 @@ public class MongoCollectionTab extends Tab {
             grid.setCurrentSort(columnName, direction);
             reloadFromStart();
         });
-        grid.setEditable(true);
-        grid.enableEditing(this::onCellEdit);
+
+        submitButton.getStyleClass().add("run-button");
+        submitButton.setGraphic(Icons.of(FontAwesomeSolid.CHECK, "#ffffff", 11));
+        revertButton.setGraphic(Icons.of(FontAwesomeSolid.UNDO, "#a9b7c6", 11));
+        editManager = new MongoGridEditManager(profile, grid,
+                submitButton, revertButton, this::loadPage, statusLabel::setText);
 
         filterField.setPromptText("Filter JSON, e.g. {\"status\": \"active\", \"age\": {\"$gt\": 21}}");
         HBox.setHgrow(filterField, Priority.ALWAYS);
@@ -59,10 +69,14 @@ public class MongoCollectionTab extends Tab {
         applyButton.setGraphic(Icons.of(FontAwesomeSolid.SEARCH, "#6897bb", 11));
         applyButton.setOnAction(e -> reloadFromStart());
 
-        Button exportButton = new Button();
-        exportButton.setGraphic(Icons.of(FontAwesomeSolid.FILE_CSV, "#e0a44c", 11));
-        exportButton.setTooltip(new Tooltip("Export current page to CSV"));
-        exportButton.setOnAction(e -> grid.exportCsv());
+        MenuButton exportButton = new MenuButton();
+        exportButton.setGraphic(Icons.of(FontAwesomeSolid.DOWNLOAD, "#e0a44c", 11));
+        exportButton.setTooltip(new Tooltip("Export current page"));
+        MenuItem exportCsv = new MenuItem("Export to CSV\u2026");
+        exportCsv.setOnAction(e -> grid.exportCsv());
+        MenuItem exportJson = new MenuItem("Export to JSON\u2026");
+        exportJson.setOnAction(e -> grid.exportJson());
+        exportButton.getItems().addAll(exportCsv, exportJson);
 
         prevButton.setGraphic(Icons.of(FontAwesomeSolid.CHEVRON_LEFT, "#a9b7c6", 11));
         prevButton.setOnAction(e -> { if (page > 0) { page--; loadPage(); } });
@@ -70,7 +84,8 @@ public class MongoCollectionTab extends Tab {
         nextButton.setOnAction(e -> { page++; loadPage(); });
 
         Region spacer = new Region();
-        HBox toolbar = new HBox(8, filterField, applyButton, exportButton,
+        HBox toolbar = new HBox(8, submitButton, revertButton, new Separator(),
+                filterField, applyButton, exportButton,
                 spacer, prevButton, pageLabel, nextButton);
         toolbar.setAlignment(Pos.CENTER_LEFT);
         toolbar.setPadding(new Insets(6, 10, 6, 10));
@@ -113,7 +128,7 @@ public class MongoCollectionTab extends Tab {
                     }
                 }
                 Platform.runLater(() -> {
-                    lastResult = result;
+                    editManager.configure(collection.getCatalog(), collection.getName(), result);
                     grid.showResult(result);
                     long from = (long) currentPage * PAGE_SIZE + 1;
                     long to = from + result.getRows().size() - 1;
@@ -130,88 +145,5 @@ public class MongoCollectionTab extends Tab {
                 Platform.runLater(() -> statusLabel.setText("Error: " + msg));
             }
         });
-    }
-
-    /**
-     * Commits an inline cell edit as a real {@code updateOne({_id: ...}, {$set: {field: value}})}
-     * against the collection — not just an in-memory grid change. {@code _id}
-     * itself can't be edited this way (MongoDB doesn't allow modifying a
-     * document's {@code _id} via update; that would need a delete + re-insert
-     * instead), so that column stays read-only.
-     */
-    private void onCellEdit(int rowIndex, int columnIndex, String oldValue, String newValue) {
-        if (lastResult == null || rowIndex < 0 || rowIndex >= lastResult.getRows().size()) return;
-        java.util.List<String> columns = lastResult.getColumns();
-        if (columnIndex < 0 || columnIndex >= columns.size()) return;
-        String columnName = columns.get(columnIndex);
-
-        if ("_id".equals(columnName)) {
-            statusLabel.setText("_id can't be edited here \u2014 delete and re-insert the document instead");
-            grid.refresh();
-            return;
-        }
-        int idIndex = columns.indexOf("_id");
-        if (idIndex < 0) {
-            statusLabel.setText("Can't locate this document's _id \u2014 edit not saved");
-            grid.refresh();
-            return;
-        }
-        String idValue = lastResult.getRows().get(rowIndex).get(idIndex);
-        if (java.util.Objects.equals(oldValue, newValue)) return;
-
-        String filterJson = idFilterJson(idValue);
-        String updateJson = "{\"$set\": {\"" + columnName.replace("\"", "\\\"")
-                + "\": " + toJsonValue(newValue) + "}}";
-
-        statusLabel.setText("Saving\u2026");
-        AppExecutor.run(() -> {
-            try {
-                var result = ClientRegistry.mongo(profile).updateOne(
-                        collection.getCatalog(), collection.getName(), filterJson, updateJson);
-                Platform.runLater(() -> statusLabel.setText(result.message()));
-            } catch (Exception ex) {
-                String msg = ex.getMessage() == null ? ex.toString() : ex.getMessage();
-                Platform.runLater(() -> {
-                    statusLabel.setText("Update failed: " + msg);
-                    grid.refresh();
-                });
-            }
-        });
-    }
-
-    /**
-     * Builds a filter matching one document by its displayed {@code _id}
-     * text. The grid only has the flattened string form to work with (the
-     * original typed BSON value isn't kept around after rendering), so this
-     * recognizes the overwhelmingly common case — a 24-hex-character
-     * ObjectId — and falls back to a plain number or string otherwise,
-     * which covers collections that use their own natural-key {@code _id}.
-     */
-    private static String idFilterJson(String idValue) {
-        if (idValue.matches("[0-9a-fA-F]{24}")) {
-            return "{\"_id\": ObjectId(\"" + idValue + "\")}";
-        }
-        if (idValue.matches("-?\\d+(\\.\\d+)?")) {
-            return "{\"_id\": " + idValue + "}";
-        }
-        return "{\"_id\": \"" + idValue.replace("\\", "\\\\").replace("\"", "\\\"") + "\"}";
-    }
-
-    /**
-     * Best-effort typed encoding of a typed-in cell value: recognizable
-     * numbers and booleans are stored as such, "null" clears the field,
-     * everything else is stored as a string. Scope note: this covers the
-     * common scalar types — entering a date, ObjectId, array, or nested
-     * object as text isn't supported here, only via the console's
-     * {@code updateOne(...)} for now.
-     */
-    private static String toJsonValue(String newValue) {
-        if (newValue == null || newValue.equalsIgnoreCase("null")) return "null";
-        if (newValue.equalsIgnoreCase("true") || newValue.equalsIgnoreCase("false")) {
-            return newValue.toLowerCase(java.util.Locale.ROOT);
-        }
-        if (newValue.matches("-?\\d+")) return newValue;
-        if (newValue.matches("-?\\d+\\.\\d+")) return newValue;
-        return "\"" + newValue.replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
     }
 }
