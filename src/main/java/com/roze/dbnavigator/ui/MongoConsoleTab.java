@@ -34,6 +34,13 @@ import java.util.List;
  * way the real Mongo shell accepts them (unquoted keys, single or double
  * quoted strings) via {@link MongoShellParser}, not strict JSON.
  *
+ * {@code find()} results support the same real column sorting, Submit/
+ * Revert cell editing, and CSV/JSON export as {@link MongoCollectionTab} —
+ * sorting and editing both act against whichever collection/filter the
+ * most recent {@code find()} used. Running a {@code find()} also switches
+ * to the Result tab automatically, so the results are immediately visible
+ * rather than left behind the Output log.
+ *
  * Honest scope note: this covers the common CRUD operations, not the full
  * shell language — no variables, no JS expressions/functions beyond a
  * literal document/array argument, no aggregation pipeline helpers. That
@@ -46,10 +53,20 @@ public class MongoConsoleTab extends Tab {
     private final CodeArea editor = MongoShellHighlighter.createEditor();
     private final TextArea outputArea = new TextArea();
     private final ResultGrid resultGrid = new ResultGrid();
+    private final MongoGridEditManager editManager;
     private final Label dbLabel = new Label();
     private final DateTimeFormatter timeFormat = DateTimeFormatter.ofPattern("HH:mm:ss");
+    private final Button submitButton = new Button("Submit");
+    private final Button revertButton = new Button("Revert");
+    private final TabPane bottomTabs;
+    private final Tab resultTab;
 
     private String currentDatabase;
+    private String lastFindDatabase;
+    private String lastFindCollection;
+    private String lastFindFilter = "{}";
+    private String sortField;
+    private String sortDirection;   // "ASC", "DESC", or null
 
     public MongoConsoleTab(ConnectionProfile profile, String initialDatabase, String title) {
         this.profile = profile;
@@ -68,12 +85,35 @@ public class MongoConsoleTab extends Tab {
         runButton.getStyleClass().add("run-button");
         runButton.setOnAction(e -> runAll());
 
+        submitButton.getStyleClass().add("run-button");
+        submitButton.setGraphic(Icons.of(FontAwesomeSolid.CHECK, "#ffffff", 11));
+        revertButton.setGraphic(Icons.of(FontAwesomeSolid.UNDO, "#a9b7c6", 11));
+        editManager = new MongoGridEditManager(profile, resultGrid,
+                submitButton, revertButton, this::rerunLastFind, this::log);
+
+        MenuButton exportButton = new MenuButton();
+        exportButton.setGraphic(Icons.of(FontAwesomeSolid.DOWNLOAD, "#e0a44c", 11));
+        exportButton.setTooltip(new Tooltip("Export the current result"));
+        MenuItem exportCsv = new MenuItem("Export to CSV\u2026");
+        exportCsv.setOnAction(e -> resultGrid.exportCsv());
+        MenuItem exportJson = new MenuItem("Export to JSON\u2026");
+        exportJson.setOnAction(e -> resultGrid.exportJson());
+        exportButton.getItems().addAll(exportCsv, exportJson);
+
+        resultGrid.setSortRequestListener((columnName, direction) -> {
+            sortField = direction == null ? null : columnName;
+            sortDirection = direction;
+            resultGrid.setCurrentSort(columnName, direction);
+            rerunLastFind();
+        });
+
         dbLabel.getStyleClass().add("console-connection-label");
         updateDbLabel();
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-        HBox toolbar = new HBox(8, runButton, spacer, dbLabel);
+        HBox toolbar = new HBox(8, runButton, new Separator(), submitButton, revertButton,
+                exportButton, spacer, dbLabel);
         toolbar.setAlignment(Pos.CENTER_LEFT);
         toolbar.setPadding(new Insets(6, 10, 6, 10));
         toolbar.getStyleClass().add("console-toolbar");
@@ -82,9 +122,9 @@ public class MongoConsoleTab extends Tab {
         outputArea.getStyleClass().add("process-output");
         Tab outputTab = new Tab("Output", outputArea);
         outputTab.setClosable(false);
-        Tab resultTab = new Tab("Result", resultGrid);
+        resultTab = new Tab("Result", resultGrid);
         resultTab.setClosable(false);
-        TabPane bottomTabs = new TabPane(outputTab, resultTab);
+        bottomTabs = new TabPane(outputTab, resultTab);
 
         SplitPane split = new SplitPane(editorScroll, bottomTabs);
         split.setOrientation(javafx.geometry.Orientation.VERTICAL);
@@ -191,13 +231,12 @@ public class MongoConsoleTab extends Tab {
                     reportCommand(stmt, result.message(), start);
                 }
                 case "find" -> {
-                    QueryResult result = client.find(currentDatabase, collection,
-                            args.isEmpty() ? "{}" : toJson(args, 0), 0, 500);
-                    Platform.runLater(() -> {
-                        resultGrid.showResult(result);
-                        log("db." + collection + ".find(...) \u2192 " + result.getRows().size()
-                                + " document(s) in " + (System.currentTimeMillis() - start) + " ms");
-                    });
+                    lastFindDatabase = currentDatabase;
+                    lastFindCollection = collection;
+                    lastFindFilter = args.isEmpty() ? "{}" : toJson(args, 0);
+                    sortField = null;
+                    sortDirection = null;
+                    showFindResult(start);
                 }
                 default -> Platform.runLater(() -> log("Unsupported method: " + stmt.method()
                         + "  (supported: insertOne, insertMany, find, updateOne, updateMany, "
@@ -206,6 +245,31 @@ public class MongoConsoleTab extends Tab {
         } catch (Exception ex) {
             String msg = ex.getMessage() == null ? ex.toString() : ex.getMessage();
             Platform.runLater(() -> log("Error in " + shorten(stmt.raw()) + ": " + msg));
+        }
+    }
+
+    /** Re-runs the most recent find() — used by both the sort icon and Revert, so both act on real fresh data. */
+    private void rerunLastFind() {
+        if (lastFindCollection == null) return;
+        AppExecutor.run(() -> showFindResult(System.currentTimeMillis()));
+    }
+
+    private void showFindResult(long start) {
+        MongoDbClient client = ClientRegistry.mongo(profile);
+        try {
+            QueryResult result = client.find(lastFindDatabase, lastFindCollection, lastFindFilter,
+                    sortField, "DESC".equals(sortDirection), 0, 500);
+            Platform.runLater(() -> {
+                resultGrid.setCurrentSort(sortField, sortDirection);
+                editManager.configure(lastFindDatabase, lastFindCollection, result);
+                resultGrid.showResult(result);
+                bottomTabs.getSelectionModel().select(resultTab);
+                log("db." + lastFindCollection + ".find(...) \u2192 " + result.getRows().size()
+                        + " document(s) in " + (System.currentTimeMillis() - start) + " ms");
+            });
+        } catch (Exception ex) {
+            String msg = ex.getMessage() == null ? ex.toString() : ex.getMessage();
+            Platform.runLater(() -> log("Error running find(): " + msg));
         }
     }
 

@@ -49,6 +49,7 @@ public class ResultGrid extends TableView<List<String>> {
     private CellEditListener editListener;
     private Runnable deleteRowsAction;
     private List<String> columnTypes = List.of();
+    private List<String> columnNames = List.of();
 
     public ResultGrid() {
         getStyleClass().add("result-grid");
@@ -165,6 +166,7 @@ public class ResultGrid extends TableView<List<String>> {
 
         this.columnTypes = result.getColumnTypes();
         List<String> columnNames = result.getColumns();
+        this.columnNames = List.copyOf(columnNames);
         for (int i = 0; i < columnNames.size(); i++) {
             final int index = i;
             String columnName = columnNames.get(i);
@@ -401,8 +403,8 @@ public class ResultGrid extends TableView<List<String>> {
         if (file == null) return;
 
         try (PrintWriter out = new PrintWriter(file, StandardCharsets.UTF_8)) {
-            out.println(getColumns().stream()
-                    .map(c -> csvEscape(c.getText()))
+            out.println(columnNames.stream()
+                    .map(ResultGrid::csvEscape)
                     .reduce((a, b) -> a + "," + b).orElse(""));
             for (List<String> row : getItems()) {
                 out.println(row.stream()
@@ -412,6 +414,60 @@ public class ResultGrid extends TableView<List<String>> {
         } catch (IOException e) {
             DialogTheme.apply(new Alert(Alert.AlertType.ERROR, "Export failed: " + e.getMessage())).showAndWait();
         }
+    }
+
+    /**
+     * Exports the current rows as a JSON array of objects, keyed by column
+     * name. Any cell whose text already looks like a JSON object or array —
+     * which is how nested documents/arrays are rendered for display, since
+     * the grid only ever holds flattened strings — is embedded as real
+     * nested JSON rather than a doubly-escaped string, so the output stays
+     * structurally faithful to the original document shape.
+     */
+    public void exportJson() {
+        if (getItems().isEmpty()) return;
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Export JSON");
+        chooser.setInitialFileName("export.json");
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("JSON files", "*.json"));
+        File file = chooser.showSaveDialog(getScene().getWindow());
+        if (file == null) return;
+
+        try (PrintWriter out = new PrintWriter(file, StandardCharsets.UTF_8)) {
+            out.println("[");
+            List<List<String>> rows = getItems();
+            for (int r = 0; r < rows.size(); r++) {
+                List<String> row = rows.get(r);
+                StringBuilder obj = new StringBuilder("  {");
+                for (int c = 0; c < columnNames.size(); c++) {
+                    if (c > 0) obj.append(", ");
+                    String value = c < row.size() ? row.get(c) : null;
+                    obj.append('"').append(jsonEscape(columnNames.get(c))).append("\": ")
+                            .append(jsonValue(value));
+                }
+                obj.append('}');
+                if (r < rows.size() - 1) obj.append(',');
+                out.println(obj);
+            }
+            out.println("]");
+        } catch (IOException e) {
+            DialogTheme.apply(new Alert(Alert.AlertType.ERROR, "Export failed: " + e.getMessage())).showAndWait();
+        }
+    }
+
+    private static String jsonValue(String value) {
+        if (value == null || value.equals("NULL")) return "null";
+        String trimmed = value.strip();
+        if ((trimmed.startsWith("{") && trimmed.endsWith("}"))
+                || (trimmed.startsWith("[") && trimmed.endsWith("]"))) {
+            return trimmed;   // already-serialized nested document/array — embed as-is
+        }
+        return '"' + jsonEscape(value) + '"';
+    }
+
+    private static String jsonEscape(String value) {
+        return value.replace("\\", "\\\\").replace("\"", "\\\"")
+                .replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t");
     }
 
     private static String csvEscape(String value) {
