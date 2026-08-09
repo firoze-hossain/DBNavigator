@@ -33,6 +33,7 @@ public class MongoCollectionTab extends Tab {
     private long totalDocs = -1;
     private String sortField;
     private String sortDirection;   // "ASC", "DESC", or null
+    private QueryResult lastResult;
 
     public MongoCollectionTab(ConnectionProfile profile, DbObject collection) {
         this.profile = profile;
@@ -47,6 +48,8 @@ public class MongoCollectionTab extends Tab {
             grid.setCurrentSort(columnName, direction);
             reloadFromStart();
         });
+        grid.setEditable(true);
+        grid.enableEditing(this::onCellEdit);
 
         filterField.setPromptText("Filter JSON, e.g. {\"status\": \"active\", \"age\": {\"$gt\": 21}}");
         HBox.setHgrow(filterField, Priority.ALWAYS);
@@ -110,6 +113,7 @@ public class MongoCollectionTab extends Tab {
                     }
                 }
                 Platform.runLater(() -> {
+                    lastResult = result;
                     grid.showResult(result);
                     long from = (long) currentPage * PAGE_SIZE + 1;
                     long to = from + result.getRows().size() - 1;
@@ -126,5 +130,88 @@ public class MongoCollectionTab extends Tab {
                 Platform.runLater(() -> statusLabel.setText("Error: " + msg));
             }
         });
+    }
+
+    /**
+     * Commits an inline cell edit as a real {@code updateOne({_id: ...}, {$set: {field: value}})}
+     * against the collection — not just an in-memory grid change. {@code _id}
+     * itself can't be edited this way (MongoDB doesn't allow modifying a
+     * document's {@code _id} via update; that would need a delete + re-insert
+     * instead), so that column stays read-only.
+     */
+    private void onCellEdit(int rowIndex, int columnIndex, String oldValue, String newValue) {
+        if (lastResult == null || rowIndex < 0 || rowIndex >= lastResult.getRows().size()) return;
+        java.util.List<String> columns = lastResult.getColumns();
+        if (columnIndex < 0 || columnIndex >= columns.size()) return;
+        String columnName = columns.get(columnIndex);
+
+        if ("_id".equals(columnName)) {
+            statusLabel.setText("_id can't be edited here \u2014 delete and re-insert the document instead");
+            grid.refresh();
+            return;
+        }
+        int idIndex = columns.indexOf("_id");
+        if (idIndex < 0) {
+            statusLabel.setText("Can't locate this document's _id \u2014 edit not saved");
+            grid.refresh();
+            return;
+        }
+        String idValue = lastResult.getRows().get(rowIndex).get(idIndex);
+        if (java.util.Objects.equals(oldValue, newValue)) return;
+
+        String filterJson = idFilterJson(idValue);
+        String updateJson = "{\"$set\": {\"" + columnName.replace("\"", "\\\"")
+                + "\": " + toJsonValue(newValue) + "}}";
+
+        statusLabel.setText("Saving\u2026");
+        AppExecutor.run(() -> {
+            try {
+                var result = ClientRegistry.mongo(profile).updateOne(
+                        collection.getCatalog(), collection.getName(), filterJson, updateJson);
+                Platform.runLater(() -> statusLabel.setText(result.message()));
+            } catch (Exception ex) {
+                String msg = ex.getMessage() == null ? ex.toString() : ex.getMessage();
+                Platform.runLater(() -> {
+                    statusLabel.setText("Update failed: " + msg);
+                    grid.refresh();
+                });
+            }
+        });
+    }
+
+    /**
+     * Builds a filter matching one document by its displayed {@code _id}
+     * text. The grid only has the flattened string form to work with (the
+     * original typed BSON value isn't kept around after rendering), so this
+     * recognizes the overwhelmingly common case — a 24-hex-character
+     * ObjectId — and falls back to a plain number or string otherwise,
+     * which covers collections that use their own natural-key {@code _id}.
+     */
+    private static String idFilterJson(String idValue) {
+        if (idValue.matches("[0-9a-fA-F]{24}")) {
+            return "{\"_id\": ObjectId(\"" + idValue + "\")}";
+        }
+        if (idValue.matches("-?\\d+(\\.\\d+)?")) {
+            return "{\"_id\": " + idValue + "}";
+        }
+        return "{\"_id\": \"" + idValue.replace("\\", "\\\\").replace("\"", "\\\"") + "\"}";
+    }
+
+    /**
+     * Best-effort typed encoding of a typed-in cell value: recognizable
+     * numbers and booleans are stored as such, "null" clears the field,
+     * everything else is stored as a string. Scope note: this covers the
+     * common scalar types — entering a date, ObjectId, array, or nested
+     * object as text isn't supported here, only via the console's
+     * {@code updateOne(...)} for now.
+     */
+    private static String toJsonValue(String newValue) {
+        if (newValue == null || newValue.equalsIgnoreCase("null")) return "null";
+        if (newValue.equalsIgnoreCase("true") || newValue.equalsIgnoreCase("false")) {
+            return newValue.toLowerCase(java.util.Locale.ROOT);
+        }
+        if (newValue.matches("-?\\d+")) return newValue;
+        if (newValue.matches("-?\\d+\\.\\d+")) return newValue;
+        return "\"" + newValue.replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
     }
 }
