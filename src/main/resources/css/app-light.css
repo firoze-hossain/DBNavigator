@@ -331,6 +331,8 @@
 .completion-table   { -fx-text-fill: #4a88c7; }
 .completion-column  { -fx-text-fill: #6a8759; }
 .completion-sequence { -fx-text-fill: #b06f00; }
+.completion-collection { -fx-text-fill: #1a5fb4; }
+.completion-method  { -fx-text-fill: #9c27b0; }
 .completion-detail  { -fx-text-fill: #6f7680; -fx-font-size: 11px; }
 
 /* ---------- search everywhere ---------- */

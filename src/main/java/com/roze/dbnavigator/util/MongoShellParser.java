@@ -22,6 +22,23 @@ public final class MongoShellParser {
     public record Statement(Kind kind, String database, String collection, String method,
                             String argsJson, String raw) {}
 
+    /**
+     * One statement as split out of the script.
+     *
+     * @param start        offset of the first character belonging to this
+     *                     statement's own boundary (may include leading
+     *                     blank lines carried over from the previous split
+     *                     point)
+     * @param end          offset just past the statement (at the splitting
+     *                     {@code ;} or newline)
+     * @param contentStart offset of the statement's actual first non-
+     *                     comment, non-blank character — the right start
+     *                     point for highlighting just the command itself,
+     *                     not any comment line above it
+     * @param text         the statement's text with comments stripped
+     */
+    public record RawStatement(int start, int end, int contentStart, String text) {}
+
     private static final Pattern USE_PATTERN =
             Pattern.compile("(?i)^use\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*;?\\s*$");
     // The optional trailing ".pretty()" is a purely cosmetic shell convenience
@@ -34,22 +51,30 @@ public final class MongoShellParser {
                     + "(?:\\s*\\.\\s*pretty\\s*\\(\\s*\\))?\\s*;?\\s*$");
 
     /**
-     * Splits a console's whole script into individual statements, respecting
-     * nested {@code {}}/{@code []}/{@code ()}, string literals, and comments
-     * — and strips line/block comments out of the returned statement text
-     * entirely, not just skipping over them while scanning for the next
-     * {@code ;}. Leaving comment text glued to the statement that follows it
-     * broke the "use"/"db.collection.method(...)" pattern match below,
-     * since a statement starting with a comment no longer starts with
-     * "use" or "db" once the comment is (correctly) not stripped.
+     * Splits a console's whole script into individual statements. Real Mongo
+     * shell scripts routinely omit semicolons entirely, relying on newlines
+     * as implicit statement boundaries the same way JavaScript's automatic
+     * semicolon insertion does — so this splits on {@code ;} AND on
+     * newlines, whenever either occurs at bracket depth 0 (a statement that
+     * spans multiple lines, like a multi-line document literal, keeps depth
+     * above 0 the whole time it's open, so a newline in the middle of one
+     * doesn't split it). A comment ending mid-way through such an open
+     * multi-line literal doesn't trigger a split either, for the same
+     * reason. Comment text is stripped from each returned statement's
+     * {@code text} entirely, not just skipped over while scanning — leaving
+     * it in place would break the "use"/"db.collection.method(...)" pattern
+     * match later, since a statement starting with a comment no longer
+     * starts with "use" or "db" once the comment isn't (correctly) removed.
      */
-    public static List<String> splitStatements(String script) {
-        List<String> statements = new ArrayList<>();
+    public static List<RawStatement> splitStatements(String script) {
+        List<RawStatement> statements = new ArrayList<>();
         if (script == null) return statements;
         int n = script.length();
         int depth = 0;
         boolean inSingle = false, inDouble = false, inLineComment = false, inBlockComment = false;
         StringBuilder current = new StringBuilder();
+        int rawStart = 0;
+        int contentStart = -1;
 
         int i = 0;
         while (i < n) {
@@ -57,7 +82,23 @@ public final class MongoShellParser {
             char next = i + 1 < n ? script.charAt(i + 1) : '\0';
 
             if (inLineComment) {
-                if (c == '\n') inLineComment = false;
+                if (c == '\n') {
+                    inLineComment = false;
+                    if (depth == 0) {
+                        String stmt = current.toString().strip();
+                        if (!stmt.isEmpty()) {
+                            statements.add(new RawStatement(rawStart, i,
+                                    contentStart < 0 ? i : contentStart, stmt));
+                        }
+                        current.setLength(0);
+                        rawStart = i + 1;
+                        contentStart = -1;
+                    } else {
+                        current.append(c);
+                    }
+                    i++;
+                    continue;
+                }
                 i++;
                 continue;
             }
@@ -83,6 +124,24 @@ public final class MongoShellParser {
 
             if (c == '/' && next == '/') { inLineComment = true; i += 2; continue; }
             if (c == '/' && next == '*') { inBlockComment = true; i += 2; continue; }
+            if (Character.isWhitespace(c)) {
+                if (c == '\n' && depth == 0) {
+                    String stmt = current.toString().strip();
+                    if (!stmt.isEmpty()) {
+                        statements.add(new RawStatement(rawStart, i, contentStart < 0 ? i : contentStart, stmt));
+                    }
+                    current.setLength(0);
+                    rawStart = i + 1;
+                    contentStart = -1;
+                    i++;
+                    continue;
+                }
+                current.append(c);
+                i++;
+                continue;
+            }
+
+            if (contentStart < 0) contentStart = i;
             if (c == '\'') { inSingle = true; current.append(c); i++; continue; }
             if (c == '"') { inDouble = true; current.append(c); i++; continue; }
             if (c == '{' || c == '[' || c == '(') { depth++; current.append(c); i++; continue; }
@@ -90,8 +149,10 @@ public final class MongoShellParser {
 
             if (c == ';' && depth == 0) {
                 String stmt = current.toString().strip();
-                if (!stmt.isEmpty()) statements.add(stmt);
+                if (!stmt.isEmpty()) statements.add(new RawStatement(rawStart, i, contentStart < 0 ? i : contentStart, stmt));
                 current.setLength(0);
+                rawStart = i + 1;
+                contentStart = -1;
                 i++;
                 continue;
             }
@@ -100,8 +161,16 @@ public final class MongoShellParser {
             i++;
         }
         String tail = current.toString().strip();
-        if (!tail.isEmpty()) statements.add(tail);
+        if (!tail.isEmpty()) statements.add(new RawStatement(rawStart, n, contentStart < 0 ? n : contentStart, tail));
         return statements;
+    }
+
+    /** The statement whose span contains the given caret offset, or null if none does. */
+    public static RawStatement statementAt(List<RawStatement> statements, int caretOffset) {
+        for (RawStatement s : statements) {
+            if (caretOffset >= s.start() && caretOffset <= s.end()) return s;
+        }
+        return null;
     }
 
     public static Statement parse(String statement) {

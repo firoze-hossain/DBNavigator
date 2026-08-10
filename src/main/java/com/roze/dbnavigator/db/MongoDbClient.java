@@ -107,6 +107,13 @@ public class MongoDbClient implements AutoCloseable {
         return db.runCommand(command).toJson();
     }
 
+    /** Collection names for the current database — used by the console's autocomplete after "db.". */
+    public List<String> listCollectionNames(String database) {
+        List<String> names = new ArrayList<>();
+        client.getDatabase(database).listCollectionNames().forEach(names::add);
+        return names;
+    }
+
     public void ping() {
         client.getDatabase("admin").runCommand(new Document("ping", 1));
     }
@@ -153,6 +160,11 @@ public class MongoDbClient implements AutoCloseable {
             result.add(new IndexInfo(name, "(" + keyDescription + ")" + (unique ? " UNIQUE" : "")));
         }
         return result;
+    }
+
+    /** Same shape as find(), but for a single document — renders in the same grid as a one-row result. */
+    public QueryResult findOne(String database, String collection, String jsonFilter) {
+        return find(database, collection, jsonFilter, null, false, 0, 1);
     }
 
     /** Result of a write/admin operation, for the console's Output log — no rows to show, just a summary. */

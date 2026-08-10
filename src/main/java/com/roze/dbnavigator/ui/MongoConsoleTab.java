@@ -7,39 +7,55 @@ import com.roze.dbnavigator.model.QueryResult;
 import com.roze.dbnavigator.util.AppExecutor;
 import com.roze.dbnavigator.util.MongoShellParser;
 import javafx.application.Platform;
+import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.input.KeyCombination;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import javafx.stage.Popup;
 import org.bson.Document;
 import org.fxmisc.flowless.VirtualizedScrollPane;
 import org.fxmisc.richtext.CodeArea;
 import org.kordamp.ikonli.fontawesome5.FontAwesomeSolid;
 
+import java.time.Duration;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * A real MongoDB shell console: {@code use dbname;} and
  * {@code db.collection.method(args);} statements, run against the actual
  * driver — not just a read-only filter box like {@link MongoCollectionTab}.
  *
- * Supported methods: insertOne, insertMany, find, updateOne, updateMany,
- * deleteOne, deleteMany, countDocuments, drop. Arguments are written the
- * way the real Mongo shell accepts them (unquoted keys, single or double
- * quoted strings) via {@link MongoShellParser}, not strict JSON.
+ * Matches the reference IDE's console behavior: Run and Ctrl+Enter execute
+ * only the statement the caret is currently in (or the whole thing if
+ * there's just one), which is highlighted with the same character-range
+ * background used by the SQL console — not the entire script every time.
+ * Statements don't need trailing semicolons; a newline at bracket depth 0
+ * ends one, the same way the real Mongo shell (and JavaScript's automatic
+ * semicolon insertion) treats them.
  *
- * {@code find()} results support the same real column sorting, Submit/
- * Revert cell editing, and CSV/JSON export as {@link MongoCollectionTab} —
- * sorting and editing both act against whichever collection/filter the
- * most recent {@code find()} used. Running a {@code find()} also switches
- * to the Result tab automatically, so the results are immediately visible
- * rather than left behind the Output log.
+ * Supported methods: findOne, insertOne, insertMany, find, updateOne,
+ * updateMany, deleteOne, deleteMany, countDocuments, drop. Arguments are
+ * written the way the real Mongo shell accepts them (unquoted keys, single
+ * or double quoted strings) via {@link MongoShellParser}, not strict JSON.
+ *
+ * {@code find()}/{@code findOne()} results support the same real column
+ * sorting, Submit/Revert cell editing, and CSV/JSON export as
+ * {@link MongoCollectionTab} — sorting and editing both act against
+ * whichever collection/filter the most recent query used. Running one also
+ * switches to the Result tab automatically.
  *
  * Honest scope note: this covers the common CRUD operations, not the full
  * shell language — no variables, no JS expressions/functions beyond a
@@ -65,8 +81,17 @@ public class MongoConsoleTab extends Tab {
     private String lastFindDatabase;
     private String lastFindCollection;
     private String lastFindFilter = "{}";
+    private boolean lastFindWasSingle;
     private String sortField;
     private String sortDirection;   // "ASC", "DESC", or null
+
+    // ---- autocomplete ----
+    private final Popup completionPopup = new Popup();
+    private final ListView<MongoCompletionService.Suggestion> completionList = new ListView<>();
+    private int tokenStart = -1;
+    private boolean suppressCompletion = false;
+    private List<String> cachedCollectionNames = List.of();
+    private String cachedCollectionsDatabase;
 
     public MongoConsoleTab(ConnectionProfile profile, String initialDatabase, String title) {
         this.profile = profile;
@@ -75,7 +100,7 @@ public class MongoConsoleTab extends Tab {
         setText(title);
         setGraphic(Icons.of(FontAwesomeSolid.LEAF, "#57965c", 11));
 
-        editor.replaceText("// MongoDB console. Ctrl+Enter runs everything below.\n"
+        editor.replaceText("// MongoDB console. Run/Ctrl+Enter execute the statement at the caret.\n"
                 + "// Example: use " + (initialDatabase != null ? initialDatabase : "mydb") + ";\n"
                 + "// db.collection.insertOne({ name: \"Ada\", age: 30 });\n\n");
         VirtualizedScrollPane<CodeArea> editorScroll = new VirtualizedScrollPane<>(editor);
@@ -83,7 +108,7 @@ public class MongoConsoleTab extends Tab {
         Button runButton = new Button("Run");
         runButton.setGraphic(Icons.of(FontAwesomeSolid.PLAY, "#57965c", 12));
         runButton.getStyleClass().add("run-button");
-        runButton.setOnAction(e -> runAll());
+        runButton.setOnAction(e -> runCurrentStatement());
 
         submitButton.getStyleClass().add("run-button");
         submitButton.setGraphic(Icons.of(FontAwesomeSolid.CHECK, "#ffffff", 11));
@@ -134,12 +159,15 @@ public class MongoConsoleTab extends Tab {
         VBox.setVgrow(split, Priority.ALWAYS);
         setContent(root);
 
-        editor.addEventFilter(javafx.scene.input.KeyEvent.KEY_PRESSED, e -> {
-            if (e.isControlDown() && e.getCode() == javafx.scene.input.KeyCode.ENTER) {
-                runAll();
+        editor.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
+            if (e.isControlDown() && e.getCode() == KeyCode.ENTER) {
+                runCurrentStatement();
                 e.consume();
             }
         });
+
+        setupStatementHighlighting();
+        setupCompletion();
     }
 
     private void updateDbLabel() {
@@ -150,20 +178,226 @@ public class MongoConsoleTab extends Tab {
         outputArea.appendText("[" + LocalTime.now().format(timeFormat) + "] " + line + "\n");
     }
 
-    private void runAll() {
-        String script = editor.getText();
-        List<String> statements = MongoShellParser.splitStatements(script);
+    // ----------------------------------------------------- current-statement
+
+    /**
+     * Highlights the statement the caret is currently inside — same
+     * character-range technique as the SQL console (an overlay merged with
+     * the syntax-highlighting spans, so the highlighted text keeps its own
+     * keyword/string colors underneath).
+     */
+    private void setupStatementHighlighting() {
+        editor.multiPlainChanges()
+                .successionEnds(Duration.ofMillis(120))
+                .subscribe(ignore -> refreshEditorStyling());
+        editor.caretPositionProperty().addListener((obs, o, n) -> refreshEditorStyling());
+        Platform.runLater(this::refreshEditorStyling);
+    }
+
+    private void refreshEditorStyling() {
+        try {
+            String text = editor.getText();
+            var syntax = MongoShellHighlighter.computeHighlighting(text);
+            int[] range = currentStatementCharRange(text);
+
+            if (range == null) {
+                editor.setStyleSpans(0, syntax);
+                return;
+            }
+            var spansBuilder = new org.fxmisc.richtext.model.StyleSpansBuilder<java.util.Collection<String>>();
+            if (range[0] > 0) spansBuilder.add(Collections.emptyList(), range[0]);
+            spansBuilder.add(Collections.singleton("current-statement-line"), range[1] - range[0]);
+            if (range[1] < text.length()) spansBuilder.add(Collections.emptyList(), text.length() - range[1]);
+            var highlight = spansBuilder.create();
+
+            var merged = syntax.overlay(highlight, (base, extra) -> {
+                if (extra.isEmpty()) return base;
+                var combined = new java.util.LinkedHashSet<>(base);
+                combined.addAll(extra);
+                return combined;
+            });
+            editor.setStyleSpans(0, merged);
+        } catch (Exception ignored) {
+            // Never let a highlight-computation edge case leave stale/broken styling behind.
+        }
+    }
+
+    /** Start/end offsets of the statement at the caret — or null if there's only one statement to begin with. */
+    private int[] currentStatementCharRange(String text) {
+        List<MongoShellParser.RawStatement> statements = MongoShellParser.splitStatements(text);
+        if (statements.size() < 2) return null;
+        MongoShellParser.RawStatement stmt = statementAtCaret(statements);
+        if (stmt == null) return null;
+        if (stmt.contentStart() >= stmt.end()) return null;
+        return new int[]{stmt.contentStart(), stmt.end()};
+    }
+
+    private MongoShellParser.RawStatement statementAtCaret(List<MongoShellParser.RawStatement> statements) {
+        return MongoShellParser.statementAt(statements, editor.getCaretPosition());
+    }
+
+    // ------------------------------------------------------------- completion
+
+    /**
+     * Autocomplete after {@code db}/{@code use}, {@code db.} (collection
+     * names plus database-level methods), and {@code db.collection.}
+     * (collection-level methods) — same popup interaction pattern as the
+     * SQL console: Ctrl+Space to open, auto-opens while typing an
+     * identifier, Up/Down/Enter/Tab/Escape to navigate and accept.
+     */
+    private void setupCompletion() {
+        completionList.getStyleClass().add("completion-list");
+        completionList.setPrefSize(360, 200);
+        completionList.setCellFactory(list -> new ListCell<>() {
+            @Override
+            protected void updateItem(MongoCompletionService.Suggestion item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setGraphic(null);
+                    setText(null);
+                    return;
+                }
+                Label name = new Label(item.text());
+                name.getStyleClass().addAll("completion-name",
+                        "completion-" + item.kind().name().toLowerCase());
+                Label detail = new Label(item.detail());
+                detail.getStyleClass().add("completion-detail");
+                Region gap = new Region();
+                HBox.setHgrow(gap, Priority.ALWAYS);
+                HBox box = new HBox(10, name, gap, detail);
+                box.setAlignment(Pos.CENTER_LEFT);
+                setGraphic(box);
+                setText(null);
+            }
+        });
+        completionPopup.getContent().add(completionList);
+        completionPopup.setAutoHide(true);
+
+        completionList.setOnMouseClicked(e -> insertSelectedCompletion());
+        completionList.setOnKeyPressed(e -> {
+            switch (e.getCode()) {
+                case ENTER, TAB -> { insertSelectedCompletion(); e.consume(); }
+                case ESCAPE -> { completionPopup.hide(); e.consume(); }
+                default -> {}
+            }
+        });
+
+        editor.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
+            if (new KeyCodeCombination(KeyCode.SPACE, KeyCombination.CONTROL_DOWN).match(e)) {
+                showCompletions();
+                e.consume();
+                return;
+            }
+            if (!completionPopup.isShowing()) return;
+            switch (e.getCode()) {
+                case DOWN -> { completionList.getSelectionModel().selectNext(); e.consume(); }
+                case UP -> { completionList.getSelectionModel().selectPrevious(); e.consume(); }
+                case ENTER, TAB -> { insertSelectedCompletion(); e.consume(); }
+                case ESCAPE -> { completionPopup.hide(); e.consume(); }
+                default -> {}
+            }
+        });
+
+        editor.plainTextChanges().subscribe(change -> {
+            if (suppressCompletion) return;
+            String inserted = change.getInserted();
+            if (inserted.length() == 1 && inserted.matches("[A-Za-z0-9_.]")) {
+                showCompletions();
+            } else if (completionPopup.isShowing()) {
+                showCompletions();   // refresh after backspace etc.
+            }
+        });
+    }
+
+    private void showCompletions() {
+        String token = currentToken();
+        String textBeforeCaret = editor.getText().substring(0, tokenStart);
+        MongoCompletionService.Context context = MongoCompletionService.contextAt(textBeforeCaret);
+
+        if (context == MongoCompletionService.Context.DB_MEMBER) {
+            ensureCollectionNamesCached();
+        }
+
+        List<MongoCompletionService.Suggestion> suggestions =
+                MongoCompletionService.suggest(context, token, cachedCollectionNames);
+        if (suggestions.isEmpty()
+                || (suggestions.size() == 1 && suggestions.get(0).text().equalsIgnoreCase(token))) {
+            completionPopup.hide();
+            return;
+        }
+        completionList.getItems().setAll(suggestions);
+        completionList.getSelectionModel().selectFirst();
+
+        Optional<Bounds> caret = editor.getCaretBounds();
+        if (caret.isPresent()) {
+            completionPopup.show(editor, caret.get().getMinX(), caret.get().getMaxY() + 2);
+        }
+    }
+
+    /** Fetches collection names once per database, in the background, then silently refreshes an open popup. */
+    private void ensureCollectionNamesCached() {
+        if (currentDatabase == null || currentDatabase.equals(cachedCollectionsDatabase)) return;
+        String database = currentDatabase;
+        cachedCollectionsDatabase = database;   // claim it immediately so a fast retype doesn't refetch repeatedly
+        AppExecutor.run(() -> {
+            try {
+                List<String> names = ClientRegistry.mongo(profile).listCollectionNames(database);
+                Platform.runLater(() -> {
+                    cachedCollectionNames = names;
+                    if (completionPopup.isShowing()) showCompletions();
+                });
+            } catch (Exception ignored) {
+                // best-effort suggestions only — a fetch failure just means no collection names offered yet
+            }
+        });
+    }
+
+    /** Extracts the identifier token immediately before the caret (dots included, so "db.stu" is one token). */
+    private String currentToken() {
+        int caret = editor.getCaretPosition();
+        String text = editor.getText();
+        int start = caret;
+        while (start > 0) {
+            char c = text.charAt(start - 1);
+            if (Character.isLetterOrDigit(c) || c == '_') start--;
+            else break;
+        }
+        tokenStart = start;
+        return text.substring(start, caret);
+    }
+
+    private void insertSelectedCompletion() {
+        MongoCompletionService.Suggestion selected = completionList.getSelectionModel().getSelectedItem();
+        if (selected == null || tokenStart < 0) {
+            completionPopup.hide();
+            return;
+        }
+        suppressCompletion = true;
+        editor.replaceText(tokenStart, editor.getCaretPosition(), selected.text());
+        suppressCompletion = false;
+        completionPopup.hide();
+        editor.requestFocus();
+    }
+
+    // --------------------------------------------------------------- run
+
+    /** Run / Ctrl+Enter: the statement at the caret, or the only statement if there's just one. */
+    private void runCurrentStatement() {
+        String text = editor.getText();
+        List<MongoShellParser.RawStatement> statements = MongoShellParser.splitStatements(text);
         if (statements.isEmpty()) return;
 
+        MongoShellParser.RawStatement target = statements.size() == 1
+                ? statements.get(0) : statementAtCaret(statements);
+        if (target == null) return;
+
+        MongoShellParser.Statement stmt = MongoShellParser.parse(target.text());
         AppExecutor.run(() -> {
-            for (String raw : statements) {
-                MongoShellParser.Statement stmt = MongoShellParser.parse(raw);
-                try {
-                    runOne(stmt);
-                } catch (Exception ex) {
-                    String msg = ex.getMessage() == null ? ex.toString() : ex.getMessage();
-                    Platform.runLater(() -> log("Error: " + msg));
-                }
+            try {
+                runOne(stmt);
+            } catch (Exception ex) {
+                String msg = ex.getMessage() == null ? ex.toString() : ex.getMessage();
+                Platform.runLater(() -> log("Error: " + msg));
             }
         });
     }
@@ -234,12 +468,22 @@ public class MongoConsoleTab extends Tab {
                     lastFindDatabase = currentDatabase;
                     lastFindCollection = collection;
                     lastFindFilter = args.isEmpty() ? "{}" : toJson(args, 0);
+                    lastFindWasSingle = false;
+                    sortField = null;
+                    sortDirection = null;
+                    showFindResult(start);
+                }
+                case "findOne" -> {
+                    lastFindDatabase = currentDatabase;
+                    lastFindCollection = collection;
+                    lastFindFilter = args.isEmpty() ? "{}" : toJson(args, 0);
+                    lastFindWasSingle = true;
                     sortField = null;
                     sortDirection = null;
                     showFindResult(start);
                 }
                 default -> Platform.runLater(() -> log("Unsupported method: " + stmt.method()
-                        + "  (supported: insertOne, insertMany, find, updateOne, updateMany, "
+                        + "  (supported: findOne, insertOne, insertMany, find, updateOne, updateMany, "
                         + "deleteOne, deleteMany, countDocuments, drop)"));
             }
         } catch (Exception ex) {
@@ -248,7 +492,7 @@ public class MongoConsoleTab extends Tab {
         }
     }
 
-    /** Re-runs the most recent find() — used by both the sort icon and Revert, so both act on real fresh data. */
+    /** Re-runs the most recent find()/findOne() — used by both the sort icon and Revert, so both act on fresh data. */
     private void rerunLastFind() {
         if (lastFindCollection == null) return;
         AppExecutor.run(() -> showFindResult(System.currentTimeMillis()));
@@ -257,14 +501,17 @@ public class MongoConsoleTab extends Tab {
     private void showFindResult(long start) {
         MongoDbClient client = ClientRegistry.mongo(profile);
         try {
-            QueryResult result = client.find(lastFindDatabase, lastFindCollection, lastFindFilter,
-                    sortField, "DESC".equals(sortDirection), 0, 500);
+            QueryResult result = lastFindWasSingle
+                    ? client.findOne(lastFindDatabase, lastFindCollection, lastFindFilter)
+                    : client.find(lastFindDatabase, lastFindCollection, lastFindFilter,
+                            sortField, "DESC".equals(sortDirection), 0, 500);
             Platform.runLater(() -> {
                 resultGrid.setCurrentSort(sortField, sortDirection);
                 editManager.configure(lastFindDatabase, lastFindCollection, result);
                 resultGrid.showResult(result);
                 bottomTabs.getSelectionModel().select(resultTab);
-                log("db." + lastFindCollection + ".find(...) \u2192 " + result.getRows().size()
+                log("db." + lastFindCollection + "." + (lastFindWasSingle ? "findOne" : "find")
+                        + "(...) \u2192 " + result.getRows().size()
                         + " document(s) in " + (System.currentTimeMillis() - start) + " ms");
             });
         } catch (Exception ex) {
