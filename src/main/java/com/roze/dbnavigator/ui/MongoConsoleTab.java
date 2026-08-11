@@ -85,6 +85,14 @@ public class MongoConsoleTab extends Tab {
     private String sortField;
     private String sortDirection;   // "ASC", "DESC", or null
 
+    // ---- find() pagination ----
+    private static final int FIND_PAGE_SIZE = 200;
+    private int findPage = 0;
+    private long findTotalDocs = -1;
+    private final Label findPageLabel = new Label();
+    private final Button findPrevButton = new Button();
+    private final Button findNextButton = new Button();
+
     // ---- autocomplete ----
     private final Popup completionPopup = new Popup();
     private final ListView<MongoCompletionService.Suggestion> completionList = new ListView<>();
@@ -129,6 +137,7 @@ public class MongoConsoleTab extends Tab {
             sortField = direction == null ? null : columnName;
             sortDirection = direction;
             resultGrid.setCurrentSort(columnName, direction);
+            findPage = 0;
             rerunLastFind();
         });
 
@@ -145,9 +154,25 @@ public class MongoConsoleTab extends Tab {
 
         outputArea.setEditable(false);
         outputArea.getStyleClass().add("process-output");
+        findPrevButton.setGraphic(Icons.of(FontAwesomeSolid.CHEVRON_LEFT, "#a9b7c6", 11));
+        findPrevButton.setOnAction(e -> { if (findPage > 0) { findPage--; rerunLastFind(); } });
+        findNextButton.setGraphic(Icons.of(FontAwesomeSolid.CHEVRON_RIGHT, "#a9b7c6", 11));
+        findNextButton.setOnAction(e -> { findPage++; rerunLastFind(); });
+        findPrevButton.setDisable(true);
+        findNextButton.setDisable(true);
+        Region resultSpacer = new Region();
+        HBox.setHgrow(resultSpacer, Priority.ALWAYS);
+        HBox resultPagingBar = new HBox(6, resultSpacer, findPrevButton, findPageLabel, findNextButton);
+        resultPagingBar.setAlignment(Pos.CENTER_RIGHT);
+        resultPagingBar.setPadding(new Insets(4, 8, 4, 8));
+        resultPagingBar.getStyleClass().add("console-status-bar");
+
+        VBox resultContent = new VBox(resultGrid, resultPagingBar);
+        VBox.setVgrow(resultGrid, Priority.ALWAYS);
+
         Tab outputTab = new Tab("Output", outputArea);
         outputTab.setClosable(false);
-        resultTab = new Tab("Result", resultGrid);
+        resultTab = new Tab("Result", resultContent);
         resultTab.setClosable(false);
         bottomTabs = new TabPane(outputTab, resultTab);
 
@@ -263,7 +288,8 @@ public class MongoConsoleTab extends Tab {
                     setText(null);
                     return;
                 }
-                Label name = new Label(item.text());
+                boolean isMethod = item.kind() == MongoCompletionService.Kind.METHOD;
+                Label name = new Label(isMethod ? item.text() + "()" : item.text());
                 name.getStyleClass().addAll("completion-name",
                         "completion-" + item.kind().name().toLowerCase());
                 Label detail = new Label(item.detail());
@@ -484,6 +510,8 @@ public class MongoConsoleTab extends Tab {
                     lastFindWasSingle = false;
                     sortField = null;
                     sortDirection = null;
+                    findPage = 0;
+                    findTotalDocs = -1;
                     showFindResult(start);
                 }
                 case "findOne" -> {
@@ -493,6 +521,8 @@ public class MongoConsoleTab extends Tab {
                     lastFindWasSingle = true;
                     sortField = null;
                     sortDirection = null;
+                    findPage = 0;
+                    findTotalDocs = -1;
                     showFindResult(start);
                 }
                 default -> Platform.runLater(() -> log("Unsupported method: " + stmt.method()
@@ -514,23 +544,51 @@ public class MongoConsoleTab extends Tab {
     private void showFindResult(long start) {
         MongoDbClient client = ClientRegistry.mongo(profile);
         try {
-            QueryResult result = lastFindWasSingle
-                    ? client.findOne(lastFindDatabase, lastFindCollection, lastFindFilter)
-                    : client.find(lastFindDatabase, lastFindCollection, lastFindFilter,
-                            sortField, "DESC".equals(sortDirection), 0, 500);
+            QueryResult result;
+            if (lastFindWasSingle) {
+                result = client.findOne(lastFindDatabase, lastFindCollection, lastFindFilter);
+            } else {
+                result = client.find(lastFindDatabase, lastFindCollection, lastFindFilter,
+                        sortField, "DESC".equals(sortDirection), findPage * FIND_PAGE_SIZE, FIND_PAGE_SIZE);
+                if (findTotalDocs < 0) {
+                    try {
+                        findTotalDocs = client.countDocuments(lastFindDatabase, lastFindCollection, lastFindFilter);
+                    } catch (Exception ignore) {
+                        findTotalDocs = -1;
+                    }
+                }
+            }
+            QueryResult finalResult = result;
             Platform.runLater(() -> {
                 resultGrid.setCurrentSort(sortField, sortDirection);
-                editManager.configure(lastFindDatabase, lastFindCollection, result);
-                resultGrid.showResult(result);
+                editManager.configure(lastFindDatabase, lastFindCollection, finalResult);
+                resultGrid.showResult(finalResult);
                 bottomTabs.getSelectionModel().select(resultTab);
+                updateFindPagingUi(finalResult);
                 log("db." + lastFindCollection + "." + (lastFindWasSingle ? "findOne" : "find")
-                        + "(...) \u2192 " + result.getRows().size()
+                        + "(...) \u2192 " + finalResult.getRows().size()
                         + " document(s) in " + (System.currentTimeMillis() - start) + " ms");
             });
         } catch (Exception ex) {
             String msg = ex.getMessage() == null ? ex.toString() : ex.getMessage();
             Platform.runLater(() -> log("Error running find(): " + msg));
         }
+    }
+
+    private void updateFindPagingUi(QueryResult result) {
+        if (lastFindWasSingle) {
+            findPageLabel.setText("");
+            findPrevButton.setDisable(true);
+            findNextButton.setDisable(true);
+            return;
+        }
+        int rows = result.getRows().size();
+        long from = rows == 0 ? 0 : (long) findPage * FIND_PAGE_SIZE + 1;
+        long to = from + rows - 1;
+        findPageLabel.setText(rows == 0 ? "0 docs"
+                : from + "\u2013" + to + (findTotalDocs >= 0 ? " of " + findTotalDocs : ""));
+        findPrevButton.setDisable(findPage == 0);
+        findNextButton.setDisable(rows < FIND_PAGE_SIZE);
     }
 
     private void reportCommand(MongoShellParser.Statement stmt, String message, long start) {

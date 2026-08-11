@@ -215,6 +215,26 @@ public class MongoDbClient implements AutoCloseable {
         return new CommandResult("Dropped collection \"" + collection + "\"");
     }
 
+    public CommandResult renameCollection(String database, String oldName, String newName) {
+        client.getDatabase(database).getCollection(oldName)
+                .renameCollection(new com.mongodb.MongoNamespace(database, newName));
+        return new CommandResult("Renamed \"" + oldName + "\" to \"" + newName + "\"");
+    }
+
+    public CommandResult createIndex(String database, String collection, String fieldName,
+                                     boolean descending, boolean unique) {
+        MongoCollection<Document> coll = client.getDatabase(database).getCollection(collection);
+        Document keys = new Document(fieldName, descending ? -1 : 1);
+        var options = new com.mongodb.client.model.IndexOptions().unique(unique);
+        String name = coll.createIndex(keys, options);
+        return new CommandResult("Created index \"" + name + "\"");
+    }
+
+    public CommandResult dropIndex(String database, String collection, String indexName) {
+        client.getDatabase(database).getCollection(collection).dropIndex(indexName);
+        return new CommandResult("Dropped index \"" + indexName + "\"");
+    }
+
     private static String bsonTypeName(Object value) {
         if (value == null) return "Null";
         if (value instanceof org.bson.types.ObjectId) return "ObjectId";

@@ -12,6 +12,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Locale;
 import java.util.Set;
 
 /** Loads schema tree children lazily for both JDBC and MongoDB connections. */
@@ -500,15 +501,45 @@ public final class MetadataService {
                     DbObject col = new DbObject(name, Kind.COLUMN,
                             folder.getCatalog(), folder.getSchema());
                     col.setTableName(folder.getTableName());
-                    String type = rs.getString("TYPE_NAME");
+                    String type = formatColumnType(rs.getString("TYPE_NAME"),
+                            rs.getInt("COLUMN_SIZE"), rs.getInt("DECIMAL_DIGITS"));
                     boolean nullable = "YES".equalsIgnoreCase(rs.getString("IS_NULLABLE"));
-                    col.setDetail(type.toLowerCase()
+                    col.setDetail(type
                             + (primaryKeys.contains(name) ? "  PK" : nullable ? "" : "  not null"));
                     result.add(col);
                 }
             }
         }
         return result;
+    }
+
+    private static final Set<String> CHAR_LENGTH_TYPES = Set.of(
+            "varchar", "char", "character varying", "character", "nvarchar", "nchar", "bpchar", "binary", "varbinary");
+    private static final Set<String> PRECISION_SCALE_TYPES = Set.of("numeric", "decimal");
+    private static final Set<String> FRACTIONAL_SECONDS_TYPES = Set.of(
+            "timestamp", "timestamptz", "timestamp with time zone", "timestamp without time zone",
+            "time", "timetz", "time with time zone", "time without time zone", "datetime");
+
+    /**
+     * Builds the exact type string the reference IDE shows — e.g.
+     * {@code numeric(19,4)}, {@code varchar(255)}, {@code timestamp(6)} —
+     * rather than just the bare type name JDBC's TYPE_NAME reports on its
+     * own, which drops the precision/scale/length that's actually part of
+     * the column's real declared type.
+     */
+    private static String formatColumnType(String typeName, int columnSize, int decimalDigits) {
+        String lower = typeName.toLowerCase(Locale.ROOT);
+        if (CHAR_LENGTH_TYPES.contains(lower) && columnSize > 0) {
+            return lower + "(" + columnSize + ")";
+        }
+        if (PRECISION_SCALE_TYPES.contains(lower) && columnSize > 0) {
+            return decimalDigits > 0 ? lower + "(" + columnSize + "," + decimalDigits + ")"
+                                      : lower + "(" + columnSize + ")";
+        }
+        if (FRACTIONAL_SECONDS_TYPES.contains(lower) && decimalDigits >= 0) {
+            return lower + "(" + decimalDigits + ")";
+        }
+        return lower;
     }
 
     private static List<DbObject> loadIndexes(ConnectionProfile profile, DbObject folder)
@@ -659,10 +690,13 @@ public final class MetadataService {
             try (ResultSet rs = meta.getColumns(cat, table.getSchema(), table.getName(), "%")) {
                 while (rs.next()) {
                     String name = rs.getString("COLUMN_NAME");
+                    int columnSize = rs.getInt("COLUMN_SIZE");
+                    String formattedType = formatColumnType(rs.getString("TYPE_NAME"),
+                            columnSize, rs.getInt("DECIMAL_DIGITS"));
                     result.add(new ColumnInfo(
                             name,
-                            rs.getString("TYPE_NAME"),
-                            rs.getInt("COLUMN_SIZE"),
+                            formattedType,
+                            columnSize,
                             "YES".equalsIgnoreCase(rs.getString("IS_NULLABLE")),
                             rs.getString("COLUMN_DEF"),
                             pk.contains(name)));
