@@ -128,13 +128,21 @@ public final class ModifyCollectionDialog {
         execute.getStyleClass().add("run-button");
         execute.setDefaultButton(true);
         execute.setOnAction(e -> {
-            String newName = nameField.getText().strip();
-            List<String> toDropIndexes = new ArrayList<>();
-            for (IndexRow row : indexRows) {
-                if (row.drop().get()) toDropIndexes.add(row.name());
+            try {
+                String newName = nameField.getText().strip();
+                List<String> toDropIndexes = new ArrayList<>();
+                for (IndexRow row : indexRows) {
+                    if (row.drop().get()) toDropIndexes.add(row.name());
+                }
+                stage.close();
+                applyChanges(mainWindow, profile, collection, newName, toDropIndexes, pendingNewIndexes);
+            } catch (Exception ex) {
+                // Nothing between clicking Execute and the actual database work
+                // should ever be able to fail invisibly — show it directly
+                // rather than letting JavaFX's default handler swallow it.
+                showAlert(mainWindow, Alert.AlertType.ERROR,
+                        "Could not start Modify Collection: " + describeError(ex));
             }
-            stage.close();
-            applyChanges(mainWindow, profile, collection, newName, toDropIndexes, pendingNewIndexes);
         });
 
         Region spacer = new Region();
@@ -169,42 +177,94 @@ public final class ModifyCollectionDialog {
         });
     }
 
+    /**
+     * Does the real database work first, entirely off the FX thread and
+     * completely independent of the Run panel, then shows a direct,
+     * unmissable Alert with the outcome — success or failure — before
+     * attempting anything else. Run panel logging is attempted afterward,
+     * in its own try/catch, specifically so that even if something about
+     * that panel's own state has a problem, it can never prevent the user
+     * from seeing the actual result of the operation they asked for.
+     */
     private static void applyChanges(MainWindow mainWindow, ConnectionProfile profile, DbObject collection,
                                      String newName, List<String> toDropIndexes, List<String[]> newIndexes) {
-        RunPanel.RunHandle handle = mainWindow.getRunPanel()
-                .startRun("Modify Collection \u2014 " + collection.getName());
-        mainWindow.showRunPanel();
+        String currentName = collection.getName();
+        if (toDropIndexes.isEmpty() && newIndexes.isEmpty()
+                && (newName.equals(currentName) || newName.isBlank())) {
+            showAlert(mainWindow, Alert.AlertType.INFORMATION,
+                    "No changes to apply \u2014 nothing was renamed, and no indexes were added or checked for drop.");
+            return;
+        }
 
         AppExecutor.run(() -> {
+            List<String> applied = new ArrayList<>();
+            Exception failure = null;
             try {
                 MongoDbClient client = ClientRegistry.mongo(profile);
                 String database = collection.getCatalog();
-                String currentName = collection.getName();
+                String workingName = currentName;
 
                 for (String indexName : toDropIndexes) {
-                    handle.appendLine("Drop index " + indexName);
-                    var result = client.dropIndex(database, currentName, indexName);
-                    handle.appendLine(result.message());
+                    var result = client.dropIndex(database, workingName, indexName);
+                    applied.add(result.message());
                 }
                 for (String[] spec : newIndexes) {
                     boolean descending = Boolean.parseBoolean(spec[1]);
                     boolean unique = Boolean.parseBoolean(spec[2]);
-                    handle.appendLine("Create index on " + spec[0]);
-                    var result = client.createIndex(database, currentName, spec[0], descending, unique);
-                    handle.appendLine(result.message());
+                    var result = client.createIndex(database, workingName, spec[0], descending, unique);
+                    applied.add(result.message());
                 }
-                if (!newName.equals(currentName) && !newName.isBlank()) {
-                    handle.appendLine("Rename \"" + currentName + "\" to \"" + newName + "\"");
-                    var result = client.renameCollection(database, currentName, newName);
-                    handle.appendLine(result.message());
+                if (!newName.equals(workingName) && !newName.isBlank()) {
+                    var result = client.renameCollection(database, workingName, newName);
+                    applied.add(result.message());
                 }
+            } catch (Exception ex) {
+                failure = ex;
+            }
 
+            Exception finalFailure = failure;
+            List<String> finalApplied = applied;
+            Platform.runLater(() -> {
+                if (finalFailure != null) {
+                    showAlert(mainWindow, Alert.AlertType.ERROR,
+                            "Modify Collection failed: " + describeError(finalFailure));
+                } else {
+                    mainWindow.refreshSchemaExplorer();
+                    String summary = finalApplied.isEmpty() ? "(nothing applied)" : String.join("\n", finalApplied);
+                    showAlert(mainWindow, Alert.AlertType.INFORMATION,
+                            "Collection modified successfully:\n\n" + summary);
+                }
+                logToRunPanelBestEffort(mainWindow, collection, finalApplied, finalFailure);
+            });
+        });
+    }
+
+    private static void logToRunPanelBestEffort(MainWindow mainWindow, DbObject collection,
+                                                List<String> applied, Exception failure) {
+        try {
+            RunPanel.RunHandle handle = mainWindow.getRunPanel()
+                    .startRun("Modify Collection \u2014 " + collection.getName());
+            mainWindow.showRunPanel();
+            for (String line : applied) handle.appendLine(line);
+            if (failure != null) {
+                handle.markFailed(describeError(failure));
+            } else {
                 handle.appendLine("\u2713 Done");
                 handle.markFinished(0);
-                Platform.runLater(mainWindow::refreshSchemaExplorer);
-            } catch (Exception ex) {
-                handle.markFailed(ex.getMessage() == null ? ex.toString() : ex.getMessage());
             }
-        });
+        } catch (Exception ignored) {
+            // The user already has the real answer from the alert shown above.
+        }
+    }
+
+    private static void showAlert(MainWindow mainWindow, Alert.AlertType type, String message) {
+        Alert alert = DialogTheme.apply(new Alert(type, message));
+        Window owner = mainWindow.getOwnerWindow();
+        if (owner != null) alert.initOwner(owner);
+        alert.showAndWait();
+    }
+
+    private static String describeError(Exception ex) {
+        return ex.getMessage() == null ? ex.toString() : ex.getMessage();
     }
 }
