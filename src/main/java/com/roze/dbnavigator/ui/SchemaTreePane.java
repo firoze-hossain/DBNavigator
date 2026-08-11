@@ -370,6 +370,48 @@ public class SchemaTreePane extends VBox {
         });
     }
 
+    private void confirmAndDropCollection(ConnectionProfile profile, DbObject collection) {
+        String name = collection.getName();
+        Alert warn = (Alert) DialogTheme.apply(new Alert(Alert.AlertType.WARNING,
+                "This permanently deletes the collection \"" + name + "\" and every document in it. "
+                        + "This cannot be undone.",
+                ButtonType.YES, ButtonType.NO));
+        warn.setTitle("Drop Collection");
+        warn.setHeaderText("Drop \"" + name + "\"?");
+        warn.initOwner(getScene() == null ? null : getScene().getWindow());
+        if (warn.showAndWait().orElse(ButtonType.NO) != ButtonType.YES) return;
+
+        TextInputDialog confirm = (TextInputDialog) DialogTheme.apply(new TextInputDialog());
+        confirm.setTitle("Confirm Drop");
+        confirm.setHeaderText(null);
+        confirm.setContentText("Type the collection name \"" + name + "\" to confirm:");
+        confirm.initOwner(getScene() == null ? null : getScene().getWindow());
+        confirm.getDialogPane().setPrefWidth(420);
+
+        String typed = confirm.showAndWait().orElse("");
+        if (!typed.equals(name)) {
+            if (!typed.isEmpty()) {
+                DialogTheme.apply(new Alert(Alert.AlertType.INFORMATION, "Name didn't match — drop cancelled."))
+                        .showAndWait();
+            }
+            return;
+        }
+
+        AppExecutor.run(() -> {
+            try {
+                var result = ClientRegistry.mongo(profile).drop(collection.getCatalog(), name);
+                Platform.runLater(() -> {
+                    mainWindow.setStatus(result.message());
+                    reload();
+                });
+            } catch (Exception ex) {
+                String msg = ex.getMessage() == null ? ex.toString() : ex.getMessage();
+                Platform.runLater(() -> DialogTheme.apply(new Alert(Alert.AlertType.ERROR,
+                        "Could not drop collection: " + msg)).showAndWait());
+            }
+        });
+    }
+
     private static TreeItem<DbObject> loadingNode() {
         return new TreeItem<>(new DbObject("Loading…", Kind.MESSAGE));
     }
@@ -529,7 +571,21 @@ public class SchemaTreePane extends VBox {
                 case COLLECTION -> {
                     MenuItem openDocs = new MenuItem("Open Documents");
                     openDocs.setOnAction(e -> mainWindow.openMongoTab(profile, obj));
-                    menu.getItems().add(openDocs);
+                    MenuItem newConsole = new MenuItem("New Console on " + obj.getName());
+                    newConsole.setOnAction(e -> mainWindow.openQueryTab(profile, obj.getCatalog(),
+                            "use " + obj.getCatalog() + ";\ndb." + obj.getName() + "."));
+                    MenuItem modify = new MenuItem("Modify Collection\u2026");
+                    modify.setOnAction(e -> ModifyCollectionDialog.show(mainWindow, profile, obj));
+                    MenuItem refresh = new MenuItem("Refresh");
+                    refresh.setOnAction(e -> {
+                        obj.setLoaded(false);
+                        getTreeItem().setExpanded(false);
+                        mainWindow.setStatus("Refreshed " + obj.getName());
+                    });
+                    MenuItem drop = new MenuItem("Drop\u2026");
+                    drop.setOnAction(e -> confirmAndDropCollection(profile, obj));
+                    menu.getItems().addAll(openDocs, newConsole, modify, refresh,
+                            new SeparatorMenuItem(), drop);
                 }
                 case DATABASE -> {
                     MenuItem refreshDb = new MenuItem("Refresh");

@@ -41,6 +41,7 @@ public final class ModifyTableDialog {
         final javafx.beans.property.SimpleStringProperty originalName;
         final javafx.beans.property.SimpleStringProperty name;
         final javafx.beans.property.SimpleStringProperty type;
+        final String originalType;
         final javafx.beans.property.SimpleBooleanProperty nullable;
         final javafx.beans.property.SimpleBooleanProperty primaryKey;
         final javafx.beans.property.SimpleBooleanProperty markedForDrop =
@@ -51,6 +52,7 @@ public final class ModifyTableDialog {
             this.originalName = new javafx.beans.property.SimpleStringProperty(originalName);
             this.name = new javafx.beans.property.SimpleStringProperty(name);
             this.type = new javafx.beans.property.SimpleStringProperty(type);
+            this.originalType = type;
             this.nullable = new javafx.beans.property.SimpleBooleanProperty(nullable);
             this.primaryKey = new javafx.beans.property.SimpleBooleanProperty(pk);
             this.isNew = isNew;
@@ -169,6 +171,7 @@ public final class ModifyTableDialog {
     }
 
     private void wireLiveRefresh(ColumnRow row) {
+        row.type.addListener((obs, o, n) -> refreshPreview());
         row.nullable.addListener((obs, o, n) -> refreshPreview());
         row.markedForDrop.addListener((obs, o, n) -> refreshPreview());
     }
@@ -196,6 +199,8 @@ public final class ModifyTableDialog {
     private List<String> buildAlterStatements() {
         List<String> statements = new ArrayList<>();
         String qualifiedTable = table.qualifiedName();
+        boolean isMySqlFamily = profile.getType() == ConnectionProfile.DatabaseType.MYSQL
+                || profile.getType() == ConnectionProfile.DatabaseType.MARIADB;
 
         for (ColumnRow row : rows) {
             if (row.isNew) {
@@ -203,12 +208,31 @@ public final class ModifyTableDialog {
                 statements.add("ALTER TABLE " + qualifiedTable + " ADD COLUMN "
                         + DbObject.quote(row.name.get()) + " " + row.type.get()
                         + (row.nullable.get() ? "" : " NOT NULL") + ";");
-            } else if (row.markedForDrop.get()) {
+                continue;
+            }
+            if (row.markedForDrop.get()) {
                 statements.add("ALTER TABLE " + qualifiedTable + " DROP COLUMN "
                         + DbObject.quote(row.originalName.get()) + ";");
-            } else if (!row.originalName.get().equals(row.name.get())) {
+                continue;
+            }
+
+            boolean renamed = !row.originalName.get().equals(row.name.get());
+            boolean retyped = !row.type.get().equalsIgnoreCase(row.originalType);
+            String currentName = row.originalName.get();
+
+            // Rename first, then retype using the column's now-current name —
+            // a column can have both changes pending at once.
+            if (renamed) {
                 statements.add("ALTER TABLE " + qualifiedTable + " RENAME COLUMN "
-                        + DbObject.quote(row.originalName.get()) + " TO " + DbObject.quote(row.name.get()) + ";");
+                        + DbObject.quote(currentName) + " TO " + DbObject.quote(row.name.get()) + ";");
+                currentName = row.name.get();
+            }
+            if (retyped) {
+                statements.add(isMySqlFamily
+                        ? "ALTER TABLE " + qualifiedTable + " MODIFY COLUMN "
+                              + DbObject.quote(currentName) + " " + row.type.get() + ";"
+                        : "ALTER TABLE " + qualifiedTable + " ALTER COLUMN "
+                              + DbObject.quote(currentName) + " TYPE " + row.type.get() + ";");
             }
         }
         return statements;
