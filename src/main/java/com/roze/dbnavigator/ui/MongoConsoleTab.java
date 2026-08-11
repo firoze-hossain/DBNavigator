@@ -174,6 +174,12 @@ public class MongoConsoleTab extends Tab {
         dbLabel.setText(profile.getName() + (currentDatabase != null ? "  \u203a  " + currentDatabase : ""));
     }
 
+    /** Used by MainWindow's Split Right/Down and Reopen Closed Tab. */
+    public ConnectionProfile getProfileForReopen() { return profile; }
+    public String getCurrentDatabase() { return currentDatabase; }
+    public String getScriptText() { return editor.getText(); }
+    public void setScriptText(String text) { editor.replaceText(text); }
+
     private void log(String line) {
         outputArea.appendText("[" + LocalTime.now().format(timeFormat) + "] " + line + "\n");
     }
@@ -373,7 +379,14 @@ public class MongoConsoleTab extends Tab {
             return;
         }
         suppressCompletion = true;
-        editor.replaceText(tokenStart, editor.getCaretPosition(), selected.text());
+        boolean isMethod = selected.kind() == MongoCompletionService.Kind.METHOD;
+        String insertText = isMethod ? selected.text() + "()" : selected.text();
+        editor.replaceText(tokenStart, editor.getCaretPosition(), insertText);
+        if (isMethod) {
+            // Land the caret between the parens, ready to type arguments —
+            // matching the reference IDE's method-completion behavior.
+            editor.moveTo(tokenStart + selected.text().length() + 1);
+        }
         suppressCompletion = false;
         completionPopup.hide();
         editor.requestFocus();

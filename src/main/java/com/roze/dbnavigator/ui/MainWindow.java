@@ -704,6 +704,16 @@ public class MainWindow {
         if (tab instanceof DataTab dataTab) {
             return new DataTab(dataTab.getProfileForReopen(), dataTab.getTableForReopen());
         }
+        if (tab instanceof MongoConsoleTab mongoConsole) {
+            MongoConsoleTab copy = new MongoConsoleTab(mongoConsole.getProfileForReopen(),
+                    mongoConsole.getCurrentDatabase(), tab.getText());
+            copy.setScriptText(mongoConsole.getScriptText());
+            return copy;
+        }
+        if (tab instanceof MongoCollectionTab mongoCollection) {
+            return new MongoCollectionTab(mongoCollection.getProfileForReopen(),
+                    mongoCollection.getCollectionForReopen());
+        }
         return null;
     }
 
@@ -825,7 +835,8 @@ public class MainWindow {
         return null;
     }
 
-    private java.util.List<TabPane> editorTabPanes() {
+    /** Every editor pane currently in the split layout — used by TabContextMenu's Close Other/All Tabs, which act across all of them, not just the pane a tab happens to be in. */
+    java.util.List<TabPane> editorTabPanes() {
         java.util.List<TabPane> panes = new java.util.ArrayList<>();
         collectEditorTabPanes(centerSplit.getItems().get(1), panes);
         return panes;

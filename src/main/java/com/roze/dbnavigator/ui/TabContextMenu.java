@@ -66,10 +66,18 @@ public final class TabContextMenu {
         close.setOnAction(e -> closeTab(tab));
 
         MenuItem closeOthers = new MenuItem("Close Other Tabs");
-        closeOthers.setOnAction(e -> closeMatching(tabPane, t -> t != tab && !pinnedTabs.contains(t)));
+        closeOthers.setOnAction(e -> {
+            for (TabPane pane : mainWindow.editorTabPanes()) {
+                closeMatching(pane, t -> t != tab && !pinnedTabs.contains(t));
+            }
+        });
 
         MenuItem closeAll = new MenuItem("Close All Tabs");
-        closeAll.setOnAction(e -> closeMatching(tabPane, t -> !pinnedTabs.contains(t)));
+        closeAll.setOnAction(e -> {
+            for (TabPane pane : mainWindow.editorTabPanes()) {
+                closeMatching(pane, t -> !pinnedTabs.contains(t));
+            }
+        });
 
         MenuItem closeLeft = new MenuItem("Close Tabs to the Left");
         closeLeft.setOnAction(e -> {
