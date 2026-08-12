@@ -38,6 +38,7 @@ public class ConnectionDialog extends Dialog<ConnectionProfile> {
     private final CheckBox savePasswordCheck = new CheckBox("Save password");
     private final CheckBox sslCheck = new CheckBox("Use SSL");
     private final Label testResultLabel = new Label();
+    private final Label sqlitePathHint = new Label();
     private final Button browseButton = new Button();
     private final javafx.scene.layout.StackPane typeIconHolder = new javafx.scene.layout.StackPane();
 
@@ -78,6 +79,16 @@ public class ConnectionDialog extends Dialog<ConnectionProfile> {
             if (file != null) databaseField.setText(file.getAbsolutePath());
         });
 
+        // Live preview so a bare/relative filename doesn't silently resolve
+        // to the wrong file — shown as the user types, before they even
+        // reach Test Connection.
+        sqlitePathHint.getStyleClass().add("connection-sqlite-hint");
+        sqlitePathHint.setWrapText(true);
+        sqlitePathHint.setManaged(false);
+        sqlitePathHint.setVisible(false);
+        databaseField.textProperty().addListener((obs, old, val) -> updateSqlitePathHint());
+        typeCombo.valueProperty().addListener((obs, old, type) -> updateSqlitePathHint());
+
         // ---- header: colored icon for the selected engine + name field ----
         typeIconHolder.setPrefSize(40, 40);
         typeIconHolder.getStyleClass().add("connection-dialog-icon");
@@ -113,6 +124,7 @@ public class ConnectionDialog extends Dialog<ConnectionProfile> {
         connGrid.add(fieldLabel("Database:"), 0, row);
         connGrid.add(databaseField, 1, row);
         connGrid.add(browseButton, 2, row++);
+        connGrid.add(sqlitePathHint, 1, row++, 2, 1);
         connGrid.add(fieldLabel("User:"), 0, row);
         connGrid.add(userField, 1, row++, 2, 1);
         connGrid.add(fieldLabel("Password:"), 0, row);
@@ -203,8 +215,9 @@ public class ConnectionDialog extends Dialog<ConnectionProfile> {
         sslCheck.setDisable(sqlite || mongo);
         browseButton.setVisible(sqlite);
         browseButton.setManaged(sqlite);
-        databaseField.setPromptText(sqlite ? "Path to .db / .sqlite file"
+        databaseField.setPromptText(sqlite ? "Path to .db / .sqlite file (not a jdbc: URL)"
                 : mongo ? "(optional — browse all databases)" : "database name");
+        updateSqlitePathHint();
 
         // Only overwrite the port if the user hasn't customized it
         try {
@@ -229,11 +242,72 @@ public class ConnectionDialog extends Dialog<ConnectionProfile> {
         } catch (NumberFormatException e) {
             p.setPort(typeCombo.getValue().getDefaultPort());
         }
-        p.setDatabase(databaseField.getText().trim());
+        p.setDatabase(resolveDatabaseField());
         p.setUsername(userField.getText().trim());
         p.setPassword(passwordField.getText());
         p.setSavePassword(savePasswordCheck.isSelected());
         p.setUseSsl(sslCheck.isSelected());
+    }
+
+    /**
+     * SQLite's driver never rejects a path — if the file doesn't exist yet it
+     * silently creates a brand-new, empty database instead of failing. Left
+     * as-is that has two consequences: (1) a relative path like
+     * "identifier.sqlite" resolves against whatever the app's current working
+     * directory happens to be at launch, which is almost never where the
+     * user's actual data file lives and can even change between runs of the
+     * same saved connection; (2) "Test Connection" reports success even
+     * though it just created an empty file, so the schema tree then shows
+     * "Tables (empty)" with no indication anything went wrong. Resolving to
+     * an absolute path here — the same thing the Browse button already does —
+     * makes a saved SQLite connection point at one consistent file forever.
+     */
+    private String resolveDatabaseField() {
+        String text = databaseField.getText().trim();
+        if (typeCombo.getValue() != DatabaseType.SQLITE || text.isEmpty()) return text;
+        return new File(stripJdbcSqlitePrefix(text)).getAbsoluteFile().toString();
+    }
+
+    /**
+     * Defensive: this field wants a plain file path, but it's an easy, real
+     * mistake to paste a full "jdbc:sqlite:..." URL into it out of habit from
+     * other tools. Left alone, the app then adds its own "jdbc:sqlite:" on
+     * top when building the real connection URL, producing a doubly-prefixed
+     * path (literally containing colons) that no real file will ever exist
+     * at. Stripping a leading scheme here means pasting either form works.
+     */
+    private static String stripJdbcSqlitePrefix(String text) {
+        String lower = text.toLowerCase(java.util.Locale.ROOT);
+        if (lower.startsWith("jdbc:sqlite://")) return text.substring("jdbc:sqlite://".length());
+        if (lower.startsWith("jdbc:sqlite:")) return text.substring("jdbc:sqlite:".length());
+        return text;
+    }
+
+    /**
+     * Shows, as the user types, exactly what absolute path a SQLite entry
+     * will resolve to and whether a file already exists there — the same
+     * ambiguity that made "Test Connection" misleading in the first place,
+     * surfaced before the user ever clicks it.
+     */
+    private void updateSqlitePathHint() {
+        if (typeCombo.getValue() != DatabaseType.SQLITE) {
+            sqlitePathHint.setVisible(false);
+            sqlitePathHint.setManaged(false);
+            return;
+        }
+        String text = databaseField.getText().trim();
+        if (text.isEmpty()) {
+            sqlitePathHint.setVisible(false);
+            sqlitePathHint.setManaged(false);
+            return;
+        }
+        String resolved = new File(stripJdbcSqlitePrefix(text)).getAbsoluteFile().toString();
+        boolean exists = new File(resolved).isFile();
+        sqlitePathHint.setText((exists ? "✓ " : "⚠ new file — ") + resolved);
+        sqlitePathHint.getStyleClass().removeAll("hint-ok", "hint-warn");
+        sqlitePathHint.getStyleClass().add(exists ? "hint-ok" : "hint-warn");
+        sqlitePathHint.setVisible(true);
+        sqlitePathHint.setManaged(true);
     }
 
     private void testConnection(Button testButton) {
@@ -241,15 +315,27 @@ public class ConnectionDialog extends Dialog<ConnectionProfile> {
         collectInto(temp);
         testButton.setDisable(true);
         testResultLabel.setText("Connecting…");
-        testResultLabel.getStyleClass().removeAll("test-ok", "test-fail");
+        testResultLabel.getStyleClass().removeAll("test-ok", "test-fail", "test-warn");
+
+        // Checked before connecting: SQLite creates this file itself the
+        // instant a connection is opened, so this is the only point at which
+        // "did the file already exist" can still be answered honestly.
+        boolean sqliteFileExistedBefore = temp.getType() != DatabaseType.SQLITE
+                || new File(temp.getDatabase()).isFile();
 
         AppExecutor.run(() -> {
             try {
                 ClientRegistry.connectAndVerify(temp);
                 ClientRegistry.disconnect(temp);   // test client only — close it again
                 Platform.runLater(() -> {
-                    testResultLabel.setText("✓ Connection successful");
-                    testResultLabel.getStyleClass().add("test-ok");
+                    if (sqliteFileExistedBefore) {
+                        testResultLabel.setText("✓ Connection successful");
+                        testResultLabel.getStyleClass().add("test-ok");
+                    } else {
+                        testResultLabel.setText(
+                                "⚠ No file existed at this path — a new, empty database was just created there");
+                        testResultLabel.getStyleClass().add("test-warn");
+                    }
                     testButton.setDisable(false);
                 });
             } catch (Exception ex) {

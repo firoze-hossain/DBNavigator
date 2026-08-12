@@ -37,6 +37,23 @@ public final class CreateDatabaseDialog {
 
     private CreateDatabaseDialog() {}
 
+    /**
+     * Whether "New > Database…" does something real for this engine.
+     * PostgreSQL and MySQL/MariaDB have an actual CREATE DATABASE workflow
+     * with meaningful options (encoding, owner, collation, etc). SQLite has
+     * no such concept — a SQLite connection already *is* one database, tied
+     * to exactly one file, with no server-side "create another one" step
+     * (this mirrors DataGrip, which likewise doesn't offer it for SQLite).
+     * SQL Server/Oracle are included here for the same reason: {@link #show}
+     * only ever shows a "use a console" message for them today.
+     */
+    public static boolean supportsCreate(ConnectionProfile.DatabaseType type) {
+        return switch (type) {
+            case POSTGRESQL, MYSQL, MARIADB -> true;
+            default -> false;
+        };
+    }
+
     public static void show(MainWindow mainWindow, ConnectionProfile profile) {
         switch (profile.getType()) {
             case POSTGRESQL -> showPostgres(mainWindow, profile);
