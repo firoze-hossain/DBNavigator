@@ -107,6 +107,16 @@ public class MainWindow {
         schemaPane.reload();
     }
 
+    /**
+     * Refreshes just one connection's subtree — used after DDL runs in a
+     * query console for that connection, so a newly created/dropped table
+     * shows up without collapsing every other connection in the explorer
+     * the way a full reload() would.
+     */
+    public void refreshSchemaExplorer(ConnectionProfile profile) {
+        schemaPane.refreshConnection(profile);
+    }
+
     /** Toolbar gear button's quick Theme submenu — switches and persists in one step. */
     private void quickSwitchTheme(com.roze.dbnavigator.db.AppSettingsStore.Theme theme) {
         com.roze.dbnavigator.db.AppSettingsStore.Settings settings = com.roze.dbnavigator.db.AppSettingsStore.load();

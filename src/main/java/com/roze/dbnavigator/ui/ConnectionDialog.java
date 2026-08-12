@@ -5,6 +5,7 @@ import com.roze.dbnavigator.model.ConnectionProfile;
 import com.roze.dbnavigator.model.ConnectionProfile.DatabaseType;
 import com.roze.dbnavigator.util.AppExecutor;
 import javafx.application.Platform;
+import javafx.event.ActionEvent;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
@@ -136,6 +137,10 @@ public class ConnectionDialog extends Dialog<ConnectionProfile> {
         GridPane.setHgrow(databaseField, Priority.ALWAYS);
         GridPane.setHgrow(userField, Priority.ALWAYS);
         GridPane.setHgrow(passwordField, Priority.ALWAYS);
+        GridPane.setHgrow(sqlitePathHint, Priority.ALWAYS);
+        GridPane.setFillWidth(sqlitePathHint, true);
+        sqlitePathHint.setMaxWidth(Double.MAX_VALUE);
+        sqlitePathHint.setMinWidth(0);   // without this, Label sizes to its unwrapped text and wrapText is ignored
 
         Button testButton = new Button("Test Connection");
         testButton.getStyleClass().add("run-button");
@@ -157,6 +162,32 @@ public class ConnectionDialog extends Dialog<ConnectionProfile> {
         VBox root = new VBox(header, body);
         getDialogPane().setContent(root);
         getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+
+        // This whole class of mistake — a typo'd or half-remembered filename
+        // quietly becoming a brand-new empty database instead of failing —
+        // is exactly what a warning label after the fact keeps failing to
+        // prevent. Blocking OK itself, right when it's about to happen, is
+        // the only point that actually stops it: an event filter (not the
+        // result converter, which only runs once the dialog is already
+        // closing) can still consume() the click and keep the dialog open.
+        Button okButton = (Button) getDialogPane().lookupButton(ButtonType.OK);
+        okButton.addEventFilter(ActionEvent.ACTION, event -> {
+            if (typeCombo.getValue() != DatabaseType.SQLITE) return;
+            String resolved = ConnectionProfile.resolveSqlitePath(resolveDatabaseField());
+            if (resolved == null || resolved.isBlank() || new File(resolved).isFile()) return;
+
+            Alert confirm = (Alert) DialogTheme.apply(new Alert(Alert.AlertType.CONFIRMATION,
+                    "No existing file was found at:\n\n" + resolved
+                    + "\n\nContinuing creates a brand-new, empty database there — it will NOT contain "
+                    + "any tables from another file that happens to share this name.\n\n"
+                    + "If you meant to open a file you already have, click Cancel and use Browse instead.",
+                    ButtonType.YES, ButtonType.NO));
+            confirm.setHeaderText("Create a new, empty database?");
+            confirm.initOwner(getDialogPane().getScene().getWindow());
+            if (confirm.showAndWait().orElse(ButtonType.NO) != ButtonType.YES) {
+                event.consume();
+            }
+        });
 
         applyTypeDefaults(profile.getType());
 
@@ -251,21 +282,22 @@ public class ConnectionDialog extends Dialog<ConnectionProfile> {
 
     /**
      * SQLite's driver never rejects a path — if the file doesn't exist yet it
-     * silently creates a brand-new, empty database instead of failing. Left
-     * as-is that has two consequences: (1) a relative path like
-     * "identifier.sqlite" resolves against whatever the app's current working
-     * directory happens to be at launch, which is almost never where the
-     * user's actual data file lives and can even change between runs of the
-     * same saved connection; (2) "Test Connection" reports success even
-     * though it just created an empty file, so the schema tree then shows
-     * "Tables (empty)" with no indication anything went wrong. Resolving to
-     * an absolute path here — the same thing the Browse button already does —
-     * makes a saved SQLite connection point at one consistent file forever.
+     * silently creates a brand-new, empty database instead of failing. Combined
+     * with a bare relative filename like "identifier.sqlite", that's what
+     * produced several different, empty files with the same name during
+     * testing: relative paths used to resolve against wherever the app's
+     * process happened to be launched from, which isn't stable across runs.
+     * The text here is now saved exactly as typed/browsed (minus an
+     * accidental jdbc: prefix) — actual resolution to one stable file, for
+     * both relative and absolute input, happens centrally in
+     * {@link ConnectionProfile#resolveSqlitePath}, which every other part of
+     * the app (this dialog's hint, the tree, the real JDBC connection) also
+     * goes through, so they can never disagree about which file is meant.
      */
     private String resolveDatabaseField() {
         String text = databaseField.getText().trim();
         if (typeCombo.getValue() != DatabaseType.SQLITE || text.isEmpty()) return text;
-        return new File(stripJdbcSqlitePrefix(text)).getAbsoluteFile().toString();
+        return stripJdbcSqlitePrefix(text);
     }
 
     /**
@@ -284,10 +316,12 @@ public class ConnectionDialog extends Dialog<ConnectionProfile> {
     }
 
     /**
-     * Shows, as the user types, exactly what absolute path a SQLite entry
-     * will resolve to and whether a file already exists there — the same
-     * ambiguity that made "Test Connection" misleading in the first place,
-     * surfaced before the user ever clicks it.
+     * Shows, as the user types, exactly what file a SQLite entry will
+     * resolve to and whether it already exists there — the same ambiguity
+     * that made "Test Connection" misleading in the first place, surfaced
+     * before the user ever clicks it. With the field still empty, shows
+     * static guidance instead, since that's the point where "just a
+     * filename" is usually assumed to mean more than it does.
      */
     private void updateSqlitePathHint() {
         if (typeCombo.getValue() != DatabaseType.SQLITE) {
@@ -297,11 +331,15 @@ public class ConnectionDialog extends Dialog<ConnectionProfile> {
         }
         String text = databaseField.getText().trim();
         if (text.isEmpty()) {
-            sqlitePathHint.setVisible(false);
-            sqlitePathHint.setManaged(false);
+            sqlitePathHint.setText("A bare filename is saved under " + ConnectionProfile.sqliteHomeDir()
+                    + " — use Browse to pick an existing file elsewhere.");
+            sqlitePathHint.getStyleClass().removeAll("hint-ok", "hint-warn");
+            sqlitePathHint.getStyleClass().add("hint-ok");
+            sqlitePathHint.setVisible(true);
+            sqlitePathHint.setManaged(true);
             return;
         }
-        String resolved = new File(stripJdbcSqlitePrefix(text)).getAbsoluteFile().toString();
+        String resolved = ConnectionProfile.resolveSqlitePath(stripJdbcSqlitePrefix(text));
         boolean exists = new File(resolved).isFile();
         sqlitePathHint.setText((exists ? "✓ " : "⚠ new file — ") + resolved);
         sqlitePathHint.getStyleClass().removeAll("hint-ok", "hint-warn");
@@ -321,7 +359,7 @@ public class ConnectionDialog extends Dialog<ConnectionProfile> {
         // instant a connection is opened, so this is the only point at which
         // "did the file already exist" can still be answered honestly.
         boolean sqliteFileExistedBefore = temp.getType() != DatabaseType.SQLITE
-                || new File(temp.getDatabase()).isFile();
+                || new File(temp.resolvedSqlitePath()).isFile();
 
         AppExecutor.run(() -> {
             try {
@@ -333,7 +371,7 @@ public class ConnectionDialog extends Dialog<ConnectionProfile> {
                         testResultLabel.getStyleClass().add("test-ok");
                     } else {
                         testResultLabel.setText(
-                                "⚠ No file existed at this path — a new, empty database was just created there");
+                                "⚠ New, empty database created at " + temp.resolvedSqlitePath());
                         testResultLabel.getStyleClass().add("test-warn");
                     }
                     testButton.setDisable(false);

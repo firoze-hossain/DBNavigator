@@ -33,6 +33,22 @@ public class JdbcClient implements AutoCloseable {
         config.setConnectionTimeout(10_000);
         config.setIdleTimeout(60_000);
         config.setMaxLifetime(600_000);
+        if (profile.getType() == ConnectionProfile.DatabaseType.SQLITE) {
+            // SQLite's default journal mode (rollback journal) needs an
+            // exclusive-ish lock to actually finish a commit. If ANOTHER
+            // process has the same file open at that moment — DataGrip,
+            // or a second instance of this app — the commit can leave a
+            // "hot" journal behind instead of completing. The next
+            // connection that opens the file then automatically rolls
+            // back to the pre-transaction state as part of SQLite's own
+            // crash-recovery logic — which looks exactly like "CREATE
+            // TABLE succeeded, then the table was gone again a few
+            // seconds later." WAL mode is SQLite's own recommended fix
+            // for concurrent/multi-process access to one file; busy_timeout
+            // makes any remaining brief contention wait and retry instead
+            // of failing outright.
+            config.setConnectionInitSql("PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;");
+        }
         config.setPoolName("DBNav-" + profile.getName()
                 + (catalogOverride == null ? "" : "-" + catalogOverride));
         this.dataSource = new HikariDataSource(config);

@@ -1199,6 +1199,14 @@ public class QueryTab extends Tab {
                         statusLabel.setText(completion);
                         pager.update(0, 0, -1, true);
                         output.appendLine(completion);
+                        // A CREATE/ALTER/DROP/TRUNCATE just succeeded — without
+                        // this, the explorer keeps showing whatever it last
+                        // loaded (e.g. "Tables (empty)") until the user
+                        // remembers to hit Refresh by hand, even though the
+                        // table now genuinely exists on disk.
+                        if (isSchemaChangingStatement(sql)) {
+                            mainWindow.refreshSchemaExplorer(profile);
+                        }
                     }
                     if (output != null) output.markFinished(0);
                     setRunningState(false);
@@ -1258,6 +1266,21 @@ public class QueryTab extends Tab {
 
     private static String compactSql(String sql) {
         return sql.replaceAll("\\s+", " ").trim();
+    }
+
+    private static final Pattern SCHEMA_CHANGING_STATEMENT = Pattern.compile(
+            "^\\s*(CREATE|ALTER|DROP|TRUNCATE)\\b", Pattern.CASE_INSENSITIVE);
+
+    /**
+     * True for statements that add, remove, or restructure a schema object —
+     * the kind of change the explorer's cached folders (Tables, Views, ...)
+     * need to actually re-fetch to reflect. Deliberately excludes plain
+     * INSERT/UPDATE/DELETE: those change row data, not what shows up in the
+     * tree, so refreshing for them would just be tree flicker with nothing
+     * new to show.
+     */
+    private static boolean isSchemaChangingStatement(String sql) {
+        return SCHEMA_CHANGING_STATEMENT.matcher(sql).find();
     }
 
     /** Formats database errors compactly while retaining the SQLSTATE when the driver provides it. */

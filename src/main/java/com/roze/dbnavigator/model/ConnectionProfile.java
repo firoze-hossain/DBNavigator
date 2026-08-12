@@ -2,6 +2,8 @@ package com.roze.dbnavigator.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
+import java.io.File;
+import java.nio.file.Path;
 import java.util.UUID;
 
 /** A saved database connection. Serialized to ~/.dbnavigator/connections.json */
@@ -96,9 +98,58 @@ public class ConnectionProfile {
             // service name/SID, or a file path) — there's no meaningful
             // "default" to substitute, so these still require a value.
             case ORACLE     -> "jdbc:oracle:thin:@//%s:%d/%s".formatted(host, port, database);
-            case SQLITE     -> "jdbc:sqlite:%s".formatted(database);
+            case SQLITE     -> "jdbc:sqlite:%s".formatted(resolveSqlitePath(database));
             case MONGODB    -> throw new IllegalStateException("MongoDB does not use JDBC");
         };
+    }
+
+    /**
+     * Stable, per-user folder a bare/relative SQLite filename resolves
+     * against. DataGrip can get away with a relative "File:" path because it
+     * resolves it against the current *project's* root — a folder that's
+     * fixed for as long as you keep opening that same project. This app has
+     * no equivalent notion of a project, and the alternative — resolving
+     * against the JVM's working directory — depends entirely on how the app
+     * happens to be launched (double-click, terminal, an IDE run config all
+     * differ, and can even differ between two launches of the exact same
+     * shortcut). That's what silently produced several different, empty
+     * "identifier.sqlite" files during earlier testing. Anchoring to a fixed
+     * folder under the user's home directory instead means one saved
+     * connection with a relative name always opens the exact same file,
+     * every time, regardless of how the app was started.
+     */
+    public static Path sqliteHomeDir() {
+        return Path.of(System.getProperty("user.home"), ".dbnavigator", "sqlite");
+    }
+
+    /**
+     * Resolves whatever was typed/browsed into the Database field into the
+     * actual file SQLite will open. An absolute path — including anything
+     * chosen via the Browse file picker, which always yields one — is used
+     * exactly as given, untouched. Only a bare relative name gets anchored,
+     * via {@link #sqliteHomeDir()}, instead of being left to resolve against
+     * whatever the process's working directory happens to be.
+     */
+    public static String resolveSqlitePath(String rawPath) {
+        if (rawPath == null || rawPath.isBlank()) return rawPath;
+        File asGiven = new File(rawPath);
+        if (asGiven.isAbsolute()) return asGiven.getPath();
+
+        Path anchored = sqliteHomeDir().resolve(rawPath).normalize();
+        try {
+            java.nio.file.Files.createDirectories(anchored.getParent());
+        } catch (java.io.IOException ignored) {
+            // Best-effort: if this fails, SQLite's own "unable to open
+            // database file" error on connect will explain why, which is a
+            // clearer signal than swallowing it silently here.
+        }
+        return anchored.toString();
+    }
+
+    /** The actual file this profile's SQLite connection will open — see {@link #resolveSqlitePath}. */
+    @JsonIgnore
+    public String resolvedSqlitePath() {
+        return resolveSqlitePath(database);
     }
 
     @JsonIgnore
@@ -116,7 +167,7 @@ public class ConnectionProfile {
 
     @JsonIgnore
     public String getSummary() {
-        if (type == DatabaseType.SQLITE) return database;
+        if (type == DatabaseType.SQLITE) return resolvedSqlitePath();
         return host + ":" + port + (database == null || database.isBlank() ? "" : "/" + database);
     }
 
