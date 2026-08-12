@@ -134,9 +134,7 @@ public class MongoDbClient implements AutoCloseable {
 
         MongoCollection<Document> coll = client.getDatabase(database).getCollection(collection);
         for (Document doc : coll.find().limit(sampleSize)) {
-            for (String key : doc.keySet()) {
-                typeByField.putIfAbsent(key, bsonTypeName(doc.get(key)));
-            }
+            collectFields(doc, "", typeByField, 0);
         }
 
         List<FieldInfo> result = new ArrayList<>();
@@ -144,6 +142,25 @@ public class MongoDbClient implements AutoCloseable {
             result.add(new FieldInfo(entry.getKey(), entry.getValue()));
         }
         return result;
+    }
+
+    /**
+     * Recursively walks a document's fields, adding a dot-notation entry
+     * for each nested sub-field (e.g. "address.city") right alongside the
+     * parent object field itself ("address") — matching the reference
+     * IDE's own field tree exactly, which lists both. Capped at a modest
+     * depth purely as a safety net against unusually deep documents.
+     */
+    private static void collectFields(Document doc, String prefix, Map<String, String> typeByField, int depth) {
+        if (depth > 4) return;
+        for (String key : doc.keySet()) {
+            String fullKey = prefix.isEmpty() ? key : prefix + "." + key;
+            Object value = doc.get(key);
+            typeByField.putIfAbsent(fullKey, bsonTypeName(value));
+            if (value instanceof Document nested) {
+                collectFields(nested, fullKey, typeByField, depth + 1);
+            }
+        }
     }
 
     /** One index, with a DataGrip-style "(keys) UNIQUE" detail string ready to display. */
