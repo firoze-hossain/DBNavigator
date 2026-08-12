@@ -117,6 +117,32 @@ public class PagedResultCursor implements AutoCloseable {
             int count = statement.getUpdateCount();
             updateCount = Math.max(count, 0);
             message = count >= 0 ? count + " row(s) affected" : "Statement executed";
+            // A non-query statement (DDL like CREATE TABLE, or DML like
+            // INSERT/UPDATE/DELETE) has nothing left to stream, so there's no
+            // reason to leave it sitting inside the same no-autocommit
+            // transaction used for cursor-based SELECT paging above. Commit
+            // it right now. Left uncommitted, the change stays invisible to
+            // every other connection — including this same profile's *next*
+            // pooled connection — until some later statement in this same
+            // console tab happens to succeed and close() this cursor. If
+            // that next statement fails instead (exactly what happens when
+            // it can't see a table this transaction just "created"), the
+            // change never gets committed at all.
+            if (autoCommitDisabled) {
+                try {
+                    connection.commit();
+                } catch (SQLException commitFailed) {
+                    try { connection.rollback(); } catch (SQLException ignored) {}
+                    throw commitFailed;
+                }
+                try {
+                    connection.setAutoCommit(true);
+                    autoCommitDisabled = false;
+                } catch (SQLException ignored) {
+                    // Non-fatal: close() will still restore autocommit on its
+                    // own if this didn't take, using the same guarded logic.
+                }
+            }
         }
         executionMillis = System.currentTimeMillis() - start;
     }

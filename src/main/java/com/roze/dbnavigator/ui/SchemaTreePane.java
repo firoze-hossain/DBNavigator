@@ -121,7 +121,7 @@ public class SchemaTreePane extends VBox {
      */
     private static String sqliteFileWarning(ConnectionProfile profile) {
         if (profile.getType() != ConnectionProfile.DatabaseType.SQLITE) return "";
-        String path = profile.getDatabase();
+        String path = profile.resolvedSqlitePath();
         if (path == null || path.isBlank()) return "";
         java.io.File file = new java.io.File(path);
         if (!file.isFile()) return "  ⚠ file not found";
@@ -161,6 +161,36 @@ public class SchemaTreePane extends VBox {
         item.getChildren().setAll(loadingNode());
         loadChildrenAsync(item, profile, () -> loadTopLevelFiltered(profile, obj));
         item.setExpanded(true);
+    }
+
+    /**
+     * Public counterpart used from outside the tree (currently: QueryTab,
+     * right after a CREATE/ALTER/DROP/TRUNCATE succeeds) — invalidates just
+     * this one connection's cached children so a newly created or dropped
+     * table actually shows up. Deliberately narrower than {@link #reload()}:
+     * a DDL statement run in one console tab has no bearing on any other
+     * connection, so there's no reason to collapse the whole explorer over
+     * it the way a full reload would.
+     */
+    public void refreshConnection(ConnectionProfile profile) {
+        connectionItems.entrySet().stream()
+                .filter(e -> e.getValue().getId().equals(profile.getId()))
+                .findFirst()
+                .ifPresent(e -> {
+                    TreeItem<DbObject> item = e.getKey();
+                    DbObject obj = item.getValue();
+                    obj.setLoaded(false);
+                    if (item.isExpanded()) {
+                        // Toggling through false re-fires the expandedProperty
+                        // listener on the way back to true, which is what
+                        // actually re-fetches — now that isLoaded() is false.
+                        item.setExpanded(false);
+                        item.setExpanded(true);
+                    }
+                    // If it isn't currently expanded, leaving it unloaded is
+                    // enough: the same listener will fetch fresh data the
+                    // next time the user opens it.
+                });
     }
 
     private void openObject(TreeItem<DbObject> item) {
