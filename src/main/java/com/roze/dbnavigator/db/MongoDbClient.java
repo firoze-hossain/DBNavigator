@@ -118,6 +118,17 @@ public class MongoDbClient implements AutoCloseable {
         client.getDatabase("admin").runCommand(new Document("ping", 1));
     }
 
+    /**
+     * MongoDB has no CREATE DATABASE — a database only starts existing, and
+     * shows up in listDatabases(), once it holds at least one collection.
+     * "Creating a database" from the UI therefore really means creating its
+     * first collection; this is the explicit equivalent of a shell's
+     * {@code use dbName; db.createCollection("collName")}.
+     */
+    public void createCollection(String database, String collection) {
+        client.getDatabase(database).createCollection(collection);
+    }
+
     /** One inferred field, from sampling documents — Mongo has no fixed schema, so this is a best effort. */
     public record FieldInfo(String name, String type) {}
 

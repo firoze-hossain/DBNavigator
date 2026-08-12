@@ -25,8 +25,10 @@ import java.util.Map;
  * specific, since "create a database" means genuinely different things per
  * engine: PostgreSQL gets Comment/Template/Allow Connections/Tablespace/
  * Owner (matching the reference dialog); MySQL/MariaDB get Character Set/
- * Collation (the properties that actually exist for a MySQL database).
- * Every path ends in the same live-updating SQL preview + Run pattern.
+ * Collation (the properties that actually exist for a MySQL database);
+ * MongoDB gets a Database name plus a required initial Collection name,
+ * since MongoDB has no CREATE DATABASE at all — a database only persists
+ * once it holds at least one collection.
  *
  * Honest scope note: the PostgreSQL Grants section is shown for visual
  * parity ("Nothing to show" + toolbar) but isn't wired to real grant-
@@ -49,7 +51,7 @@ public final class CreateDatabaseDialog {
      */
     public static boolean supportsCreate(ConnectionProfile.DatabaseType type) {
         return switch (type) {
-            case POSTGRESQL, MYSQL, MARIADB -> true;
+            case POSTGRESQL, MYSQL, MARIADB, MONGODB -> true;
             default -> false;
         };
     }
@@ -58,6 +60,7 @@ public final class CreateDatabaseDialog {
         switch (profile.getType()) {
             case POSTGRESQL -> showPostgres(mainWindow, profile);
             case MYSQL, MARIADB -> showMySql(mainWindow, profile);
+            case MONGODB -> showMongo(mainWindow, profile);
             default -> DialogTheme.apply(new Alert(Alert.AlertType.INFORMATION,
                     "Creating a database from this dialog is only available for PostgreSQL and "
                     + "MySQL/MariaDB right now — for other engines, run CREATE DATABASE from a console."))
@@ -374,6 +377,129 @@ public final class CreateDatabaseDialog {
 
     private static String backtick(String ident) {
         return "`" + ident.replace("`", "``") + "`";
+    }
+
+    // ================================================================ MongoDB
+
+    /**
+     * MongoDB has no CREATE DATABASE statement — a database isn't real until
+     * it holds at least one collection (an empty one is never persisted and
+     * won't appear in listDatabases() once the connection that "created" it
+     * closes). So this dialog asks for both a database name and an initial
+     * collection name, and creates that collection explicitly — the same
+     * thing typing {@code use dbName} then {@code db.createCollection(...)}
+     * in a shell accomplishes.
+     */
+    private static void showMongo(MainWindow mainWindow, ConnectionProfile profile) {
+        Stage stage = new Stage();
+        Window owner = mainWindow.getOwnerWindow();
+        stage.initOwner(owner);
+        stage.initModality(Modality.APPLICATION_MODAL);
+        stage.setTitle("Create Database");
+        stage.setResizable(true);
+        stage.setMinWidth(520);
+        stage.setMinHeight(360);
+
+        TextField nameField = new TextField();
+        nameField.setPromptText("database_name");
+        TextField collectionField = new TextField();
+        collectionField.setPromptText("initial_collection");
+
+        GridPane grid = new GridPane();
+        grid.setHgap(14);
+        grid.setVgap(12);
+        grid.setPadding(new Insets(20, 20, 8, 20));
+        int row = 0;
+        grid.add(fieldLabel("Database"), 0, row);
+        grid.add(withGrow(nameField), 1, row++);
+        grid.add(fieldLabel("Initial Collection"), 0, row);
+        grid.add(withGrow(collectionField), 1, row++);
+
+        ColumnConstraints labelCol = new ColumnConstraints(130);
+        ColumnConstraints fieldCol = new ColumnConstraints();
+        fieldCol.setHgrow(Priority.ALWAYS);
+        grid.getColumnConstraints().addAll(labelCol, fieldCol);
+
+        Label explainer = new Label(
+                "MongoDB only keeps a database once it holds at least one collection — "
+                + "an empty one disappears again as soon as this connection closes. "
+                + "This creates that first collection for you; add more afterward from "
+                + "a console or the schema tree.");
+        explainer.setWrapText(true);
+        explainer.getStyleClass().add("console-status");
+
+        TextArea preview = new TextArea();
+        preview.setEditable(false);
+        preview.setPrefRowCount(4);
+        preview.getStyleClass().add("process-output");
+        Label previewLabel = new Label("Preview");
+        previewLabel.getStyleClass().add("connection-field-label");
+
+        VBox content = new VBox(14, grid, explainer, new Separator(), previewLabel, preview);
+        content.setPadding(new Insets(0, 20, 8, 20));
+        VBox.setVgrow(preview, Priority.ALWAYS);
+
+        Runnable refreshPreview = () -> preview.setText(buildMongoPreview(
+                nameField.getText(), collectionField.getText()));
+        nameField.textProperty().addListener((o, a, b) -> refreshPreview.run());
+        collectionField.textProperty().addListener((o, a, b) -> refreshPreview.run());
+        refreshPreview.run();
+
+        Button cancel = new Button("Cancel");
+        cancel.setOnAction(e -> stage.close());
+        Button ok = new Button("OK");
+        ok.getStyleClass().add("run-button");
+        ok.setDefaultButton(true);
+        ok.setOnAction(e -> {
+            String name = nameField.getText().trim();
+            String collection = collectionField.getText().trim();
+            if (name.isBlank() || collection.isBlank()) {
+                DialogTheme.apply(new Alert(Alert.AlertType.WARNING,
+                        "Enter both a database name and an initial collection name.")).showAndWait();
+                return;
+            }
+            stage.close();
+            runCreateMongo(mainWindow, profile, name, collection);
+        });
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        HBox buttons = new HBox(10, spacer, ok, cancel);
+        buttons.setAlignment(Pos.CENTER_RIGHT);
+        buttons.setPadding(new Insets(0, 20, 16, 20));
+
+        VBox root = new VBox(content, buttons);
+        root.getStyleClass().add("app-root");
+        VBox.setVgrow(content, Priority.ALWAYS);
+        Scene scene = new Scene(root, 520, 360);
+        if (owner != null && owner.getScene() != null) {
+            scene.getStylesheets().addAll(owner.getScene().getStylesheets());
+        }
+        stage.setScene(scene);
+        stage.show();
+    }
+
+    private static String buildMongoPreview(String database, String collection) {
+        String db = database == null || database.isBlank() ? "database_name" : database.trim();
+        String coll = collection == null || collection.isBlank() ? "initial_collection" : collection.trim();
+        return "use " + db + "\ndb.createCollection(\"" + coll + "\")";
+    }
+
+    private static void runCreateMongo(MainWindow mainWindow, ConnectionProfile profile,
+                                        String database, String collection) {
+        AppExecutor.run(() -> {
+            try {
+                ClientRegistry.mongo(profile).createCollection(database, collection);
+                Platform.runLater(() -> {
+                    mainWindow.setStatus("Created database " + database);
+                    mainWindow.refreshSchemaExplorer();
+                });
+            } catch (Exception ex) {
+                String msg = ex.getMessage() == null ? ex.toString() : ex.getMessage();
+                Platform.runLater(() -> DialogTheme.apply(new Alert(Alert.AlertType.ERROR,
+                        "Could not create database: " + msg)).showAndWait());
+            }
+        });
     }
 
     // ============================================================== shared
