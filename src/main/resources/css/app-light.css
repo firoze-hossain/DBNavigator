@@ -550,6 +550,12 @@
 }
 
 /* ---------- New/Edit Data Source dialog ---------- */
+.connection-dialog-scroll, .connection-dialog-scroll .viewport {
+    -fx-background-color: transparent;
+}
+.connection-dialog-scroll > .scroll-bar:vertical {
+    -fx-background-color: transparent;
+}
 .connection-dialog-header {
     -fx-background-color: -bg-mid;
     -fx-border-color: transparent transparent -border transparent;

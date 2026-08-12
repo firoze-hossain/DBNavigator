@@ -245,7 +245,17 @@ public class ConnectionDialog extends Dialog<ConnectionProfile> {
         body.setPadding(new Insets(4, 20, 16, 20));
 
         VBox root = new VBox(header, body);
-        getDialogPane().setContent(root);
+        // MongoDB's extra rows (connection-type toggle, replica set, read
+        // preference, URL override) can make this taller than the screen —
+        // without a scroll pane, that pushed the OK/Cancel buttons entirely
+        // off-screen with no way to reach them. The button bar itself lives
+        // outside this content (JavaFX renders it as the dialog's fixed
+        // footer), so only the fields above it need to scroll.
+        ScrollPane scrollPane = new ScrollPane(root);
+        scrollPane.setFitToWidth(true);
+        scrollPane.getStyleClass().add("connection-dialog-scroll");
+        getDialogPane().setContent(scrollPane);
+        getDialogPane().setMaxHeight(640);
         getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
 
         // This whole class of mistake — a typo'd or half-remembered filename
