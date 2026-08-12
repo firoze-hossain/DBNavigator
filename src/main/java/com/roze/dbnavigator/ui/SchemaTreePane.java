@@ -554,9 +554,11 @@ public class SchemaTreePane extends VBox {
                     }
                     menu.getItems().addAll(refreshConnection, new SeparatorMenuItem(), renameConnection,
                             new SeparatorMenuItem());
-                    if (profile.getType().isRelational()) {
-                        menu.getItems().addAll(newConsole, new SeparatorMenuItem());
-                    }
+                    // openQueryTab already dispatches to a MongoConsoleTab for
+                    // MongoDB and a SQL QueryTab for everything else — every
+                    // connection type has some kind of console, so this item
+                    // always applies.
+                    menu.getItems().addAll(newConsole, new SeparatorMenuItem());
                     if (MetadataService.supportsDatabaseFilter(profile)) {
                         menu.getItems().add(filterDbs);
                     }
