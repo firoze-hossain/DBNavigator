@@ -43,6 +43,20 @@ public class ConnectionDialog extends Dialog<ConnectionProfile> {
     private final Button browseButton = new Button();
     private final javafx.scene.layout.StackPane typeIconHolder = new javafx.scene.layout.StackPane();
 
+    // MongoDB-only fields — mirrors DataGrip's own "default / Atlas SRV /
+    // URL only" toggle plus its Replica set and Read preference fields.
+    private final ToggleButton mongoDefaultToggle = new ToggleButton("default");
+    private final ToggleButton mongoSrvToggle = new ToggleButton("Atlas SRV");
+    private final ToggleButton mongoUrlOnlyToggle = new ToggleButton("URL only");
+    private final ToggleGroup mongoConnTypeGroup = new ToggleGroup();
+    private final TextField replicaSetField = new TextField();
+    private final ComboBox<String> readPreferenceCombo = new ComboBox<>();
+    private final TextField mongoUrlField = new TextField();
+    private final Label mongoUrlLabel = fieldLabel("URL:");
+    private final Label mongoUrlNote = new Label("Overrides settings above");
+    private java.util.List<javafx.scene.Node> mongoOnlyNodes;
+    private java.util.List<Control> mongoOverridableFields;
+
     public ConnectionDialog(ConnectionProfile existing) {
         this.profile = existing != null ? existing.copy() : new ConnectionProfile();
         DialogTheme.apply(this);
@@ -71,6 +85,43 @@ public class ConnectionDialog extends Dialog<ConnectionProfile> {
         passwordField.setText(profile.getPassword());
         savePasswordCheck.setSelected(profile.isSavePassword());
         sslCheck.setSelected(profile.isUseSsl());
+
+        // ---- MongoDB-only fields ----
+        mongoDefaultToggle.setToggleGroup(mongoConnTypeGroup);
+        mongoSrvToggle.setToggleGroup(mongoConnTypeGroup);
+        mongoUrlOnlyToggle.setToggleGroup(mongoConnTypeGroup);
+        mongoDefaultToggle.getStyleClass().add("mongo-conn-type-toggle");
+        mongoSrvToggle.getStyleClass().add("mongo-conn-type-toggle");
+        mongoUrlOnlyToggle.getStyleClass().add("mongo-conn-type-toggle");
+        mongoDefaultToggle.setUserData(ConnectionProfile.MongoConnectionType.DEFAULT);
+        mongoSrvToggle.setUserData(ConnectionProfile.MongoConnectionType.SRV);
+        mongoUrlOnlyToggle.setUserData(ConnectionProfile.MongoConnectionType.URL_ONLY);
+        ToggleButton initialToggle = switch (profile.getMongoConnectionType()) {
+            case SRV -> mongoSrvToggle;
+            case URL_ONLY -> mongoUrlOnlyToggle;
+            case DEFAULT -> mongoDefaultToggle;
+        };
+        mongoConnTypeGroup.selectToggle(initialToggle);
+        // A segmented control needs at least one selected at all times — a
+        // plain ToggleGroup otherwise lets the active button be clicked back
+        // off, leaving nothing selected.
+        mongoConnTypeGroup.selectedToggleProperty().addListener((obs, old, current) -> {
+            if (current == null) mongoConnTypeGroup.selectToggle(old);
+            else updateMongoFieldsVisibility();
+        });
+
+        replicaSetField.setText(profile.getReplicaSet());
+        replicaSetField.setPromptText("(optional)");
+        readPreferenceCombo.getItems().addAll(
+                "", "primary", "primaryPreferred", "secondary", "secondaryPreferred", "nearest");
+        readPreferenceCombo.setConverter(new javafx.util.StringConverter<>() {
+            @Override public String toString(String s) { return s == null || s.isEmpty() ? "Default" : s; }
+            @Override public String fromString(String s) { return s; }
+        });
+        readPreferenceCombo.setValue(profile.getReadPreference());
+        mongoUrlField.setText(profile.getMongoUrlOverride());
+        mongoUrlField.setPromptText("mongodb+srv://user:pass@cluster.example.mongodb.net/mydb");
+        mongoUrlNote.getStyleClass().add("connection-field-hint");
 
         browseButton.setGraphic(Icons.of(FontAwesomeSolid.FOLDER_OPEN, "#e0a44c", 12));
         browseButton.setOnAction(e -> {
@@ -118,6 +169,11 @@ public class ConnectionDialog extends Dialog<ConnectionProfile> {
         // ---- "Connection" section ----
         GridPane connGrid = sectionGrid();
         row = 0;
+        Label mongoConnTypeLabel = fieldLabel("Connection type:");
+        HBox mongoConnTypeBox = new HBox(6, mongoDefaultToggle, mongoSrvToggle, mongoUrlOnlyToggle);
+        connGrid.add(mongoConnTypeLabel, 0, row);
+        connGrid.add(mongoConnTypeBox, 1, row++, 2, 1);
+
         connGrid.add(fieldLabel("Host:"), 0, row);
         connGrid.add(hostField, 1, row++, 2, 1);
         connGrid.add(fieldLabel("Port:"), 0, row);
@@ -132,15 +188,44 @@ public class ConnectionDialog extends Dialog<ConnectionProfile> {
         connGrid.add(passwordField, 1, row++, 2, 1);
         connGrid.add(new HBox(20, savePasswordCheck, sslCheck), 1, row++, 2, 1);
 
+        Label replicaSetLabel = fieldLabel("Replica set:");
+        connGrid.add(replicaSetLabel, 0, row);
+        connGrid.add(replicaSetField, 1, row++, 2, 1);
+        Label readPreferenceLabel = fieldLabel("Read preference:");
+        connGrid.add(readPreferenceLabel, 0, row);
+        connGrid.add(readPreferenceCombo, 1, row++, 2, 1);
+        connGrid.add(mongoUrlLabel, 0, row);
+        connGrid.add(mongoUrlField, 1, row, 2, 1);
+        row++;
+        connGrid.add(mongoUrlNote, 1, row++, 2, 1);
+
         GridPane.setHgrow(nameField, Priority.ALWAYS);
         GridPane.setHgrow(hostField, Priority.ALWAYS);
         GridPane.setHgrow(databaseField, Priority.ALWAYS);
         GridPane.setHgrow(userField, Priority.ALWAYS);
         GridPane.setHgrow(passwordField, Priority.ALWAYS);
         GridPane.setHgrow(sqlitePathHint, Priority.ALWAYS);
+        GridPane.setHgrow(replicaSetField, Priority.ALWAYS);
+        GridPane.setHgrow(readPreferenceCombo, Priority.ALWAYS);
+        GridPane.setHgrow(mongoUrlField, Priority.ALWAYS);
+        readPreferenceCombo.setMaxWidth(Double.MAX_VALUE);
         GridPane.setFillWidth(sqlitePathHint, true);
         sqlitePathHint.setMaxWidth(Double.MAX_VALUE);
         sqlitePathHint.setMinWidth(0);   // without this, Label sizes to its unwrapped text and wrapText is ignored
+
+        // Everything above tagged as mongo-only toggles together, in one
+        // place, instead of scattering visible/managed calls across every
+        // row individually.
+        mongoOnlyNodes = java.util.List.of(
+                mongoConnTypeLabel, mongoConnTypeBox, replicaSetLabel, replicaSetField,
+                readPreferenceLabel, readPreferenceCombo, mongoUrlLabel, mongoUrlField, mongoUrlNote);
+        // In URL-only mode these are ignored (the pasted URL wins instead),
+        // so they're disabled rather than hidden — same as DataGrip greys
+        // them out instead of removing them, since switching back to
+        // "default" should find them exactly as they were left.
+        mongoOverridableFields = java.util.List.of(
+                hostField, portField, databaseField, userField, passwordField,
+                replicaSetField, readPreferenceCombo);
 
         Button testButton = new Button("Test Connection");
         testButton.getStyleClass().add("run-button");
@@ -249,6 +334,7 @@ public class ConnectionDialog extends Dialog<ConnectionProfile> {
         databaseField.setPromptText(sqlite ? "Path to .db / .sqlite file (not a jdbc: URL)"
                 : mongo ? "(optional — browse all databases)" : "database name");
         updateSqlitePathHint();
+        updateMongoFieldsVisibility();
 
         // Only overwrite the port if the user hasn't customized it
         try {
@@ -262,6 +348,37 @@ public class ConnectionDialog extends Dialog<ConnectionProfile> {
         } catch (NumberFormatException e) {
             portField.setText(String.valueOf(type.getDefaultPort()));
         }
+    }
+
+    /**
+     * Shows the MongoDB-only rows (connection-type toggle, replica set, read
+     * preference, URL override) only for a MongoDB connection, and — within
+     * that — greys out every field the "URL only" toggle position makes
+     * irrelevant, matching DataGrip's own behavior for that same toggle.
+     */
+    private void updateMongoFieldsVisibility() {
+        if (mongoOnlyNodes == null) return;   // fields not laid out yet — selectToggle() below fires this early
+        boolean mongo = typeCombo.getValue() == DatabaseType.MONGODB;
+        for (javafx.scene.Node node : mongoOnlyNodes) {
+            node.setVisible(mongo);
+            node.setManaged(mongo);
+        }
+        if (!mongo) return;
+
+        boolean urlOnly = mongoConnTypeGroup.getSelectedToggle() == mongoUrlOnlyToggle;
+        mongoUrlLabel.setVisible(urlOnly);
+        mongoUrlLabel.setManaged(urlOnly);
+        mongoUrlField.setVisible(urlOnly);
+        mongoUrlField.setManaged(urlOnly);
+        mongoUrlNote.setVisible(urlOnly);
+        mongoUrlNote.setManaged(urlOnly);
+        for (Control field : mongoOverridableFields) {
+            field.setDisable(urlOnly);
+        }
+        boolean srv = mongoConnTypeGroup.getSelectedToggle() == mongoSrvToggle;
+        // An SRV record supplies each host's own port, so a manually entered
+        // one here would be misleading as well as unused.
+        portField.setDisable(urlOnly || srv);
     }
 
     private void collectInto(ConnectionProfile p) {
@@ -278,6 +395,15 @@ public class ConnectionDialog extends Dialog<ConnectionProfile> {
         p.setPassword(passwordField.getText());
         p.setSavePassword(savePasswordCheck.isSelected());
         p.setUseSsl(sslCheck.isSelected());
+        if (typeCombo.getValue() == DatabaseType.MONGODB) {
+            Toggle selected = mongoConnTypeGroup.getSelectedToggle();
+            p.setMongoConnectionType(selected == null
+                    ? ConnectionProfile.MongoConnectionType.DEFAULT
+                    : (ConnectionProfile.MongoConnectionType) selected.getUserData());
+            p.setReplicaSet(replicaSetField.getText().trim());
+            p.setReadPreference(readPreferenceCombo.getValue());
+            p.setMongoUrlOverride(mongoUrlField.getText().trim());
+        }
     }
 
     /**

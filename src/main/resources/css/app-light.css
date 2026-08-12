@@ -583,6 +583,20 @@
 .connection-sqlite-hint { -fx-font-size: 11px; -fx-font-family: monospace; }
 .connection-sqlite-hint.hint-ok   { -fx-text-fill: #7a7a82; }
 .connection-sqlite-hint.hint-warn { -fx-text-fill: #b5750f; }
+.connection-field-hint { -fx-font-size: 11px; -fx-text-fill: #7a7a82; }
+.mongo-conn-type-toggle {
+    -fx-background-radius: 0;
+    -fx-border-color: -border;
+    -fx-border-width: 1 1 1 0;
+    -fx-padding: 5 12 5 12;
+}
+.mongo-conn-type-toggle:first-of-type { -fx-background-radius: 4 0 0 4; -fx-border-width: 1; }
+.mongo-conn-type-toggle:last-of-type  { -fx-background-radius: 0 4 4 0; }
+.mongo-conn-type-toggle:selected {
+    -fx-background-color: #2e7d3233;
+    -fx-text-fill: #2e7d32;
+    -fx-font-weight: bold;
+}
 
 /* ---------- ER diagram ---------- */
 .diagram-pane { -fx-background-color: -bg-darkest; }

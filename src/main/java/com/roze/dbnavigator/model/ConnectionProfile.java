@@ -35,6 +35,18 @@ public class ConnectionProfile {
         @Override public String toString() { return displayName; }
     }
 
+    /**
+     * Mirrors DataGrip's own three-way toggle for a MongoDB data source.
+     * DEFAULT builds a standard mongodb:// URI from the individual fields;
+     * SRV builds a mongodb+srv:// one instead (Atlas and most managed
+     * MongoDB hosts hand out an SRV record instead of a fixed host:port —
+     * the port is omitted from the URI in this mode because the SRV DNS
+     * record supplies the real hosts and ports); URL_ONLY ignores every
+     * other connection field and uses {@link #mongoUrlOverride} verbatim,
+     * for a full connection string pasted in from elsewhere.
+     */
+    public enum MongoConnectionType { DEFAULT, SRV, URL_ONLY }
+
     private String id = UUID.randomUUID().toString();
     private String name = "";
     private DatabaseType type = DatabaseType.POSTGRESQL;
@@ -47,6 +59,11 @@ public class ConnectionProfile {
     private boolean useSsl;
     /** Databases shown under this connection; empty = show all. */
     private java.util.List<String> visibleDatabases = new java.util.ArrayList<>();
+    // MongoDB-only; ignored by every other engine.
+    private MongoConnectionType mongoConnectionType = MongoConnectionType.DEFAULT;
+    private String replicaSet = "";
+    private String readPreference = "";
+    private String mongoUrlOverride = "";
 
     public ConnectionProfile() {}
 
@@ -153,12 +170,44 @@ public class ConnectionProfile {
     }
 
     @JsonIgnore
+    /**
+     * DEFAULT/SRV modes build the URI from the individual fields, same as
+     * DataGrip's own "default" and "MongoDB Atlas (SRV protocol)" toggle
+     * positions. URL_ONLY mode — DataGrip's "URL only" position — instead
+     * uses {@link #mongoUrlOverride} verbatim and ignores every other field
+     * here, for a full connection string (e.g. one copied from Atlas)
+     * that already encodes auth, replica set, TLS, etc. on its own.
+     */
     public String getMongoUri() {
-        if (username != null && !username.isBlank()) {
-            return "mongodb://%s:%s@%s:%d/?authSource=admin".formatted(
-                    urlEncode(username), urlEncode(password == null ? "" : password), host, port);
+        if (mongoConnectionType == MongoConnectionType.URL_ONLY) {
+            return mongoUrlOverride == null ? "" : mongoUrlOverride.trim();
         }
-        return "mongodb://%s:%d".formatted(host, port);
+
+        boolean srv = mongoConnectionType == MongoConnectionType.SRV;
+        StringBuilder uri = new StringBuilder(srv ? "mongodb+srv://" : "mongodb://");
+        if (username != null && !username.isBlank()) {
+            uri.append(urlEncode(username)).append(':')
+                    .append(urlEncode(password == null ? "" : password)).append('@');
+        }
+        uri.append(host);
+        // An SRV record already encodes each host's port; a literal port
+        // here would conflict with it rather than override it.
+        if (!srv) uri.append(':').append(port);
+        uri.append('/');
+        if (database != null && !database.isBlank()) uri.append(urlEncodePathSegment(database));
+
+        java.util.List<String> params = new java.util.ArrayList<>();
+        if (username != null && !username.isBlank()) params.add("authSource=admin");
+        if (replicaSet != null && !replicaSet.isBlank()) params.add("replicaSet=" + urlEncode(replicaSet));
+        if (readPreference != null && !readPreference.isBlank()) params.add("readPreference=" + readPreference);
+        if (!params.isEmpty()) uri.append('?').append(String.join("&", params));
+        return uri.toString();
+    }
+
+    private static String urlEncodePathSegment(String s) {
+        // Path segments use the same percent-encoding as query values, except
+        // a literal "/" would otherwise be encoded and break the path itself.
+        return urlEncode(s).replace("%2F", "/");
     }
 
     private static String urlEncode(String s) {
@@ -184,6 +233,10 @@ public class ConnectionProfile {
         c.savePassword = savePassword;
         c.useSsl = useSsl;
         c.visibleDatabases = new java.util.ArrayList<>(visibleDatabases);
+        c.mongoConnectionType = mongoConnectionType;
+        c.replicaSet = replicaSet;
+        c.readPreference = readPreference;
+        c.mongoUrlOverride = mongoUrlOverride;
         return c;
     }
 
@@ -212,6 +265,21 @@ public class ConnectionProfile {
     public void setVisibleDatabases(java.util.List<String> visibleDatabases) {
         this.visibleDatabases = visibleDatabases == null
                 ? new java.util.ArrayList<>() : visibleDatabases;
+    }
+    public MongoConnectionType getMongoConnectionType() { return mongoConnectionType; }
+    public void setMongoConnectionType(MongoConnectionType mongoConnectionType) {
+        this.mongoConnectionType = mongoConnectionType == null
+                ? MongoConnectionType.DEFAULT : mongoConnectionType;
+    }
+    public String getReplicaSet() { return replicaSet; }
+    public void setReplicaSet(String replicaSet) { this.replicaSet = replicaSet == null ? "" : replicaSet; }
+    public String getReadPreference() { return readPreference; }
+    public void setReadPreference(String readPreference) {
+        this.readPreference = readPreference == null ? "" : readPreference;
+    }
+    public String getMongoUrlOverride() { return mongoUrlOverride; }
+    public void setMongoUrlOverride(String mongoUrlOverride) {
+        this.mongoUrlOverride = mongoUrlOverride == null ? "" : mongoUrlOverride;
     }
 
     @Override public String toString() { return name; }
