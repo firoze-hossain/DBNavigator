@@ -805,3 +805,7 @@
 /* ---------- sortable column header (DataGrip-style sort icon) ---------- */
 .grid-header-label { -fx-text-fill: #1a1a1e; -fx-font-weight: bold; }
 .grid-sort-icon { -fx-cursor: hand; }
+
+/* ---------- inline dialog status (Modify Collection, etc.) ---------- */
+.status-success { -fx-text-fill: #1b7a1b; -fx-font-weight: bold; }
+.status-error { -fx-text-fill: #c0392b; -fx-font-weight: bold; }

@@ -28,6 +28,15 @@ import java.util.List;
  * operations that actually apply to a collection: renaming it, and
  * managing its indexes (list, drop, create).
  *
+ * The result of Execute — success or failure, with the real message either
+ * way — is shown as a status line inside this same dialog rather than as a
+ * separate Alert popup shown after closing it. Closing one modal window
+ * and immediately opening another is a known trouble spot on some Linux
+ * window managers (the new window can fail to render or grab focus), so
+ * this avoids that transition entirely: the dialog stays open throughout,
+ * Execute becomes Close once the result is in, and there's no point where
+ * a second top-level window needs to appear on its own.
+ *
  * Honest scope note: the reference IDE's virtual columns / virtual foreign
  * keys are metadata-only annotations layered on top of the IDE's own
  * inferred schema view — they don't correspond to any real MongoDB
@@ -49,7 +58,7 @@ public final class ModifyCollectionDialog {
         stage.initModality(Modality.APPLICATION_MODAL);
         stage.setTitle("Modify Collection \u2014 " + collection.getName());
         stage.setMinWidth(620);
-        stage.setMinHeight(520);
+        stage.setMinHeight(540);
 
         TextField nameField = new TextField(collection.getName());
 
@@ -117,8 +126,14 @@ public final class ModifyCollectionDialog {
         HBox addIndexRow = new HBox(8, fieldNameField, directionCombo, uniqueCheck, addIndexButton);
         addIndexRow.setAlignment(Pos.CENTER_LEFT);
 
+        // ---- inline status line — replaces the separate post-close Alert ----
+        Label statusLabel = new Label();
+        statusLabel.setWrapText(true);
+        statusLabel.setManaged(false);
+        statusLabel.setVisible(false);
+
         VBox content = new VBox(10, nameGrid, new Separator(), indexesLabel, indexTable,
-                new Label("New indexes to create:"), pendingIndexList, addIndexRow);
+                new Label("New indexes to create:"), pendingIndexList, addIndexRow, statusLabel);
         content.setPadding(new Insets(0, 16, 8, 16));
         VBox.setVgrow(indexTable, Priority.SOMETIMES);
 
@@ -127,34 +142,46 @@ public final class ModifyCollectionDialog {
         Button execute = new Button("Execute");
         execute.getStyleClass().add("run-button");
         execute.setDefaultButton(true);
-        execute.setOnAction(e -> {
-            try {
-                String newName = nameField.getText().strip();
-                List<String> toDropIndexes = new ArrayList<>();
-                for (IndexRow row : indexRows) {
-                    if (row.drop().get()) toDropIndexes.add(row.name());
-                }
-                stage.close();
-                applyChanges(mainWindow, profile, collection, newName, toDropIndexes, pendingNewIndexes);
-            } catch (Exception ex) {
-                // Nothing between clicking Execute and the actual database work
-                // should ever be able to fail invisibly — show it directly
-                // rather than letting JavaFX's default handler swallow it.
-                showAlert(mainWindow, Alert.AlertType.ERROR,
-                        "Could not start Modify Collection: " + describeError(ex));
-            }
-        });
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
         HBox buttons = new HBox(10, spacer, execute, cancel);
         buttons.setPadding(new Insets(0, 16, 16, 16));
 
+        execute.setOnAction(e -> {
+            String newName = nameField.getText().strip();
+            List<String> toDropIndexes = new ArrayList<>();
+            for (IndexRow row : indexRows) {
+                if (row.drop().get()) toDropIndexes.add(row.name());
+            }
+
+            execute.setDisable(true);
+            nameField.setDisable(true);
+            indexTable.setDisable(true);
+            addIndexButton.setDisable(true);
+            statusLabel.setManaged(true);
+            statusLabel.setVisible(true);
+            statusLabel.getStyleClass().setAll("console-status");
+            statusLabel.setText("Working\u2026");
+
+            applyChanges(mainWindow, profile, collection, newName, toDropIndexes, pendingNewIndexes,
+                    result -> {
+                        statusLabel.getStyleClass().setAll(result.success() ? "status-success" : "status-error");
+                        statusLabel.setText(result.message());
+                        execute.setDisable(true);
+                        execute.setVisible(false);
+                        execute.setManaged(false);
+                        cancel.setText("Close");
+                        cancel.setDefaultButton(true);
+                        if (result.success()) mainWindow.refreshSchemaExplorer();
+                    });
+        });
+
         VBox root = new VBox(content, buttons);
         root.getStyleClass().add("app-root");
         VBox.setVgrow(content, Priority.ALWAYS);
 
-        Scene scene = new Scene(root, 640, 560);
+        Scene scene = new Scene(root, 640, 580);
         if (owner != null && owner.getScene() != null) {
             scene.getStylesheets().addAll(owner.getScene().getStylesheets());
         }
@@ -177,22 +204,22 @@ public final class ModifyCollectionDialog {
         });
     }
 
+    private record Outcome(boolean success, String message) {}
+
     /**
-     * Does the real database work first, entirely off the FX thread and
-     * completely independent of the Run panel, then shows a direct,
-     * unmissable Alert with the outcome — success or failure — before
-     * attempting anything else. Run panel logging is attempted afterward,
-     * in its own try/catch, specifically so that even if something about
-     * that panel's own state has a problem, it can never prevent the user
-     * from seeing the actual result of the operation they asked for.
+     * Does the real database work off the FX thread, then hands the result
+     * back to {@code onDone} on the FX thread — the caller updates its own
+     * still-open dialog's UI with it. No new top-level window is created
+     * or shown as part of reporting the result.
      */
     private static void applyChanges(MainWindow mainWindow, ConnectionProfile profile, DbObject collection,
-                                     String newName, List<String> toDropIndexes, List<String[]> newIndexes) {
+                                     String newName, List<String> toDropIndexes, List<String[]> newIndexes,
+                                     java.util.function.Consumer<Outcome> onDone) {
         String currentName = collection.getName();
         if (toDropIndexes.isEmpty() && newIndexes.isEmpty()
                 && (newName.equals(currentName) || newName.isBlank())) {
-            showAlert(mainWindow, Alert.AlertType.INFORMATION,
-                    "No changes to apply \u2014 nothing was renamed, and no indexes were added or checked for drop.");
+            onDone.accept(new Outcome(true,
+                    "No changes to apply \u2014 nothing was renamed, and no indexes were added or checked for drop."));
             return;
         }
 
@@ -226,42 +253,13 @@ public final class ModifyCollectionDialog {
             List<String> finalApplied = applied;
             Platform.runLater(() -> {
                 if (finalFailure != null) {
-                    showAlert(mainWindow, Alert.AlertType.ERROR,
-                            "Modify Collection failed: " + describeError(finalFailure));
+                    onDone.accept(new Outcome(false, "Failed: " + describeError(finalFailure)));
                 } else {
-                    mainWindow.refreshSchemaExplorer();
-                    String summary = finalApplied.isEmpty() ? "(nothing applied)" : String.join("\n", finalApplied);
-                    showAlert(mainWindow, Alert.AlertType.INFORMATION,
-                            "Collection modified successfully:\n\n" + summary);
+                    String summary = finalApplied.isEmpty() ? "nothing to apply" : String.join("; ", finalApplied);
+                    onDone.accept(new Outcome(true, "\u2713 " + summary));
                 }
-                logToRunPanelBestEffort(mainWindow, collection, finalApplied, finalFailure);
             });
         });
-    }
-
-    private static void logToRunPanelBestEffort(MainWindow mainWindow, DbObject collection,
-                                                List<String> applied, Exception failure) {
-        try {
-            RunPanel.RunHandle handle = mainWindow.getRunPanel()
-                    .startRun("Modify Collection \u2014 " + collection.getName());
-            mainWindow.showRunPanel();
-            for (String line : applied) handle.appendLine(line);
-            if (failure != null) {
-                handle.markFailed(describeError(failure));
-            } else {
-                handle.appendLine("\u2713 Done");
-                handle.markFinished(0);
-            }
-        } catch (Exception ignored) {
-            // The user already has the real answer from the alert shown above.
-        }
-    }
-
-    private static void showAlert(MainWindow mainWindow, Alert.AlertType type, String message) {
-        Alert alert = DialogTheme.apply(new Alert(type, message));
-        Window owner = mainWindow.getOwnerWindow();
-        if (owner != null) alert.initOwner(owner);
-        alert.showAndWait();
     }
 
     private static String describeError(Exception ex) {
