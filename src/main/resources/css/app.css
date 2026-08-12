@@ -574,6 +574,10 @@
 .connection-test-result { -fx-font-size: 12px; }
 .connection-test-result.test-ok   { -fx-text-fill: #57965c; }
 .connection-test-result.test-fail { -fx-text-fill: #e05555; }
+.connection-test-result.test-warn { -fx-text-fill: #e0a44c; }
+.connection-sqlite-hint { -fx-font-size: 11px; -fx-font-family: monospace; }
+.connection-sqlite-hint.hint-ok   { -fx-text-fill: -text-dim; }
+.connection-sqlite-hint.hint-warn { -fx-text-fill: #e0a44c; }
 
 /* ---------- ER diagram ---------- */
 .diagram-pane { -fx-background-color: -bg-darkest; }

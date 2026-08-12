@@ -89,7 +89,8 @@ public class SchemaTreePane extends VBox {
 
     public void addConnectionNode(ConnectionProfile profile) {
         DbObject obj = new DbObject(profile.getName(), Kind.CONNECTION);
-        obj.setDetail(profile.getType().getDisplayName() + " · " + profile.getSummary());
+        obj.setDetail(profile.getType().getDisplayName() + " · " + profile.getSummary()
+                + sqliteFileWarning(profile));
         TreeItem<DbObject> item = new TreeItem<>(obj);
         item.getChildren().add(loadingNode());
         connectionItems.put(item, profile);
@@ -107,6 +108,25 @@ public class SchemaTreePane extends VBox {
             }
         });
         root.getChildren().add(item);
+    }
+
+    /**
+     * Flags right in the connection row, before the user even expands it,
+     * the exact class of mistake this app has run into repeatedly: SQLite
+     * silently creates a file that doesn't exist yet rather than failing, so
+     * a mistyped or stale path looks identical to a real one until you dig
+     * in. A 0-byte file has never had a single table created in it; a
+     * missing file means the path itself is now wrong (e.g. the drive isn't
+     * mounted, or it was moved/deleted since this connection was saved).
+     */
+    private static String sqliteFileWarning(ConnectionProfile profile) {
+        if (profile.getType() != ConnectionProfile.DatabaseType.SQLITE) return "";
+        String path = profile.getDatabase();
+        if (path == null || path.isBlank()) return "";
+        java.io.File file = new java.io.File(path);
+        if (!file.isFile()) return "  ⚠ file not found";
+        if (file.length() == 0) return "  ⚠ empty file — no tables created here yet";
+        return "";
     }
 
     /**
@@ -499,7 +519,7 @@ public class SchemaTreePane extends VBox {
                             }
                         });
                     });
-                    if (profile.getType().isRelational()) {
+                    if (CreateDatabaseDialog.supportsCreate(profile.getType())) {
                         menu.getItems().add(newMenu);
                     }
                     menu.getItems().addAll(refreshConnection, new SeparatorMenuItem(), renameConnection,

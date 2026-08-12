@@ -579,6 +579,10 @@
 .connection-test-result { -fx-font-size: 12px; }
 .connection-test-result.test-ok   { -fx-text-fill: #57965c; }
 .connection-test-result.test-fail { -fx-text-fill: #e05555; }
+.connection-test-result.test-warn { -fx-text-fill: #b5750f; }
+.connection-sqlite-hint { -fx-font-size: 11px; -fx-font-family: monospace; }
+.connection-sqlite-hint.hint-ok   { -fx-text-fill: #7a7a82; }
+.connection-sqlite-hint.hint-warn { -fx-text-fill: #b5750f; }
 
 /* ---------- ER diagram ---------- */
 .diagram-pane { -fx-background-color: -bg-darkest; }
@@ -757,6 +761,7 @@
 
 .connection-test-result.test-ok   { -fx-text-fill: #2e7d32; }
 .connection-test-result.test-fail { -fx-text-fill: #c62828; }
+.connection-test-result.test-warn { -fx-text-fill: #b5750f; }
 .connection-field-label { -fx-text-fill: #55555c; }
 .connection-section-label { -fx-text-fill: -accent; }
 .connection-dialog-title { -fx-text-fill: #1a1a1e; }
