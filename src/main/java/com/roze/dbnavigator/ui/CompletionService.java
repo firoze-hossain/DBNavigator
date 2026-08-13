@@ -44,6 +44,26 @@ public final class CompletionService {
             "SEQUENCE", "CREATE SEQUENCE", "ALTER SEQUENCE", "DROP SEQUENCE",
             "NEXTVAL(", "CURRVAL(", "SETVAL(");
 
+    /**
+     * T-SQL syntax with no equivalent (or a differently-spelled equivalent)
+     * in the ANSI-ish KEYWORDS list above — SQL Server's paging, identity,
+     * ranking, and variable/scripting constructs. Kept separate rather than
+     * merged into KEYWORDS so a Postgres/MySQL console isn't offered TOP or
+     * GETDATE(), the way DataGrip itself tailors suggestions per dialect.
+     */
+    private static final List<String> SQLSERVER_KEYWORDS = List.of(
+            "TOP", "IDENTITY(", "MERGE", "USING", "WHEN MATCHED THEN", "WHEN NOT MATCHED THEN",
+            "OUTPUT", "INSERTED.", "DELETED.", "CROSS APPLY", "OUTER APPLY",
+            "WITH (NOLOCK)", "OFFSET 0 ROWS", "FETCH NEXT", "ROWS ONLY",
+            "OVER (", "PARTITION BY", "ROW_NUMBER()", "RANK()", "DENSE_RANK()",
+            "ISNULL(", "IIF(", "TRY_CAST(", "TRY_CONVERT(", "CONVERT(",
+            "GETDATE()", "GETUTCDATE()", "SYSDATETIME()", "DATEADD(", "DATEDIFF(", "DATEPART(",
+            "LEN(", "SUBSTRING(", "STUFF(", "CHARINDEX(", "PATINDEX(", "STRING_AGG(", "FORMAT(",
+            "DECLARE", "PRINT", "EXEC", "EXECUTE", "RAISERROR(", "THROW", "WAITFOR DELAY",
+            "BEGIN TRAN", "BEGIN TRANSACTION", "COMMIT TRAN", "ROLLBACK TRAN", "GO",
+            "NVARCHAR(", "VARCHAR(", "NCHAR(", "DATETIME2", "UNIQUEIDENTIFIER", "BIT",
+            "SCOPE_IDENTITY()", "@@IDENTITY", "IDENT_CURRENT(", "@@ROWCOUNT");
+
     private static final int MAX_SUGGESTIONS = 20;
 
     /** cacheKey = profileId::catalog */
@@ -120,21 +140,21 @@ public final class CompletionService {
         switch (context) {
             case TABLES -> {
                 addTables(profile, catalog, prefix, matches);
-                addKeywords(prefix, matches);      // e.g. FROM (SELECT …
+                addKeywords(profile, prefix, matches);      // e.g. FROM (SELECT …
             }
             case COLUMNS -> {
                 addScopedColumns(profile, catalog, fullText, prefix, matches);
-                addKeywords(prefix, matches);
+                addKeywords(profile, prefix, matches);
             }
             case SEQUENCES -> {
                 addSequences(profile, catalog, prefix, matches);
-                addKeywords(prefix, matches);
+                addKeywords(profile, prefix, matches);
             }
             case ANY -> {
                 addTables(profile, catalog, prefix, matches);
                 addScopedColumns(profile, catalog, fullText, prefix, matches);
                 addSequences(profile, catalog, prefix, matches);
-                addKeywords(prefix, matches);
+                addKeywords(profile, prefix, matches);
             }
         }
         return matches;
@@ -191,12 +211,20 @@ public final class CompletionService {
         }
     }
 
-    private static void addKeywords(String prefix, List<Suggestion> matches) {
+    private static void addKeywords(ConnectionProfile profile, String prefix, List<Suggestion> matches) {
         if (prefix.isBlank()) return;              // don't flood with all keywords
         for (String keyword : KEYWORDS) {
             if (matches.size() >= MAX_SUGGESTIONS) return;
             if (keyword.toLowerCase(Locale.ROOT).startsWith(prefix) && notPresent(matches, keyword)) {
                 matches.add(new Suggestion(keyword, Kind.KEYWORD, "keyword"));
+            }
+        }
+        if (profile.getType() == ConnectionProfile.DatabaseType.SQLSERVER) {
+            for (String keyword : SQLSERVER_KEYWORDS) {
+                if (matches.size() >= MAX_SUGGESTIONS) return;
+                if (keyword.toLowerCase(Locale.ROOT).startsWith(prefix) && notPresent(matches, keyword)) {
+                    matches.add(new Suggestion(keyword, Kind.KEYWORD, "T-SQL"));
+                }
             }
         }
     }

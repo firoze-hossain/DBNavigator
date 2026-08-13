@@ -23,6 +23,16 @@ public final class MetadataService {
     private static final Set<String> PG_SYSTEM_SCHEMAS =
             Set.of("pg_catalog", "information_schema", "pg_toast");
 
+    // SQL Server creates these fixed database-role schemas in every database
+    // by default; they're almost never where a user's own objects live, and
+    // DataGrip tucks the equivalent noise away under its own "Database
+    // Objects" node rather than listing it alongside real schemas like dbo.
+    private static final Set<String> SQLSERVER_SYSTEM_SCHEMAS = Set.of(
+            "db_owner", "db_accessadmin", "db_securityadmin", "db_ddladmin",
+            "db_backupoperator", "db_datareader", "db_datawriter",
+            "db_denydatareader", "db_denydatawriter", "sys", "guest",
+            "information_schema");
+
     private static JdbcClient client(ConnectionProfile profile, String catalog) {
         return ClientRegistry.jdbc(profile, catalog);
     }
@@ -55,6 +65,16 @@ public final class MetadataService {
                 }
                 yield names;
             }
+            case SQLSERVER -> {
+                List<String> names = new ArrayList<>();
+                try (Connection conn = client(profile, null).getConnection();
+                     Statement stmt = conn.createStatement();
+                     ResultSet rs = stmt.executeQuery(
+                             "SELECT name FROM sys.databases ORDER BY name")) {
+                    while (rs.next()) names.add(rs.getString(1));
+                }
+                yield names;
+            }
             default -> List.of();
         };
     }
@@ -62,7 +82,7 @@ public final class MetadataService {
     /** True when this engine shows DATABASE nodes that can be filtered. */
     public static boolean supportsDatabaseFilter(ConnectionProfile profile) {
         return switch (profile.getType()) {
-            case POSTGRESQL, MYSQL, MARIADB, MONGODB -> true;
+            case POSTGRESQL, MYSQL, MARIADB, MONGODB, SQLSERVER -> true;
             default -> false;
         };
     }
@@ -83,7 +103,12 @@ public final class MetadataService {
             // PostgreSQL: list EVERY database on the server (DataGrip style)
             case POSTGRESQL -> loadPostgresDatabases(profile);
             case MYSQL, MARIADB -> loadCatalogs(profile);
-            case SQLSERVER, ORACLE -> {
+            // SQL Server: same idea as PostgreSQL — one login can see every
+            // database on the instance, and each has its own set of schemas,
+            // so it gets its own DATABASE level in the tree too (DataGrip
+            // does the same: CompanyDB, master, etc. each as their own node).
+            case SQLSERVER -> loadSqlServerDatabases(profile);
+            case ORACLE -> {
                 try (Connection conn = client(profile, null).getConnection()) {
                     yield loadSchemas(conn, profile, null);
                 }
@@ -91,6 +116,21 @@ public final class MetadataService {
             case SQLITE -> objectFolders(null, null);
             default -> List.of();
         };
+    }
+
+    private static List<DbObject> loadSqlServerDatabases(ConnectionProfile profile) throws SQLException {
+        List<DbObject> result = new ArrayList<>();
+        try (Connection conn = client(profile, null).getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SELECT name FROM sys.databases ORDER BY name")) {
+            while (rs.next()) {
+                String db = rs.getString(1);
+                DbObject obj = new DbObject(db, Kind.DATABASE, db, null);
+                if (db.equals(profile.getDatabase())) obj.setDetail("(default)");
+                result.add(obj);
+            }
+        }
+        return result;
     }
 
     private static List<DbObject> loadPostgresDatabases(ConnectionProfile profile) throws SQLException {
@@ -130,6 +170,8 @@ public final class MetadataService {
                 String schema = rs.getString("TABLE_SCHEM");
                 if (profile.getType() == DatabaseType.POSTGRESQL
                         && PG_SYSTEM_SCHEMAS.contains(schema)) continue;
+                if (profile.getType() == DatabaseType.SQLSERVER
+                        && SQLSERVER_SYSTEM_SCHEMAS.contains(schema.toLowerCase(Locale.ROOT))) continue;
                 result.add(new DbObject(schema, Kind.SCHEMA, catalog, schema));
             }
         }
@@ -144,8 +186,9 @@ public final class MetadataService {
         return switch (profile.getType()) {
             case MONGODB -> List.of(
                     folder("Collections", Kind.COLLECTIONS_FOLDER, database.getCatalog(), null));
-            case POSTGRESQL -> {
-                // schemas of that particular database (separate physical connection)
+            case POSTGRESQL, SQLSERVER -> {
+                // schemas of that particular database (separate physical connection,
+                // via databaseName=/dbname in the JDBC URL — see ConnectionProfile.getJdbcUrl)
                 try (Connection conn = client(profile, database.getCatalog()).getConnection()) {
                     yield loadSchemas(conn, profile, database.getCatalog());
                 }

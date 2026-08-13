@@ -51,7 +51,7 @@ public final class CreateDatabaseDialog {
      */
     public static boolean supportsCreate(ConnectionProfile.DatabaseType type) {
         return switch (type) {
-            case POSTGRESQL, MYSQL, MARIADB, MONGODB -> true;
+            case POSTGRESQL, MYSQL, MARIADB, MONGODB, SQLSERVER -> true;
             default -> false;
         };
     }
@@ -61,6 +61,7 @@ public final class CreateDatabaseDialog {
             case POSTGRESQL -> showPostgres(mainWindow, profile);
             case MYSQL, MARIADB -> showMySql(mainWindow, profile);
             case MONGODB -> showMongo(mainWindow, profile);
+            case SQLSERVER -> showSqlServer(mainWindow, profile);
             default -> DialogTheme.apply(new Alert(Alert.AlertType.INFORMATION,
                     "Creating a database from this dialog is only available for PostgreSQL and "
                     + "MySQL/MariaDB right now — for other engines, run CREATE DATABASE from a console."))
@@ -377,6 +378,106 @@ public final class CreateDatabaseDialog {
 
     private static String backtick(String ident) {
         return "`" + ident.replace("`", "``") + "`";
+    }
+
+    // ============================================================= SQL Server
+
+    private static void showSqlServer(MainWindow mainWindow, ConnectionProfile profile) {
+        Stage stage = new Stage();
+        Window owner = mainWindow.getOwnerWindow();
+        stage.initOwner(owner);
+        stage.initModality(Modality.APPLICATION_MODAL);
+        stage.setTitle("Create Database");
+        stage.setResizable(true);
+        stage.setMinWidth(560);
+        stage.setMinHeight(360);
+
+        TextField nameField = new TextField();
+        nameField.setPromptText("database_name");
+        ComboBox<String> collationCombo = new ComboBox<>();
+        collationCombo.setEditable(true);
+        collationCombo.getItems().addAll(
+                "SQL_Latin1_General_CP1_CI_AS", "SQL_Latin1_General_CP1_CS_AS",
+                "Latin1_General_100_CI_AS_SC_UTF8", "Latin1_General_BIN2");
+
+        GridPane grid = new GridPane();
+        grid.setHgap(14);
+        grid.setVgap(12);
+        grid.setPadding(new Insets(20, 20, 8, 20));
+        int row = 0;
+        grid.add(fieldLabel("Name"), 0, row);
+        grid.add(withGrow(nameField), 1, row++);
+        grid.add(fieldLabel("Collation"), 0, row);
+        collationCombo.setPrefWidth(300);
+        grid.add(collationCombo, 1, row++);
+
+        ColumnConstraints labelCol = new ColumnConstraints(110);
+        ColumnConstraints fieldCol = new ColumnConstraints();
+        fieldCol.setHgrow(Priority.ALWAYS);
+        grid.getColumnConstraints().addAll(labelCol, fieldCol);
+
+        TextArea preview = new TextArea();
+        preview.setEditable(false);
+        preview.setPrefRowCount(4);
+        preview.getStyleClass().add("process-output");
+        Label previewLabel = new Label("Preview");
+        previewLabel.getStyleClass().add("connection-field-label");
+
+        VBox content = new VBox(14, grid, new Separator(), previewLabel, preview);
+        content.setPadding(new Insets(0, 20, 8, 20));
+        VBox.setVgrow(preview, Priority.ALWAYS);
+
+        Runnable refreshPreview = () -> preview.setText(
+                buildSqlServerSql(nameField.getText(), collationCombo.getEditor().getText()));
+        nameField.textProperty().addListener((o, a, b) -> refreshPreview.run());
+        collationCombo.getEditor().textProperty().addListener((o, a, b) -> refreshPreview.run());
+        refreshPreview.run();
+
+        Button cancel = new Button("Cancel");
+        cancel.setOnAction(e -> stage.close());
+        Button ok = new Button("OK");
+        ok.getStyleClass().add("run-button");
+        ok.setDefaultButton(true);
+        ok.setOnAction(e -> {
+            String name = nameField.getText().trim();
+            if (name.isBlank()) {
+                DialogTheme.apply(new Alert(Alert.AlertType.WARNING, "Enter a database name.")).showAndWait();
+                return;
+            }
+            String sql = buildSqlServerSql(name, collationCombo.getEditor().getText().trim());
+            stage.close();
+            runCreate(mainWindow, profile, name, sql);
+        });
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        HBox buttons = new HBox(10, spacer, ok, cancel);
+        buttons.setAlignment(Pos.CENTER_RIGHT);
+        buttons.setPadding(new Insets(0, 20, 16, 20));
+
+        VBox root = new VBox(content, buttons);
+        root.getStyleClass().add("app-root");
+        VBox.setVgrow(content, Priority.ALWAYS);
+        Scene scene = new Scene(root, 560, 360);
+        if (owner != null && owner.getScene() != null) {
+            scene.getStylesheets().addAll(owner.getScene().getStylesheets());
+        }
+        stage.setScene(scene);
+        stage.show();
+    }
+
+    private static String buildSqlServerSql(String name, String collation) {
+        String dbName = name == null || name.isBlank() ? "database_name" : name.trim();
+        StringBuilder sql = new StringBuilder("CREATE DATABASE ").append(bracket(dbName));
+        if (collation != null && !collation.isBlank()) {
+            sql.append("\nCOLLATE ").append(collation.trim());
+        }
+        sql.append(";");
+        return sql.toString();
+    }
+
+    private static String bracket(String ident) {
+        return "[" + ident.replace("]", "]]") + "]";
     }
 
     // ================================================================ MongoDB
