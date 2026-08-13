@@ -54,7 +54,26 @@ public final class MetadataService {
 
     /** PostgreSQL's JDBC metadata calls ignore/reject foreign catalogs — pass null. */
     private static String metaCatalog(ConnectionProfile profile, String catalog) {
-        return profile.getType() == DatabaseType.POSTGRESQL ? null : catalog;
+        // Oracle's JDBC driver never populates TABLE_CAT at all (it has no
+        // catalog concept) — passing a real value here as a catalog filter
+        // would match nothing. What looks like "catalog" for an Oracle
+        // console scoped to one schema is actually a schema name; see
+        // metaSchema below for where that value actually belongs.
+        return profile.getType() == DatabaseType.POSTGRESQL
+                || profile.getType() == DatabaseType.ORACLE ? null : catalog;
+    }
+
+    /**
+     * The schema-filter argument for Oracle's metadata calls, when a console
+     * is scoped to one schema (catalog here is actually that schema's name —
+     * see JdbcClient's use of Connection.setSchema() for the same value).
+     * Every other engine keeps filtering by catalog/database instead, via
+     * the connection itself already being scoped to the right one, so this
+     * stays null for them — an explicit schema filter would only narrow
+     * results they don't actually want narrowed.
+     */
+    private static String metaSchema(ConnectionProfile profile, String catalog) {
+        return profile.getType() == DatabaseType.ORACLE ? catalog : null;
     }
 
     /** Names of every database on the server — used by the show/hide dialog. */
@@ -857,7 +876,8 @@ public final class MetadataService {
         List<String> tables = new ArrayList<>();
         try (Connection conn = client(profile, catalog).getConnection();
              ResultSet rs = conn.getMetaData().getTables(
-                     metaCatalog(profile, catalog), null, "%", new String[]{"TABLE", "VIEW"})) {
+                     metaCatalog(profile, catalog), metaSchema(profile, catalog), "%",
+                     new String[]{"TABLE", "VIEW"})) {
             while (rs.next()) {
                 String schema = rs.getString("TABLE_SCHEM");
                 if (schema != null && PG_SYSTEM_SCHEMAS.contains(schema)) continue;
@@ -886,7 +906,8 @@ public final class MetadataService {
 
         try (Connection conn = client(profile, catalog).getConnection();
              ResultSet rs = conn.getMetaData().getTables(
-                     metaCatalog(profile, catalog), null, "%", new String[]{"SEQUENCE"})) {
+                     metaCatalog(profile, catalog), metaSchema(profile, catalog), "%",
+                     new String[]{"SEQUENCE"})) {
             while (rs.next()) sequences.add(rs.getString("TABLE_NAME"));
         } catch (SQLException ignored) {}
         return sequences;
@@ -897,7 +918,7 @@ public final class MetadataService {
         Set<String> columns = new LinkedHashSet<>();
         try (Connection conn = client(profile, catalog).getConnection();
              ResultSet rs = conn.getMetaData().getColumns(
-                     metaCatalog(profile, catalog), null, "%", "%")) {
+                     metaCatalog(profile, catalog), metaSchema(profile, catalog), "%", "%")) {
             while (rs.next() && columns.size() < 4000) {
                 String schema = rs.getString("TABLE_SCHEM");
                 if (schema != null && PG_SYSTEM_SCHEMAS.contains(schema)) continue;
@@ -912,7 +933,7 @@ public final class MetadataService {
         List<String> columns = new ArrayList<>();
         try (Connection conn = client(profile, catalog).getConnection();
              ResultSet rs = conn.getMetaData().getColumns(
-                     metaCatalog(profile, catalog), null, table, "%")) {
+                     metaCatalog(profile, catalog), metaSchema(profile, catalog), table, "%")) {
             while (rs.next()) columns.add(rs.getString("COLUMN_NAME"));
         } catch (SQLException ignored) {}
         return columns;
@@ -1018,7 +1039,7 @@ public final class MetadataService {
         List<DbObject> out = new ArrayList<>();
         try (Connection conn = client(profile, catalog).getConnection();
              ResultSet rs = conn.getMetaData().getTables(
-                     metaCatalog(profile, catalog), null, "%" + query + "%",
+                     metaCatalog(profile, catalog), metaSchema(profile, catalog), "%" + query + "%",
                      new String[]{"TABLE", "VIEW"})) {
             while (rs.next() && out.size() < limit) {
                 String schema = rs.getString("TABLE_SCHEM");

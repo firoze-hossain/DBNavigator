@@ -711,6 +711,26 @@ public class SchemaTreePane extends VBox {
                             newConsole, dump, restore, diagramsMenu,
                             new SeparatorMenuItem(), deleteDb);
                 }
+                case SCHEMA -> {
+                    MenuItem refreshSchema = new MenuItem("Refresh");
+                    refreshSchema.setOnAction(e -> {
+                        obj.setLoaded(false);
+                        getTreeItem().setExpanded(false);
+                        mainWindow.setStatus("Refreshed " + obj.getName());
+                    });
+                    MenuItem newConsole = new MenuItem("New Query Console on " + obj.getName());
+                    newConsole.setOnAction(e -> {
+                        // Oracle schemas are top-level (no enclosing database
+                        // to speak of — see MetadataService), so the schema's
+                        // own name IS the scope. Postgres/MySQL/SQL Server
+                        // schemas sit inside a database; obj.getCatalog()
+                        // is that enclosing database's name.
+                        String catalog = profile.getType() == ConnectionProfile.DatabaseType.ORACLE
+                                ? obj.getName() : obj.getCatalog();
+                        mainWindow.openQueryTab(profile, catalog, null);
+                    });
+                    menu.getItems().addAll(newConsole, new SeparatorMenuItem(), refreshSchema);
+                }
                 default -> {
                     return null;
                 }

@@ -102,10 +102,22 @@ public class ConnectionProfile {
      * convention for "no database specified" is used rather than passing an
      * empty string straight into the URL, which several drivers/servers
      * reject outright as an invalid database name.
+     *
+     * Oracle never honors this override: one Oracle connection always points
+     * at the same database/service — there's no per-connection "catalog" to
+     * switch the way PostgreSQL/MySQL/SQL Server have. When this is called
+     * for an Oracle "console scoped to one schema" (schemas are Oracle's
+     * real organizing unit — see MetadataService), the value passed in is a
+     * schema name, not an alternate service name/SID, so applying it here
+     * exactly like the other engines would silently try to connect to a
+     * nonexistent service literally named after the schema. That case is
+     * instead handled by JdbcClient calling Connection.setSchema() after
+     * connecting — a session-level CURRENT_SCHEMA change, not a new URL.
      */
     @JsonIgnore
     public String getJdbcUrl(String databaseOverride) {
-        String database = (databaseOverride != null && !databaseOverride.isBlank())
+        boolean applyOverride = type != DatabaseType.ORACLE;
+        String database = (applyOverride && databaseOverride != null && !databaseOverride.isBlank())
                 ? databaseOverride : this.database;
         boolean blank = database == null || database.isBlank();
 

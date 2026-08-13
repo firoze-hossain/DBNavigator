@@ -56,7 +56,7 @@ public class ConnectionDialog extends Dialog<ConnectionProfile> {
     private final Label mongoUrlLabel = fieldLabel("URL:");
     private final Label mongoUrlNote = new Label("Overrides settings above");
     private java.util.List<javafx.scene.Node> mongoOnlyNodes;
-    private java.util.List<javafx.scene.control.Control> mongoOverridableFields;
+    private java.util.List<Control> mongoOverridableFields;
 
     // Oracle-only fields — mirrors DataGrip's own "SID / Service Name / TNS /
     // URL only" connection-type dropdown, as a segmented toggle for
@@ -447,7 +447,7 @@ public class ConnectionDialog extends Dialog<ConnectionProfile> {
         mongoUrlField.setManaged(urlOnly);
         mongoUrlNote.setVisible(urlOnly);
         mongoUrlNote.setManaged(urlOnly);
-        for (javafx.scene.control.Control field : mongoOverridableFields) {
+        for (Control field : mongoOverridableFields) {
             field.setDisable(urlOnly);
         }
         boolean srv = mongoConnTypeGroup.getSelectedToggle() == mongoSrvToggle;
