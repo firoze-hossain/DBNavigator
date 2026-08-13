@@ -43,7 +43,8 @@ public final class ModifyDatabaseDialog {
         ownerField.setPromptText("(loading current owner\u2026)");
         ownerField.setDisable(true);
 
-        boolean supportsRename = profile.getType() == ConnectionProfile.DatabaseType.POSTGRESQL;
+        boolean supportsRename = profile.getType() == ConnectionProfile.DatabaseType.POSTGRESQL
+                || profile.getType() == ConnectionProfile.DatabaseType.SQLSERVER;
         nameField.setDisable(!supportsRename);
 
         GridPane grid = new GridPane();

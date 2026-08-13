@@ -24,10 +24,10 @@ public final class DatabaseAdminService {
             throw new UnsupportedOperationException(
                     "Dropping MongoDB databases isn't supported yet — use a console command.");
         }
-        if (profile.getType() == DatabaseType.POSTGRESQL) {
-            dropPostgresDatabase(profile, databaseName);
-        } else {
-            dropGenericDatabase(profile, databaseName);
+        switch (profile.getType()) {
+            case POSTGRESQL -> dropPostgresDatabase(profile, databaseName);
+            case SQLSERVER -> dropSqlServerDatabase(profile, databaseName);
+            default -> dropGenericDatabase(profile, databaseName);
         }
     }
 
@@ -71,14 +71,53 @@ public final class DatabaseAdminService {
     }
 
     /**
+     * SQL Server, like PostgreSQL, refuses to drop a database with any
+     * active connection — including the one issuing the DROP if it's
+     * currently using that database. SET SINGLE_USER WITH ROLLBACK
+     * IMMEDIATE forces every other session off first (SQL Server's
+     * equivalent of PostgreSQL's pg_terminate_backend loop above), and the
+     * DROP itself runs from "master" rather than the target database.
+     */
+    private static void dropSqlServerDatabase(ConnectionProfile profile, String databaseName) throws Exception {
+        ClientRegistry.disconnectCatalog(profile, databaseName);
+        String adminCatalog = databaseName.equalsIgnoreCase(profile.getDatabase())
+                ? "master" : profile.getDatabase();
+        try (Connection conn = ClientRegistry.jdbc(profile, adminCatalog).getConnection();
+             Statement stmt = conn.createStatement()) {
+            try {
+                stmt.execute("ALTER DATABASE " + bracket(databaseName)
+                        + " SET SINGLE_USER WITH ROLLBACK IMMEDIATE");
+            } catch (SQLException ignored) {
+                // insufficient privilege, or already single-user — proceed anyway
+            }
+            stmt.execute("DROP DATABASE " + bracket(databaseName));
+        }
+    }
+
+    /**
      * Renames a database. PostgreSQL supports this directly with
-     * ALTER DATABASE ... RENAME TO ...; it still requires no other
-     * connection be using the database being renamed, same as DROP.
-     * MySQL/MariaDB have no equivalent statement (the common workaround is
-     * dump + recreate + restore), so that's reported as unsupported rather
-     * than attempted.
+     * ALTER DATABASE ... RENAME TO ...; SQL Server has its own equivalent,
+     * ALTER DATABASE ... MODIFY NAME = ... (also requires exclusive access,
+     * same as dropping). MySQL/MariaDB have no equivalent statement (the
+     * common workaround is dump + recreate + restore), so that's reported
+     * as unsupported rather than attempted.
      */
     public static void renameDatabase(ConnectionProfile profile, String oldName, String newName) throws Exception {
+        if (profile.getType() == DatabaseType.SQLSERVER) {
+            ClientRegistry.disconnectCatalog(profile, oldName);
+            String adminCatalog = oldName.equalsIgnoreCase(profile.getDatabase()) ? "master" : profile.getDatabase();
+            try (Connection conn = ClientRegistry.jdbc(profile, adminCatalog).getConnection();
+                 Statement stmt = conn.createStatement()) {
+                try {
+                    stmt.execute("ALTER DATABASE " + bracket(oldName) + " SET SINGLE_USER WITH ROLLBACK IMMEDIATE");
+                } catch (SQLException ignored) {
+                    // insufficient privilege, or already single-user — proceed anyway
+                }
+                stmt.execute("ALTER DATABASE " + bracket(oldName) + " MODIFY NAME = " + bracket(newName));
+            }
+            if (oldName.equals(profile.getDatabase())) profile.setDatabase(newName);
+            return;
+        }
         if (profile.getType() != DatabaseType.POSTGRESQL) {
             throw new UnsupportedOperationException(
                     profile.getType().getDisplayName() + " has no direct \"rename database\" statement — "
@@ -129,5 +168,10 @@ public final class DatabaseAdminService {
 
     private static String quoteBacktick(String name) {
         return "`" + name.replace("`", "``") + "`";
+    }
+
+    /** SQL Server's bracket-quoted identifier form — [name], with ] doubled if present. */
+    private static String bracket(String name) {
+        return "[" + name.replace("]", "]]") + "]";
     }
 }
