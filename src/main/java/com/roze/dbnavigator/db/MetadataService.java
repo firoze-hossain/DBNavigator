@@ -33,6 +33,21 @@ public final class MetadataService {
             "db_denydatareader", "db_denydatawriter", "sys", "guest",
             "information_schema");
 
+    // Every Oracle install ships several dozen built-in component schemas
+    // (Oracle Text, Spatial, Multimedia, XML DB, label security, and so on)
+    // that are essentially never where a user's own tables live, alongside
+    // SYS/SYSTEM which — deliberately not included here — genuinely are
+    // used directly by many real users (this app's own SYSTEM user among
+    // them). DataGrip's equivalent tucks this same noise away under its own
+    // "Database Objects" node rather than listing it next to real schemas.
+    private static final Set<String> ORACLE_SYSTEM_SCHEMAS = Set.of(
+            "anonymous", "appqossys", "audsys", "ctxsys", "dbsfwuser", "dbsnmp",
+            "dip", "dvf", "dvsys", "ggsys", "gsmadmin_internal", "gsmcatuser",
+            "gsmuser", "lbacsys", "mddata", "mdsys", "ojvmsys", "olapsys",
+            "oracle_ocm", "orddata", "ordplugins", "ordsys", "outln", "pdbadmin",
+            "remote_scheduler_agent", "si_informtn_schema", "sys$umf",
+            "sysbackup", "sysdg", "syskm", "sysrac", "wmsys", "xdb", "xs$null");
+
     private static JdbcClient client(ConnectionProfile profile, String catalog) {
         return ClientRegistry.jdbc(profile, catalog);
     }
@@ -75,6 +90,19 @@ public final class MetadataService {
                 }
                 yield names;
             }
+            // Oracle has no per-connection "database" the way the engines
+            // above do — one instance is one database. Its real organizing
+            // unit, and the thing this filter is actually useful for, is the
+            // schema (1:1 with a user) — see loadTopLevel below, which
+            // already lists every (non-noise) schema as Oracle's top-level
+            // nodes; this reuses that exact same list for consistency.
+            case ORACLE -> {
+                List<DbObject> schemas;
+                try (Connection conn = client(profile, null).getConnection()) {
+                    schemas = loadSchemas(conn, profile, null);
+                }
+                yield schemas.stream().map(DbObject::getName).toList();
+            }
             default -> List.of();
         };
     }
@@ -82,7 +110,7 @@ public final class MetadataService {
     /** True when this engine shows DATABASE nodes that can be filtered. */
     public static boolean supportsDatabaseFilter(ConnectionProfile profile) {
         return switch (profile.getType()) {
-            case POSTGRESQL, MYSQL, MARIADB, MONGODB, SQLSERVER -> true;
+            case POSTGRESQL, MYSQL, MARIADB, MONGODB, SQLSERVER, ORACLE -> true;
             default -> false;
         };
     }
@@ -172,6 +200,8 @@ public final class MetadataService {
                         && PG_SYSTEM_SCHEMAS.contains(schema)) continue;
                 if (profile.getType() == DatabaseType.SQLSERVER
                         && SQLSERVER_SYSTEM_SCHEMAS.contains(schema.toLowerCase(Locale.ROOT))) continue;
+                if (profile.getType() == DatabaseType.ORACLE
+                        && ORACLE_SYSTEM_SCHEMAS.contains(schema.toLowerCase(Locale.ROOT))) continue;
                 result.add(new DbObject(schema, Kind.SCHEMA, catalog, schema));
             }
         }
