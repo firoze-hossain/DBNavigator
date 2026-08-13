@@ -49,6 +49,15 @@ public class JdbcClient implements AutoCloseable {
             // of failing outright.
             config.setConnectionInitSql("PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;");
         }
+        if (profile.getType() == ConnectionProfile.DatabaseType.ORACLE
+                && catalogOverride != null && !catalogOverride.isBlank()) {
+            // Oracle has no per-connection catalog to switch — the "New
+            // Query Console on <schema>" action instead asks for a session-
+            // level CURRENT_SCHEMA change, applied here via the standard
+            // JDBC Connection.setSchema() (which Oracle's driver implements
+            // as exactly that ALTER SESSION) rather than by changing the URL.
+            config.setSchema(catalogOverride);
+        }
         config.setPoolName("DBNav-" + profile.getName()
                 + (catalogOverride == null ? "" : "-" + catalogOverride));
         this.dataSource = new HikariDataSource(config);
