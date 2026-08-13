@@ -47,6 +47,20 @@ public class ConnectionProfile {
      */
     public enum MongoConnectionType { DEFAULT, SRV, URL_ONLY }
 
+    /**
+     * Oracle's classic JDBC "thin" driver supports several distinct URL
+     * shapes for the same underlying protocol — this mirrors DataGrip's own
+     * "Connection type" dropdown for Oracle. SID is the older, still very
+     * common form (e.g. every default Oracle XE install uses SID "XE" —
+     * this is the exact case the previous Service-Name-only implementation
+     * couldn't express at all). SERVICE_NAME is the modern, PDB/CDB-aware
+     * form most current Oracle databases actually expect. TNS accepts
+     * either a tnsnames.ora alias or a full descriptor string verbatim.
+     * URL_ONLY ignores every other field and uses {@link #oracleConnectString}
+     * as the complete jdbc:oracle:... URL.
+     */
+    public enum OracleConnectionType { SID, SERVICE_NAME, TNS, URL_ONLY }
+
     private String id = UUID.randomUUID().toString();
     private String name = "";
     private DatabaseType type = DatabaseType.POSTGRESQL;
@@ -64,6 +78,12 @@ public class ConnectionProfile {
     private String replicaSet = "";
     private String readPreference = "";
     private String mongoUrlOverride = "";
+    // Oracle-only; ignored by every other engine. Defaults to SERVICE_NAME
+    // so existing saved profiles — which only ever knew Service Name —
+    // behave exactly as before unless a user explicitly picks something else.
+    private OracleConnectionType oracleConnectionType = OracleConnectionType.SERVICE_NAME;
+    private String oracleSid = "";
+    private String oracleConnectString = "";
 
     public ConnectionProfile() {}
 
@@ -111,10 +131,35 @@ public class ConnectionProfile {
                     ? "jdbc:sqlserver://%s:%d;encrypt=%s;trustServerCertificate=true".formatted(host, port, useSsl)
                     : "jdbc:sqlserver://%s:%d;databaseName=%s;encrypt=%s;trustServerCertificate=true"
                           .formatted(host, port, database, useSsl);
-            // Oracle and SQLite genuinely need a specific identifier (a
-            // service name/SID, or a file path) — there's no meaningful
-            // "default" to substitute, so these still require a value.
-            case ORACLE     -> "jdbc:oracle:thin:@//%s:%d/%s".formatted(host, port, database);
+            // SQLite genuinely needs a specific identifier (a file path) —
+            // there's no meaningful "default" to substitute, so it still
+            // requires a value.
+            // Oracle's thin driver understands several distinct URL shapes for
+            // the same connection — which one applies depends entirely on how
+            // the target database is configured, so this is driven by the
+            // explicit connection-type toggle rather than one fixed format.
+            case ORACLE -> switch (oracleConnectionType) {
+                // A full, ready-to-use URL pasted in from elsewhere — every
+                // other Oracle field is ignored, same as Mongo's URL_ONLY.
+                case URL_ONLY -> oracleConnectString;
+                // Either a tnsnames.ora alias (resolved via the
+                // oracle.net.tns_admin system property, if one is
+                // configured — this app doesn't manage that file) or a
+                // full manually-written (DESCRIPTION=...) connect
+                // descriptor, which always works standalone with no
+                // external file needed.
+                case TNS -> "jdbc:oracle:thin:@" + oracleConnectString;
+                // The older, still very common form — this is what every
+                // default Oracle XE install actually uses (SID "XE"),
+                // which is exactly the case the previous Service-Name-only
+                // implementation had no way to express at all.
+                case SID -> "jdbc:oracle:thin:@%s:%d:%s"
+                                .formatted(host, port, oracleSid.isBlank() ? "XE" : oracleSid);
+                // The modern, PDB/CDB-aware form most current Oracle
+                // databases expect — this was the only form supported
+                // before, and remains the default for existing profiles.
+                case SERVICE_NAME -> "jdbc:oracle:thin:@//%s:%d/%s".formatted(host, port, database);
+            };
             case SQLITE     -> "jdbc:sqlite:%s".formatted(resolveSqlitePath(database));
             case MONGODB    -> throw new IllegalStateException("MongoDB does not use JDBC");
         };
@@ -217,6 +262,13 @@ public class ConnectionProfile {
     @JsonIgnore
     public String getSummary() {
         if (type == DatabaseType.SQLITE) return resolvedSqlitePath();
+        if (type == DatabaseType.ORACLE) return switch (oracleConnectionType) {
+            case URL_ONLY -> oracleConnectString;
+            case TNS -> host + ":" + port + " @" + oracleConnectString;
+            case SID -> host + ":" + port + ":" + (oracleSid.isBlank() ? "XE" : oracleSid);
+            case SERVICE_NAME -> host + ":" + port
+                    + (database == null || database.isBlank() ? "" : "/" + database);
+        };
         return host + ":" + port + (database == null || database.isBlank() ? "" : "/" + database);
     }
 
@@ -237,6 +289,9 @@ public class ConnectionProfile {
         c.replicaSet = replicaSet;
         c.readPreference = readPreference;
         c.mongoUrlOverride = mongoUrlOverride;
+        c.oracleConnectionType = oracleConnectionType;
+        c.oracleSid = oracleSid;
+        c.oracleConnectString = oracleConnectString;
         return c;
     }
 
@@ -280,6 +335,17 @@ public class ConnectionProfile {
     public String getMongoUrlOverride() { return mongoUrlOverride; }
     public void setMongoUrlOverride(String mongoUrlOverride) {
         this.mongoUrlOverride = mongoUrlOverride == null ? "" : mongoUrlOverride;
+    }
+    public OracleConnectionType getOracleConnectionType() { return oracleConnectionType; }
+    public void setOracleConnectionType(OracleConnectionType oracleConnectionType) {
+        this.oracleConnectionType = oracleConnectionType == null
+                ? OracleConnectionType.SERVICE_NAME : oracleConnectionType;
+    }
+    public String getOracleSid() { return oracleSid; }
+    public void setOracleSid(String oracleSid) { this.oracleSid = oracleSid == null ? "" : oracleSid; }
+    public String getOracleConnectString() { return oracleConnectString; }
+    public void setOracleConnectString(String oracleConnectString) {
+        this.oracleConnectString = oracleConnectString == null ? "" : oracleConnectString;
     }
 
     @Override public String toString() { return name; }

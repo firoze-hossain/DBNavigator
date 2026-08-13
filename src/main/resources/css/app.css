@@ -585,15 +585,15 @@
 .connection-sqlite-hint.hint-ok   { -fx-text-fill: -text-dim; }
 .connection-sqlite-hint.hint-warn { -fx-text-fill: #e0a44c; }
 .connection-field-hint { -fx-font-size: 11px; -fx-text-fill: -text-dim; }
-.mongo-conn-type-toggle {
+.segmented-toggle {
     -fx-background-radius: 0;
     -fx-border-color: -border;
     -fx-border-width: 1 1 1 0;
     -fx-padding: 5 12 5 12;
 }
-.mongo-conn-type-toggle:first-of-type { -fx-background-radius: 4 0 0 4; -fx-border-width: 1; }
-.mongo-conn-type-toggle:last-of-type  { -fx-background-radius: 0 4 4 0; }
-.mongo-conn-type-toggle:selected {
+.segmented-toggle:first-of-type { -fx-background-radius: 4 0 0 4; -fx-border-width: 1; }
+.segmented-toggle:last-of-type  { -fx-background-radius: 0 4 4 0; }
+.segmented-toggle:selected {
     -fx-background-color: #57965c33;
     -fx-text-fill: #57965c;
     -fx-font-weight: bold;

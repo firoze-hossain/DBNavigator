@@ -34,6 +34,7 @@ public class ConnectionDialog extends Dialog<ConnectionProfile> {
     private final TextField hostField = new TextField();
     private final TextField portField = new TextField();
     private final TextField databaseField = new TextField();
+    private final Label databaseLabel = fieldLabel("Database:");
     private final TextField userField = new TextField();
     private final PasswordField passwordField = new PasswordField();
     private final CheckBox savePasswordCheck = new CheckBox("Save password");
@@ -56,6 +57,20 @@ public class ConnectionDialog extends Dialog<ConnectionProfile> {
     private final Label mongoUrlNote = new Label("Overrides settings above");
     private java.util.List<javafx.scene.Node> mongoOnlyNodes;
     private java.util.List<Control> mongoOverridableFields;
+
+    // Oracle-only fields — mirrors DataGrip's own "SID / Service Name / TNS /
+    // URL only" connection-type dropdown, as a segmented toggle for
+    // consistency with the Mongo one above.
+    private final ToggleButton oracleSidToggle = new ToggleButton("SID");
+    private final ToggleButton oracleServiceNameToggle = new ToggleButton("Service Name");
+    private final ToggleButton oracleTnsToggle = new ToggleButton("TNS");
+    private final ToggleButton oracleUrlOnlyToggle = new ToggleButton("URL only");
+    private final ToggleGroup oracleConnTypeGroup = new ToggleGroup();
+    private final TextField oracleSidField = new TextField();
+    private final Label oracleSidLabel = fieldLabel("SID:");
+    private final TextField oracleConnectStringField = new TextField();
+    private final Label oracleConnectStringLabel = fieldLabel("TNS Descriptor:");
+    private java.util.List<javafx.scene.Node> oracleOnlyNodes;
 
     public ConnectionDialog(ConnectionProfile existing) {
         this.profile = existing != null ? existing.copy() : new ConnectionProfile();
@@ -90,9 +105,9 @@ public class ConnectionDialog extends Dialog<ConnectionProfile> {
         mongoDefaultToggle.setToggleGroup(mongoConnTypeGroup);
         mongoSrvToggle.setToggleGroup(mongoConnTypeGroup);
         mongoUrlOnlyToggle.setToggleGroup(mongoConnTypeGroup);
-        mongoDefaultToggle.getStyleClass().add("mongo-conn-type-toggle");
-        mongoSrvToggle.getStyleClass().add("mongo-conn-type-toggle");
-        mongoUrlOnlyToggle.getStyleClass().add("mongo-conn-type-toggle");
+        mongoDefaultToggle.getStyleClass().add("segmented-toggle");
+        mongoSrvToggle.getStyleClass().add("segmented-toggle");
+        mongoUrlOnlyToggle.getStyleClass().add("segmented-toggle");
         mongoDefaultToggle.setUserData(ConnectionProfile.MongoConnectionType.DEFAULT);
         mongoSrvToggle.setUserData(ConnectionProfile.MongoConnectionType.SRV);
         mongoUrlOnlyToggle.setUserData(ConnectionProfile.MongoConnectionType.URL_ONLY);
@@ -122,6 +137,37 @@ public class ConnectionDialog extends Dialog<ConnectionProfile> {
         mongoUrlField.setText(profile.getMongoUrlOverride());
         mongoUrlField.setPromptText("mongodb+srv://user:pass@cluster.example.mongodb.net/mydb");
         mongoUrlNote.getStyleClass().add("connection-field-hint");
+
+        // ---- Oracle-only fields ----
+        oracleSidToggle.setToggleGroup(oracleConnTypeGroup);
+        oracleServiceNameToggle.setToggleGroup(oracleConnTypeGroup);
+        oracleTnsToggle.setToggleGroup(oracleConnTypeGroup);
+        oracleUrlOnlyToggle.setToggleGroup(oracleConnTypeGroup);
+        for (ToggleButton tb : java.util.List.of(oracleSidToggle, oracleServiceNameToggle,
+                oracleTnsToggle, oracleUrlOnlyToggle)) {
+            tb.getStyleClass().add("segmented-toggle");
+        }
+        oracleSidToggle.setUserData(ConnectionProfile.OracleConnectionType.SID);
+        oracleServiceNameToggle.setUserData(ConnectionProfile.OracleConnectionType.SERVICE_NAME);
+        oracleTnsToggle.setUserData(ConnectionProfile.OracleConnectionType.TNS);
+        oracleUrlOnlyToggle.setUserData(ConnectionProfile.OracleConnectionType.URL_ONLY);
+        ToggleButton initialOracleToggle = switch (profile.getOracleConnectionType()) {
+            case SID -> oracleSidToggle;
+            case TNS -> oracleTnsToggle;
+            case URL_ONLY -> oracleUrlOnlyToggle;
+            case SERVICE_NAME -> oracleServiceNameToggle;
+        };
+        oracleConnTypeGroup.selectToggle(initialOracleToggle);
+        oracleConnTypeGroup.selectedToggleProperty().addListener((obs, old, current) -> {
+            if (current == null) oracleConnTypeGroup.selectToggle(old);
+            else updateOracleFieldsVisibility();
+        });
+
+        oracleSidField.setText(profile.getOracleSid());
+        oracleSidField.setPromptText("XE");
+        oracleConnectStringField.setText(profile.getOracleConnectString());
+        oracleConnectStringField.setPromptText(
+                "myTnsAlias, or (DESCRIPTION=(ADDRESS=...)(CONNECT_DATA=...))");
 
         browseButton.setGraphic(Icons.of(FontAwesomeSolid.FOLDER_OPEN, "#e0a44c", 12));
         browseButton.setOnAction(e -> {
@@ -174,14 +220,24 @@ public class ConnectionDialog extends Dialog<ConnectionProfile> {
         connGrid.add(mongoConnTypeLabel, 0, row);
         connGrid.add(mongoConnTypeBox, 1, row++, 2, 1);
 
+        Label oracleConnTypeLabel = fieldLabel("Connection type:");
+        HBox oracleConnTypeBox = new HBox(6,
+                oracleSidToggle, oracleServiceNameToggle, oracleTnsToggle, oracleUrlOnlyToggle);
+        connGrid.add(oracleConnTypeLabel, 0, row);
+        connGrid.add(oracleConnTypeBox, 1, row++, 2, 1);
+
         connGrid.add(fieldLabel("Host:"), 0, row);
         connGrid.add(hostField, 1, row++, 2, 1);
         connGrid.add(fieldLabel("Port:"), 0, row);
         connGrid.add(portField, 1, row++, 2, 1);
-        connGrid.add(fieldLabel("Database:"), 0, row);
+        connGrid.add(databaseLabel, 0, row);
         connGrid.add(databaseField, 1, row);
         connGrid.add(browseButton, 2, row++);
         connGrid.add(sqlitePathHint, 1, row++, 2, 1);
+        connGrid.add(oracleSidLabel, 0, row);
+        connGrid.add(oracleSidField, 1, row++, 2, 1);
+        connGrid.add(oracleConnectStringLabel, 0, row);
+        connGrid.add(oracleConnectStringField, 1, row++, 2, 1);
         connGrid.add(fieldLabel("User:"), 0, row);
         connGrid.add(userField, 1, row++, 2, 1);
         connGrid.add(fieldLabel("Password:"), 0, row);
@@ -208,6 +264,8 @@ public class ConnectionDialog extends Dialog<ConnectionProfile> {
         GridPane.setHgrow(replicaSetField, Priority.ALWAYS);
         GridPane.setHgrow(readPreferenceCombo, Priority.ALWAYS);
         GridPane.setHgrow(mongoUrlField, Priority.ALWAYS);
+        GridPane.setHgrow(oracleSidField, Priority.ALWAYS);
+        GridPane.setHgrow(oracleConnectStringField, Priority.ALWAYS);
         readPreferenceCombo.setMaxWidth(Double.MAX_VALUE);
         GridPane.setFillWidth(sqlitePathHint, true);
         sqlitePathHint.setMaxWidth(Double.MAX_VALUE);
@@ -226,6 +284,9 @@ public class ConnectionDialog extends Dialog<ConnectionProfile> {
         mongoOverridableFields = java.util.List.of(
                 hostField, portField, databaseField, userField, passwordField,
                 replicaSetField, readPreferenceCombo);
+
+        oracleOnlyNodes = java.util.List.of(oracleConnTypeLabel, oracleConnTypeBox,
+                oracleSidLabel, oracleSidField, oracleConnectStringLabel, oracleConnectStringField);
 
         Button testButton = new Button("Test Connection");
         testButton.getStyleClass().add("run-button");
@@ -333,6 +394,7 @@ public class ConnectionDialog extends Dialog<ConnectionProfile> {
     private void applyTypeDefaults(DatabaseType type) {
         boolean sqlite = type == DatabaseType.SQLITE;
         boolean mongo = type == DatabaseType.MONGODB;
+        boolean oracle = type == DatabaseType.ORACLE;
 
         hostField.setDisable(sqlite);
         portField.setDisable(sqlite);
@@ -342,9 +404,12 @@ public class ConnectionDialog extends Dialog<ConnectionProfile> {
         browseButton.setVisible(sqlite);
         browseButton.setManaged(sqlite);
         databaseField.setPromptText(sqlite ? "Path to .db / .sqlite file (not a jdbc: URL)"
-                : mongo ? "(optional — browse all databases)" : "database name");
+                : mongo ? "(optional — browse all databases)"
+                : oracle ? "e.g. ORCLPDB1, XEPDB1, FREEPDB1"
+                : "database name");
         updateSqlitePathHint();
         updateMongoFieldsVisibility();
+        updateOracleFieldsVisibility();
 
         // Only overwrite the port if the user hasn't customized it
         try {
@@ -391,6 +456,75 @@ public class ConnectionDialog extends Dialog<ConnectionProfile> {
         portField.setDisable(urlOnly || srv);
     }
 
+    /**
+     * Shows the Oracle-only rows (connection-type toggle, SID, TNS/URL
+     * field) only for an Oracle connection, and switches which of
+     * SID/Service Name/TNS/URL is actually usable based on the selected
+     * toggle position — mirroring DataGrip's own "Connection type" dropdown,
+     * which likewise shows a different field set per position rather than
+     * one fixed layout.
+     */
+    private void updateOracleFieldsVisibility() {
+        if (oracleOnlyNodes == null) return;  // fields not laid out yet — selectToggle() below fires this early
+        boolean oracle = typeCombo.getValue() == DatabaseType.ORACLE;
+        for (javafx.scene.Node node : oracleOnlyNodes) {
+            node.setVisible(oracle);
+            node.setManaged(oracle);
+        }
+        if (!oracle) {
+            // Restore the shared Database field to its normal role for
+            // every other engine — Oracle's Service Name mode is the only
+            // place this label/field gets repurposed.
+            databaseLabel.setText("Database:");
+            databaseLabel.setVisible(true);
+            databaseLabel.setManaged(true);
+            databaseField.setVisible(true);
+            databaseField.setManaged(true);
+            return;
+        }
+
+        Toggle selected = oracleConnTypeGroup.getSelectedToggle();
+        ConnectionProfile.OracleConnectionType mode = selected == null
+                ? ConnectionProfile.OracleConnectionType.SERVICE_NAME
+                : (ConnectionProfile.OracleConnectionType) selected.getUserData();
+
+        boolean showSid = mode == ConnectionProfile.OracleConnectionType.SID;
+        boolean showServiceName = mode == ConnectionProfile.OracleConnectionType.SERVICE_NAME;
+        boolean showTnsOrUrl = mode == ConnectionProfile.OracleConnectionType.TNS
+                || mode == ConnectionProfile.OracleConnectionType.URL_ONLY;
+
+        oracleSidLabel.setVisible(showSid);
+        oracleSidLabel.setManaged(showSid);
+        oracleSidField.setVisible(showSid);
+        oracleSidField.setManaged(showSid);
+
+        databaseLabel.setText("Service Name:");
+        databaseLabel.setVisible(showServiceName);
+        databaseLabel.setManaged(showServiceName);
+        databaseField.setVisible(showServiceName);
+        databaseField.setManaged(showServiceName);
+
+        oracleConnectStringLabel.setText(
+                mode == ConnectionProfile.OracleConnectionType.URL_ONLY ? "URL:" : "TNS Descriptor:");
+        oracleConnectStringLabel.setVisible(showTnsOrUrl);
+        oracleConnectStringLabel.setManaged(showTnsOrUrl);
+        oracleConnectStringField.setVisible(showTnsOrUrl);
+        oracleConnectStringField.setManaged(showTnsOrUrl);
+
+        // TNS and URL-only connect strings already encode their own address
+        // (a (DESCRIPTION=(ADDRESS=...))) — Host/Port would be redundant,
+        // and potentially misleading, in either of those two modes.
+        boolean hostPortRelevant = showSid || showServiceName;
+        hostField.setDisable(!hostPortRelevant);
+        portField.setDisable(!hostPortRelevant);
+
+        // A pasted URL typically already encodes its own credentials too,
+        // the same way Mongo's URL-only mode does.
+        boolean urlOnly = mode == ConnectionProfile.OracleConnectionType.URL_ONLY;
+        userField.setDisable(urlOnly);
+        passwordField.setDisable(urlOnly);
+    }
+
     private void collectInto(ConnectionProfile p) {
         p.setName(nameField.getText().trim());
         p.setType(typeCombo.getValue());
@@ -413,6 +547,14 @@ public class ConnectionDialog extends Dialog<ConnectionProfile> {
             p.setReplicaSet(replicaSetField.getText().trim());
             p.setReadPreference(readPreferenceCombo.getValue());
             p.setMongoUrlOverride(mongoUrlField.getText().trim());
+        }
+        if (typeCombo.getValue() == DatabaseType.ORACLE) {
+            Toggle selected = oracleConnTypeGroup.getSelectedToggle();
+            p.setOracleConnectionType(selected == null
+                    ? ConnectionProfile.OracleConnectionType.SERVICE_NAME
+                    : (ConnectionProfile.OracleConnectionType) selected.getUserData());
+            p.setOracleSid(oracleSidField.getText().trim());
+            p.setOracleConnectString(oracleConnectStringField.getText().trim());
         }
     }
 
