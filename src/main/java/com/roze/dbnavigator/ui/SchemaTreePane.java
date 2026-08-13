@@ -137,9 +137,15 @@ public class SchemaTreePane extends VBox {
             throws Exception {
         List<DbObject> all = MetadataService.loadTopLevel(profile);
 
-        boolean databases = !all.isEmpty()
-                && all.stream().allMatch(o -> o.getKind() == Kind.DATABASE);
-        if (!databases) {
+        // Same show/hide mechanism, generalized to whichever kind of node
+        // this engine's connection root actually produces: DATABASE for
+        // PostgreSQL/MySQL/SQL Server/Mongo, or SCHEMA for Oracle (which has
+        // no per-connection "database" — schemas are its real organizing
+        // unit, one per user, and exactly what Show/Hide Schemas filters).
+        boolean filterable = !all.isEmpty() && (
+                all.stream().allMatch(o -> o.getKind() == Kind.DATABASE)
+                || all.stream().allMatch(o -> o.getKind() == Kind.SCHEMA));
+        if (!filterable) {
             connectionObj.setDetail(null);
             return all;
         }
@@ -281,14 +287,17 @@ public class SchemaTreePane extends VBox {
         };
     }
 
-    /** Opens the DataGrip-style show/hide databases popup for one connection. */
+    /** Opens the DataGrip-style show/hide databases (or, for Oracle, schemas) popup. */
     private void showDatabaseFilterDialog(TreeItem<DbObject> connectionItem,
                                           ConnectionProfile profile) {
         AppExecutor.run(() -> {
             try {
                 List<String> allDatabases = MetadataService.listDatabaseNames(profile);
                 Platform.runLater(() -> {
-                    DatabaseFilterDialog dialog = new DatabaseFilterDialog(profile, allDatabases);
+                    boolean oracle = profile.getType() == ConnectionProfile.DatabaseType.ORACLE;
+                    DatabaseFilterDialog dialog = oracle
+                            ? new DatabaseFilterDialog(profile, allDatabases, "schema", profile.getUsername())
+                            : new DatabaseFilterDialog(profile, allDatabases);
                     dialog.initOwner(getScene().getWindow());
                     dialog.showAndWait().ifPresent(selected -> {
                         profile.setVisibleDatabases(selected);
@@ -527,7 +536,8 @@ public class SchemaTreePane extends VBox {
 
                     MenuItem newConsole = new MenuItem("New Query Console");
                     newConsole.setOnAction(e -> mainWindow.openQueryTab(profile, null, null));
-                    MenuItem filterDbs = new MenuItem("Show / Hide Databases…");
+                    MenuItem filterDbs = new MenuItem(profile.getType() == ConnectionProfile.DatabaseType.ORACLE
+                            ? "Show / Hide Schemas…" : "Show / Hide Databases…");
                     filterDbs.setOnAction(e -> showDatabaseFilterDialog(getTreeItem(), profile));
                     MenuItem edit = new MenuItem("Edit Connection…");
                     edit.setOnAction(e -> mainWindow.showEditConnectionDialog(profile));

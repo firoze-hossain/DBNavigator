@@ -26,14 +26,19 @@ import java.util.Map;
  * engine: PostgreSQL gets Comment/Template/Allow Connections/Tablespace/
  * Owner (matching the reference dialog); MySQL/MariaDB get Character Set/
  * Collation (the properties that actually exist for a MySQL database);
- * MongoDB gets a Database name plus a required initial Collection name,
- * since MongoDB has no CREATE DATABASE at all — a database only persists
- * once it holds at least one collection.
+ * SQL Server gets Name/Collation; MongoDB gets a Database name plus a
+ * required initial Collection name, since MongoDB has no CREATE DATABASE
+ * at all — a database only persists once it holds at least one collection;
+ * Oracle gets a genuinely different dialog — CREATE USER, not CREATE
+ * DATABASE — since one Oracle instance is one database, and a new user
+ * (schema) is Oracle's real equivalent of "a clean place for my own
+ * tables," not a second database.
  *
  * Honest scope note: the PostgreSQL Grants section is shown for visual
  * parity ("Nothing to show" + toolbar) but isn't wired to real grant-
  * editing yet — add roles/privileges afterward from a console instead.
- * SQL Server/Oracle/SQLite still show the "use a console" message.
+ * SQLite still shows the "use a console" message (there's genuinely
+ * nothing to create — a SQLite connection already is one file).
  */
 public final class CreateDatabaseDialog {
 
@@ -51,7 +56,7 @@ public final class CreateDatabaseDialog {
      */
     public static boolean supportsCreate(ConnectionProfile.DatabaseType type) {
         return switch (type) {
-            case POSTGRESQL, MYSQL, MARIADB, MONGODB, SQLSERVER -> true;
+            case POSTGRESQL, MYSQL, MARIADB, MONGODB, SQLSERVER, ORACLE -> true;
             default -> false;
         };
     }
@@ -62,9 +67,10 @@ public final class CreateDatabaseDialog {
             case MYSQL, MARIADB -> showMySql(mainWindow, profile);
             case MONGODB -> showMongo(mainWindow, profile);
             case SQLSERVER -> showSqlServer(mainWindow, profile);
+            case ORACLE -> showOracleUser(mainWindow, profile);
             default -> DialogTheme.apply(new Alert(Alert.AlertType.INFORMATION,
-                    "Creating a database from this dialog is only available for PostgreSQL and "
-                    + "MySQL/MariaDB right now — for other engines, run CREATE DATABASE from a console."))
+                    "SQLite has nothing to create here — a connection already is one "
+                    + "single file. Use \"New Data Source\" to point at a different file instead."))
                     .showAndWait();
         }
     }
@@ -478,6 +484,179 @@ public final class CreateDatabaseDialog {
 
     private static String bracket(String ident) {
         return "[" + ident.replace("]", "]]") + "]";
+    }
+
+    // ================================================================ Oracle
+
+    /**
+     * Oracle has no CREATE DATABASE for this dialog to run — one instance
+     * is one database, and creating a whole new one is an instance-level
+     * operation (DBCA/scripted, requiring new datafiles, redo logs, control
+     * files) that nobody does from a GUI "New Database" click. What DataGrip
+     * and every other Oracle tool actually mean by "give me a place to put
+     * my own tables, cleanly separated from SYSTEM" is: create a new user —
+     * in Oracle, a schema and a user are the same object, so CREATE USER is
+     * simultaneously "create my own login" and "create my own namespace"
+     * (exactly the role a Postgres/MySQL database plays for this purpose).
+     * QUOTA UNLIMITED is granted on the tablespace explicitly because a
+     * freshly created Oracle user has a quota of *zero* by default — without
+     * it, their very first CREATE TABLE fails with ORA-01950.
+     */
+    private static void showOracleUser(MainWindow mainWindow, ConnectionProfile profile) {
+        Stage stage = new Stage();
+        Window owner = mainWindow.getOwnerWindow();
+        stage.initOwner(owner);
+        stage.initModality(Modality.APPLICATION_MODAL);
+        stage.setTitle("Create User (Schema)");
+        stage.setResizable(true);
+        stage.setMinWidth(560);
+        stage.setMinHeight(420);
+
+        TextField nameField = new TextField();
+        nameField.setPromptText("my_schema");
+        PasswordField passwordField = new PasswordField();
+        passwordField.setPromptText("password");
+        TextField tablespaceField = new TextField();
+        tablespaceField.setText("USERS");
+        CheckBox grantConnectResource = new CheckBox("Grant CONNECT, RESOURCE (needed to log in and create objects)");
+        grantConnectResource.setSelected(true);
+
+        GridPane grid = new GridPane();
+        grid.setHgap(14);
+        grid.setVgap(12);
+        grid.setPadding(new Insets(20, 20, 8, 20));
+        int row = 0;
+        grid.add(fieldLabel("Username"), 0, row);
+        grid.add(withGrow(nameField), 1, row++);
+        grid.add(fieldLabel("Password"), 0, row);
+        grid.add(withGrow(passwordField), 1, row++);
+        grid.add(fieldLabel("Default Tablespace"), 0, row);
+        grid.add(withGrow(tablespaceField), 1, row++);
+        grid.add(grantConnectResource, 1, row++, 2, 1);
+
+        ColumnConstraints labelCol = new ColumnConstraints(150);
+        ColumnConstraints fieldCol = new ColumnConstraints();
+        fieldCol.setHgrow(Priority.ALWAYS);
+        grid.getColumnConstraints().addAll(labelCol, fieldCol);
+
+        Label explainer = new Label(
+                "Oracle has no CREATE DATABASE equivalent here — one instance is one "
+                + "database. A new user IS a new schema in Oracle, so this creates your "
+                + "own clean namespace to work in instead of mixing your tables into "
+                + "SYSTEM's — exactly the separation a new database gives you in "
+                + "PostgreSQL or MySQL.");
+        explainer.setWrapText(true);
+        explainer.getStyleClass().add("console-status");
+
+        TextArea preview = new TextArea();
+        preview.setEditable(false);
+        preview.setPrefRowCount(6);
+        preview.getStyleClass().add("process-output");
+        Label previewLabel = new Label("Preview");
+        previewLabel.getStyleClass().add("connection-field-label");
+
+        VBox content = new VBox(14, grid, explainer, new Separator(), previewLabel, preview);
+        content.setPadding(new Insets(0, 20, 8, 20));
+        VBox.setVgrow(preview, Priority.ALWAYS);
+
+        Runnable refreshPreview = () -> preview.setText(buildOracleUserPreview(
+                nameField.getText(), tablespaceField.getText(), grantConnectResource.isSelected()));
+        nameField.textProperty().addListener((o, a, b) -> refreshPreview.run());
+        tablespaceField.textProperty().addListener((o, a, b) -> refreshPreview.run());
+        grantConnectResource.selectedProperty().addListener((o, a, b) -> refreshPreview.run());
+        refreshPreview.run();
+
+        Button cancel = new Button("Cancel");
+        cancel.setOnAction(e -> stage.close());
+        Button ok = new Button("OK");
+        ok.getStyleClass().add("run-button");
+        ok.setDefaultButton(true);
+        ok.setOnAction(e -> {
+            String name = nameField.getText().trim();
+            String password = passwordField.getText();
+            if (name.isBlank() || password.isBlank()) {
+                DialogTheme.apply(new Alert(Alert.AlertType.WARNING,
+                        "Enter both a username and a password.")).showAndWait();
+                return;
+            }
+            String tablespace = tablespaceField.getText().trim();
+            List<String> statements = oracleUserStatements(name, password, tablespace,
+                    grantConnectResource.isSelected());
+            stage.close();
+            runCreateMultiStatement(mainWindow, profile, name, statements);
+        });
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        HBox buttons = new HBox(10, spacer, ok, cancel);
+        buttons.setAlignment(Pos.CENTER_RIGHT);
+        buttons.setPadding(new Insets(0, 20, 16, 20));
+
+        VBox root = new VBox(content, buttons);
+        root.getStyleClass().add("app-root");
+        VBox.setVgrow(content, Priority.ALWAYS);
+        Scene scene = new Scene(root, 560, 420);
+        if (owner != null && owner.getScene() != null) {
+            scene.getStylesheets().addAll(owner.getScene().getStylesheets());
+        }
+        stage.setScene(scene);
+        stage.show();
+    }
+
+    private static List<String> oracleUserStatements(String name, String password,
+                                                      String tablespace, boolean grantConnectResource) {
+        String user = oracleIdent(name);
+        List<String> statements = new ArrayList<>();
+        String tbs = tablespace == null || tablespace.isBlank() ? "USERS" : tablespace.trim();
+        statements.add("CREATE USER " + user + " IDENTIFIED BY \"" + password.replace("\"", "\\\"") + "\""
+                + " DEFAULT TABLESPACE " + oracleIdent(tbs));
+        // A brand-new Oracle user has a quota of zero on every tablespace by
+        // default — without this, their very first CREATE TABLE fails with
+        // ORA-01950, which would otherwise look exactly like a permissions
+        // bug rather than an expected extra step.
+        statements.add("ALTER USER " + user + " QUOTA UNLIMITED ON " + oracleIdent(tbs));
+        if (grantConnectResource) {
+            statements.add("GRANT CONNECT, RESOURCE TO " + user);
+        }
+        return statements;
+    }
+
+    private static String buildOracleUserPreview(String name, String tablespace, boolean grantConnectResource) {
+        String user = name == null || name.isBlank() ? "my_schema" : name.trim();
+        List<String> statements = oracleUserStatements(user, "********", tablespace, grantConnectResource);
+        StringBuilder sb = new StringBuilder();
+        for (String s : statements) sb.append(s).append(";\n");
+        return sb.toString();
+    }
+
+    private static String oracleIdent(String ident) {
+        // Unquoted Oracle identifiers are case-insensitive (folded to upper),
+        // so a plain name doesn't need quoting at all — quoting only a name
+        // with characters that actually require it keeps the generated SQL
+        // readable instead of always wrapping everything in "quotes".
+        if (ident.matches("[A-Za-z][A-Za-z0-9_$#]*")) return ident;
+        return "\"" + ident.replace("\"", "\"\"") + "\"";
+    }
+
+    /** Runs several statements in sequence against one connection — used where a single CREATE isn't enough. */
+    private static void runCreateMultiStatement(MainWindow mainWindow, ConnectionProfile profile,
+                                                String name, List<String> statements) {
+        AppExecutor.run(() -> {
+            try (Connection conn = ClientRegistry.jdbc(profile, null).getConnection();
+                 Statement stmt = conn.createStatement()) {
+                for (String sql : statements) {
+                    stmt.execute(sql);
+                }
+                Platform.runLater(() -> {
+                    mainWindow.setStatus("Created " + name);
+                    mainWindow.refreshSchemaExplorer();
+                });
+            } catch (Exception ex) {
+                String msg = ex.getMessage() == null ? ex.toString() : ex.getMessage();
+                Platform.runLater(() -> DialogTheme.apply(new Alert(Alert.AlertType.ERROR,
+                        "Could not create user: " + msg)).showAndWait());
+            }
+        });
     }
 
     // ================================================================ MongoDB

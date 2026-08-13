@@ -11,21 +11,34 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * DataGrip-style database visibility popup: "All databases" master checkbox
- * plus one checkbox per database, with "(Default database)" marking the
- * database the profile connects to.
+ * DataGrip-style visibility popup: "All databases"/"All schemas" master
+ * checkbox plus one checkbox per item, with a "(Default)" marker on
+ * whichever one the profile actually connects to/as.
  *
- * Result: empty list = show all databases; otherwise only the checked ones.
+ * Result: empty list = show all; otherwise only the checked ones.
  */
 public class DatabaseFilterDialog extends Dialog<List<String>> {
 
-    private final CheckBox allBox = new CheckBox("All databases");
+    private final CheckBox allBox;
     private final Map<String, CheckBox> databaseBoxes = new LinkedHashMap<>();
 
     public DatabaseFilterDialog(ConnectionProfile profile, List<String> allDatabases) {
+        this(profile, allDatabases, "database", profile.getDatabase());
+    }
+
+    /**
+     * @param noun        "database" or "schema" — drives every label in the dialog
+     * @param defaultName the one item to mark "(Default)"; for Oracle this is the
+     *                    connected user/schema (profile.getUsername()), not
+     *                    profile.getDatabase() (which is Service Name/SID/TNS
+     *                    depending on connection type, and not a schema name at all)
+     */
+    public DatabaseFilterDialog(ConnectionProfile profile, List<String> allDatabases,
+                                String noun, String defaultName) {
         DialogTheme.apply(this);
-        setTitle("Show / Hide Databases");
-        setHeaderText("Choose which databases appear under " + profile.getName());
+        String nounPlural = noun + "s";
+        setTitle("Show / Hide " + capitalize(nounPlural));
+        setHeaderText("Choose which " + nounPlural + " appear under " + profile.getName());
         getDialogPane().setPrefWidth(420);
 
         List<String> filter = profile.getVisibleDatabases();
@@ -34,6 +47,7 @@ public class DatabaseFilterDialog extends Dialog<List<String>> {
         VBox list = new VBox(8);
         list.setPadding(new Insets(12));
 
+        allBox = new CheckBox("All " + nounPlural);
         allBox.setSelected(showAll);
         allBox.selectedProperty().addListener((obs, was, all) -> {
             for (CheckBox box : databaseBoxes.values()) {
@@ -44,8 +58,8 @@ public class DatabaseFilterDialog extends Dialog<List<String>> {
         list.getChildren().addAll(allBox, new Separator());
 
         for (String db : allDatabases) {
-            boolean isDefault = db.equals(profile.getDatabase());
-            CheckBox box = new CheckBox(db + (isDefault ? "   (Default database)" : ""));
+            boolean isDefault = db.equalsIgnoreCase(defaultName);
+            CheckBox box = new CheckBox(db + (isDefault ? "   (Default)" : ""));
             box.setSelected(showAll || filter.contains(db));
             box.setDisable(showAll);
             databaseBoxes.put(db, box);
@@ -69,5 +83,9 @@ public class DatabaseFilterDialog extends Dialog<List<String>> {
             // Selecting everything manually is the same as "all"
             return selected.size() == allDatabases.size() ? new ArrayList<>() : selected;
         });
+    }
+
+    private static String capitalize(String s) {
+        return s.isEmpty() ? s : Character.toUpperCase(s.charAt(0)) + s.substring(1);
     }
 }

@@ -64,6 +64,29 @@ public final class CompletionService {
             "NVARCHAR(", "VARCHAR(", "NCHAR(", "DATETIME2", "UNIQUEIDENTIFIER", "BIT",
             "SCOPE_IDENTITY()", "@@IDENTITY", "IDENT_CURRENT(", "@@ROWCOUNT");
 
+    /**
+     * PL/SQL and Oracle-SQL syntax with no equivalent in the ANSI-ish
+     * KEYWORDS list above — Oracle's row-limiting, hierarchical-query,
+     * NVL/DECODE-style, and PL/SQL block/exception constructs. Kept
+     * separate for the same reason as SQLSERVER_KEYWORDS: a Postgres/MySQL
+     * console shouldn't be offered ROWNUM or SYSDATE.
+     */
+    private static final List<String> ORACLE_KEYWORDS = List.of(
+            "ROWNUM", "ROWID", "DUAL", "MINUS", "CONNECT BY", "START WITH", "PRIOR",
+            "MERGE INTO", "USING", "WHEN MATCHED THEN", "WHEN NOT MATCHED THEN",
+            "NVL(", "NVL2(", "DECODE(", "TO_CHAR(", "TO_DATE(", "TO_NUMBER(", "TO_TIMESTAMP(",
+            "SYSDATE", "SYSTIMESTAMP", "TRUNC(", "EXTRACT(", "ADD_MONTHS(", "MONTHS_BETWEEN(",
+            "SUBSTR(", "INSTR(", "LENGTH(", "LPAD(", "RPAD(", "LISTAGG(", "REGEXP_LIKE(",
+            "REGEXP_SUBSTR(", "REGEXP_REPLACE(",
+            "OVER (", "PARTITION BY", "ROW_NUMBER()", "RANK()", "DENSE_RANK()",
+            "FETCH FIRST", "ROWS ONLY", "OFFSET", "ROWS FETCH NEXT",
+            "VARCHAR2(", "NUMBER(", "CLOB", "BLOB", "DATE", "TIMESTAMP",
+            "CREATE OR REPLACE", "PACKAGE", "PACKAGE BODY", "PROCEDURE", "FUNCTION",
+            "TRIGGER", "IS", "AS", "DECLARE", "BEGIN", "EXCEPTION", "WHEN OTHERS THEN",
+            "RAISE", "RAISE_APPLICATION_ERROR(", "PRAGMA", "END;", "DBMS_OUTPUT.PUT_LINE(",
+            "CREATE USER", "IDENTIFIED BY", "GRANT", "REVOKE", "QUOTA UNLIMITED ON",
+            "CREATE OR REPLACE VIEW", "CREATE SYNONYM", "ALL_TABLES", "USER_TABLES", "ALL_TAB_COLUMNS");
+
     private static final int MAX_SUGGESTIONS = 20;
 
     /** cacheKey = profileId::catalog */
@@ -224,6 +247,14 @@ public final class CompletionService {
                 if (matches.size() >= MAX_SUGGESTIONS) return;
                 if (keyword.toLowerCase(Locale.ROOT).startsWith(prefix) && notPresent(matches, keyword)) {
                     matches.add(new Suggestion(keyword, Kind.KEYWORD, "T-SQL"));
+                }
+            }
+        }
+        if (profile.getType() == ConnectionProfile.DatabaseType.ORACLE) {
+            for (String keyword : ORACLE_KEYWORDS) {
+                if (matches.size() >= MAX_SUGGESTIONS) return;
+                if (keyword.toLowerCase(Locale.ROOT).startsWith(prefix) && notPresent(matches, keyword)) {
+                    matches.add(new Suggestion(keyword, Kind.KEYWORD, "PL/SQL"));
                 }
             }
         }
