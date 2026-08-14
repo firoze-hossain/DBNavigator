@@ -1082,7 +1082,85 @@ public class QueryTab extends Tab {
         completionPopup.hide();
         String sql = selectedOrEditorText();
         if (sql.isBlank()) return;
-        resolveParametersThenRun(sql, this::executeSql);
+        resolveParametersThenRun(sql, resolved -> {
+            List<String> statements = SqlStatementSplitter.split(resolved).stream()
+                    .map(s -> stripTrailingSemicolon(s.text()).strip())
+                    .filter(s -> !s.isEmpty())
+                    .toList();
+            if (statements.size() > 1) {
+                executeStatementsSequentially(statements);
+            } else if (!statements.isEmpty()) {
+                executeSql(statements.get(0));
+            }
+        });
+    }
+
+    /**
+     * Runs several statements one at a time, in the order they appear — the
+     * same semantics DataGrip uses for a multi-statement selection or a
+     * whole script. This exists because joining them back into one
+     * semicolon-separated string and sending that to Statement.execute()
+     * only happens to work on drivers lenient enough to accept several
+     * statements in a single call (MySQL/SQL Server/PostgreSQL all
+     * tolerate it); Oracle's driver does not — it parses the first
+     * statement, then rejects everything after its semicolon with
+     * "ORA-00933: SQL command not properly ended," since as far as Oracle
+     * is concerned that first statement should have been the entire input.
+     * Stops at the first failing statement, matching typical script
+     * semantics — later statements are often only valid because earlier
+     * ones already succeeded (e.g. INSERTs into a table a prior CREATE
+     * TABLE just made).
+     */
+    private void executeStatementsSequentially(List<String> statements) {
+        setRunningState(true);
+        showDataPanel(false);
+        RunPanel.RunHandle output = mainWindow.getRunPanel().openConsoleOutput(fileId, getText());
+        mainWindow.showRunPanel();
+        statusLabel.setText("Executing " + statements.size() + " statements\u2026");
+
+        AppExecutor.run(() -> {
+            int completed = 0;
+            boolean schemaChanged = false;
+            try {
+                for (String stmt : statements) {
+                    output.appendLine(connectionLabel() + "> " + compactSql(stmt));
+                    QueryHistoryStore.record(profile.getId(), stmt);
+                    QueryResult result = ClientRegistry.jdbc(profile, catalog).execute(stmt, 0);
+                    completed++;
+                    String line = result.isResultSet()
+                            ? "Completed successfully: " + result.getRows().size()
+                                    + " row(s) returned in " + result.getExecutionMillis() + " ms."
+                            : "Completed successfully: " + result.getMessage()
+                                    + " in " + result.getExecutionMillis() + " ms.";
+                    output.appendLine(line);
+                    if (isSchemaChangingStatement(stmt)) schemaChanged = true;
+                }
+                int finalCompleted = completed;
+                boolean finalSchemaChanged = schemaChanged;
+                Platform.runLater(() -> {
+                    statusLabel.setText(finalCompleted + " of " + statements.size() + " statement(s) completed");
+                    output.markFinished(0);
+                    setRunningState(false);
+                    if (finalSchemaChanged) mainWindow.refreshSchemaExplorer(profile);
+                });
+            } catch (Exception ex) {
+                String failedStatement = statements.get(Math.min(completed, statements.size() - 1));
+                String msg = executionErrorMessage(ex, failedStatement);
+                int finalCompleted = completed;
+                boolean finalSchemaChanged = schemaChanged;
+                output.appendLine("ERROR: " + msg);
+                Platform.runLater(() -> {
+                    statusLabel.setText("Error after " + finalCompleted + " of " + statements.size()
+                            + " statement(s): " + msg);
+                    output.markFinished(-1);
+                    setRunningState(false);
+                    // Whatever ran before the failure may still have changed
+                    // the schema (e.g. CREATE TABLE succeeded, the following
+                    // INSERT failed) — the explorer should reflect that.
+                    if (finalSchemaChanged) mainWindow.refreshSchemaExplorer(profile);
+                });
+            }
+        });
     }
 
     /**
