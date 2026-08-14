@@ -766,24 +766,31 @@ public class QueryTab extends Tab {
      * statement the caret is currently inside (multi-statement consoles);
      * otherwise the whole editor as a last resort.
      *
-     * Whatever text comes back has its own trailing ";" stripped (if it has
-     * one) before being handed off to execute. SqlStatementSplitter keeps
-     * the semicolon as part of each statement's text/range for editor
-     * purposes (highlighting, caret-range checks) — but a semicolon
-     * submitted as part of the actual SQL sent over JDBC is a client-side
-     * statement terminator, not part of the statement itself, and not
-     * every driver treats it as optional. PostgreSQL/MySQL/SQL Server
-     * generally tolerate (or silently strip) a trailing one; Oracle's does
-     * not — passing one produces exactly "ORA-00922: missing or invalid
-     * option" on otherwise entirely valid SQL, which is indistinguishable
-     * from a real syntax mistake unless you already know this quirk.
+     * The result has its own trailing ";" stripped, UNLESS it's a single
+     * PL/SQL block, whose own trailing ";" (right after its final END) is
+     * mandatory grammar rather than a separator — see
+     * SqlStatementSplitter's class doc for why blocks need this distinct
+     * handling in the first place. This has to be resolved here, before
+     * execute()'s own re-split/strip runs, because the single most common
+     * way to run a block is simply placing the caret inside it with
+     * nothing selected — that always comes through this method first, and
+     * if this method already corrupted the block's closing ";", execute()
+     * re-splitting the (already-broken) result afterward can't recover it.
      */
     private String selectedOrEditorText() {
         String selected = editor.getSelectedText();
-        if (selected != null && !selected.isBlank()) return stripTrailingSemicolon(selected);
-        SqlStatementSplitter.Statement stmt = currentStatement();
-        if (stmt != null) return stripTrailingSemicolon(stmt.text());
-        return stripTrailingSemicolon(editor.getText());
+        String raw = (selected != null && !selected.isBlank()) ? selected : null;
+        if (raw == null) {
+            SqlStatementSplitter.Statement stmt = currentStatement();
+            raw = stmt != null ? stmt.text() : editor.getText();
+        }
+        return smartStripTrailingSemicolon(raw);
+    }
+
+    private static String smartStripTrailingSemicolon(String sql) {
+        List<SqlStatementSplitter.Statement> parts = SqlStatementSplitter.split(sql);
+        if (parts.size() == 1 && parts.get(0).plsqlBlock()) return sql.strip();
+        return stripTrailingSemicolon(sql);
     }
 
     private static String stripTrailingSemicolon(String sql) {
@@ -1047,7 +1054,8 @@ public class QueryTab extends Tab {
         if (chosen == null) return;
         editor.moveTo(Math.min(chosen.start(), editor.getLength()));
         editor.requestFollowCaret();
-        resolveParametersThenRun(chosen.text(), this::executeSql);
+        String text = chosen.plsqlBlock() ? chosen.text() : stripTrailingSemicolon(chosen.text());
+        resolveParametersThenRun(text, this::executeSql);
     }
 
     private static String previewOf(String sql) {
@@ -1084,7 +1092,11 @@ public class QueryTab extends Tab {
         if (sql.isBlank()) return;
         resolveParametersThenRun(sql, resolved -> {
             List<String> statements = SqlStatementSplitter.split(resolved).stream()
-                    .map(s -> stripTrailingSemicolon(s.text()).strip())
+                    // A PL/SQL block's own trailing ";" (right after its final
+                    // END) is mandatory grammar, not a separator — stripping it
+                    // the way a plain statement's separator ";" gets stripped
+                    // would send Oracle an invalid, unterminated block.
+                    .map(s -> (s.plsqlBlock() ? s.text() : stripTrailingSemicolon(s.text())).strip())
                     .filter(s -> !s.isEmpty())
                     .toList();
             if (statements.size() > 1) {
