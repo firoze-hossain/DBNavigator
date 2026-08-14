@@ -622,7 +622,7 @@ public class SchemaTreePane extends VBox {
 
                     MenuItem select = new MenuItem("New Query: SELECT *");
                     select.setOnAction(e -> mainWindow.openQueryTab(profile, obj.getCatalog(),
-                            "SELECT * FROM " + obj.qualifiedName() + " LIMIT 100;"));
+                            selectTopRowsSql(profile.getType(), obj)));
                     MenuItem count = new MenuItem("New Query: COUNT(*)");
                     count.setOnAction(e -> mainWindow.openQueryTab(profile, obj.getCatalog(),
                             "SELECT COUNT(*) FROM " + obj.qualifiedName() + ";"));
@@ -758,6 +758,23 @@ public class SchemaTreePane extends VBox {
             }
             return menu;
         }
+    }
+
+    /**
+     * "Top N rows" syntax genuinely differs per engine — LIMIT doesn't
+     * exist in Oracle at all (ORA-00933 the instant it's used, since the
+     * parser has no idea what the trailing tokens mean), and while SQL
+     * Server's driver tolerates LIMIT via some compatibility layers, TOP
+     * is its native, always-correct form and needs no ORDER BY the way
+     * OFFSET/FETCH technically wants one. PostgreSQL/MySQL/MariaDB/SQLite
+     * all share the same LIMIT syntax, so they stay on the simple form.
+     */
+    private static String selectTopRowsSql(ConnectionProfile.DatabaseType type, DbObject obj) {
+        return switch (type) {
+            case ORACLE -> "SELECT * FROM " + obj.qualifiedName() + " FETCH FIRST 100 ROWS ONLY;";
+            case SQLSERVER -> "SELECT TOP 100 * FROM " + obj.qualifiedName() + ";";
+            default -> "SELECT * FROM " + obj.qualifiedName() + " LIMIT 100;";
+        };
     }
 
     /**
