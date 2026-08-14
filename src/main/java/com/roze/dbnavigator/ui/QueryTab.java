@@ -765,13 +765,30 @@ public class QueryTab extends Tab {
      * explicit target: an active text selection wins; otherwise the
      * statement the caret is currently inside (multi-statement consoles);
      * otherwise the whole editor as a last resort.
+     *
+     * Whatever text comes back has its own trailing ";" stripped (if it has
+     * one) before being handed off to execute. SqlStatementSplitter keeps
+     * the semicolon as part of each statement's text/range for editor
+     * purposes (highlighting, caret-range checks) — but a semicolon
+     * submitted as part of the actual SQL sent over JDBC is a client-side
+     * statement terminator, not part of the statement itself, and not
+     * every driver treats it as optional. PostgreSQL/MySQL/SQL Server
+     * generally tolerate (or silently strip) a trailing one; Oracle's does
+     * not — passing one produces exactly "ORA-00922: missing or invalid
+     * option" on otherwise entirely valid SQL, which is indistinguishable
+     * from a real syntax mistake unless you already know this quirk.
      */
     private String selectedOrEditorText() {
         String selected = editor.getSelectedText();
-        if (selected != null && !selected.isBlank()) return selected;
+        if (selected != null && !selected.isBlank()) return stripTrailingSemicolon(selected);
         SqlStatementSplitter.Statement stmt = currentStatement();
-        if (stmt != null) return stmt.text();
-        return editor.getText();
+        if (stmt != null) return stripTrailingSemicolon(stmt.text());
+        return stripTrailingSemicolon(editor.getText());
+    }
+
+    private static String stripTrailingSemicolon(String sql) {
+        String trimmed = sql.stripTrailing();
+        return trimmed.endsWith(";") ? trimmed.substring(0, trimmed.length() - 1) : sql;
     }
 
     private SqlStatementSplitter.Statement currentStatement() {
