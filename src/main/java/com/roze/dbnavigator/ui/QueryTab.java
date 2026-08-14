@@ -1567,8 +1567,22 @@ public class QueryTab extends Tab {
     // ------------------------------------------- editable-target detection
 
     private static final Pattern SIMPLE_SELECT = Pattern.compile(
-            "^\\s*select\\s+.+?\\s+from\\s+([A-Za-z0-9_.\"]+)(.*)$",
+            "^\\s*select\\s+(.+?)\\s+from\\s+([A-Za-z0-9_.\"]+)(.*)$",
             Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+    /**
+     * An aggregate function anywhere in the SELECT list means the result no
+     * longer has a 1:1 row-to-table-row mapping — e.g. "SELECT COUNT(*)
+     * FROM t" returns one summary row, not editable table data. Queries
+     * like this still otherwise match SIMPLE_SELECT (no JOIN/GROUP BY/etc),
+     * so without this check addMissingPrimaryKeyColumns would insert the
+     * table's PK column into the select list to make it "editable" —
+     * turning "SELECT COUNT(*) FROM t" into "SELECT pk_col, COUNT(*) FROM
+     * t", an aggregate mixed with an ungrouped column, which every engine
+     * rejects (Oracle reports it as ORA-00937, "not a single-group group
+     * function").
+     */
+    private static final Pattern AGGREGATE_CALL = Pattern.compile(
+            "(?i)\\b(COUNT|SUM|AVG|MIN|MAX|LISTAGG|STRING_AGG|ARRAY_AGG|GROUP_CONCAT|VARIANCE|STDDEV)\\s*\\(");
     /** Identifies the object in a DDL statement for friendly PostgreSQL missing-object errors. */
     private static final Pattern DDL_OBJECT = Pattern.compile(
             "(?is)^\\s*(?:drop|alter|truncate)\\s+(table|sequence)\\s+"
@@ -1590,9 +1604,11 @@ public class QueryTab extends Tab {
         }
         Matcher matcher = SIMPLE_SELECT.matcher(sql.trim());
         if (!matcher.matches()) return null;
-        String rest = matcher.group(2).stripLeading();
+        String selectList = matcher.group(1);
+        if (AGGREGATE_CALL.matcher(selectList).find()) return null;
+        String rest = matcher.group(3).stripLeading();
         if (rest.startsWith(",")) return null;   // multi-table FROM a, b
-        return matcher.group(1);
+        return matcher.group(2);
     }
 
     /** Builds a DbObject reference from a (possibly qualified) table token. */

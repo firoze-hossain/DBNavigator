@@ -775,12 +775,28 @@ public final class MetadataService {
             try (ResultSet rs = meta.getColumns(cat, table.getSchema(), table.getName(), "%")) {
                 while (rs.next()) {
                     String name = rs.getString("COLUMN_NAME");
+                    String typeName = rs.getString("TYPE_NAME");
+                    int columnSize = rs.getInt("COLUMN_SIZE");
+                    int decimalDigits = rs.getInt("DECIMAL_DIGITS");
+                    // Oracle's driver backs COLUMN_DEF with a LONG column
+                    // (mirroring DBA_TAB_COLUMNS.DATA_DEFAULT in the data
+                    // dictionary), which — like every LONG/LONG RAW column —
+                    // can only be read once, and only before any
+                    // later-positioned column in the result set is read.
+                    // IS_NULLABLE sits after COLUMN_DEF in the standard JDBC
+                    // column ordering, so it must be read second, not first,
+                    // or Oracle throws ORA-17027 ("Stream has already been
+                    // closed") the moment this tries to read COLUMN_DEF at
+                    // all — every other engine tolerates either order fine,
+                    // which is exactly why this only ever broke on Oracle.
+                    String defaultValue = rs.getString("COLUMN_DEF");
+                    String nullable = rs.getString("IS_NULLABLE");
                     result.getRows().add(new ArrayList<>(List.of(
                             name,
-                            String.valueOf(rs.getString("TYPE_NAME")),
-                            String.valueOf(rs.getInt("COLUMN_SIZE")),
-                            "YES".equalsIgnoreCase(rs.getString("IS_NULLABLE")) ? "YES" : "NO",
-                            String.valueOf(rs.getString("COLUMN_DEF")),
+                            String.valueOf(typeName),
+                            String.valueOf(columnSize),
+                            "YES".equalsIgnoreCase(nullable) ? "YES" : "NO",
+                            String.valueOf(defaultValue),
                             primaryKeys.contains(name) ? "PK" : ""
                     )));
                 }
@@ -851,12 +867,19 @@ public final class MetadataService {
                     int columnSize = rs.getInt("COLUMN_SIZE");
                     String formattedType = formatColumnType(rs.getString("TYPE_NAME"),
                             columnSize, rs.getInt("DECIMAL_DIGITS"));
+                    // See loadTableStructure just above for why COLUMN_DEF
+                    // must be read before IS_NULLABLE, not after — Oracle's
+                    // driver backs it with a LONG column, which can only be
+                    // read once and only before any later-positioned column
+                    // in the result set has already been read.
+                    String defaultValue = rs.getString("COLUMN_DEF");
+                    boolean nullable = "YES".equalsIgnoreCase(rs.getString("IS_NULLABLE"));
                     result.add(new ColumnInfo(
                             name,
                             formattedType,
                             columnSize,
-                            "YES".equalsIgnoreCase(rs.getString("IS_NULLABLE")),
-                            rs.getString("COLUMN_DEF"),
+                            nullable,
+                            defaultValue,
                             pk.contains(name)));
                 }
             }
