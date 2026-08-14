@@ -3,6 +3,8 @@ package com.roze.dbnavigator.ui;
 import com.roze.dbnavigator.db.ClientRegistry;
 import com.roze.dbnavigator.db.ConnectionStore;
 import com.roze.dbnavigator.db.LocalHistoryStore;
+import com.roze.dbnavigator.db.MetadataService;
+import com.roze.dbnavigator.db.SessionStore;
 import com.roze.dbnavigator.model.ConnectionProfile;
 import com.roze.dbnavigator.model.DbObject;
 import com.roze.dbnavigator.util.AppExecutor;
@@ -30,6 +32,7 @@ import org.kordamp.ikonli.fontawesome5.FontAwesomeSolid;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.List;
 import java.util.function.Consumer;
 
 /**
@@ -93,6 +96,12 @@ public class MainWindow {
         runPanel.setOnMinimize(this::hideRunPanel);
 
         root.setCenter(verticalSplit);
+
+        // Needs centerSplit/tabPane fully wired first — editorTabPanes()
+        // (used by addAndSelect for each restored console) walks centerSplit's
+        // own children, which don't exist until the two lines above run.
+        restoreSession();
+        stage.setOnCloseRequest(e -> saveSession());
     }
 
     public Parent getRoot() { return root; }
@@ -581,6 +590,81 @@ public class MainWindow {
         addAndSelect(new MongoCollectionTab(profile, collection));
     }
 
+    /**
+     * Opens a stored procedure/function's own source in an editable console,
+     * pre-filled and ready to re-run (which recompiles it, since the source
+     * is reconstructed as a full CREATE OR REPLACE) — the same thing
+     * double-clicking a stored routine opens in DataGrip. Falls back to a
+     * short explanatory message for engines getRoutineSource doesn't cover
+     * yet, rather than opening a silently blank console.
+     */
+    public void openRoutineSourceTab(ConnectionProfile profile, DbObject obj) {
+        if (!Passwords.ensure(profile, stage)) return;
+        String title = obj.getName() + " [" + profile.getName() + "]";
+        setStatus("Loading " + obj.getName() + "\u2026");
+        AppExecutor.run(() -> {
+            try {
+                String source = MetadataService.getRoutineSource(profile, obj);
+                Platform.runLater(() -> {
+                    setStatus("Ready");
+                    if (source == null) {
+                        DialogTheme.apply(new Alert(Alert.AlertType.INFORMATION,
+                                "Viewing a " + obj.getKind().toString().toLowerCase()
+                                + "'s source isn't supported yet for " + profile.getType().getDisplayName()
+                                + " — this currently works for Oracle only.")).showAndWait();
+                        return;
+                    }
+                    // ALL_SOURCE's own text has no block terminator — add the
+                    // standard "/" so Run recompiles the whole thing as one
+                    // statement instead of fragmenting on its internal ";"s.
+                    QueryTab tab = new QueryTab(this, profile, obj.getCatalog(), title);
+                    tab.setSql(source.stripTrailing() + "\n/\n");
+                    addAndSelect(tab);
+                });
+            } catch (Exception ex) {
+                String msg = ex.getMessage() == null ? ex.toString() : ex.getMessage();
+                Platform.runLater(() -> {
+                    setStatus("Ready");
+                    DialogTheme.apply(new Alert(Alert.AlertType.ERROR,
+                            "Could not load " + obj.getName() + ": " + msg)).showAndWait();
+                });
+            }
+        });
+    }
+
+    /**
+     * Opens a console pre-filled with a ready-to-fill invocation block for a
+     * procedure/function — e.g. "BEGIN\n  name(:p1, :p2);\nEND;\n/" for
+     * Oracle. Reuses the console's own existing ":name" parameter-prompt
+     * flow (the same one used for ad-hoc parameterized queries) rather than
+     * building a separate parameter dialog — hitting Run prompts for each
+     * value exactly the way it already does for any other :placeholder.
+     */
+    public void openRoutineRunTab(ConnectionProfile profile, DbObject obj) {
+        if (!Passwords.ensure(profile, stage)) return;
+        setStatus("Loading " + obj.getName() + "\u2026");
+        AppExecutor.run(() -> {
+            try {
+                List<String> params = MetadataService.loadProcedureParameters(profile, obj);
+                String args = String.join(", ", params.stream().map(p -> ":" + p).toList());
+                String sql = obj.getKind() == DbObject.Kind.FUNCTION
+                        ? "SELECT " + obj.getName() + "(" + args + ") FROM dual;"
+                        : "BEGIN\n  " + obj.getName() + "(" + args + ");\nEND;\n/\n";
+                Platform.runLater(() -> {
+                    setStatus("Ready");
+                    openQueryTab(profile, obj.getCatalog(), sql);
+                });
+            } catch (Exception ex) {
+                String msg = ex.getMessage() == null ? ex.toString() : ex.getMessage();
+                Platform.runLater(() -> {
+                    setStatus("Ready");
+                    DialogTheme.apply(new Alert(Alert.AlertType.ERROR,
+                            "Could not load " + obj.getName() + "'s parameters: " + msg)).showAndWait();
+                });
+            }
+        });
+    }
+
     private void addAndSelect(Tab tab) {
         TabPane targetPane = activeEditorTabPane();
         targetPane.getTabs().add(tab);
@@ -616,6 +700,51 @@ public class MainWindow {
     public void reopenLastClosedTab() {
         if (closedTabStack.isEmpty()) return;
         addAndSelect(closedTabStack.pop().get());
+    }
+
+    /**
+     * Reopens every console that was still open the last time the app
+     * closed — see SessionStore's class doc for exactly what's covered
+     * (consoles only, not data grids/diagrams/structure views).
+     */
+    private void restoreSession() {
+        List<SessionStore.OpenTab> saved = SessionStore.load();
+        if (saved.isEmpty()) return;
+        List<ConnectionProfile> profiles = ConnectionStore.load();
+        for (SessionStore.OpenTab open : saved) {
+            ConnectionProfile profile = profiles.stream()
+                    .filter(p -> p.getId().equals(open.profileId()))
+                    .findFirst().orElse(null);
+            // The connection this console belonged to was deleted since —
+            // nothing sensible to restore it against.
+            if (profile == null) continue;
+            if (open.mongo()) {
+                MongoConsoleTab tab = new MongoConsoleTab(profile, open.catalog(), open.title());
+                tab.setScriptText(open.sql());
+                addAndSelect(tab);
+            } else {
+                QueryTab tab = new QueryTab(this, profile, open.catalog(), open.title());
+                tab.setSql(open.sql());
+                addAndSelect(tab);
+            }
+        }
+    }
+
+    /** Snapshots every currently open console so restoreSession() can bring them back next launch. */
+    private void saveSession() {
+        List<SessionStore.OpenTab> open = new java.util.ArrayList<>();
+        for (TabPane pane : editorTabPanes()) {
+            for (Tab t : pane.getTabs()) {
+                if (t instanceof QueryTab qt) {
+                    open.add(new SessionStore.OpenTab(
+                            qt.getProfile().getId(), qt.getCatalog(), qt.getSqlText(), t.getText(), false));
+                } else if (t instanceof MongoConsoleTab mt) {
+                    open.add(new SessionStore.OpenTab(mt.getProfileForReopen().getId(),
+                            mt.getCurrentDatabase(), mt.getScriptText(), t.getText(), true));
+                }
+            }
+        }
+        SessionStore.save(open);
     }
 
     // ------------------------------------------------------------- split view
@@ -757,7 +886,7 @@ public class MainWindow {
 
     /** Tab context menu → Bookmarks → Show Bookmarks… */
     public void showBookmarksDialog() {
-        java.util.List<QueryTab> consoles = new java.util.ArrayList<>();
+        List<QueryTab> consoles = new java.util.ArrayList<>();
         forEachEditorTab(t -> {
                 if (t instanceof QueryTab qt) consoles.add(qt);
         });
@@ -779,7 +908,7 @@ public class MainWindow {
     }
 
     private TabPane activeEditorTabPane() {
-        java.util.List<TabPane> panes = editorTabPanes();
+        List<TabPane> panes = editorTabPanes();
         if (activeTabPane != null && panes.contains(activeTabPane)) return activeTabPane;
         if (!panes.isEmpty()) {
             activeTabPane = panes.get(0);
@@ -813,8 +942,8 @@ public class MainWindow {
         }
         if (!(node instanceof SplitPane split)) return node;
 
-        java.util.List<Node> survivors = new java.util.ArrayList<>();
-        for (Node child : java.util.List.copyOf(split.getItems())) {
+        List<Node> survivors = new java.util.ArrayList<>();
+        for (Node child : List.copyOf(split.getItems())) {
             Node survivor = collapseEmptyEditorNode(child);
             if (survivor != null) survivors.add(survivor);
         }
@@ -846,13 +975,13 @@ public class MainWindow {
     }
 
     /** Every editor pane currently in the split layout — used by TabContextMenu's Close Other/All Tabs, which act across all of them, not just the pane a tab happens to be in. */
-    java.util.List<TabPane> editorTabPanes() {
-        java.util.List<TabPane> panes = new java.util.ArrayList<>();
+    List<TabPane> editorTabPanes() {
+        List<TabPane> panes = new java.util.ArrayList<>();
         collectEditorTabPanes(centerSplit.getItems().get(1), panes);
         return panes;
     }
 
-    private void collectEditorTabPanes(Node node, java.util.List<TabPane> panes) {
+    private void collectEditorTabPanes(Node node, List<TabPane> panes) {
         if (node instanceof TabPane pane) {
             panes.add(pane);
         } else if (node instanceof SplitPane split) {

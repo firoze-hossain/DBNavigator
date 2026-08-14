@@ -364,6 +364,72 @@ public final class MetadataService {
         return result;
     }
 
+    /**
+     * The CREATE-ready source of a stored procedure or function, for an
+     * "Edit Source" console pre-filled with the object's own definition —
+     * the same thing double-clicking a stored routine opens in DataGrip.
+     *
+     * Oracle-specific for now: ALL_SOURCE holds exactly the text needed,
+     * for any schema the connected user has privilege to see (not just
+     * their own, the way USER_SOURCE would be), reconstructed with a
+     * CREATE OR REPLACE prefix since ALL_SOURCE's own TEXT column starts
+     * mid-statement, right after that keyword. Every other engine has a
+     * genuinely different mechanism for this (PostgreSQL: pg_get_
+     * functiondef(); MySQL: SHOW CREATE PROCEDURE; SQL Server: sys.sql_
+     * modules / OBJECT_DEFINITION()) and isn't wired up yet — this
+     * returns null for them, which the caller falls back on gracefully.
+     */
+    public static String getRoutineSource(ConnectionProfile profile, DbObject obj) throws SQLException {
+        if (profile.getType() != DatabaseType.ORACLE) return null;
+        String type = obj.getKind() == Kind.FUNCTION ? "FUNCTION" : "PROCEDURE";
+        StringBuilder body = new StringBuilder();
+        try (Connection conn = client(profile, obj.getCatalog()).getConnection();
+             PreparedStatement ps = conn.prepareStatement(
+                     "SELECT text FROM all_source WHERE owner = ? AND name = ? AND type = ? ORDER BY line")) {
+            ps.setString(1, obj.getSchema());
+            ps.setString(2, obj.getName());
+            ps.setString(3, type);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) body.append(rs.getString(1));
+            }
+        }
+        if (body.isEmpty()) return null;
+        return "CREATE OR REPLACE " + body;
+    }
+
+    /**
+     * IN/INOUT parameter names of a procedure or function, in declared
+     * order — used to build a ready-to-fill "BEGIN name(:param1, :param2);
+     * END;" invocation block. Standard JDBC (DatabaseMetaData.
+     * getProcedureColumns), so this works the same way across every
+     * relational engine without engine-specific code.
+     */
+    public static List<String> loadProcedureParameters(ConnectionProfile profile, DbObject obj)
+            throws SQLException {
+        List<String> params = new ArrayList<>();
+        try (Connection conn = client(profile, obj.getCatalog()).getConnection()) {
+            DatabaseMetaData meta = conn.getMetaData();
+            ResultSet rs = obj.getKind() == Kind.FUNCTION
+                    ? meta.getFunctionColumns(metaCatalog(profile, obj.getCatalog()), obj.getSchema(),
+                            obj.getName(), "%")
+                    : meta.getProcedureColumns(metaCatalog(profile, obj.getCatalog()), obj.getSchema(),
+                            obj.getName(), "%");
+            try (rs) {
+                while (rs.next()) {
+                    short columnType = rs.getShort("COLUMN_TYPE");
+                    boolean isIn = columnType == DatabaseMetaData.procedureColumnIn
+                            || columnType == DatabaseMetaData.procedureColumnInOut
+                            || columnType == DatabaseMetaData.functionColumnIn
+                            || columnType == DatabaseMetaData.functionColumnInOut;
+                    if (!isIn) continue;
+                    String name = rs.getString("COLUMN_NAME");
+                    if (name != null && !name.isBlank()) params.add(name);
+                }
+            }
+        }
+        return params;
+    }
+
     private static List<DbObject> loadSequences(ConnectionProfile profile, String catalog, String schema) {
         String sql = switch (profile.getType()) {
             case POSTGRESQL -> "SELECT sequence_name FROM information_schema.sequences WHERE sequence_schema = '"

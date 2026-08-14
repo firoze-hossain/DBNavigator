@@ -207,6 +207,7 @@ public class SchemaTreePane extends VBox {
         switch (obj.getKind()) {
             case TABLE, VIEW, PARTITION -> mainWindow.openDataTab(profile, obj);
             case COLLECTION  -> mainWindow.openMongoTab(profile, obj);
+            case PROCEDURE, FUNCTION -> mainWindow.openRoutineSourceTab(profile, obj);
             case CONNECTION  -> item.setExpanded(!item.isExpanded());
             default -> {}
         }
@@ -731,11 +732,121 @@ public class SchemaTreePane extends VBox {
                     });
                     menu.getItems().addAll(newConsole, new SeparatorMenuItem(), refreshSchema);
                 }
+                case PROCEDURE, FUNCTION -> {
+                    String kindLabel = obj.getKind() == Kind.FUNCTION ? "Function" : "Procedure";
+                    MenuItem run = new MenuItem("Run\u2026");
+                    run.setOnAction(e -> mainWindow.openRoutineRunTab(profile, obj));
+                    MenuItem editSource = new MenuItem("Edit Source");
+                    editSource.setOnAction(e -> mainWindow.openRoutineSourceTab(profile, obj));
+                    MenuItem rename = new MenuItem("Rename\u2026");
+                    rename.setOnAction(e -> renameRoutine(profile, obj));
+                    MenuItem refresh = new MenuItem("Refresh");
+                    refresh.setOnAction(e -> {
+                        obj.setLoaded(false);
+                        mainWindow.setStatus("Refreshed " + obj.getName());
+                        reload();
+                    });
+                    MenuItem drop = new MenuItem("Drop\u2026");
+                    drop.setOnAction(e -> dropRoutine(profile, obj, kindLabel));
+
+                    menu.getItems().addAll(run, editSource, new SeparatorMenuItem(),
+                            rename, refresh, new SeparatorMenuItem(), drop);
+                }
                 default -> {
                     return null;
                 }
             }
             return menu;
         }
+    }
+
+    /**
+     * DataGrip-style rename: a single "new name" prompt. The actual RENAME
+     * syntax genuinely differs per engine — Oracle's generic RENAME
+     * statement works for any object type including routines; SQL Server
+     * uses sp_rename instead; PostgreSQL has an engine-specific ALTER
+     * PROCEDURE/FUNCTION ... RENAME TO (which, without the full parameter
+     * signature, only resolves correctly for a non-overloaded routine —
+     * an acceptable simplification for the common case, and it fails with
+     * a clear database error rather than silently doing the wrong thing
+     * if there IS an overload); MySQL/MariaDB have no rename statement for
+     * a routine at all, so that's reported as unsupported up front instead
+     * of attempted.
+     */
+    private void renameRoutine(ConnectionProfile profile, DbObject obj) {
+        String kindLabel = obj.getKind() == Kind.FUNCTION ? "Function" : "Procedure";
+        if (profile.getType() == ConnectionProfile.DatabaseType.MYSQL
+                || profile.getType() == ConnectionProfile.DatabaseType.MARIADB) {
+            DialogTheme.apply(new Alert(Alert.AlertType.INFORMATION,
+                    profile.getType().getDisplayName() + " has no rename statement for a "
+                    + kindLabel.toLowerCase() + " — the usual workaround is to view its source "
+                    + "(Edit Source), then drop and recreate it under the new name."))
+                    .showAndWait();
+            return;
+        }
+
+        TextInputDialog dialog = DialogTheme.apply(new TextInputDialog(obj.getName()));
+        dialog.initOwner(getScene() == null ? null : getScene().getWindow());
+        dialog.setTitle("Rename " + kindLabel);
+        dialog.setHeaderText(null);
+        dialog.setContentText("New name for \"" + obj.getName() + "\":");
+
+        dialog.showAndWait().ifPresent(newName -> {
+            String trimmed = newName.trim();
+            if (trimmed.isEmpty() || trimmed.equals(obj.getName())) return;
+            AppExecutor.run(() -> {
+                try {
+                    String sql = switch (profile.getType()) {
+                        case ORACLE -> "RENAME " + obj.getName() + " TO " + trimmed;
+                        case SQLSERVER -> "EXEC sp_rename '" + obj.getName() + "', '" + trimmed + "'";
+                        default -> "ALTER " + kindLabel.toUpperCase(java.util.Locale.ROOT) + " "
+                                + obj.getName() + " RENAME TO " + trimmed;
+                    };
+                    try (java.sql.Connection conn =
+                                 ClientRegistry.jdbc(profile, obj.getCatalog()).getConnection();
+                         java.sql.Statement stmt = conn.createStatement()) {
+                        stmt.execute(sql);
+                    }
+                    Platform.runLater(() -> {
+                        mainWindow.setStatus("Renamed " + obj.getName() + " to " + trimmed);
+                        reload();
+                    });
+                } catch (Exception ex) {
+                    String msg = ex.getMessage() == null ? ex.toString() : ex.getMessage();
+                    Platform.runLater(() -> DialogTheme.apply(new Alert(Alert.AlertType.ERROR,
+                            "Could not rename " + obj.getName() + ": " + msg)).showAndWait());
+                }
+            });
+        });
+    }
+
+    /** DataGrip-style destructive confirmation, scaled down from the database version — a routine is easier to recreate than a whole database, so a single Yes/No is enough rather than also requiring the name to be typed out. */
+    private void dropRoutine(ConnectionProfile profile, DbObject obj, String kindLabel) {
+        Alert warn = (Alert) DialogTheme.apply(new Alert(Alert.AlertType.WARNING,
+                "This permanently deletes " + kindLabel.toLowerCase() + " \"" + obj.getName()
+                        + "\". This cannot be undone.",
+                ButtonType.YES, ButtonType.NO));
+        warn.setTitle("Drop " + kindLabel);
+        warn.setHeaderText("Drop \"" + obj.getName() + "\"?");
+        warn.initOwner(getScene() == null ? null : getScene().getWindow());
+        if (warn.showAndWait().orElse(ButtonType.NO) != ButtonType.YES) return;
+
+        AppExecutor.run(() -> {
+            try {
+                String sql = "DROP " + kindLabel.toUpperCase(java.util.Locale.ROOT) + " " + obj.getName();
+                try (java.sql.Connection conn = ClientRegistry.jdbc(profile, obj.getCatalog()).getConnection();
+                     java.sql.Statement stmt = conn.createStatement()) {
+                    stmt.execute(sql);
+                }
+                Platform.runLater(() -> {
+                    mainWindow.setStatus("Dropped " + obj.getName());
+                    reload();
+                });
+            } catch (Exception ex) {
+                String msg = ex.getMessage() == null ? ex.toString() : ex.getMessage();
+                Platform.runLater(() -> DialogTheme.apply(new Alert(Alert.AlertType.ERROR,
+                        "Could not drop " + obj.getName() + ": " + msg)).showAndWait());
+            }
+        });
     }
 }
