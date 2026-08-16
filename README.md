@@ -24,21 +24,21 @@ PostgreSQL, MySQL, MariaDB, SQL Server, Oracle, SQLite, and MongoDB, all in one 
 <table>
   <tr>
     <td align="center" width="50%">
-      <img src="docs/screenshots/screenshot-1.png" alt="Schema explorer and SQL console" width="100%"><br>
+      <img src="docs/screenshots/Schema Explore and Query Console.png" alt="Schema explorer and SQL console" width="100%"><br>
       <sub><b>Schema explorer + SQL console</b></sub>
     </td>
     <td align="center" width="50%">
-      <img src="docs/screenshots/screenshot-2.png" alt="Data grid with inline editing" width="100%"><br>
+      <img src="docs/screenshots/Sorting and Editing.png" alt="Data grid with inline editing" width="100%"><br>
       <sub><b>Data grid — sorting, inline editing, Submit/Revert</b></sub>
     </td>
   </tr>
   <tr>
     <td align="center" width="50%">
-      <img src="docs/screenshots/screenshot-3.png" alt="MongoDB console with autocomplete" width="100%"><br>
+      <img src="docs/screenshots/Mongodb Query console.png" alt="MongoDB console with autocomplete" width="100%"><br>
       <sub><b>MongoDB shell console + autocomplete</b></sub>
     </td>
     <td align="center" width="50%">
-      <img src="docs/screenshots/screenshot-4.png" alt="Database ER diagram" width="100%"><br>
+      <img src="docs/screenshots/Diagram.png" alt="Database ER diagram" width="100%"><br>
       <sub><b>Whole-database ER diagram</b></sub>
     </td>
   </tr>
