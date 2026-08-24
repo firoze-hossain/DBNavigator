@@ -1,10 +1,6 @@
 package com.roze.dbnavigator.ui;
 
-import com.roze.dbnavigator.db.ClientRegistry;
-import com.roze.dbnavigator.db.ConnectionStore;
-import com.roze.dbnavigator.db.LocalHistoryStore;
-import com.roze.dbnavigator.db.MetadataService;
-import com.roze.dbnavigator.db.SessionStore;
+import com.roze.dbnavigator.db.*;
 import com.roze.dbnavigator.model.ConnectionProfile;
 import com.roze.dbnavigator.model.DbObject;
 import com.roze.dbnavigator.util.AppExecutor;
@@ -16,14 +12,10 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
-import javafx.scene.layout.Region;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.*;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.stage.Window;
@@ -246,6 +238,9 @@ public class MainWindow {
         Menu navigateMenu = new Menu("Navigate", null, searchEverywhere);
 
         // ---- Help ----
+        MenuItem checkUpdates = new MenuItem("Check for Updates…");
+        checkUpdates.setOnAction(e -> AppUpdateDialog.check(stage, false));
+
         MenuItem about = new MenuItem("About DBNavigator Pro");
         about.setOnAction(e -> {
             Alert alert = (Alert) DialogTheme.apply(new Alert(Alert.AlertType.INFORMATION,
@@ -255,7 +250,7 @@ public class MainWindow {
             alert.initOwner(stage);
             alert.showAndWait();
         });
-        Menu helpMenu = new Menu("Help", null, about);
+        Menu helpMenu = new Menu("Help", null, checkUpdates, new SeparatorMenuItem(), about);
 
         MenuBar menuBar = new MenuBar(fileMenu, viewMenu, navigateMenu, helpMenu);
         menuBar.getStyleClass().add("app-menu-bar");

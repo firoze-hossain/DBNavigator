@@ -36,6 +36,7 @@ module com.roze.dbnavigator {
     requires com.microsoft.sqlserver.jdbc;
     requires com.oracle.database.jdbc;
     requires java.desktop;
+    requires java.net.http;
 
     // JavaFX launches Main reflectively
     opens com.roze.dbnavigator to javafx.graphics;

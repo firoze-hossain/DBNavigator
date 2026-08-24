@@ -47,8 +47,9 @@ public final class SettingsDialog {
         editor.setExpanded(true);
 
         TreeItem<String> plugins = new TreeItem<>("Plugins");
+        TreeItem<String> updates = new TreeItem<>("Updates");
 
-        root.getChildren().addAll(appearanceBehavior, editor, plugins);
+        root.getChildren().addAll(appearanceBehavior, editor, plugins, updates);
         TreeView<String> tree = new TreeView<>(root);
         tree.setShowRoot(false);
         tree.setPrefWidth(220);
@@ -58,8 +59,9 @@ public final class SettingsDialog {
         VBox generalPanel = buildGeneralPanel(settings);
         VBox fontPanel = buildFontPanel(settings);
         VBox pluginsPanel = buildPluginsPanel();
+        VBox updatesPanel = buildUpdatesPanel(settings);
 
-        StackPane content = new StackPane(appearancePanel, generalPanel, fontPanel, pluginsPanel);
+        StackPane content = new StackPane(appearancePanel, generalPanel, fontPanel, pluginsPanel, updatesPanel);
         content.setPadding(new Insets(20));
         showOnly(content, appearancePanel);
 
@@ -70,6 +72,7 @@ public final class SettingsDialog {
                 case "General" -> showOnly(content, generalPanel);
                 case "Font" -> showOnly(content, fontPanel);
                 case "Plugins" -> showOnly(content, pluginsPanel);
+                case "Updates" -> showOnly(content, updatesPanel);
                 default -> { /* category header clicked — keep current panel */ }
             }
         });
@@ -87,7 +90,7 @@ public final class SettingsDialog {
         ok.getStyleClass().add("run-button");
         ok.setDefaultButton(true);
 
-        Runnable applyAction = () -> applySettings(mainWindow, settings, appearancePanel, generalPanel, fontPanel);
+        Runnable applyAction = () -> applySettings(mainWindow, settings, appearancePanel, generalPanel, fontPanel, updatesPanel);
         apply.setOnAction(e -> applyAction.run());
         ok.setOnAction(e -> { applyAction.run(); stage.close(); });
 
@@ -221,11 +224,53 @@ public final class SettingsDialog {
         return panel;
     }
 
+
+    private static VBox buildUpdatesPanel(AppSettingsStore.Settings settings) {
+        Label title = new Label("Updates");
+        title.getStyleClass().add("panel-header");
+
+        CheckBox autoCheck = new CheckBox("Automatically check for application updates");
+        autoCheck.setSelected(settings.isAutoUpdateEnabled());
+        CheckBox autoDownload = new CheckBox("Automatically download updates when available");
+        autoDownload.setSelected(settings.isAutoDownloadUpdates());
+
+        Label channelLabel = new Label("Update channel:");
+        channelLabel.getStyleClass().add("connection-field-label");
+        ComboBox<String> channel = new ComboBox<>();
+        channel.getItems().addAll("Stable", "Beta", "Nightly");
+        channel.getSelectionModel().select(settings.getUpdateChannel());
+        channel.setPrefWidth(180);
+
+        Label endpointLabel = new Label("RozeHub endpoint:");
+        endpointLabel.getStyleClass().add("connection-field-label");
+        TextField endpoint = new TextField(settings.getUpdateEndpoint());
+        endpoint.setPromptText("Leave blank to use the configured RozeHub endpoint");
+        endpoint.setPrefWidth(420);
+
+        Label hint = new Label("Updates are downloaded outside the DBNavigator installation. Every package is verified with SHA-256 before the operating-system installer is started.");
+        hint.getStyleClass().add("console-status");
+        hint.setWrapText(true);
+        hint.setMaxWidth(500);
+
+        Button check = new Button("Check for Updates…");
+        check.setOnAction(e -> {
+            Window owner = check.getScene() == null ? null : check.getScene().getWindow();
+            AppUpdateDialog.check(owner, false);
+        });
+
+        VBox panel = new VBox(14, title, autoCheck, autoDownload, channelLabel, channel, endpointLabel, endpoint, hint, check);
+        panel.getProperties().put("autoCheck", autoCheck);
+        panel.getProperties().put("autoDownload", autoDownload);
+        panel.getProperties().put("channel", channel);
+        panel.getProperties().put("endpoint", endpoint);
+        return panel;
+    }
+
     // ------------------------------------------------------------- apply
 
     @SuppressWarnings("unchecked")
     private static void applySettings(MainWindow mainWindow, AppSettingsStore.Settings settings,
-                                      VBox appearancePanel, VBox generalPanel, VBox fontPanel) {
+                                      VBox appearancePanel, VBox generalPanel, VBox fontPanel, VBox updatesPanel) {
         ComboBox<AppSettingsStore.Theme> themeCombo = (ComboBox<AppSettingsStore.Theme>) appearancePanel.getUserData();
         CheckBox ctrlScrollCheck = (CheckBox) generalPanel.getUserData();
         ComboBox<String> fontCombo = (ComboBox<String>) fontPanel.getProperties().get("fontCombo");
@@ -235,6 +280,15 @@ public final class SettingsDialog {
         settings.setCtrlScrollZoomEnabled(ctrlScrollCheck.isSelected());
         settings.setEditorFontFamily(fontCombo.getValue());
         settings.setEditorFontSize(sizeSpinner.getValue());
+
+        CheckBox autoCheck = (CheckBox) updatesPanel.getProperties().get("autoCheck");
+        CheckBox autoDownload = (CheckBox) updatesPanel.getProperties().get("autoDownload");
+        ComboBox<String> channel = (ComboBox<String>) updatesPanel.getProperties().get("channel");
+        TextField endpoint = (TextField) updatesPanel.getProperties().get("endpoint");
+        settings.setAutoUpdateEnabled(autoCheck.isSelected());
+        settings.setAutoDownloadUpdates(autoDownload.isSelected());
+        settings.setUpdateChannel(channel.getValue() == null ? "Stable" : channel.getValue());
+        settings.setUpdateEndpoint(endpoint.getText() == null ? "" : endpoint.getText().trim());
         AppSettingsStore.save(settings);
 
         ThemeManager.setTheme(settings.getTheme());

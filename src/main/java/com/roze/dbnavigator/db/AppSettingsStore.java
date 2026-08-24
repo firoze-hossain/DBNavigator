@@ -21,6 +21,10 @@ public final class AppSettingsStore {
         public String editorFontFamily = "JetBrains Mono";
         public double editorFontSize = 14;
         public boolean ctrlScrollZoomEnabled = true;
+        public boolean autoUpdateEnabled = true;
+        public boolean autoDownloadUpdates = false;
+        public String updateChannel = "Stable";
+        public String updateEndpoint = "";
 
         public Theme getTheme() { return theme; }
         public void setTheme(Theme theme) { this.theme = theme; }
@@ -32,6 +36,14 @@ public final class AppSettingsStore {
         public void setCtrlScrollZoomEnabled(boolean ctrlScrollZoomEnabled) {
             this.ctrlScrollZoomEnabled = ctrlScrollZoomEnabled;
         }
+        public boolean isAutoUpdateEnabled() { return autoUpdateEnabled; }
+        public void setAutoUpdateEnabled(boolean value) { this.autoUpdateEnabled = value; }
+        public boolean isAutoDownloadUpdates() { return autoDownloadUpdates; }
+        public void setAutoDownloadUpdates(boolean value) { this.autoDownloadUpdates = value; }
+        public String getUpdateChannel() { return updateChannel; }
+        public void setUpdateChannel(String value) { this.updateChannel = value; }
+        public String getUpdateEndpoint() { return updateEndpoint; }
+        public void setUpdateEndpoint(String value) { this.updateEndpoint = value; }
     }
 
     private static final Path FILE =
