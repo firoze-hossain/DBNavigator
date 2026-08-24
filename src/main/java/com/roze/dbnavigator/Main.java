@@ -5,6 +5,8 @@ import com.roze.dbnavigator.db.ClientRegistry;
 import com.roze.dbnavigator.ui.MainWindow;
 import com.roze.dbnavigator.ui.ThemeManager;
 import com.roze.dbnavigator.util.AppExecutor;
+import com.roze.dbnavigator.update.AppUpdateService;
+import com.roze.dbnavigator.ui.AppUpdateDialog;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
@@ -22,6 +24,17 @@ public class Main extends Application {
         stage.setMinWidth(1000);
         stage.setMinHeight(650);
         stage.show();
+
+        // Non-blocking startup update check. The user controls this from Settings > Updates.
+        var updateSettings = AppSettingsStore.load();
+        if (updateSettings.isAutoUpdateEnabled()) {
+            AppUpdateService.checkForUpdate().thenAccept(update -> {
+                if (update != null && update.available) {
+                    javafx.application.Platform.runLater(() ->
+                            AppUpdateDialog.show(stage, update, null, updateSettings.isAutoDownloadUpdates(), false));
+                }
+            }).exceptionally(error -> null);
+        }
     }
 
     @Override
