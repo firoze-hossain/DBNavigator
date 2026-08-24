@@ -76,7 +76,7 @@ public final class AppUpdateDialog {
             download.setDisable(true);
             progress.setVisible(true);
             progress.setManaged(true);
-            status.setText("Downloading " + release.fileName + "…");
+            status.setText("Downloading " + release.effectiveFileName() + "…");
             AppUpdateService.download(release, value -> Platform.runLater(() -> progress.setProgress(value)))
                     .whenComplete((file, downloadError) -> Platform.runLater(() -> {
                         if (downloadError != null) {
@@ -128,7 +128,7 @@ public final class AppUpdateDialog {
         AppUpdate.Release release = update.release;
         releaseHolder[0] = release;
         title.setText("DBNavigator Pro " + release.version + " is available");
-        status.setText("Current version: " + AppUpdateService.currentVersion() + "  •  " + release.fileName + (release.mandatory ? "  •  Mandatory update" : ""));
+        status.setText("Current version: " + AppUpdateService.currentVersion() + "  •  " + release.effectiveFileName() + "  •  " + release.effectivePackageType().toUpperCase() + (release.mandatory ? "  •  Mandatory update" : ""));
         notes.setText(release.displayNotes());
         notes.setVisible(true);
         notes.setManaged(true);

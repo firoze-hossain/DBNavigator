@@ -89,18 +89,31 @@ public final class AppUpdateService {
     }
 
     public static CompletableFuture<Path> download(AppUpdate.Release release, Consumer<Double> progress) {
-        if (release == null || release.downloadUrl == null || release.downloadUrl.isBlank()) {
-            return CompletableFuture.failedFuture(new IOException("The release does not contain a download URL."));
+        if (release == null) {
+            return CompletableFuture.failedFuture(new IOException("No update release was provided."));
+        }
+        String downloadUrl = release.effectiveDownloadUrl();
+        String fileName = release.effectiveFileName();
+        long fileSize = release.effectiveFileSize();
+        String expectedSha256 = release.effectiveSha256();
+        if (downloadUrl == null || downloadUrl.isBlank()) {
+            return CompletableFuture.failedFuture(new IOException("RozeHub did not provide an update artifact download URL."));
+        }
+        if (fileName == null || fileName.isBlank()) {
+            return CompletableFuture.failedFuture(new IOException("RozeHub did not provide an update artifact file name."));
+        }
+        if (expectedSha256 == null || expectedSha256.isBlank()) {
+            return CompletableFuture.failedFuture(new IOException("RozeHub did not provide a SHA-256 checksum for the update artifact."));
         }
         return CompletableFuture.supplyAsync(() -> {
             try {
                 Files.createDirectories(UPDATE_DIR);
-                String safeName = sanitizeFileName(release.fileName);
+                String safeName = sanitizeFileName(fileName);
                 Path partial = UPDATE_DIR.resolve(safeName + ".part");
                 Path target = UPDATE_DIR.resolve(safeName);
                 Files.deleteIfExists(partial);
 
-                HttpRequest request = HttpRequest.newBuilder(URI.create(release.downloadUrl))
+                HttpRequest request = HttpRequest.newBuilder(URI.create(downloadUrl))
                         .timeout(Duration.ofMinutes(30))
                         .header("Accept", "application/octet-stream")
                         .header("User-Agent", "DBNavigator-Pro/" + currentVersion())
@@ -111,7 +124,7 @@ public final class AppUpdateService {
                     throw new IOException("RozeHub download failed with HTTP " + response.statusCode());
                 }
 
-                long expectedSize = release.fileSize;
+                long expectedSize = fileSize;
                 long downloaded = 0;
                 try (InputStream in = response.body();
                      var out = Files.newOutputStream(partial)) {
@@ -130,11 +143,8 @@ public final class AppUpdateService {
                     throw new IOException("Downloaded file size does not match RozeHub metadata.");
                 }
 
-                if (release.sha256 == null || release.sha256.isBlank()) {
-                    throw new IOException("RozeHub did not provide a SHA-256 checksum.");
-                }
                 String actualHash = sha256(partial);
-                if (!actualHash.equalsIgnoreCase(release.sha256.trim())) {
+                if (!actualHash.equalsIgnoreCase(expectedSha256.trim())) {
                     throw new IOException("SHA-256 verification failed. The downloaded package was not installed.");
                 }
 
@@ -142,15 +152,23 @@ public final class AppUpdateService {
                 if (progress != null) progress.accept(1d);
                 return target;
             } catch (Exception e) {
-                try { Files.deleteIfExists(UPDATE_DIR.resolve(sanitizeFileName(release.fileName) + ".part")); }
+                try { Files.deleteIfExists(UPDATE_DIR.resolve(sanitizeFileName(fileName) + ".part")); }
                 catch (Exception ignored) {}
                 throw new RuntimeException(e.getMessage(), e);
             }
         });
     }
 
-    /** Launches the OS installer. DBNavigator itself is not overwritten while running. */
+    /**
+     * Starts the verified update package. The package is selected from
+     * RozeHub's updateArtifact, so macOS can use .pkg while public downloads
+     * can continue using .dmg.
+     */
     public static void installAndRestart(Path packageFile) throws IOException {
+        if (packageFile == null || !Files.isRegularFile(packageFile)) {
+            throw new IOException("Verified update package was not found.");
+        }
+
         String name = packageFile.getFileName().toString().toLowerCase(Locale.ROOT);
         String platform = platform();
         ProcessBuilder builder;
@@ -164,9 +182,13 @@ public final class AppUpdateService {
                 throw new IOException("Unsupported Windows update package: " + packageFile.getFileName());
             }
         } else if (platform.equals("macOS")) {
-            if (name.endsWith(".dmg")) {
-                builder = new ProcessBuilder("open", packageFile.toAbsolutePath().toString());
-            } else if (name.endsWith(".pkg")) {
+            if (name.endsWith(".pkg")) {
+                // macOS Installer.app handles permissions and displays the normal
+                // signed package installation UI. This is the preferred update artifact.
+                builder = new ProcessBuilder("open", "-W", packageFile.toAbsolutePath().toString());
+            } else if (name.endsWith(".dmg")) {
+                // Legacy fallback only. DMG is intended for new installations;
+                // RozeHub should normally return a .pkg as updateArtifact.
                 builder = new ProcessBuilder("open", packageFile.toAbsolutePath().toString());
             } else {
                 throw new IOException("Unsupported macOS update package: " + packageFile.getFileName());
@@ -174,7 +196,7 @@ public final class AppUpdateService {
         } else {
             if (name.endsWith(".deb")) {
                 builder = new ProcessBuilder("pkexec", "apt-get", "install", "-y", packageFile.toAbsolutePath().toString());
-            } else if (name.endsWith(".AppImage".toLowerCase(Locale.ROOT))) {
+            } else if (name.endsWith(".appimage")) {
                 packageFile.toFile().setExecutable(true, false);
                 builder = new ProcessBuilder(packageFile.toAbsolutePath().toString());
             } else {
