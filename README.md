@@ -5,7 +5,7 @@
 **A DataGrip-style desktop database IDE, built from scratch in JavaFX.**
 
 One unified explorer, console, and data editor for relational databases *and* MongoDB —
-PostgreSQL, MySQL, MariaDB, SQL Server, Oracle, SQLite, and MongoDB, all in one app.
+PostgreSQL, MySQL, MariaDB, SQL Server, Oracle, SQLite, StratosDB, and MongoDB, all in one app.
 
 </div>
 
@@ -54,10 +54,18 @@ execution, real schema editing, real data editing, and the day-to-day
 conveniences (autocomplete, history, bookmarks, split editors) that make a
 database IDE actually pleasant to live in.
 
-It currently supports **six relational engines and MongoDB** through one
+It currently supports **seven relational engines and MongoDB** through one
 consistent interface: the same schema tree, the same tab system, the same
 keyboard habits — whether you're writing SQL against Postgres or `db.collection`
-shell commands against Mongo.
+shell commands against Mongo. StratosDB support connects through its own real,
+native JDBC driver (not a compatibility shim against another engine's driver) -
+see `local-maven-repo/README.md` for how that driver is packaged, since it
+isn't published to Maven Central. A few of StratosDB's own real, current
+engine limitations carry through honestly rather than being papered over: no
+TLS yet (connecting with "Use SSL" checked surfaces a clear error, not a
+silent failure), and no dump/restore tooling yet (StratosDB's own real backup
+tooling - PITR, `StratosDump` - isn't wrapped here yet, the same real gap
+Oracle/SQL Server also currently have).
 
 This is an actively evolving project. The feature list below reflects what's
 implemented *today*; the [Roadmap](#-roadmap--whats-next) section is what's
@@ -220,6 +228,8 @@ if you'd like to influence this list:
 - [ ] Broader MongoDB shell method coverage (`bulkWrite`, `distinct`, more
       admin/db-level commands)
 - [ ] SQL Server / Oracle-specific dump-restore tooling
+- [ ] StratosDB dump/restore dialogs, wrapping its own real `StratosDump`/PITR
+      tooling, matching the existing `pg_dump`/`mysqldump` ones
 - [ ] A proper query-results diff/compare view
 - [ ] Connection groups/folders in the Database Explorer
 - [ ] Keyboard-shortcut customization

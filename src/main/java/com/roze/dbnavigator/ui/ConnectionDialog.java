@@ -385,6 +385,7 @@ public class ConnectionDialog extends Dialog<ConnectionProfile> {
             case SQLSERVER -> "#c77dbb";
             case ORACLE -> "#e05555";
             case SQLITE -> "#868a91";
+            case STRATOSDB -> "#2eb8a6";
             case MONGODB -> "#57965c";
         };
         typeIconHolder.getChildren().setAll(Icons.of(FontAwesomeSolid.DATABASE, color, 20));

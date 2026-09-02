@@ -161,6 +161,11 @@ public final class MetadataService {
                 }
             }
             case SQLITE -> objectFolders(null, null);
+            // StratosDB, like SQLite, has no databases/schemas concept at all
+            // (see StratosDriver's own javadoc: one data directory per server
+            // process) - straight to Tables/Views/etc. folders under the
+            // connection node, same as SQLite.
+            case STRATOSDB -> objectFolders(null, null);
             default -> List.of();
         };
     }

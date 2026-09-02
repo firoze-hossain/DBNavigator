@@ -16,6 +16,7 @@ public class ConnectionProfile {
         SQLSERVER("SQL Server", 1433, true),
         ORACLE("Oracle", 1521, true),
         SQLITE("SQLite", 0, true),
+        STRATOSDB("StratosDB", 6582, true),
         MONGODB("MongoDB", 27017, false);
 
         private final String displayName;
@@ -127,6 +128,15 @@ public class ConnectionProfile {
             // has, and is exactly what psql itself falls back to by convention.
             case POSTGRESQL -> "jdbc:postgresql://%s:%d/%s%s"
                                    .formatted(host, port, blank ? "postgres" : database, useSsl ? "?ssl=true" : "");
+            // StratosDB has no real multiple-databases-per-server concept yet -
+            // any non-blank value is accepted without being meaningfully
+            // validated server-side (see StratosDriver's own javadoc), so
+            // "stratos" here is just a reasonable, real default, not a
+            // required administrative database the way Postgres's "postgres"
+            // database actually is.
+            case STRATOSDB  -> "jdbc:stratos://%s:%d/%s%s"
+                                   .formatted(host, port, blank ? "stratos" : database, useSsl ? "?ssl=true" : "");
+
             // MySQL/MariaDB can omit the database segment entirely and still
             // connect — you just won't have a schema selected until you USE one.
             case MYSQL      -> blank
