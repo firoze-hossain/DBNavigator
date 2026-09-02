@@ -35,6 +35,7 @@ module com.roze.dbnavigator {
     requires org.xerial.sqlitejdbc;
     requires com.microsoft.sqlserver.jdbc;
     requires com.oracle.database.jdbc;
+    requires stratosdb.jdbc;
     requires java.desktop;
     requires java.net.http;
 
