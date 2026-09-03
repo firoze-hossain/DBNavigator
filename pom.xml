@@ -30,8 +30,8 @@
     -->
     <repositories>
         <repository>
-            <id>stratosdb-local</id>
-            <url>file://${project.basedir}/local-maven-repo</url>
+            <id>jitpack.io</id>
+            <url>https://jitpack.io</url>
         </repository>
     </repositories>
 
@@ -95,9 +95,9 @@
           other real Maven dependency graph.
         -->
         <dependency>
-            <groupId>com.stratosdb</groupId>
+            <groupId>com.github.firoze-hossain.stratosdb</groupId>
             <artifactId>stratosdb-jdbc</artifactId>
-            <version>1.0.0-SNAPSHOT</version>
+            <version>1.0.1</version>
         </dependency>
         <dependency>
             <groupId>org.xerial</groupId>
