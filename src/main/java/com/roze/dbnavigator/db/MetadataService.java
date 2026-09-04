@@ -122,6 +122,21 @@ public final class MetadataService {
                 }
                 yield schemas.stream().map(DbObject::getName).toList();
             }
+            // Real, but conditional: SHOW DATABASES genuinely lists every
+            // database only when this server is a real, multi-database
+            // StratosCluster - a plain, single-database instance (this
+            // engine's own real, established default) honestly returns an
+            // empty result for it instead (see StratosDB's own
+            // ExecutorEngine.executeShowDatabases javadoc), which would
+            // otherwise leave this filter with nothing to show at all even
+            // though a real connection - to exactly one, real database - is
+            // sitting right there. Falls back to that one, real database's
+            // own name in that case, matching what the connection is
+            // actually, already using.
+            case STRATOSDB -> {
+                List<String> names = queryStratosDatabases(profile);
+                yield names.isEmpty() ? List.of(stratosCurrentDatabaseName(profile)) : names;
+            }
             default -> List.of();
         };
     }
@@ -129,7 +144,7 @@ public final class MetadataService {
     /** True when this engine shows DATABASE nodes that can be filtered. */
     public static boolean supportsDatabaseFilter(ConnectionProfile profile) {
         return switch (profile.getType()) {
-            case POSTGRESQL, MYSQL, MARIADB, MONGODB, SQLSERVER, ORACLE -> true;
+            case POSTGRESQL, MYSQL, MARIADB, MONGODB, SQLSERVER, ORACLE, STRATOSDB -> true;
             default -> false;
         };
     }
@@ -161,11 +176,15 @@ public final class MetadataService {
                 }
             }
             case SQLITE -> objectFolders(null, null);
-            // StratosDB, like SQLite, has no databases/schemas concept at all
-            // (see StratosDriver's own javadoc: one data directory per server
-            // process) - straight to Tables/Views/etc. folders under the
-            // connection node, same as SQLite.
-            case STRATOSDB -> objectFolders(null, null);
+            // Real, but conditional, just like the database filter above:
+            // a real, multi-database StratosCluster gets real, individually
+            // expandable DATABASE nodes (PostgreSQL's own pattern) - a plain,
+            // single-database instance (this engine's own real, established
+            // default) falls back to going straight to Tables/Views/etc.
+            // under the connection node (SQLite's own pattern), since SHOW
+            // DATABASES on a plain instance honestly returns nothing to
+            // build real database nodes from at all.
+            case STRATOSDB -> loadStratosDatabases(profile);
             default -> List.of();
         };
     }
@@ -200,6 +219,46 @@ public final class MetadataService {
             }
         }
         return result;
+    }
+
+    /**
+     * Real DATABASE nodes for a real, multi-database StratosCluster - the
+     * same real shape PostgreSQL's own connection tree already has, since
+     * StratosDB's own real cluster support genuinely is that same shape
+     * (see StratosCluster's own javadoc). Falls back to the plain,
+     * single-database tree shape ({@code objectFolders}, SQLite's own real
+     * pattern) when {@code SHOW DATABASES} honestly returns nothing - a
+     * plain, non-clustered StratosDB instance, this engine's own real,
+     * established default.
+     */
+    private static List<DbObject> loadStratosDatabases(ConnectionProfile profile) throws SQLException {
+        List<String> names = queryStratosDatabases(profile);
+        if (names.isEmpty()) {
+            return objectFolders(null, null);
+        }
+        List<DbObject> result = new ArrayList<>();
+        for (String name : names) {
+            DbObject obj = new DbObject(name, Kind.DATABASE, name, null);
+            if (name.equals(stratosCurrentDatabaseName(profile))) obj.setDetail("(default)");
+            result.add(obj);
+        }
+        return result;
+    }
+
+    private static List<String> queryStratosDatabases(ConnectionProfile profile) throws SQLException {
+        List<String> names = new ArrayList<>();
+        try (Connection conn = client(profile, null).getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SHOW DATABASES")) {
+            while (rs.next()) names.add(rs.getString(1));
+        }
+        return names;
+    }
+
+    /** StratosDB's own real default database name when none is explicitly configured - matching StratosDriver's own real, established convention (see its javadoc). */
+    private static String stratosCurrentDatabaseName(ConnectionProfile profile) {
+        String configured = profile.getDatabase();
+        return configured == null || configured.isBlank() ? "stratos" : configured;
     }
 
     private static List<DbObject> loadCatalogs(ConnectionProfile profile) throws SQLException {

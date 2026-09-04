@@ -56,7 +56,7 @@ public final class CreateDatabaseDialog {
      */
     public static boolean supportsCreate(ConnectionProfile.DatabaseType type) {
         return switch (type) {
-            case POSTGRESQL, MYSQL, MARIADB, MONGODB, SQLSERVER, ORACLE -> true;
+            case POSTGRESQL, MYSQL, MARIADB, MONGODB, SQLSERVER, ORACLE, STRATOSDB -> true;
             default -> false;
         };
     }
@@ -68,6 +68,7 @@ public final class CreateDatabaseDialog {
             case MONGODB -> showMongo(mainWindow, profile);
             case SQLSERVER -> showSqlServer(mainWindow, profile);
             case ORACLE -> showOracleUser(mainWindow, profile);
+            case STRATOSDB -> showStratos(mainWindow, profile);
             default -> DialogTheme.apply(new Alert(Alert.AlertType.INFORMATION,
                     "SQLite has nothing to create here — a connection already is one "
                     + "single file. Use \"New Data Source\" to point at a different file instead."))
@@ -657,6 +658,113 @@ public final class CreateDatabaseDialog {
                         "Could not create user: " + msg)).showAndWait());
             }
         });
+    }
+
+    // ============================================================= StratosDB
+
+    /**
+     * StratosDB's own real {@code CREATE DATABASE} grammar is genuinely
+     * simple - just a name, no character set/collation/owner/template
+     * options at all (see {@code StratosSQL.g4}'s own real
+     * {@code createDatabase} rule) - so this dialog is correspondingly
+     * simple, unlike the richer PostgreSQL/MySQL/SQL Server ones above.
+     *
+     * A real, honest note shown up front rather than discovered only
+     * after a failed attempt: this only works against a real,
+     * multi-database StratosDB cluster - a plain, single-database
+     * instance (StratosDB's own real, established default) refuses
+     * {@code CREATE DATABASE} outright with a clear server-side error,
+     * which this dialog surfaces plainly if it happens rather than
+     * pretending the attempt could have looked like anything else.
+     */
+    private static void showStratos(MainWindow mainWindow, ConnectionProfile profile) {
+        Stage stage = new Stage();
+        Window owner = mainWindow.getOwnerWindow();
+        stage.initOwner(owner);
+        stage.initModality(Modality.APPLICATION_MODAL);
+        stage.setTitle("Create Database");
+        stage.setResizable(true);
+        stage.setMinWidth(480);
+        stage.setMinHeight(280);
+
+        TextField nameField = new TextField();
+        nameField.setPromptText("database_name");
+
+        GridPane grid = new GridPane();
+        grid.setHgap(14);
+        grid.setVgap(12);
+        grid.setPadding(new Insets(20, 20, 8, 20));
+        grid.add(fieldLabel("Name"), 0, 0);
+        grid.add(withGrow(nameField), 1, 0);
+
+        ColumnConstraints labelCol = new ColumnConstraints(110);
+        ColumnConstraints fieldCol = new ColumnConstraints();
+        fieldCol.setHgrow(Priority.ALWAYS);
+        grid.getColumnConstraints().addAll(labelCol, fieldCol);
+
+        Label explainer = new Label(
+                "This only works against a real, multi-database StratosDB cluster "
+                + "(the server was started with --cluster). A plain, single-database "
+                + "StratosDB server - the default - refuses this with a clear error.");
+        explainer.setWrapText(true);
+        explainer.getStyleClass().add("console-status");
+
+        TextArea preview = new TextArea();
+        preview.setEditable(false);
+        preview.setPrefRowCount(3);
+        preview.getStyleClass().add("process-output");
+        Label previewLabel = new Label("Preview");
+        previewLabel.getStyleClass().add("connection-field-label");
+
+        VBox content = new VBox(14, grid, explainer, new Separator(), previewLabel, preview);
+        content.setPadding(new Insets(0, 20, 8, 20));
+        VBox.setVgrow(preview, Priority.ALWAYS);
+
+        Runnable refreshPreview = () -> preview.setText(buildStratosSql(nameField.getText()));
+        nameField.textProperty().addListener((o, a, b) -> refreshPreview.run());
+        refreshPreview.run();
+
+        Button cancel = new Button("Cancel");
+        cancel.setOnAction(e -> stage.close());
+        Button ok = new Button("OK");
+        ok.getStyleClass().add("run-button");
+        ok.setDefaultButton(true);
+        ok.setOnAction(e -> {
+            String name = nameField.getText().trim();
+            if (name.isBlank()) {
+                DialogTheme.apply(new Alert(Alert.AlertType.WARNING, "Enter a database name.")).showAndWait();
+                return;
+            }
+            String sql = buildStratosSql(name);
+            stage.close();
+            runCreate(mainWindow, profile, name, sql);
+        });
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        HBox buttons = new HBox(10, spacer, ok, cancel);
+        buttons.setAlignment(Pos.CENTER_RIGHT);
+        buttons.setPadding(new Insets(0, 20, 16, 20));
+
+        VBox root = new VBox(content, buttons);
+        root.getStyleClass().add("app-root");
+        VBox.setVgrow(content, Priority.ALWAYS);
+        Scene scene = new Scene(root, 520, 320);
+        if (owner != null && owner.getScene() != null) {
+            scene.getStylesheets().addAll(owner.getScene().getStylesheets());
+        }
+        stage.setScene(scene);
+        stage.show();
+    }
+
+    private static String buildStratosSql(String name) {
+        // StratosDB's own real grammar for a database name is a plain
+        // IDENTIFIER token only - no quoted-identifier form exists at all
+        // (see StratosSQL.g4's own real databaseName rule), so this is
+        // deliberately NOT quoted the way Postgres/MySQL identifiers above
+        // are - a quoted name here would simply fail to parse server-side.
+        String dbName = name == null || name.isBlank() ? "database_name" : name.trim();
+        return "CREATE DATABASE " + dbName + ";";
     }
 
     // ================================================================ MongoDB
