@@ -338,7 +338,7 @@ public final class MetadataService {
         String catalog = dbFolder.getCatalog();
         String schema = dbFolder.getSchema();
 
-        return switch (dbFolder.getKind()) {
+        List<DbObject> result = switch (dbFolder.getKind()) {
             case COLLECTIONS_FOLDER -> {
                 List<DbObject> colls = new ArrayList<>();
                 for (String name : ClientRegistry.mongo(profile).listCollections(catalog)) {
@@ -360,6 +360,23 @@ public final class MetadataService {
             case PARTITIONS_FOLDER -> loadPartitions(profile, dbFolder);
             default -> List.of();
         };
+
+        // StratosDB has no schema/catalog-qualified table syntax at all in its
+        // own real SQL grammar - a real, multi-database StratosCluster gets
+        // per-database isolation entirely through a separate connection per
+        // database (already correctly handled via ClientRegistry.jdbc using
+        // this same catalog value), not through a "catalog.table" reference
+        // within a single query. Without this, qualifiedName() would build a
+        // real, syntactically invalid reference for any table/view/procedure/
+        // function/sequence under a real database node in cluster mode - a
+        // real bug found via a real, live DBNavigator session against a real
+        // multi-database StratosDB cluster.
+        if (profile.getType() == DatabaseType.STRATOSDB) {
+            for (DbObject obj : result) {
+                obj.setSkipCatalogQualifier(true);
+            }
+        }
+        return result;
     }
 
     private static List<DbObject> loadTablesOrViews(ConnectionProfile profile, String catalog,

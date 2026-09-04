@@ -20,6 +20,21 @@ public class DbObject {
     private String tableName;       // owning table for COLUMN/INDEX/folder nodes (nullable)
     private String detail;          // e.g. column type, child count
     private boolean loaded;
+    /**
+     * True only for engines where {@code catalog} is used purely to pick
+     * the right per-database connection (see ClientRegistry.jdbc), not as
+     * a real, valid part of a qualified SQL table reference. StratosDB is
+     * the real, current example: unlike MySQL/MariaDB, its own SQL
+     * grammar has no {@code catalog.table} syntax at all - a real,
+     * multi-database StratosCluster achieves per-database isolation
+     * entirely through a separate connection per database, not through
+     * schema/catalog-qualified references within a single query. Without
+     * this flag, {@link #qualifiedName()} would build a real, syntactically
+     * invalid reference like {@code mydb.employees} for a StratosDB table
+     * that already has the right, single database selected via its own
+     * dedicated connection.
+     */
+    private boolean skipCatalogQualifier;
 
     public DbObject(String name, Kind kind) {
         this(name, kind, null, null);
@@ -42,13 +57,14 @@ public class DbObject {
     public void setDetail(String detail) { this.detail = detail; }
     public boolean isLoaded()  { return loaded; }
     public void setLoaded(boolean loaded) { this.loaded = loaded; }
+    public void setSkipCatalogQualifier(boolean skipCatalogQualifier) { this.skipCatalogQualifier = skipCatalogQualifier; }
 
     /** Fully qualified name for use in SQL. */
     public String qualifiedName() {
         StringBuilder sb = new StringBuilder();
         if (schema != null && !schema.isBlank()) {
             sb.append(quote(schema)).append('.');
-        } else if (catalog != null && !catalog.isBlank()) {
+        } else if (catalog != null && !catalog.isBlank() && !skipCatalogQualifier) {
             // MySQL/MariaDB qualify by catalog (database) instead of schema
             sb.append(quote(catalog)).append('.');
         }
