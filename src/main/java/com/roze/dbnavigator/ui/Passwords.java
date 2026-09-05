@@ -81,6 +81,20 @@ public final class Passwords {
         if (profile.getType() == DatabaseType.SQLITE) return false;
         boolean hasUser = profile.getUsername() != null && !profile.getUsername().isBlank();
         boolean hasPassword = profile.getPassword() != null && !profile.getPassword().isEmpty();
-        return hasUser && !hasPassword;
+        // A real, previously-latent bug: a connection whose real, correct
+        // password genuinely IS blank (e.g. a trust-auth server like a
+        // freshly-started StratosDB instance) has no way to look any
+        // different from "never confirmed yet" just from an empty password
+        // string alone - both are password="" with no other signal. "Save
+        // password" being checked is itself real, explicit confirmation
+        // that the user already answered this exact prompt once (even by
+        // submitting a blank password on purpose) and chose to persist
+        // that answer - so it alone is enough to skip asking again, on
+        // every subsequent app restart, without also requiring a non-empty
+        // password to be true. Without this, a trust-auth connection with
+        // "Save password" checked would show this dialog again every
+        // single time the app restarted, no matter how many times the
+        // user confirmed the blank password was correct.
+        return hasUser && !hasPassword && !profile.isSavePassword();
     }
 }
