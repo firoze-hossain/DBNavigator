@@ -683,6 +683,8 @@ public class SchemaTreePane extends VBox {
                         } else if (profile.getType() == ConnectionProfile.DatabaseType.MYSQL
                                 || profile.getType() == ConnectionProfile.DatabaseType.MARIADB) {
                             MySqlDumpDialog.show(mainWindow, profile, obj.getName());
+                        } else if (profile.getType() == ConnectionProfile.DatabaseType.STRATOSDB) {
+                            StratosDumpService.dumpDatabase(mainWindow, profile, obj.getName());
                         } else {
                             DumpRestoreService.dumpDatabase(mainWindow, profile, obj.getName());
                         }
@@ -694,6 +696,8 @@ public class SchemaTreePane extends VBox {
                         } else if (profile.getType() == ConnectionProfile.DatabaseType.MYSQL
                                 || profile.getType() == ConnectionProfile.DatabaseType.MARIADB) {
                             MySqlRestoreDialog.show(mainWindow, profile, obj.getName());
+                        } else if (profile.getType() == ConnectionProfile.DatabaseType.STRATOSDB) {
+                            StratosDumpService.restoreDatabase(mainWindow, profile, obj.getName());
                         } else {
                             DumpRestoreService.restoreDatabase(mainWindow, profile, obj.getName());
                         }
