@@ -707,9 +707,9 @@ public class MainWindow {
      * (consoles only, not data grids/diagrams/structure views).
      */
     private void restoreSession() {
-        List<SessionStore.OpenTab> saved = SessionStore.load();
-        if (saved.isEmpty()) return;
         List<ConnectionProfile> profiles = ConnectionStore.load();
+
+        List<SessionStore.OpenTab> saved = SessionStore.load();
         for (SessionStore.OpenTab open : saved) {
             ConnectionProfile profile = profiles.stream()
                     .filter(p -> p.getId().equals(open.profileId()))
@@ -727,23 +727,79 @@ public class MainWindow {
                 addAndSelect(tab);
             }
         }
+
+        List<SessionStore.OpenDataTab> savedDataTabs = SessionStore.loadDataTabs();
+        for (SessionStore.OpenDataTab open : savedDataTabs) {
+            ConnectionProfile profile = profiles.stream()
+                    .filter(p -> p.getId().equals(open.profileId()))
+                    .findFirst().orElse(null);
+            // Same real reasoning as above - the connection this data tab
+            // belonged to is simply gone now.
+            if (profile == null) continue;
+            DbObject obj = new DbObject(open.name(), open.kind(), open.catalog(), open.schema());
+            // Mirrors MetadataService's own, real, exact condition for when a
+            // table reference must not be catalog-qualified - see its own
+            // real javadoc for why this matters specifically for a StratosDB
+            // cluster. Re-derived here rather than persisted as its own
+            // separate field, since it's fully, deterministically implied by
+            // the connection's own type alone.
+            if (profile.getType() == ConnectionProfile.DatabaseType.STRATOSDB) {
+                obj.setSkipCatalogQualifier(true);
+            }
+            if (open.mongo()) {
+                openMongoTab(profile, obj);
+            } else {
+                openDataTab(profile, obj);
+            }
+        }
     }
 
-    /** Snapshots every currently open console so restoreSession() can bring them back next launch. */
+    /**
+     * Snapshots every currently open console so restoreSession() can
+     * bring them back next launch.
+     *
+     * Real, previously-shipped bug this fixes: a QueryTab's own
+     * displayed text already has " [catalog]" appended by its own
+     * constructor (see QueryTab's own setText call) - saving that full,
+     * already-suffixed text as the base title, then passing it straight
+     * back into a new QueryTab's own title parameter on the next
+     * restore (which appends " [catalog]" again, unconditionally,
+     * regardless of whether the text already ends with it) meant the
+     * suffix genuinely grew by one extra " [catalog]" on every single
+     * close-and-reopen cycle - exactly what a real, live report showed:
+     * "console 1 [hh] [hh] [hh] [hh] [hh]" after five restarts with the
+     * same console left open. Fixed by saving QueryTab's own real,
+     * already-existing base title (getFileId() - the same stable
+     * identity its own Local History already keys on, deliberately
+     * independent of the catalog suffix) instead of its full, suffixed
+     * display text. MongoConsoleTab has no such bug to begin with - its
+     * own constructor never appends anything to its title - so it keeps
+     * using its full display text exactly as before.
+     */
     private void saveSession() {
         List<SessionStore.OpenTab> open = new java.util.ArrayList<>();
+        List<SessionStore.OpenDataTab> openDataTabs = new java.util.ArrayList<>();
         for (TabPane pane : editorTabPanes()) {
             for (Tab t : pane.getTabs()) {
                 if (t instanceof QueryTab qt) {
                     open.add(new SessionStore.OpenTab(
-                            qt.getProfile().getId(), qt.getCatalog(), qt.getSqlText(), t.getText(), false));
+                            qt.getProfile().getId(), qt.getCatalog(), qt.getSqlText(), qt.getFileId(), false));
                 } else if (t instanceof MongoConsoleTab mt) {
                     open.add(new SessionStore.OpenTab(mt.getProfileForReopen().getId(),
                             mt.getCurrentDatabase(), mt.getScriptText(), t.getText(), true));
+                } else if (t instanceof DataTab dt) {
+                    DbObject table = dt.getTableForReopen();
+                    openDataTabs.add(new SessionStore.OpenDataTab(dt.getProfileForReopen().getId(),
+                            table.getName(), table.getKind(), table.getCatalog(), table.getSchema(), false));
+                } else if (t instanceof MongoCollectionTab mc) {
+                    DbObject collection = mc.getCollectionForReopen();
+                    openDataTabs.add(new SessionStore.OpenDataTab(mc.getProfileForReopen().getId(),
+                            collection.getName(), collection.getKind(), collection.getCatalog(), collection.getSchema(), true));
                 }
             }
         }
         SessionStore.save(open);
+        SessionStore.saveDataTabs(openDataTabs);
     }
 
     // ------------------------------------------------------------- split view

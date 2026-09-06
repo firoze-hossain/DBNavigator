@@ -113,8 +113,8 @@ public class QueryTab extends Tab {
         this.mainWindow = mainWindow;
         this.profile = profile;
         this.catalog = catalog;
-        this.fileId = title;
-        setText(title + (catalog != null ? " [" + catalog + "]" : ""));
+        this.fileId = normalizeTitle(title, catalog);
+        setText(fileId + (catalog != null ? " [" + catalog + "]" : ""));
         setGraphic(Icons.of(FontAwesomeSolid.TERMINAL, "#6897bb", 11));
 
         // ---- Toolbar ----
@@ -386,6 +386,30 @@ public class QueryTab extends Tab {
     // -------------------------------------------------------- local history
 
     public String getFileId() { return fileId; }
+
+    /**
+     * Real, previously-shipped bug this heals: a title already carrying
+     * one or more accumulated " [catalog]" suffixes (from a
+     * session.json saved before the fix for this existed - see
+     * MainWindow.saveSession's own real account of that bug) would
+     * otherwise get yet another suffix appended on top the very next
+     * time it's loaded, since this constructor always appends
+     * unconditionally regardless of what the title already ends with.
+     * Strips every trailing occurrence of the exact suffix this
+     * constructor is about to append, in one pass, so an already-
+     * corrupted title (potentially several suffixes deep from repeated
+     * restarts before the fix existed) is normalized back to its real,
+     * original base title immediately, rather than merely growing more
+     * slowly than before.
+     */
+    private static String normalizeTitle(String title, String catalog) {
+        if (catalog == null) return title;
+        String suffix = " [" + catalog + "]";
+        while (title.endsWith(suffix)) {
+            title = title.substring(0, title.length() - suffix.length());
+        }
+        return title;
+    }
     public ConnectionProfile getProfile() { return profile; }
     public String getCatalog() { return catalog; }
 
