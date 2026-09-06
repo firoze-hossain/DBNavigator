@@ -4,6 +4,7 @@ import com.roze.dbnavigator.db.ClientRegistry;
 import com.roze.dbnavigator.db.ConnectionStore;
 import com.roze.dbnavigator.db.DatabaseAdminService;
 import com.roze.dbnavigator.db.MetadataService;
+import com.roze.dbnavigator.db.TreeStateStore;
 import com.roze.dbnavigator.model.ConnectionProfile;
 import com.roze.dbnavigator.model.DbObject;
 import com.roze.dbnavigator.model.DbObject.Kind;
@@ -18,6 +19,7 @@ import org.kordamp.ikonli.fontawesome5.FontAwesomeSolid;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
@@ -31,6 +33,21 @@ public class SchemaTreePane extends VBox {
     private final TreeItem<DbObject> root = new TreeItem<>(new DbObject("root", Kind.MESSAGE));
     /** Maps every connection tree item to its profile. */
     private final Map<TreeItem<DbObject>, ConnectionProfile> connectionItems = new ConcurrentHashMap<>();
+    /**
+     * Registered by restoreExpansion/refreshNode right before
+     * programmatically expanding a node, so the existing lazy-load
+     * listener (see addConnectionNode/loadChildrenAsync) can call back
+     * exactly once real loading has actually finished. This is the
+     * correct, race-free way to know "children are really there now" -
+     * an earlier, real bug in this exact mechanism tried to learn this
+     * by observing the children list's own individual mutations from
+     * the outside instead, which fires once per single change (the
+     * initial clear(), then once per real child added), not once after
+     * the real rebuild as a whole is done - meaning it fired far too
+     * early, against an empty or partially-built list, and nothing ever
+     * actually got restored.
+     */
+    private final Map<TreeItem<DbObject>, Runnable> pendingLoadCallbacks = new ConcurrentHashMap<>();
 
     private final MainWindow mainWindow;
 
@@ -74,8 +91,11 @@ public class SchemaTreePane extends VBox {
         reload();
     }
 
-    /** Rebuilds the root list of connections from the store. */
+    /** Rebuilds the root list of connections from the store, preserving whichever nodes were already expanded (see restoreExpansion's own javadoc for why a full rebuild can't simply be avoided instead: there is no way to know a connection's own real children haven't changed without reloading them). */
     public void reload() {
+        Set<String> expanded = new java.util.HashSet<>();
+        capturePaths(root, expanded);
+
         root.getChildren().clear();
         connectionItems.clear();
         for (ConnectionProfile profile : ConnectionStore.load()) {
@@ -84,6 +104,10 @@ public class SchemaTreePane extends VBox {
         if (root.getChildren().isEmpty()) {
             root.getChildren().add(new TreeItem<>(
                     new DbObject("No connections — click + to add one", Kind.MESSAGE)));
+        }
+
+        if (!expanded.isEmpty()) {
+            restoreExpansion(root, expanded);
         }
     }
 
@@ -100,11 +124,20 @@ public class SchemaTreePane extends VBox {
                 // Ask for the password now if it wasn't saved (DataGrip behavior)
                 if (!Passwords.ensure(profile, getScene() == null ? null : getScene().getWindow())) {
                     item.setExpanded(false);
+                    pendingLoadCallbacks.remove(item); // will never fire otherwise - this connection's own restore/refresh, if any, simply doesn't happen this time
                     return;
                 }
                 obj.setLoaded(true);
+                Runnable onLoaded = pendingLoadCallbacks.remove(item);
                 loadChildrenAsync(item, profile,
-                        () -> loadTopLevelFiltered(profile, obj));
+                        () -> loadTopLevelFiltered(profile, obj), onLoaded);
+            } else if (expanded) {
+                // Already loaded (e.g. a programmatic re-expand of a node that
+                // was never actually collapsed to begin with) - no new load
+                // will ever fire for it, so run any pending callback right now
+                // instead of leaving it registered forever.
+                Runnable onLoaded = pendingLoadCallbacks.remove(item);
+                if (onLoaded != null) onLoaded.run();
             }
         });
         root.getChildren().add(item);
@@ -226,6 +259,12 @@ public class SchemaTreePane extends VBox {
 
     private void loadChildrenAsync(TreeItem<DbObject> parent, ConnectionProfile profile,
                                    ThrowingSupplier<List<DbObject>> loader) {
+        loadChildrenAsync(parent, profile, loader, null);
+    }
+
+    /** onLoaded, if given, is called exactly once, directly, right after the real rebuild below has genuinely finished - success (even an empty result) or failure alike - never inferred from observing the children list's own individual mutations (see pendingLoadCallbacks' own javadoc for the real bug that approach caused). */
+    private void loadChildrenAsync(TreeItem<DbObject> parent, ConnectionProfile profile,
+                                   ThrowingSupplier<List<DbObject>> loader, Runnable onLoaded) {
         AppExecutor.run(() -> {
             try {
                 List<DbObject> children = loader.get();
@@ -234,6 +273,7 @@ public class SchemaTreePane extends VBox {
                     if (children.isEmpty()) {
                         parent.getChildren().add(new TreeItem<>(
                                 new DbObject("(empty)", Kind.MESSAGE)));
+                        if (onLoaded != null) onLoaded.run();
                         return;
                     }
                     for (DbObject child : children) {
@@ -243,13 +283,18 @@ public class SchemaTreePane extends VBox {
                             childItem.expandedProperty().addListener((observable, was, expanded) -> {
                                 if (expanded && !child.isLoaded()) {
                                     child.setLoaded(true);
+                                    Runnable childOnLoaded = pendingLoadCallbacks.remove(childItem);
                                     loadChildrenAsync(childItem, profile,
-                                            () -> childrenLoader(profile, child));
+                                            () -> childrenLoader(profile, child), childOnLoaded);
+                                } else if (expanded) {
+                                    Runnable childOnLoaded = pendingLoadCallbacks.remove(childItem);
+                                    if (childOnLoaded != null) childOnLoaded.run();
                                 }
                             });
                         }
                         parent.getChildren().add(childItem);
                     }
+                    if (onLoaded != null) onLoaded.run();
                 });
             } catch (Exception ex) {
                 String msg = ex.getMessage() == null ? ex.toString() : ex.getMessage();
@@ -258,6 +303,11 @@ public class SchemaTreePane extends VBox {
                     parent.getChildren().add(new TreeItem<>(
                             new DbObject("Error: " + msg, Kind.MESSAGE)));
                     parent.getValue().setLoaded(false);
+                    // Still notified even on failure - a pending restore/refresh
+                    // callback for a subtree that turned out broken must not be
+                    // left registered forever, waiting on a load that already
+                    // failed and will never call back on its own.
+                    if (onLoaded != null) onLoaded.run();
                 });
             }
         });
@@ -286,6 +336,109 @@ public class SchemaTreePane extends VBox {
                  KEYS_FOLDER, FOREIGN_KEYS_FOLDER, COLLECTION, FIELDS_FOLDER -> true;
             default -> false;
         };
+    }
+
+    // ------------------------------------------------- tree expansion state
+    //
+    // Shared by two real, separate features: preserving expansion across a
+    // manual Refresh (which necessarily rebuilds a node's own children from
+    // scratch - there is no way to know whether they've changed without
+    // reloading them), and restoring expansion across an app restart
+    // (persisted to disk - see TreeStateStore). Both need the exact same
+    // real capability: identify a node by something that survives its own
+    // rebuild (a name-based path, not the TreeItem/DbObject instance
+    // itself, which is discarded and recreated every reload), and
+    // re-expand a remembered set of paths, correctly waiting for each
+    // level's own real, asynchronous lazy-load (see loadChildrenAsync) to
+    // actually finish before attempting to recurse into it.
+
+    /** A stable identifier for this node, built from its own real name and every real ancestor's name up to (not including) the invisible root - survives a full rebuild of the tree, unlike the TreeItem/DbObject instances themselves. */
+    private static String pathOf(TreeItem<DbObject> item) {
+        StringBuilder sb = new StringBuilder();
+        for (TreeItem<DbObject> node = item; node != null && node.getParent() != null; node = node.getParent()) {
+            sb.insert(0, node.getValue().getName());
+            sb.insert(0, '\u0000');
+        }
+        return sb.toString();
+    }
+
+    /** Recursively collects the path of every currently-expanded node under (and including) startNode. Does not descend into a node that isn't itself expanded - its own children are either a placeholder or not real yet, so there's nothing meaningful to collect there anyway. */
+    private static void capturePaths(TreeItem<DbObject> startNode, Set<String> into) {
+        if (startNode.isExpanded()) {
+            into.add(pathOf(startNode));
+            for (TreeItem<DbObject> child : startNode.getChildren()) {
+                capturePaths(child, into);
+            }
+        }
+    }
+
+    /**
+     * Re-expands every child of {@code node} whose own path is in
+     * {@code pathsToExpand}, then recurses into it once its own real
+     * loading has genuinely finished (registered via
+     * pendingLoadCallbacks - see its own javadoc for why an approach
+     * based on observing the children list's own mutations from the
+     * outside doesn't work). Deliberately does not gate on
+     * isExpandable(child.getKind()) - that check exists for a
+     * different, narrower purpose (whether a freshly-created child
+     * needs its own lazy-load listener attached at all), and using it
+     * here for the same purpose was a real, previously-shipped bug:
+     * Kind.CONNECTION was never in that list, so a persisted expansion
+     * could never even get past the very first, top-level connection
+     * node at all. Nothing else needs this gate - capturePaths only
+     * ever records the path of a node that was genuinely, actually
+     * expanded, which already implies it was expandable.
+     */
+    private void restoreExpansion(TreeItem<DbObject> node, Set<String> pathsToExpand) {
+        for (TreeItem<DbObject> child : node.getChildren()) {
+            if (!pathsToExpand.contains(pathOf(child))) {
+                continue;
+            }
+            boolean alreadyLoaded = child.getValue().isLoaded();
+            if (!alreadyLoaded) {
+                pendingLoadCallbacks.put(child, () -> restoreExpansion(child, pathsToExpand));
+            }
+            child.setExpanded(true);
+            if (alreadyLoaded) {
+                restoreExpansion(child, pathsToExpand);
+            }
+        }
+    }
+
+    /** Called once, at app startup, after the connection tree has been built - see MainWindow's own real call site. */
+    public void restoreTreeState() {
+        Set<String> saved = TreeStateStore.load();
+        if (!saved.isEmpty()) {
+            restoreExpansion(root, saved);
+        }
+    }
+
+    /** Called once, right before the app closes - see MainWindow's own real saveSession, which this mirrors exactly for the tree instead of open consoles. */
+    public void saveTreeState() {
+        Set<String> expanded = new java.util.HashSet<>();
+        capturePaths(root, expanded);
+        TreeStateStore.save(expanded);
+    }
+
+    /**
+     * The correct, real "Refresh" a node's own children: unlike simply
+     * collapsing the node and leaving the user to notice it needs to be
+     * manually re-expanded (this class's own real, previous behavior),
+     * this reloads the node's own real children while preserving
+     * whichever of its own descendants were already expanded -
+     * DataGrip's own real refresh behavior, and the entire reason
+     * restoreExpansion exists in the first place.
+     */
+    private void refreshNode(TreeItem<DbObject> item, DbObject obj, String statusLabel) {
+        Set<String> expanded = new java.util.HashSet<>();
+        capturePaths(item, expanded);
+
+        obj.setLoaded(false);
+        pendingLoadCallbacks.put(item, () -> restoreExpansion(item, expanded));
+        item.setExpanded(false);
+        item.setExpanded(true);
+
+        mainWindow.setStatus("Refreshed " + statusLabel);
     }
 
     /** Opens the DataGrip-style show/hide databases (or, for Oracle, schemas) popup. */
@@ -526,11 +679,7 @@ public class SchemaTreePane extends VBox {
                     newMenu.getItems().add(newDatabase);
 
                     MenuItem refreshConnection = new MenuItem("Refresh");
-                    refreshConnection.setOnAction(e -> {
-                        obj.setLoaded(false);
-                        getTreeItem().setExpanded(false);
-                        mainWindow.setStatus("Refreshed " + profile.getName());
-                    });
+                    refreshConnection.setOnAction(e -> refreshNode(getTreeItem(), obj, profile.getName()));
 
                     MenuItem renameConnection = new MenuItem("Rename\u2026");
                     renameConnection.setOnAction(e -> renameConnectionLabel(profile));
@@ -585,11 +734,7 @@ public class SchemaTreePane extends VBox {
                     MenuItem modifyTable = new MenuItem("Modify Table\u2026");
                     modifyTable.setOnAction(e -> ModifyTableDialog.show(mainWindow, profile, obj));
                     MenuItem refreshTable = new MenuItem("Refresh");
-                    refreshTable.setOnAction(e -> {
-                        obj.setLoaded(false);
-                        getTreeItem().setExpanded(false);
-                        mainWindow.setStatus("Refreshed " + obj.getName());
-                    });
+                    refreshTable.setOnAction(e -> refreshNode(getTreeItem(), obj, obj.getName()));
 
                     Menu importExportMenu = new Menu("Import/Export");
                     MenuItem exportData = new MenuItem("Export Data to File\u2026");
@@ -640,11 +785,7 @@ public class SchemaTreePane extends VBox {
                     MenuItem modify = new MenuItem("Modify Collection\u2026");
                     modify.setOnAction(e -> ModifyCollectionDialog.show(mainWindow, profile, obj));
                     MenuItem refresh = new MenuItem("Refresh");
-                    refresh.setOnAction(e -> {
-                        obj.setLoaded(false);
-                        getTreeItem().setExpanded(false);
-                        mainWindow.setStatus("Refreshed " + obj.getName());
-                    });
+                    refresh.setOnAction(e -> refreshNode(getTreeItem(), obj, obj.getName()));
                     MenuItem drop = new MenuItem("Drop\u2026");
                     drop.setOnAction(e -> confirmAndDropCollection(profile, obj));
                     menu.getItems().addAll(openDocs, newConsole, modify, refresh,
@@ -652,11 +793,7 @@ public class SchemaTreePane extends VBox {
                 }
                 case DATABASE -> {
                     MenuItem refreshDb = new MenuItem("Refresh");
-                    refreshDb.setOnAction(e -> {
-                        obj.setLoaded(false);
-                        getTreeItem().setExpanded(false);
-                        mainWindow.setStatus("Refreshed " + obj.getName());
-                    });
+                    refreshDb.setOnAction(e -> refreshNode(getTreeItem(), obj, obj.getName()));
                     MenuItem newConsole = new MenuItem("New Query Console on " + obj.getName());
                     newConsole.setOnAction(e ->
                             mainWindow.openQueryTab(profile, obj.getCatalog(), null));
@@ -718,11 +855,7 @@ public class SchemaTreePane extends VBox {
                 }
                 case SCHEMA -> {
                     MenuItem refreshSchema = new MenuItem("Refresh");
-                    refreshSchema.setOnAction(e -> {
-                        obj.setLoaded(false);
-                        getTreeItem().setExpanded(false);
-                        mainWindow.setStatus("Refreshed " + obj.getName());
-                    });
+                    refreshSchema.setOnAction(e -> refreshNode(getTreeItem(), obj, obj.getName()));
                     MenuItem newConsole = new MenuItem("New Query Console on " + obj.getName());
                     newConsole.setOnAction(e -> {
                         // Oracle schemas are top-level (no enclosing database
