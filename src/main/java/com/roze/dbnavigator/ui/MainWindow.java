@@ -93,7 +93,11 @@ public class MainWindow {
         // (used by addAndSelect for each restored console) walks centerSplit's
         // own children, which don't exist until the two lines above run.
         restoreSession();
-        stage.setOnCloseRequest(e -> saveSession());
+        schemaPane.restoreTreeState();
+        stage.setOnCloseRequest(e -> {
+            saveSession();
+            schemaPane.saveTreeState();
+        });
     }
 
     public Parent getRoot() { return root; }
