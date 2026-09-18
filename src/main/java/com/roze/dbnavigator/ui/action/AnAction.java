@@ -43,6 +43,8 @@ public class AnAction {
     public String getText() { return text; }
     public String getDescription() { return description; }
     public FontAwesomeSolid getIcon() { return icon; }
+    public String getIconColor() { return iconColor; }
+    public int getIconSize() { return iconSize; }
     public KeyCombination getAccelerator() { return accelerator; }
 
     public boolean isEnabled(MainWindow ctx) {

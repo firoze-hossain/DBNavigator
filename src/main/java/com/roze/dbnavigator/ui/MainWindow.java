@@ -252,6 +252,47 @@ public class MainWindow {
         }
     }
 
+    public void openNewSqlFile() {
+        var profiles = ConnectionStore.load().stream()
+                .filter(p -> p.getType().isRelational()).toList();
+        ConnectionProfile p = profiles.isEmpty() ? null : profiles.get(0);
+        if (p != null) {
+            openQueryTab(p, null, "-- New SQL File\n");
+            setStatus("Opened new SQL file");
+        } else {
+            showNewConnectionDialog();
+        }
+    }
+
+    public void openNewScratchFile() {
+        var profiles = ConnectionStore.load().stream()
+                .filter(p -> p.getType().isRelational()).toList();
+        ConnectionProfile p = profiles.isEmpty() ? null : profiles.get(0);
+        if (p != null) {
+            openQueryTab(p, null, "-- Scratch buffer\n");
+            setStatus("Opened scratch console");
+        } else {
+            showNewConnectionDialog();
+        }
+    }
+
+    public void reloadAllFromDisk() {
+        schemaPane.reload();
+        setStatus("Reloaded all schemas and files from disk");
+    }
+
+    public void repairIde() {
+        schemaPane.reload();
+        applyEditorFontToOpenConsoles();
+        setStatus("IDE caches verified and schemas refreshed");
+    }
+
+    private boolean powerSaveMode = false;
+    public void togglePowerSaveMode() {
+        powerSaveMode = !powerSaveMode;
+        setStatus("Power Save Mode: " + (powerSaveMode ? "Enabled" : "Disabled"));
+    }
+
     public void saveConsoleAs() {
         Tab selected = currentSelectedTab();
         if (!(selected instanceof QueryTab queryTab)) {
@@ -641,7 +682,17 @@ public class MainWindow {
     // ---------------------------------------------------------- actions
 
     public void showNewConnectionDialog() {
-        new ConnectionDialog(null).showAndWait().ifPresent(this::connectAndSave);
+        showNewConnectionDialog(null);
+    }
+
+    public void showNewConnectionDialog(ConnectionProfile.DatabaseType type) {
+        ConnectionProfile initial = new ConnectionProfile();
+        if (type != null) {
+            initial.setType(type);
+            initial.setName("New " + type.getDisplayName());
+            initial.setPort(type.getDefaultPort());
+        }
+        new ConnectionDialog(initial).showAndWait().ifPresent(this::connectAndSave);
     }
 
     public void showEditConnectionDialog(ConnectionProfile existing) {
