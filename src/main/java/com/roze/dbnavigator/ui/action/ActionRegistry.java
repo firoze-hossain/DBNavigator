@@ -417,8 +417,9 @@ public final class ActionRegistry {
                 .add(exit);
 
         // =========================================================================
-        // 2. EDIT ACTIONS
+        // 2. EDIT ACTIONS (Matching DataGrip)
         // =========================================================================
+        // Section 1: Undo / Redo
         AnAction undo = AnAction.builder("edit.undo", "Undo")
                 .icon(FontAwesomeSolid.UNDO, "#a9b7c6", 11)
                 .accelerator(new KeyCodeCombination(KeyCode.Z, KeyCombination.CONTROL_DOWN))
@@ -428,11 +429,12 @@ public final class ActionRegistry {
 
         AnAction redo = AnAction.builder("edit.redo", "Redo")
                 .icon(FontAwesomeSolid.REDO, "#a9b7c6", 11)
-                .accelerator(new KeyCodeCombination(KeyCode.Y, KeyCombination.CONTROL_DOWN))
+                .accelerator(new KeyCodeCombination(KeyCode.Z, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN))
                 .enabledWhen(MainWindow::hasActiveConsole)
                 .onAction(MainWindow::redoCurrentEditor)
                 .build();
 
+        // Section 2: Cut, Copy, Copy as Plain Text, Copy Path/Reference, Paste, Delete
         AnAction cut = AnAction.builder("edit.cut", "Cut")
                 .icon(FontAwesomeSolid.CUT, "#a9b7c6", 11)
                 .accelerator(new KeyCodeCombination(KeyCode.X, KeyCombination.CONTROL_DOWN))
@@ -447,6 +449,16 @@ public final class ActionRegistry {
                 .onAction(MainWindow::copyCurrentEditor)
                 .build();
 
+        AnAction copyPlain = AnAction.builder("edit.copy.plain", "Copy as Plain Text")
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(MainWindow::copyAsPlainTextCurrentEditor)
+                .build();
+
+        AnAction copyRef = AnAction.builder("edit.copy.reference", "Copy Path/Reference…")
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(MainWindow::copyPathOrReferenceCurrentEditor)
+                .build();
+
         AnAction paste = AnAction.builder("edit.paste", "Paste")
                 .icon(FontAwesomeSolid.PASTE, "#a9b7c6", 11)
                 .accelerator(new KeyCodeCombination(KeyCode.V, KeyCombination.CONTROL_DOWN))
@@ -454,10 +466,24 @@ public final class ActionRegistry {
                 .onAction(MainWindow::pasteCurrentEditor)
                 .build();
 
-        AnAction selectAll = AnAction.builder("edit.select.all", "Select All")
-                .accelerator(new KeyCodeCombination(KeyCode.A, KeyCombination.CONTROL_DOWN))
+        AnAction deleteAction = AnAction.builder("edit.delete", "Delete")
+                .accelerator(new KeyCodeCombination(KeyCode.DELETE))
                 .enabledWhen(MainWindow::hasActiveConsole)
-                .onAction(MainWindow::selectAllCurrentEditor)
+                .onAction(MainWindow::deleteCurrentEditor)
+                .build();
+
+        // Section 3: Find, Replace, Find in Files, Replace in Files, Find Usages
+        AnAction findAction = AnAction.builder("edit.find", "Find…")
+                .icon(FontAwesomeSolid.SEARCH, "#a9b7c6", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN))
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(MainWindow::showFindDialog)
+                .build();
+
+        AnAction replaceAction = AnAction.builder("edit.replace", "Replace…")
+                .accelerator(new KeyCodeCombination(KeyCode.R, KeyCombination.CONTROL_DOWN))
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(MainWindow::showReplaceDialog)
                 .build();
 
         AnAction findInFiles = AnAction.builder("edit.find.in.files", "Find in Files…")
@@ -466,6 +492,37 @@ public final class ActionRegistry {
                 .onAction(MainWindow::showSearchEverywhere)
                 .build();
 
+        AnAction replaceInFiles = AnAction.builder("edit.replace.in.files", "Replace in Files…")
+                .accelerator(new KeyCodeCombination(KeyCode.R, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(MainWindow::showReplaceInFilesDialog)
+                .build();
+
+        AnAction findUsages = AnAction.builder("edit.find.usages", "Find Usages")
+                .accelerator(new KeyCodeCombination(KeyCode.DIGIT7, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN))
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(MainWindow::findUsagesCurrentSymbol)
+                .build();
+
+        // Section 4: Generate, Insert Live Template, Surround With
+        AnAction generate = AnAction.builder("edit.generate", "Generate…")
+                .accelerator(new KeyCodeCombination(KeyCode.INSERT, KeyCombination.ALT_DOWN))
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(MainWindow::generateSqlSnippet)
+                .build();
+
+        AnAction insertLiveTemplate = AnAction.builder("edit.insert.live.template", "Insert Live Template…")
+                .accelerator(new KeyCodeCombination(KeyCode.J, KeyCombination.CONTROL_DOWN))
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(MainWindow::insertLiveTemplate)
+                .build();
+
+        AnAction surroundWith = AnAction.builder("edit.surround.with", "Surround With…")
+                .accelerator(new KeyCodeCombination(KeyCode.B, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN))
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(MainWindow::surroundWithTemplate)
+                .build();
+
+        // Section 5: Reformat Code, Reformat File, Comment Line, Comment Block, Auto-Indent
         AnAction formatCode = AnAction.builder("edit.format.code", "Reformat Code")
                 .description("Reformat SQL queries with clean indentation and capitalized keywords")
                 .icon(FontAwesomeSolid.INDENT, "#4a88c7", 11)
@@ -474,16 +531,113 @@ public final class ActionRegistry {
                 .onAction(MainWindow::formatCurrentSql)
                 .build();
 
+        AnAction formatFile = AnAction.builder("edit.format.file", "Reformat File…")
+                .accelerator(new KeyCodeCombination(KeyCode.L, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN))
+                .enabledWhen(MainWindow::hasActiveQueryTab)
+                .onAction(MainWindow::formatCurrentSql)
+                .build();
+
+        AnAction commentLine = AnAction.builder("edit.comment.line", "Comment with Line Comment")
+                .accelerator(new KeyCodeCombination(KeyCode.SLASH, KeyCombination.CONTROL_DOWN))
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(MainWindow::toggleLineCommentCurrentEditor)
+                .build();
+
+        AnAction commentBlock = AnAction.builder("edit.comment.block", "Comment with Block Comment")
+                .accelerator(new KeyCodeCombination(KeyCode.SLASH, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN))
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(MainWindow::toggleBlockCommentCurrentEditor)
+                .build();
+
+        AnAction autoIndent = AnAction.builder("edit.auto.indent", "Auto-Indent Lines")
+                .accelerator(new KeyCodeCombination(KeyCode.I, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN))
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(MainWindow::autoIndentCurrentEditor)
+                .build();
+
+        // Section 6: Refactor >
+        ActionGroup refactorGroup = new ActionGroup("edit.refactor", "Refactor", true);
+        refactorGroup.add(AnAction.builder("edit.refactor.rename", "Rename…")
+                .accelerator(new KeyCodeCombination(KeyCode.F6, KeyCombination.SHIFT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Refactor: Rename symbol"))
+                .build());
+        refactorGroup.add(AnAction.builder("edit.refactor.extract.view", "Extract View…")
+                .onAction(MainWindow::createNewVirtualViewAction)
+                .build());
+        refactorGroup.add(AnAction.builder("edit.refactor.extract.subquery", "Extract Subquery…")
+                .onAction(ctx -> ctx.setStatus("Refactor: Extract subquery"))
+                .build());
+
+        // Section 7: Selection >, Toggle Case, Join Lines, Duplicate Entire Lines, Sort Lines
+        ActionGroup selectionGroup = new ActionGroup("edit.selection", "Selection", true);
+        AnAction selectAll = AnAction.builder("edit.select.all", "Select All")
+                .accelerator(new KeyCodeCombination(KeyCode.A, KeyCombination.CONTROL_DOWN))
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(MainWindow::selectAllCurrentEditor)
+                .build();
+        AnAction extendSelection = AnAction.builder("edit.selection.extend", "Extend Selection")
+                .accelerator(new KeyCodeCombination(KeyCode.W, KeyCombination.CONTROL_DOWN))
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(MainWindow::extendSelectionCurrentEditor)
+                .build();
+        AnAction shrinkSelection = AnAction.builder("edit.selection.shrink", "Shrink Selection")
+                .accelerator(new KeyCodeCombination(KeyCode.W, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN))
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(MainWindow::shrinkSelectionCurrentEditor)
+                .build();
+        selectionGroup.addAll(selectAll, extendSelection, shrinkSelection);
+
+        AnAction toggleCase = AnAction.builder("edit.toggle.case", "Toggle Case")
+                .accelerator(new KeyCodeCombination(KeyCode.U, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN))
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(MainWindow::toggleCaseCurrentEditor)
+                .build();
+
+        AnAction joinLines = AnAction.builder("edit.join.lines", "Join Lines")
+                .accelerator(new KeyCodeCombination(KeyCode.J, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN))
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(MainWindow::joinLinesCurrentEditor)
+                .build();
+
+        AnAction duplicateLines = AnAction.builder("edit.duplicate.lines", "Duplicate Entire Lines")
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(MainWindow::duplicateLinesCurrentEditor)
+                .build();
+
+        AnAction sortLines = AnAction.builder("edit.sort.lines", "Sort Lines")
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(MainWindow::sortLinesCurrentEditor)
+                .build();
+
+        // Section 8: Bookmarks
+        AnAction toggleBookmark = AnAction.builder("edit.toggle.bookmark", "Toggle Bookmark")
+                .icon(FontAwesomeSolid.BOOKMARK, "#a9b7c6", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.F11))
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(MainWindow::toggleBookmarkCurrentEditor)
+                .build();
+
+        AnAction showBookmarks = AnAction.builder("edit.show.bookmarks", "Show Line Bookmarks…")
+                .accelerator(new KeyCodeCombination(KeyCode.F11, KeyCombination.SHIFT_DOWN))
+                .onAction(MainWindow::showBookmarksDialog)
+                .build();
+
         ActionGroup editMenu = new ActionGroup("menu.edit", "Edit");
         editMenu.addAll(undo, redo)
                 .addSeparator()
-                .addAll(cut, copy, paste)
+                .addAll(cut, copy, copyPlain, copyRef, paste, deleteAction)
                 .addSeparator()
-                .add(selectAll)
+                .addAll(findAction, replaceAction, findInFiles, replaceInFiles, findUsages)
                 .addSeparator()
-                .add(findInFiles)
+                .addAll(generate, insertLiveTemplate, surroundWith)
                 .addSeparator()
-                .add(formatCode);
+                .addAll(formatCode, formatFile, commentLine, commentBlock, autoIndent)
+                .addSeparator()
+                .add(refactorGroup)
+                .addSeparator()
+                .addAll(selectionGroup, toggleCase, joinLines, duplicateLines, sortLines)
+                .addSeparator()
+                .addAll(toggleBookmark, showBookmarks);
 
         // =========================================================================
         // 3. VIEW ACTIONS

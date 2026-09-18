@@ -231,4 +231,192 @@ public class ActionRegistryTest {
             assertTrue(found, "Data Source menu should retain " + engine);
         }
     }
+
+    @Test
+    public void testEditMenuStructureAndOrder() {
+        ActionGroup editMenu = actionManager.getGroup("menu.edit");
+        assertNotNull(editMenu, "menu.edit group should be registered");
+        assertEquals("Edit", editMenu.getText());
+
+        List<AnAction> items = editMenu.getChildren();
+        assertEquals(36, items.size(), "Edit menu must contain 29 actions/groups and 7 separators");
+
+        int idx = 0;
+
+        // Section 1: Undo, Redo
+        assertEquals("edit.undo", items.get(idx).getId());
+        assertEquals("Undo", ((AnAction) items.get(idx++)).getText());
+        assertEquals("edit.redo", items.get(idx).getId());
+        assertEquals("Redo", ((AnAction) items.get(idx++)).getText());
+
+        // Separator 1
+        assertInstanceOf(ActionSeparator.class, items.get(idx++));
+
+        // Section 2: Cut, Copy, Copy as Plain Text, Copy Path/Reference…, Paste, Delete
+        assertEquals("edit.cut", items.get(idx).getId());
+        assertEquals("Cut", ((AnAction) items.get(idx++)).getText());
+        assertEquals("edit.copy", items.get(idx).getId());
+        assertEquals("Copy", ((AnAction) items.get(idx++)).getText());
+        assertEquals("edit.copy.plain", items.get(idx).getId());
+        assertEquals("Copy as Plain Text", ((AnAction) items.get(idx++)).getText());
+        assertEquals("edit.copy.reference", items.get(idx).getId());
+        assertEquals("Copy Path/Reference…", ((AnAction) items.get(idx++)).getText());
+        assertEquals("edit.paste", items.get(idx).getId());
+        assertEquals("Paste", ((AnAction) items.get(idx++)).getText());
+        assertEquals("edit.delete", items.get(idx).getId());
+        assertEquals("Delete", ((AnAction) items.get(idx++)).getText());
+
+        // Separator 2
+        assertInstanceOf(ActionSeparator.class, items.get(idx++));
+
+        // Section 3: Find…, Replace…, Find in Files…, Replace in Files…, Find Usages
+        assertEquals("edit.find", items.get(idx).getId());
+        assertEquals("Find…", ((AnAction) items.get(idx++)).getText());
+        assertEquals("edit.replace", items.get(idx).getId());
+        assertEquals("Replace…", ((AnAction) items.get(idx++)).getText());
+        assertEquals("edit.find.in.files", items.get(idx).getId());
+        assertEquals("Find in Files…", ((AnAction) items.get(idx++)).getText());
+        assertEquals("edit.replace.in.files", items.get(idx).getId());
+        assertEquals("Replace in Files…", ((AnAction) items.get(idx++)).getText());
+        assertEquals("edit.find.usages", items.get(idx).getId());
+        assertEquals("Find Usages", ((AnAction) items.get(idx++)).getText());
+
+        // Separator 3
+        assertInstanceOf(ActionSeparator.class, items.get(idx++));
+
+        // Section 4: Generate…, Insert Live Template…, Surround With…
+        assertEquals("edit.generate", items.get(idx).getId());
+        assertEquals("Generate…", ((AnAction) items.get(idx++)).getText());
+        assertEquals("edit.insert.live.template", items.get(idx).getId());
+        assertEquals("Insert Live Template…", ((AnAction) items.get(idx++)).getText());
+        assertEquals("edit.surround.with", items.get(idx).getId());
+        assertEquals("Surround With…", ((AnAction) items.get(idx++)).getText());
+
+        // Separator 4
+        assertInstanceOf(ActionSeparator.class, items.get(idx++));
+
+        // Section 5: Reformat Code, Reformat File…, Comment with Line Comment, Comment with Block Comment, Auto-Indent Lines
+        assertEquals("edit.format.code", items.get(idx).getId());
+        assertEquals("Reformat Code", ((AnAction) items.get(idx++)).getText());
+        assertEquals("edit.format.file", items.get(idx).getId());
+        assertEquals("Reformat File…", ((AnAction) items.get(idx++)).getText());
+        assertEquals("edit.comment.line", items.get(idx).getId());
+        assertEquals("Comment with Line Comment", ((AnAction) items.get(idx++)).getText());
+        assertEquals("edit.comment.block", items.get(idx).getId());
+        assertEquals("Comment with Block Comment", ((AnAction) items.get(idx++)).getText());
+        assertEquals("edit.auto.indent", items.get(idx).getId());
+        assertEquals("Auto-Indent Lines", ((AnAction) items.get(idx++)).getText());
+
+        // Separator 5
+        assertInstanceOf(ActionSeparator.class, items.get(idx++));
+
+        // Section 6: Refactor >
+        assertInstanceOf(ActionGroup.class, items.get(idx));
+        ActionGroup refactorGroup = (ActionGroup) items.get(idx);
+        assertEquals("edit.refactor", refactorGroup.getId());
+        assertEquals("Refactor", refactorGroup.getText());
+        assertEquals(3, refactorGroup.getChildren().size());
+        assertEquals("edit.refactor.rename", refactorGroup.getChildren().get(0).getId());
+        assertEquals("Rename…", ((AnAction) refactorGroup.getChildren().get(0)).getText());
+        assertEquals("edit.refactor.extract.view", refactorGroup.getChildren().get(1).getId());
+        assertEquals("Extract View…", ((AnAction) refactorGroup.getChildren().get(1)).getText());
+        assertEquals("edit.refactor.extract.subquery", refactorGroup.getChildren().get(2).getId());
+        assertEquals("Extract Subquery…", ((AnAction) refactorGroup.getChildren().get(2)).getText());
+        idx++;
+
+        // Separator 6
+        assertInstanceOf(ActionSeparator.class, items.get(idx++));
+
+        // Section 7: Selection >, Toggle Case, Join Lines, Duplicate Entire Lines, Sort Lines
+        assertInstanceOf(ActionGroup.class, items.get(idx));
+        ActionGroup selectionGroup = (ActionGroup) items.get(idx);
+        assertEquals("edit.selection", selectionGroup.getId());
+        assertEquals("Selection", selectionGroup.getText());
+        assertEquals(3, selectionGroup.getChildren().size());
+        assertEquals("edit.select.all", selectionGroup.getChildren().get(0).getId());
+        assertEquals("edit.selection.extend", selectionGroup.getChildren().get(1).getId());
+        assertEquals("edit.selection.shrink", selectionGroup.getChildren().get(2).getId());
+        idx++;
+
+        assertEquals("edit.toggle.case", items.get(idx).getId());
+        assertEquals("Toggle Case", ((AnAction) items.get(idx++)).getText());
+        assertEquals("edit.join.lines", items.get(idx).getId());
+        assertEquals("Join Lines", ((AnAction) items.get(idx++)).getText());
+        assertEquals("edit.duplicate.lines", items.get(idx).getId());
+        assertEquals("Duplicate Entire Lines", ((AnAction) items.get(idx++)).getText());
+        assertEquals("edit.sort.lines", items.get(idx).getId());
+        assertEquals("Sort Lines", ((AnAction) items.get(idx++)).getText());
+
+        // Separator 7
+        assertInstanceOf(ActionSeparator.class, items.get(idx++));
+
+        // Section 8: Toggle Bookmark, Show Line Bookmarks…
+        assertEquals("edit.toggle.bookmark", items.get(idx).getId());
+        assertEquals("Toggle Bookmark", ((AnAction) items.get(idx++)).getText());
+        assertEquals("edit.show.bookmarks", items.get(idx).getId());
+        assertEquals("Show Line Bookmarks…", ((AnAction) items.get(idx++)).getText());
+
+        assertEquals(idx, items.size());
+    }
+
+    @Test
+    public void testEditMenuAccelerators() {
+        ActionGroup editMenu = actionManager.getGroup("menu.edit");
+
+        // Undo: Ctrl+Z
+        AnAction undo = (AnAction) actionManager.getAction("edit.undo");
+        assertNotNull(undo.getAccelerator());
+        KeyCodeCombination undoAcc = (KeyCodeCombination) undo.getAccelerator();
+        assertEquals(KeyCode.Z, undoAcc.getCode());
+        assertEquals(KeyCombination.ModifierValue.DOWN, undoAcc.getControl());
+
+        // Redo: Ctrl+Shift+Z
+        AnAction redo = (AnAction) actionManager.getAction("edit.redo");
+        assertNotNull(redo.getAccelerator());
+        KeyCodeCombination redoAcc = (KeyCodeCombination) redo.getAccelerator();
+        assertEquals(KeyCode.Z, redoAcc.getCode());
+        assertEquals(KeyCombination.ModifierValue.DOWN, redoAcc.getControl());
+        assertEquals(KeyCombination.ModifierValue.DOWN, redoAcc.getShift());
+
+        // Find Usages: Alt+Shift+7
+        AnAction findUsages = (AnAction) actionManager.getAction("edit.find.usages");
+        assertNotNull(findUsages.getAccelerator());
+        KeyCodeCombination fuAcc = (KeyCodeCombination) findUsages.getAccelerator();
+        assertEquals(KeyCode.DIGIT7, fuAcc.getCode());
+        assertEquals(KeyCombination.ModifierValue.DOWN, fuAcc.getAlt());
+        assertEquals(KeyCombination.ModifierValue.DOWN, fuAcc.getShift());
+
+        // Toggle Bookmark: F11
+        AnAction toggleBookmark = (AnAction) actionManager.getAction("edit.toggle.bookmark");
+        assertNotNull(toggleBookmark.getAccelerator());
+        KeyCodeCombination bmAcc = (KeyCodeCombination) toggleBookmark.getAccelerator();
+        assertEquals(KeyCode.F11, bmAcc.getCode());
+
+        // Show Line Bookmarks: Shift+F11
+        AnAction showBookmarks = (AnAction) actionManager.getAction("edit.show.bookmarks");
+        assertNotNull(showBookmarks.getAccelerator());
+        KeyCodeCombination sbmAcc = (KeyCodeCombination) showBookmarks.getAccelerator();
+        assertEquals(KeyCode.F11, sbmAcc.getCode());
+        assertEquals(KeyCombination.ModifierValue.DOWN, sbmAcc.getShift());
+
+        // Toggle Case: Ctrl+Shift+U
+        AnAction toggleCase = (AnAction) actionManager.getAction("edit.toggle.case");
+        assertNotNull(toggleCase.getAccelerator());
+        KeyCodeCombination tcAcc = (KeyCodeCombination) toggleCase.getAccelerator();
+        assertEquals(KeyCode.U, tcAcc.getCode());
+        assertEquals(KeyCombination.ModifierValue.DOWN, tcAcc.getControl());
+        assertEquals(KeyCombination.ModifierValue.DOWN, tcAcc.getShift());
+    }
+
+    @Test
+    public void testViewMenuPreserved() {
+        ActionGroup viewMenu = actionManager.getGroup("menu.view");
+        assertNotNull(viewMenu, "menu.view should be registered");
+        assertEquals("View", viewMenu.getText());
+
+        assertTrue(viewMenu.getChildren().stream().anyMatch(a -> "view.refresh.explorer".equals(a.getId())),
+                "View menu should retain view.refresh.explorer");
+        assertTrue(viewMenu.getChildren().stream().anyMatch(a -> "view.toggle.run".equals(a.getId())),
+                "View menu should retain view.toggle.run");
+    }
 }
