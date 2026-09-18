@@ -3,6 +3,7 @@ package com.roze.dbnavigator.ui.action;
 import com.roze.dbnavigator.ui.MainWindow;
 import javafx.application.Platform;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SeparatorMenuItem;
@@ -131,6 +132,9 @@ public class ActionManager {
                 MenuItem item = b.itemRef().get();
                 if (item == null) return true;
                 item.setDisable(!b.action().isEnabled(ctx));
+                if (item instanceof CheckMenuItem checkItem && b.action() instanceof ToggleAction toggle) {
+                    checkItem.setSelected(toggle.isSelected(ctx));
+                }
                 return false;
             });
 

@@ -640,24 +640,310 @@ public final class ActionRegistry {
                 .addAll(toggleBookmark, showBookmarks);
 
         // =========================================================================
-        // 3. VIEW ACTIONS
+        // 3. VIEW ACTIONS (Matching DataGrip)
         // =========================================================================
+
+        // --- Submenu: View -> Tool Windows ---
+        ActionGroup toolWindowsGroup = new ActionGroup("view.toolwindows", "Tool Windows", true);
+        AnAction twCommit = AnAction.builder("view.toolwindow.commit", "Commit")
+                .icon(FontAwesomeSolid.CHECK, "#57965c", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.DIGIT0, KeyCombination.ALT_DOWN))
+                .onAction(MainWindow::toggleCommitToolWindow)
+                .build();
+        AnAction twDatabase = AnAction.builder("view.toolwindow.database", "Database Explorer")
+                .icon(FontAwesomeSolid.DATABASE, "#4a88c7", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.DIGIT1, KeyCombination.ALT_DOWN))
+                .onAction(MainWindow::toggleDatabaseExplorer)
+                .build();
+        AnAction twFiles = AnAction.builder("view.toolwindow.files", "Files")
+                .icon(FontAwesomeSolid.FOLDER, "#e0a44c", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.DIGIT2, KeyCombination.ALT_DOWN))
+                .onAction(MainWindow::toggleFilesToolWindow)
+                .build();
+        AnAction twFind = AnAction.builder("view.toolwindow.find", "Find")
+                .icon(FontAwesomeSolid.SEARCH, "#a9b7c6", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.DIGIT3, KeyCombination.ALT_DOWN))
+                .onAction(MainWindow::toggleFindToolWindow)
+                .build();
+        AnAction twRun = AnAction.builder("view.toggle.run", "Run")
+                .icon(FontAwesomeSolid.PLAY, "#57965c", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.DIGIT4, KeyCombination.ALT_DOWN))
+                .onAction(MainWindow::toggleRunPanel)
+                .build();
+        AnAction twDebug = AnAction.builder("view.toolwindow.debug", "Debug")
+                .icon(FontAwesomeSolid.BUG, "#e05555", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.DIGIT5, KeyCombination.ALT_DOWN))
+                .onAction(MainWindow::toggleDebugToolWindow)
+                .build();
+        AnAction twProblems = AnAction.builder("view.toolwindow.problems", "Problems")
+                .icon(FontAwesomeSolid.EXCLAMATION_TRIANGLE, "#e0a44c", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.DIGIT6, KeyCombination.ALT_DOWN))
+                .onAction(MainWindow::toggleProblemsToolWindow)
+                .build();
+        AnAction twStructure = AnAction.builder("view.toolwindow.structure", "Structure")
+                .icon(FontAwesomeSolid.SITEMAP, "#c77dbb", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.DIGIT7, KeyCombination.ALT_DOWN))
+                .onAction(MainWindow::toggleStructureToolWindow)
+                .build();
+        AnAction twServices = AnAction.builder("view.toolwindow.services", "Services")
+                .icon(FontAwesomeSolid.CUBES, "#4a88c7", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.DIGIT8, KeyCombination.ALT_DOWN))
+                .onAction(MainWindow::toggleServicesToolWindow)
+                .build();
+        AnAction twVcs = AnAction.builder("view.toolwindow.vcs", "Version Control")
+                .icon(FontAwesomeSolid.CODE_BRANCH, "#4a88c7", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.DIGIT9, KeyCombination.ALT_DOWN))
+                .onAction(MainWindow::toggleVersionControlToolWindow)
+                .build();
+        AnAction twAi = AnAction.builder("view.toolwindow.ai", "AI Assistant")
+                .icon(FontAwesomeSolid.ROBOT, "#6897bb", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.DIGIT4, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(MainWindow::toggleAiAssistantToolWindow)
+                .build();
+
+        AnAction twBackupSync = AnAction.builder("view.toolwindow.backup.sync", "Backup and Sync History")
+                .icon(FontAwesomeSolid.HISTORY, "#a9b7c6", 11)
+                .onAction(MainWindow::showBackupAndSyncHistory)
+                .build();
+        AnAction twBookmarks = AnAction.builder("view.toolwindow.bookmarks", "Bookmarks")
+                .icon(FontAwesomeSolid.BOOKMARK, "#a9b7c6", 11)
+                .onAction(MainWindow::showBookmarksDialog)
+                .build();
+        AnAction twCoverage = AnAction.builder("view.toolwindow.coverage", "Coverage")
+                .icon(FontAwesomeSolid.SHIELD_ALT, "#57965c", 11)
+                .onAction(MainWindow::showCoverageToolWindow)
+                .build();
+        AnAction twDbChanges = AnAction.builder("view.toolwindow.dbchanges", "Database Changes")
+                .icon(FontAwesomeSolid.DATABASE, "#e0a44c", 11)
+                .onAction(MainWindow::showDatabaseChanges)
+                .build();
+        AnAction twHierarchy = AnAction.builder("view.toolwindow.hierarchy", "Hierarchy")
+                .icon(FontAwesomeSolid.SITEMAP, "#a9b7c6", 11)
+                .onAction(MainWindow::showHierarchyToolWindow)
+                .build();
+        AnAction twLearn = AnAction.builder("view.toolwindow.learn", "Learn")
+                .icon(FontAwesomeSolid.GRADUATION_CAP, "#6897bb", 11)
+                .onAction(MainWindow::showLearnToolWindow)
+                .build();
+        AnAction twNotifications = AnAction.builder("view.toolwindow.notifications", "Notifications")
+                .icon(FontAwesomeSolid.BELL, "#a9b7c6", 11)
+                .onAction(MainWindow::showNotificationsToolWindow)
+                .build();
+        AnAction twTerminal = AnAction.builder("view.toolwindow.terminal", "Terminal")
+                .icon(FontAwesomeSolid.TERMINAL, "#57965c", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.F12, KeyCombination.ALT_DOWN))
+                .onAction(MainWindow::showTerminalToolWindow)
+                .build();
+        AnAction twTodo = AnAction.builder("view.toolwindow.todo", "TODO")
+                .icon(FontAwesomeSolid.TASKS, "#a9b7c6", 11)
+                .onAction(MainWindow::showTodoToolWindow)
+                .build();
+
+        toolWindowsGroup.addAll(twCommit, twDatabase, twFiles, twFind, twRun, twDebug, twProblems, twStructure, twServices, twVcs, twAi)
+                .addSeparator()
+                .addAll(twBackupSync, twBookmarks, twCoverage, twDbChanges, twHierarchy, twLearn, twNotifications, twTerminal, twTodo);
+
+        // --- Submenu: View -> Appearance -> Main Menu ---
+        ActionGroup mainMenuPlacementGroup = new ActionGroup("view.appearance.mainmenu", "Main Menu", true);
+        mainMenuPlacementGroup.add(ToggleAction.toggleBuilder("view.appearance.mainmenu.hamburger", "Hide under Hamburger Button")
+                .isSelected(ctx -> ctx.getMainMenuPlacement() == MainWindow.MainMenuPlacement.HAMBURGER)
+                .onToggle((ctx, sel) -> ctx.setMainMenuPlacement(MainWindow.MainMenuPlacement.HAMBURGER))
+                .build());
+        mainMenuPlacementGroup.add(ToggleAction.toggleBuilder("view.appearance.mainmenu.merge", "Merge with Main Toolbar")
+                .isSelected(ctx -> ctx.getMainMenuPlacement() == MainWindow.MainMenuPlacement.MERGE_TOOLBAR)
+                .onToggle((ctx, sel) -> ctx.setMainMenuPlacement(MainWindow.MainMenuPlacement.MERGE_TOOLBAR))
+                .build());
+        mainMenuPlacementGroup.add(ToggleAction.toggleBuilder("view.appearance.mainmenu.above", "Show above Main Toolbar")
+                .isSelected(ctx -> ctx.getMainMenuPlacement() == MainWindow.MainMenuPlacement.ABOVE_TOOLBAR)
+                .onToggle((ctx, sel) -> ctx.setMainMenuPlacement(MainWindow.MainMenuPlacement.ABOVE_TOOLBAR))
+                .build());
+
+        // --- Submenu: View -> Appearance -> Navigation Bar ---
+        ActionGroup navBarGroup = new ActionGroup("view.appearance.navbar", "Navigation Bar", true);
+        navBarGroup.add(ToggleAction.toggleBuilder("view.appearance.navbar.top", "Top")
+                .isSelected(ctx -> ctx.getNavigationBarPlacement() == MainWindow.NavigationBarPlacement.TOP)
+                .onToggle((ctx, sel) -> ctx.setNavigationBarPlacement(MainWindow.NavigationBarPlacement.TOP))
+                .build());
+        navBarGroup.add(ToggleAction.toggleBuilder("view.appearance.navbar.bottom", "Bottom")
+                .isSelected(ctx -> ctx.getNavigationBarPlacement() == MainWindow.NavigationBarPlacement.BOTTOM)
+                .onToggle((ctx, sel) -> ctx.setNavigationBarPlacement(MainWindow.NavigationBarPlacement.BOTTOM))
+                .build());
+        navBarGroup.add(ToggleAction.toggleBuilder("view.appearance.navbar.hide", "Don't Show")
+                .isSelected(ctx -> ctx.getNavigationBarPlacement() == MainWindow.NavigationBarPlacement.DONT_SHOW)
+                .onToggle((ctx, sel) -> ctx.setNavigationBarPlacement(MainWindow.NavigationBarPlacement.DONT_SHOW))
+                .build());
+
+        // --- Submenu: View -> Appearance -> Status Bar Widgets ---
+        ActionGroup sbWidgetsGroup = new ActionGroup("view.appearance.statusbar.widgets", "Status Bar Widgets", true);
+        // Section 1
+        sbWidgetsGroup.add(ToggleAction.toggleBuilder("view.widget.status.text", "Status Text")
+                .isSelected(ctx -> ctx.isStatusBarWidgetActive("statusText"))
+                .onToggle((ctx, sel) -> ctx.setStatusBarWidgetActive("statusText", sel))
+                .build());
+        sbWidgetsGroup.add(ToggleAction.toggleBuilder("view.widget.fs.sync", "File System Sync")
+                .isSelected(ctx -> ctx.isStatusBarWidgetActive("fsSync"))
+                .onToggle((ctx, sel) -> ctx.setStatusBarWidgetActive("fsSync", sel))
+                .build());
+        sbWidgetsGroup.add(ToggleAction.toggleBuilder("view.widget.remote.wire", "Remote Development Wire Stats")
+                .isSelected(ctx -> ctx.isStatusBarWidgetActive("remoteWire"))
+                .onToggle((ctx, sel) -> ctx.setStatusBarWidgetActive("remoteWire", sel))
+                .build());
+        sbWidgetsGroup.addSeparator();
+
+        // Section 2
+        sbWidgetsGroup.add(ToggleAction.toggleBuilder("view.widget.aggregator", "Aggregator")
+                .isSelected(ctx -> ctx.isStatusBarWidgetActive("aggregator"))
+                .onToggle((ctx, sel) -> ctx.setStatusBarWidgetActive("aggregator", sel))
+                .build());
+        sbWidgetsGroup.add(ToggleAction.toggleBuilder("view.widget.grid.pos", "Grid Position")
+                .isSelected(ctx -> ctx.isStatusBarWidgetActive("gridPos"))
+                .onToggle((ctx, sel) -> ctx.setStatusBarWidgetActive("gridPos", sel))
+                .build());
+        sbWidgetsGroup.add(ToggleAction.toggleBuilder("view.widget.line.col", "Line:Column Number")
+                .isSelected(ctx -> ctx.isStatusBarWidgetActive("lineCol"))
+                .onToggle((ctx, sel) -> ctx.setStatusBarWidgetActive("lineCol", sel))
+                .build());
+        sbWidgetsGroup.add(ToggleAction.toggleBuilder("view.widget.lang.services", "Language Services")
+                .isSelected(ctx -> ctx.isStatusBarWidgetActive("langServices"))
+                .onToggle((ctx, sel) -> ctx.setStatusBarWidgetActive("langServices", sel))
+                .build());
+        sbWidgetsGroup.add(ToggleAction.toggleBuilder("view.widget.line.sep", "Line Separator")
+                .isSelected(ctx -> ctx.isStatusBarWidgetActive("lineSep"))
+                .onToggle((ctx, sel) -> ctx.setStatusBarWidgetActive("lineSep", sel))
+                .build());
+        sbWidgetsGroup.add(ToggleAction.toggleBuilder("view.widget.file.enc", "File Encoding")
+                .isSelected(ctx -> ctx.isStatusBarWidgetActive("fileEnc"))
+                .onToggle((ctx, sel) -> ctx.setStatusBarWidgetActive("fileEnc", sel))
+                .build());
+        sbWidgetsGroup.addSeparator();
+
+        // Section 3
+        sbWidgetsGroup.add(ToggleAction.toggleBuilder("view.widget.power.save", "Power Save Mode")
+                .isSelected(ctx -> ctx.isStatusBarWidgetActive("powerSave"))
+                .onToggle((ctx, sel) -> ctx.setStatusBarWidgetActive("powerSave", sel))
+                .build());
+        sbWidgetsGroup.add(ToggleAction.toggleBuilder("view.widget.editor.sel", "Editor Selection Mode")
+                .isSelected(ctx -> ctx.isStatusBarWidgetActive("editorSel"))
+                .onToggle((ctx, sel) -> ctx.setStatusBarWidgetActive("editorSel", sel))
+                .build());
+        sbWidgetsGroup.add(ToggleAction.toggleBuilder("view.widget.indentation", "Indentation")
+                .isSelected(ctx -> ctx.isStatusBarWidgetActive("indentation"))
+                .onToggle((ctx, sel) -> ctx.setStatusBarWidgetActive("indentation", sel))
+                .build());
+        sbWidgetsGroup.add(ToggleAction.toggleBuilder("view.widget.json.schema", "JSON Schema")
+                .isSelected(ctx -> ctx.isStatusBarWidgetActive("jsonSchema"))
+                .onToggle((ctx, sel) -> ctx.setStatusBarWidgetActive("jsonSchema", sel))
+                .build());
+        sbWidgetsGroup.add(ToggleAction.toggleBuilder("view.widget.mcp.server", "MCP Server")
+                .isSelected(ctx -> ctx.isStatusBarWidgetActive("mcpServer"))
+                .onToggle((ctx, sel) -> ctx.setStatusBarWidgetActive("mcpServer", sel))
+                .build());
+        sbWidgetsGroup.add(ToggleAction.toggleBuilder("view.widget.readonly", "Read-Only Attribute")
+                .isSelected(ctx -> ctx.isStatusBarWidgetActive("readOnly"))
+                .onToggle((ctx, sel) -> ctx.setStatusBarWidgetActive("readOnly", sel))
+                .build());
+        sbWidgetsGroup.add(ToggleAction.toggleBuilder("view.widget.notifications", "Notifications")
+                .isSelected(ctx -> ctx.isStatusBarWidgetActive("notifications"))
+                .onToggle((ctx, sel) -> ctx.setStatusBarWidgetActive("notifications", sel))
+                .build());
+        sbWidgetsGroup.addSeparator();
+
+        // Section 4
+        sbWidgetsGroup.add(ToggleAction.toggleBuilder("view.widget.memory", "Memory Indicator")
+                .isSelected(ctx -> ctx.isStatusBarWidgetActive("memory"))
+                .onToggle((ctx, sel) -> ctx.setStatusBarWidgetActive("memory", sel))
+                .build());
+
+        // --- Submenu: View -> Appearance ---
+        ActionGroup appearanceGroup = new ActionGroup("view.appearance", "Appearance", true);
+        AnAction presMode = AnAction.builder("view.appearance.presentation.mode", "Enter Presentation Mode")
+                .onAction(MainWindow::togglePresentationMode)
+                .build();
+        AnAction distractMode = AnAction.builder("view.appearance.distraction.free", "Enter Distraction Free Mode")
+                .onAction(MainWindow::toggleDistractionFreeMode)
+                .build();
+        AnAction fullScreen = AnAction.builder("view.appearance.full.screen", "Enter Full Screen")
+                .onAction(MainWindow::toggleFullScreen)
+                .build();
+        AnAction zenMode = AnAction.builder("view.appearance.zen.mode", "Enter Zen Mode")
+                .onAction(MainWindow::toggleZenMode)
+                .build();
+
+        AnAction compactMode = AnAction.builder("view.appearance.compact.mode", "Compact Mode")
+                .onAction(MainWindow::toggleCompactMode)
+                .build();
+        AnAction zoomIde = AnAction.builder("view.appearance.zoom.ide", "Zoom IDE (Current: 100%)…")
+                .onAction(MainWindow::showZoomIdeDialog)
+                .build();
+        AnAction presAssistant = AnAction.builder("view.appearance.presentation.assistant", "Presentation Assistant")
+                .onAction(MainWindow::togglePresentationAssistant)
+                .build();
+
+        ToggleAction toolbarToggle = ToggleAction.toggleBuilder("view.appearance.toolbar", "Toolbar")
+                .isSelected(MainWindow::isToolbarVisible)
+                .onToggle(MainWindow::setToolbarVisible)
+                .build();
+        AnAction toolWindowBars = AnAction.builder("view.appearance.toolwindowbars", "Tool Window Bars")
+                .onAction(ctx -> ctx.setToolWindowBarsVisible(!ctx.isToolWindowBarsVisible()))
+                .build();
+
+        ToggleAction statusBarToggle = ToggleAction.toggleBuilder("view.appearance.statusbar", "Status Bar")
+                .isSelected(MainWindow::isStatusBarVisible)
+                .onToggle(MainWindow::setStatusBarVisible)
+                .build();
+
+        appearanceGroup.addAll(presMode, distractMode, fullScreen, zenMode)
+                .addSeparator()
+                .addAll(compactMode, zoomIde, presAssistant)
+                .addSeparator()
+                .addAll(mainMenuPlacementGroup, toolbarToggle, navBarGroup, toolWindowBars)
+                .addSeparator()
+                .addAll(statusBarToggle, sbWidgetsGroup);
+
+        // --- Main View Menu Items ---
+        AnAction recentLocations = AnAction.builder("view.recent.locations", "Recent Locations")
+                .accelerator(new KeyCodeCombination(KeyCode.E, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(MainWindow::showRecentLocationsDialog)
+                .build();
+        AnAction recentFiles = AnAction.builder("view.recent.files", "Recent Files")
+                .accelerator(new KeyCodeCombination(KeyCode.E, KeyCombination.CONTROL_DOWN))
+                .onAction(MainWindow::showRecentFilesDialog)
+                .build();
+        AnAction recentChangedFiles = AnAction.builder("view.recent.changed.files", "Recently Changed Files")
+                .onAction(MainWindow::showRecentlyChangedFilesDialog)
+                .build();
+        AnAction recentChanges = AnAction.builder("view.recent.changes", "Recent Changes")
+                .accelerator(new KeyCodeCombination(KeyCode.C, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(MainWindow::showRecentChangesDialog)
+                .build();
+
+        AnAction increaseFont = AnAction.builder("view.font.increase", "Increase Font Size in All Editors")
+                .accelerator(new KeyCodeCombination(KeyCode.PERIOD, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(MainWindow::increaseFontSizeInAllEditors)
+                .build();
+        AnAction decreaseFont = AnAction.builder("view.font.decrease", "Decrease Font Size in All Editors")
+                .accelerator(new KeyCodeCombination(KeyCode.COMMA, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(MainWindow::decreaseFontSizeInAllEditors)
+                .build();
+        AnAction resetFont = AnAction.builder("view.font.reset", "Reset Font Size in All Editors")
+                .onAction(MainWindow::resetFontSizeInAllEditors)
+                .build();
+
+        // Refresh Database Explorer kept for backward compatibility and shortcut Ctrl+F5
         AnAction refreshExplorer = AnAction.builder("view.refresh.explorer", "Refresh Database Explorer")
                 .description("Reload connection metadata schemas")
                 .icon(FontAwesomeSolid.SYNC_ALT, "#57965c", 11)
                 .accelerator(new KeyCodeCombination(KeyCode.F5, KeyCombination.CONTROL_DOWN))
                 .onAction(MainWindow::refreshSchemaExplorer)
                 .build();
-
-        AnAction toggleRunPanel = AnAction.builder("view.toggle.run", "Run Tool Window")
-                .description("Show or hide the bottom Run tool window")
-                .icon(FontAwesomeSolid.TERMINAL, "#57965c", 11)
-                .accelerator(new KeyCodeCombination(KeyCode.DIGIT4, KeyCombination.ALT_DOWN))
-                .onAction(MainWindow::toggleRunPanel)
-                .build();
+        manager.registerAction(refreshExplorer);
 
         ActionGroup viewMenu = new ActionGroup("menu.view", "View");
-        viewMenu.addAll(refreshExplorer, toggleRunPanel);
+        viewMenu.addAll(toolWindowsGroup, appearanceGroup)
+                .addSeparator()
+                .addAll(recentLocations, recentFiles, recentChangedFiles, recentChanges)
+                .addSeparator()
+                .addAll(increaseFont, decreaseFont, resetFont);
 
         // =========================================================================
         // 4. NAVIGATE ACTIONS

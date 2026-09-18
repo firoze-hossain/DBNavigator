@@ -27,7 +27,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
@@ -66,6 +68,47 @@ public class MainWindow {
     private final ProgressBar taskProgressBar = new ProgressBar();
     private final Button taskCancelButton = new Button();
     private int consoleCounter = 0;
+
+    private HBox headerMiddleBar;
+    private Node statusBarNode;
+    private double lastSchemaPaneDivider = 0.22;
+    private boolean presentationMode = false;
+    private boolean distractionFreeMode = false;
+    private boolean zenMode = false;
+    private boolean compactMode = false;
+    private boolean presentationAssistant = false;
+    private boolean toolWindowBarsVisible = true;
+    private int currentIdeZoom = 100;
+
+    public enum MainMenuPlacement {
+        HAMBURGER, MERGE_TOOLBAR, ABOVE_TOOLBAR
+    }
+    private MainMenuPlacement mainMenuPlacement = MainMenuPlacement.HAMBURGER;
+
+    public enum NavigationBarPlacement {
+        TOP, BOTTOM, DONT_SHOW
+    }
+    private NavigationBarPlacement navigationBarPlacement = NavigationBarPlacement.TOP;
+
+    private final Map<String, Boolean> statusBarWidgets = new HashMap<>(Map.ofEntries(
+            Map.entry("statusText", false),
+            Map.entry("fsSync", false),
+            Map.entry("remoteWire", false),
+            Map.entry("aggregator", true),
+            Map.entry("gridPos", true),
+            Map.entry("lineCol", true),
+            Map.entry("langServices", true),
+            Map.entry("lineSep", true),
+            Map.entry("fileEnc", true),
+            Map.entry("powerSave", false),
+            Map.entry("editorSel", true),
+            Map.entry("indentation", true),
+            Map.entry("jsonSchema", true),
+            Map.entry("mcpServer", false),
+            Map.entry("readOnly", true),
+            Map.entry("notifications", true),
+            Map.entry("memory", false)
+    ));
 
     public MainWindow(Stage stage) {
         this.stage = stage;
@@ -193,6 +236,7 @@ public class MainWindow {
         ActionGroup middleGroup = actionManager.getGroup("group.middle");
         HBox middleBox = actionManager.buildToolBar(middleGroup, this);
         middleBox.setAlignment(Pos.CENTER);
+        this.headerMiddleBar = middleBox;
 
         // Right: Search Everywhere & Settings buttons
         Button searchButton = new Button();
@@ -1275,6 +1319,7 @@ public class MainWindow {
         HBox bar = new HBox(statusLabel, spacer, taskIndicator);
         bar.setPadding(new Insets(5, 12, 5, 12));
         bar.getStyleClass().add("app-status-bar");
+        this.statusBarNode = bar;
         return bar;
     }
 
@@ -1883,5 +1928,321 @@ public class MainWindow {
 
     public void setStatus(String text) {
         statusLabel.setText(text);
+    }
+
+    // =========================================================================
+    // VIEW / TOOL WINDOW ACTIONS
+    // =========================================================================
+
+    public void toggleDatabaseExplorer() {
+        if (centerSplit.getItems().contains(schemaPane)) {
+            if (centerSplit.getDividerPositions().length > 0) {
+                lastSchemaPaneDivider = centerSplit.getDividerPositions()[0];
+            }
+            centerSplit.getItems().remove(schemaPane);
+            setStatus("Database Explorer hidden");
+        } else {
+            centerSplit.getItems().add(0, schemaPane);
+            centerSplit.setDividerPositions(lastSchemaPaneDivider);
+            schemaPane.requestFocus();
+            setStatus("Database Explorer visible");
+        }
+    }
+
+    public boolean isDatabaseExplorerVisible() {
+        return centerSplit.getItems().contains(schemaPane);
+    }
+
+    public void toggleCommitToolWindow() {
+        setStatus("Commit Tool Window (Alt+0) activated");
+    }
+
+    public void toggleFilesToolWindow() {
+        setStatus("Files Tool Window (Alt+2) activated");
+    }
+
+    public void toggleFindToolWindow() {
+        showSearchEverywhere();
+    }
+
+    public void toggleDebugToolWindow() {
+        setStatus("Debug Tool Window (Alt+5) activated");
+    }
+
+    public void toggleProblemsToolWindow() {
+        setStatus("Problems Tool Window (Alt+6) activated");
+    }
+
+    public void toggleStructureToolWindow() {
+        setStatus("Structure Tool Window (Alt+7) activated");
+    }
+
+    public void toggleServicesToolWindow() {
+        setStatus("Services Tool Window (Alt+8) activated");
+    }
+
+    public void toggleVersionControlToolWindow() {
+        setStatus("Version Control Tool Window (Alt+9) activated");
+    }
+
+    public void toggleAiAssistantToolWindow() {
+        setStatus("AI Assistant Tool Window (Alt+Shift+4) activated");
+    }
+
+    public void showBackupAndSyncHistory() {
+        setStatus("Backup and Sync History opened");
+    }
+
+    public void showCoverageToolWindow() {
+        setStatus("Coverage Tool Window opened");
+    }
+
+    public void showDatabaseChanges() {
+        setStatus("Database Changes Tool Window opened");
+    }
+
+    public void showHierarchyToolWindow() {
+        setStatus("Hierarchy Tool Window opened");
+    }
+
+    public void showLearnToolWindow() {
+        setStatus("Learn Tool Window opened");
+    }
+
+    public void showNotificationsToolWindow() {
+        setStatus("Notifications Tool Window opened");
+    }
+
+    public void showTerminalToolWindow() {
+        setStatus("Terminal Tool Window (Alt+F12) opened");
+    }
+
+    public void showTodoToolWindow() {
+        setStatus("TODO Tool Window opened");
+    }
+
+    // =========================================================================
+    // VIEW / APPEARANCE ACTIONS
+    // =========================================================================
+
+    public void togglePresentationMode() {
+        presentationMode = !presentationMode;
+        stage.setFullScreen(presentationMode);
+        var settings = com.roze.dbnavigator.db.AppSettingsStore.load();
+        if (presentationMode) {
+            settings.setEditorFontSize(24);
+        } else {
+            settings.setEditorFontSize(13);
+        }
+        com.roze.dbnavigator.db.AppSettingsStore.save(settings);
+        applyEditorFontToOpenConsoles();
+        setStatus(presentationMode ? "Entered Presentation Mode" : "Exited Presentation Mode");
+    }
+
+    public boolean isPresentationMode() { return presentationMode; }
+
+    public void toggleDistractionFreeMode() {
+        distractionFreeMode = !distractionFreeMode;
+        if (distractionFreeMode) {
+            if (isDatabaseExplorerVisible()) toggleDatabaseExplorer();
+            setToolbarVisible(false);
+            setStatusBarVisible(false);
+        } else {
+            if (!isDatabaseExplorerVisible()) toggleDatabaseExplorer();
+            setToolbarVisible(true);
+            setStatusBarVisible(true);
+        }
+        setStatus(distractionFreeMode ? "Entered Distraction Free Mode" : "Exited Distraction Free Mode");
+    }
+
+    public boolean isDistractionFreeMode() { return distractionFreeMode; }
+
+    public void toggleFullScreen() {
+        stage.setFullScreen(!stage.isFullScreen());
+        setStatus(stage.isFullScreen() ? "Full Screen enabled" : "Full Screen exited");
+    }
+
+    public boolean isFullScreen() { return stage.isFullScreen(); }
+
+    public void toggleZenMode() {
+        zenMode = !zenMode;
+        stage.setFullScreen(zenMode);
+        if (zenMode) {
+            if (isDatabaseExplorerVisible()) toggleDatabaseExplorer();
+            setToolbarVisible(false);
+            setStatusBarVisible(false);
+        } else {
+            if (!isDatabaseExplorerVisible()) toggleDatabaseExplorer();
+            setToolbarVisible(true);
+            setStatusBarVisible(true);
+        }
+        setStatus(zenMode ? "Entered Zen Mode" : "Exited Zen Mode");
+    }
+
+    public boolean isZenMode() { return zenMode; }
+
+    public void toggleCompactMode() {
+        compactMode = !compactMode;
+        root.pseudoClassStateChanged(javafx.css.PseudoClass.getPseudoClass("compact"), compactMode);
+        setStatus(compactMode ? "Compact Mode enabled" : "Compact Mode disabled");
+    }
+
+    public boolean isCompactMode() { return compactMode; }
+
+    public void showZoomIdeDialog() {
+        ChoiceDialog<String> dialog = (ChoiceDialog<String>) DialogTheme.apply(
+                new ChoiceDialog<>(currentIdeZoom + "%", List.of("100%", "110%", "125%", "150%", "175%", "200%")));
+        dialog.initOwner(stage);
+        dialog.setTitle("Zoom IDE");
+        dialog.setHeaderText("Current Zoom: " + currentIdeZoom + "%");
+        dialog.setContentText("Select zoom percentage:");
+        dialog.showAndWait().ifPresent(val -> {
+            try {
+                currentIdeZoom = Integer.parseInt(val.replace("%", "").trim());
+                setStatus("IDE Zoom set to " + currentIdeZoom + "%");
+            } catch (Exception ignored) {}
+        });
+    }
+
+    public int getCurrentIdeZoom() { return currentIdeZoom; }
+
+    public void togglePresentationAssistant() {
+        presentationAssistant = !presentationAssistant;
+        setStatus(presentationAssistant ? "Presentation Assistant enabled" : "Presentation Assistant disabled");
+    }
+
+    public boolean isPresentationAssistant() { return presentationAssistant; }
+
+    public boolean isToolbarVisible() {
+        return headerMiddleBar != null && headerMiddleBar.isVisible();
+    }
+
+    public void setToolbarVisible(boolean visible) {
+        if (headerMiddleBar != null) {
+            headerMiddleBar.setVisible(visible);
+            headerMiddleBar.setManaged(visible);
+            setStatus("Toolbar " + (visible ? "shown" : "hidden"));
+        }
+    }
+
+    public boolean isToolWindowBarsVisible() { return toolWindowBarsVisible; }
+
+    public void setToolWindowBarsVisible(boolean visible) {
+        this.toolWindowBarsVisible = visible;
+        setStatus("Tool Window Bars " + (visible ? "shown" : "hidden"));
+    }
+
+    public boolean isStatusBarVisible() {
+        return root.getBottom() != null;
+    }
+
+    public void setStatusBarVisible(boolean visible) {
+        root.setBottom(visible ? statusBarNode : null);
+        setStatus("Status Bar " + (visible ? "shown" : "hidden"));
+    }
+
+    public MainMenuPlacement getMainMenuPlacement() { return mainMenuPlacement; }
+
+    public void setMainMenuPlacement(MainMenuPlacement placement) {
+        this.mainMenuPlacement = placement;
+        setStatus("Main Menu: " + placement);
+    }
+
+    public NavigationBarPlacement getNavigationBarPlacement() { return navigationBarPlacement; }
+
+    public void setNavigationBarPlacement(NavigationBarPlacement placement) {
+        this.navigationBarPlacement = placement;
+        setStatus("Navigation Bar: " + placement);
+    }
+
+    public boolean isStatusBarWidgetActive(String id) {
+        return statusBarWidgets.getOrDefault(id, false);
+    }
+
+    public void setStatusBarWidgetActive(String id, boolean active) {
+        statusBarWidgets.put(id, active);
+        setStatus("Status Bar Widget '" + id + "': " + (active ? "visible" : "hidden"));
+    }
+
+    // =========================================================================
+    // VIEW / RECENT ACTIONS
+    // =========================================================================
+
+    public void showRecentLocationsDialog() {
+        List<String> items = new java.util.ArrayList<>();
+        forEachEditorTab(t -> items.add(t.getText()));
+        if (items.isEmpty()) {
+            setStatus("No recent locations");
+            return;
+        }
+        ChoiceDialog<String> dialog = (ChoiceDialog<String>) DialogTheme.apply(
+                new ChoiceDialog<>(items.get(0), items));
+        dialog.initOwner(stage);
+        dialog.setTitle("Recent Locations");
+        dialog.setHeaderText("Jump to recent location / tab");
+        dialog.setContentText("Location:");
+        dialog.showAndWait().ifPresent(sel -> {
+            forEachEditorTab(t -> {
+                if (sel.equals(t.getText()) && t.getTabPane() != null) {
+                    t.getTabPane().getSelectionModel().select(t);
+                }
+            });
+        });
+    }
+
+    public void showRecentFilesDialog() {
+        List<String> items = new java.util.ArrayList<>();
+        forEachEditorTab(t -> items.add(t.getText()));
+        if (items.isEmpty()) {
+            setStatus("No recent files");
+            return;
+        }
+        ChoiceDialog<String> dialog = (ChoiceDialog<String>) DialogTheme.apply(
+                new ChoiceDialog<>(items.get(0), items));
+        dialog.initOwner(stage);
+        dialog.setTitle("Recent Files");
+        dialog.setHeaderText("Switch to recent file / console");
+        dialog.setContentText("File:");
+        dialog.showAndWait().ifPresent(sel -> {
+            forEachEditorTab(t -> {
+                if (sel.equals(t.getText()) && t.getTabPane() != null) {
+                    t.getTabPane().getSelectionModel().select(t);
+                }
+            });
+        });
+    }
+
+    public void showRecentlyChangedFilesDialog() {
+        showRecentChangesDialog();
+    }
+
+    // =========================================================================
+    // VIEW / FONT ACTIONS
+    // =========================================================================
+
+    public void increaseFontSizeInAllEditors() {
+        var settings = com.roze.dbnavigator.db.AppSettingsStore.load();
+        double next = Math.min(48.0, settings.getEditorFontSize() + 1.0);
+        settings.setEditorFontSize(next);
+        com.roze.dbnavigator.db.AppSettingsStore.save(settings);
+        applyEditorFontToOpenConsoles();
+        setStatus("Editor font size: " + (int) next + "px");
+    }
+
+    public void decreaseFontSizeInAllEditors() {
+        var settings = com.roze.dbnavigator.db.AppSettingsStore.load();
+        double next = Math.max(8.0, settings.getEditorFontSize() - 1.0);
+        settings.setEditorFontSize(next);
+        com.roze.dbnavigator.db.AppSettingsStore.save(settings);
+        applyEditorFontToOpenConsoles();
+        setStatus("Editor font size: " + (int) next + "px");
+    }
+
+    public void resetFontSizeInAllEditors() {
+        var settings = com.roze.dbnavigator.db.AppSettingsStore.load();
+        settings.setEditorFontSize(13.0);
+        com.roze.dbnavigator.db.AppSettingsStore.save(settings);
+        applyEditorFontToOpenConsoles();
+        setStatus("Editor font size reset to 13px");
     }
 }
