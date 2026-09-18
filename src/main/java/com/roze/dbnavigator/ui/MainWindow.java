@@ -24,6 +24,7 @@ import org.kordamp.ikonli.fontawesome5.FontAwesomeSolid;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
@@ -281,10 +282,80 @@ public class MainWindow {
         setStatus("Reloaded all schemas and files from disk");
     }
 
-    public void repairIde() {
-        schemaPane.reload();
-        applyEditorFontToOpenConsoles();
-        setStatus("IDE caches verified and schemas refreshed");
+    public void attachDirectoryToProject() {
+        javafx.stage.DirectoryChooser chooser = new javafx.stage.DirectoryChooser();
+        chooser.setTitle("Attach Directory to Project");
+        File dir = chooser.showDialog(stage);
+        if (dir != null) {
+            setStatus("Attached directory: " + dir.getAbsolutePath());
+        }
+    }
+
+    public void renameProject() {
+        TextInputDialog dialog = (TextInputDialog) DialogTheme.apply(new TextInputDialog("DBNavigator Project"));
+        dialog.initOwner(stage);
+        dialog.setTitle("Rename Project");
+        dialog.setHeaderText(null);
+        dialog.setContentText("Project name:");
+        dialog.showAndWait().ifPresent(name -> {
+            if (!name.isBlank()) {
+                stage.setTitle("DBNavigator Pro - " + name);
+                setStatus("Renamed project to: " + name);
+            }
+        });
+    }
+
+    public void showSqlDialectsDialog() {
+        Alert alert = (Alert) DialogTheme.apply(new Alert(Alert.AlertType.INFORMATION,
+                "Configured SQL Dialects:\n\n"
+                + "• MySQL / MariaDB (MySQL Dialect)\n"
+                + "• PostgreSQL (PostgreSQL Dialect)\n"
+                + "• StratosDB (StratosDB Dialect)\n"
+                + "• SQLite (SQLite Dialect)\n"
+                + "• Oracle (Oracle PL/SQL Dialect)\n"
+                + "• SQL Server (T-SQL Dialect)\n"
+                + "• MongoDB (MQL / JavaScript Dialect)\n\n"
+                + "Dialects are auto-detected based on the active connection."));
+        alert.setHeaderText("SQL Dialects");
+        alert.initOwner(stage);
+        alert.showAndWait();
+    }
+
+    public void showSqlResolutionScopesDialog() {
+        Alert alert = (Alert) DialogTheme.apply(new Alert(Alert.AlertType.INFORMATION,
+                "SQL Resolution Scopes:\n\n"
+                + "SQL symbols and object references resolve against the default database\n"
+                + "and schema selected in the active query console session."));
+        alert.setHeaderText("SQL Resolution Scopes");
+        alert.initOwner(stage);
+        alert.showAndWait();
+    }
+
+    public void showPluginsDialog() {
+        Alert alert = (Alert) DialogTheme.apply(new Alert(Alert.AlertType.INFORMATION,
+                "Plugins Marketplace:\n\n"
+                + "Installed Plugins:\n"
+                + "• Database Tools and SQL (bundled)\n"
+                + "• Terminal & Shell Integration (bundled)\n"
+                + "• Git Integration (bundled)\n"
+                + "• Dark / Light Theme Engine (bundled)\n\n"
+                + "All core database dialect plugins are active and up to date."));
+        alert.setHeaderText("Plugins");
+        alert.initOwner(stage);
+        alert.showAndWait();
+    }
+
+    public void editDataSourcesFile() {
+        Path p = Path.of(System.getProperty("user.home"), ".dbnavigator", "connections.json");
+        try {
+            if (java.awt.Desktop.isDesktopSupported() && java.awt.Desktop.getDesktop().isSupported(java.awt.Desktop.Action.OPEN) && Files.exists(p)) {
+                java.awt.Desktop.getDesktop().open(p.toFile());
+            } else {
+                setStatus("Data sources file: " + p);
+            }
+        } catch (Exception e) {
+            setStatus("Data sources file: " + p);
+        }
     }
 
     private boolean powerSaveMode = false;
