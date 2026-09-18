@@ -315,10 +315,69 @@
 }
 .date-picker .arrow-button { -fx-background-color: -bg-light; }
 
-/* ---------- menu bar ---------- */
-.app-menu-bar { -fx-background-color: -bg-mid; }
-.app-menu-bar .menu .label { -fx-text-fill: -text; }
-.app-menu-bar .menu:hover, .app-menu-bar .menu:showing { -fx-background-color: #3c4046; }
+/* ---------- unified DataGrip header bar ---------- */
+.app-header-bar {
+    -fx-background-color: -bg-mid;
+    -fx-border-color: transparent transparent -border transparent;
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 3 8 3 8;
+    -fx-alignment: center-left;
+}
+
+.header-brand-icon {
+    -fx-padding: 2 6 2 4;
+}
+
+.app-menu-bar {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+
+.app-menu-bar .menu {
+    -fx-padding: 4 6 4 6;
+    -fx-background-radius: 4;
+}
+
+.app-menu-bar .menu .label {
+    -fx-text-fill: -text;
+    -fx-font-size: 12px;
+}
+
+.app-menu-bar .menu:hover, .app-menu-bar .menu:showing {
+    -fx-background-color: #3c4046;
+}
+
+.header-middle-bar {
+    -fx-alignment: center;
+    -fx-spacing: 2;
+}
+
+.header-action-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: -text;
+    -fx-background-radius: 5;
+    -fx-border-radius: 5;
+    -fx-border-color: transparent;
+    -fx-padding: 4 7 4 7;
+    -fx-cursor: hand;
+}
+
+.header-action-button:hover {
+    -fx-background-color: #3c4046;
+    -fx-border-color: #4e5258;
+}
+
+.header-action-button:pressed {
+    -fx-background-color: #2b2d30;
+}
+
+.header-action-button:disabled {
+    -fx-opacity: 0.4;
+}
+
+.action-separator {
+    -fx-padding: 0 4 0 4;
+}
 
 /* ---------- colored completion entries (DataGrip style) ---------- */
 .completion-name    { -fx-font-family: "JetBrains Mono", "Consolas", monospace; -fx-font-size: 13px; }

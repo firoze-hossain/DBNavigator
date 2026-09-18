@@ -204,6 +204,8 @@ public class MongoConsoleTab extends Tab {
     public String getCurrentDatabase() { return currentDatabase; }
     public String getScriptText() { return editor.getText(); }
     public void setScriptText(String text) { editor.replaceText(text); }
+    public CodeArea getEditor() { return editor; }
+    public void execute() { runCurrentStatement(); }
 
     private void log(String line) {
         outputArea.appendText("[" + LocalTime.now().format(timeFormat) + "] " + line + "\n");
@@ -421,7 +423,7 @@ public class MongoConsoleTab extends Tab {
     // --------------------------------------------------------------- run
 
     /** Run / Ctrl+Enter: the statement at the caret, or the only statement if there's just one. */
-    private void runCurrentStatement() {
+    public void runCurrentStatement() {
         String text = editor.getText();
         List<MongoShellParser.RawStatement> statements = MongoShellParser.splitStatements(text);
         if (statements.isEmpty()) return;
