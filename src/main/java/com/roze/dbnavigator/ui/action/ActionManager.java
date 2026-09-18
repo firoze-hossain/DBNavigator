@@ -72,7 +72,7 @@ public class ActionManager {
     private javafx.scene.control.Menu buildMenu(ActionGroup group, MainWindow ctx) {
         javafx.scene.control.Menu menu = new javafx.scene.control.Menu(group.getText());
         if (group.getIcon() != null) {
-            menu.setGraphic(com.roze.dbnavigator.ui.Icons.of(group.getIcon(), "#a9b7c6", 11));
+            menu.setGraphic(com.roze.dbnavigator.ui.Icons.of(group.getIcon(), group.getIconColor(), group.getIconSize()));
         }
 
         for (AnAction child : group.getChildren()) {
