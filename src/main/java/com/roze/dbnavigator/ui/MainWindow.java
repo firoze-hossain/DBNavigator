@@ -2439,4 +2439,37 @@ public class MainWindow {
             setStatus("Already at first statement");
         }
     }
+
+    public void showEditConfigurationsDialog() {
+        SettingsDialog.show(this);
+        setStatus("Run/Debug Configurations");
+    }
+
+    public void showCompareDataDialog() {
+        Tab tab = currentSelectedTab();
+        if (tab instanceof DataTab dt && dt.getProfileForReopen() != null) {
+            ClipboardCompareDialog.show(stage, "-- Left: " + dt.getText() + " (Snapshot)\n", "-- Right: " + dt.getText() + " (Current Data)\n");
+            setStatus("Compare Data: " + dt.getText());
+        } else {
+            ClipboardCompareDialog.show(stage, "-- Select Left Table or Result Set\n", "-- Select Right Table or Result Set\n");
+            setStatus("Compare Data: select tables or query results to compare");
+        }
+    }
+
+    public void showCompareSchemaDialog() {
+        Tab tab = currentSelectedTab();
+        if (tab instanceof QueryTab qt && qt.getProfile() != null) {
+            String editorSql = qt.getSqlText();
+            ClipboardCompareDialog.show(stage, "-- Target Schema DDL Structure\n", (editorSql == null || editorSql.isBlank()) ? "-- Current Schema DDL Structure\n" : editorSql);
+            setStatus("Compare Schema Structure: " + qt.getProfile().getName());
+        } else {
+            ClipboardCompareDialog.show(stage, "-- Source Schema DDL Structure\n", "-- Target Schema DDL Structure\n");
+            setStatus("Compare Schema Structure: select schemas or tables to compare");
+        }
+    }
+
+    public void showFullTextSearchDialog() {
+        showSearchEverywhere();
+        setStatus("Full-Text Search across database tables");
+    }
 }

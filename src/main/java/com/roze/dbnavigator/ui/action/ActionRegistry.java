@@ -1072,8 +1072,45 @@ public final class ActionRegistry {
                 .addAll(nextStatement, prevStatement);
 
         // =========================================================================
-        // 5. RUN ACTIONS
+        // 5. RUN ACTIONS (Matching DataGrip)
         // =========================================================================
+        // Section 1: Edit Configurations…
+        AnAction editConfigurations = AnAction.builder("run.edit.configurations", "Edit Configurations…")
+                .description("Edit run and execution configurations")
+                .onAction(MainWindow::showEditConfigurationsDialog)
+                .build();
+
+        // Section 2: Compare Data & Compare Schema Structure
+        AnAction compareData = AnAction.builder("run.compare.data", "Compare Data")
+                .description("Compare data between tables or result sets")
+                .icon(FontAwesomeSolid.EXCHANGE_ALT, "#a9b7c6", 11)
+                .onAction(MainWindow::showCompareDataDialog)
+                .build();
+
+        AnAction compareSchema = AnAction.builder("run.compare.schema", "Compare Schema Structure")
+                .description("Compare DDL schema structures")
+                .icon(FontAwesomeSolid.EXCHANGE_ALT, "#a9b7c6", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.D, KeyCombination.CONTROL_DOWN))
+                .onAction(MainWindow::showCompareSchemaDialog)
+                .build();
+
+        // Section 3: Full-Text Search…
+        AnAction fullTextSearch = AnAction.builder("run.fulltext.search", "Full-Text Search…")
+                .description("Full-text search across database tables and columns")
+                .icon(FontAwesomeSolid.SEARCH, "#a9b7c6", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(MainWindow::showFullTextSearchDialog)
+                .build();
+
+        ActionGroup runMenu = new ActionGroup("menu.run", "Run");
+        runMenu.add(editConfigurations)
+                .addSeparator()
+                .add(compareData)
+                .add(compareSchema)
+                .addSeparator()
+                .add(fullTextSearch);
+
+        // Retain run.statement and run.tool.window in ActionManager for execution shortcuts and buttons
         AnAction runStatement = AnAction.builder("run.statement", "Execute Statement")
                 .description("Execute query statement at caret")
                 .icon(FontAwesomeSolid.PLAY, "#57965c", 11)
@@ -1088,10 +1125,8 @@ public final class ActionRegistry {
                 .onAction(MainWindow::toggleRunPanel)
                 .build();
 
-        ActionGroup runMenu = new ActionGroup("menu.run", "Run");
-        runMenu.add(runStatement)
-                .addSeparator()
-                .add(runToolWindow);
+        manager.registerAction(runStatement);
+        manager.registerAction(runToolWindow);
 
         // =========================================================================
         // 6. VCS ACTIONS
