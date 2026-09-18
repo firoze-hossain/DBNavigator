@@ -45,6 +45,13 @@ public class ActionManager {
     public void registerGroup(ActionGroup group) {
         groupMap.put(group.getId(), group);
         actionMap.put(group.getId(), group);
+        for (AnAction child : group.getChildren()) {
+            if (child instanceof ActionGroup subGroup) {
+                registerGroup(subGroup);
+            } else if (!(child instanceof ActionSeparator)) {
+                registerAction(child);
+            }
+        }
     }
 
     public AnAction getAction(String id) {

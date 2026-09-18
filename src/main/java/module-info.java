@@ -52,6 +52,7 @@ module com.roze.dbnavigator {
     exports com.roze.dbnavigator;
     exports com.roze.dbnavigator.model;
     exports com.roze.dbnavigator.ui;
+    exports com.roze.dbnavigator.ui.action;
     exports com.roze.dbnavigator.db;
     exports com.roze.dbnavigator.util;
 }

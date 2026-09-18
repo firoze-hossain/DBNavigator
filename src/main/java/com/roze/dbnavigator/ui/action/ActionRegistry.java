@@ -25,7 +25,72 @@ public final class ActionRegistry {
         // Submenu: New >
         ActionGroup newGroup = new ActionGroup("file.new", "New", true);
 
-        // Submenu: New -> Data Source >
+        // 1. Project...
+        AnAction newProject = AnAction.builder("file.new.project", "Project…")
+                .description("Create or initialize a new DBNavigator project")
+                .onAction(MainWindow::createNewProjectDialog)
+                .build();
+
+        // 2. SQL File
+        AnAction newSqlFile = AnAction.builder("file.new.sqlfile", "SQL File")
+                .description("Create a new SQL file")
+                .icon(FontAwesomeSolid.FILE_CODE, "#a9b7c6", 11)
+                .onAction(MainWindow::openNewSqlFile)
+                .build();
+
+        // 3. Scratch File (Ctrl+Alt+Shift+Insert)
+        AnAction newScratchFile = AnAction.builder("file.new.scratch", "Scratch File")
+                .description("Open a scratch SQL buffer")
+                .icon(FontAwesomeSolid.FILE_ALT, "#a9b7c6", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.INSERT, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(MainWindow::openNewScratchFile)
+                .build();
+
+        // 4. Query Console (Ctrl+Shift+Q)
+        AnAction newConsole = AnAction.builder("file.new.console", "Query Console")
+                .description("Open a new query console for the selected connection")
+                .icon(FontAwesomeSolid.TERMINAL, "#6897bb", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.Q, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(MainWindow::openConsoleForSelectedConnection)
+                .build();
+
+        // 5. Query File... (Ctrl+Alt+Shift+Q)
+        AnAction newQueryFile = AnAction.builder("file.new.queryfile", "Query File…")
+                .description("Create a new SQL query file attached to the current connection")
+                .icon(FontAwesomeSolid.FILE_CODE, "#4a88c7", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.Q, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(MainWindow::openNewQueryFile)
+                .build();
+
+        // 6. Database
+        AnAction newDatabase = AnAction.builder("file.new.database", "Database")
+                .description("Create a new database on the active server")
+                .icon(FontAwesomeSolid.DATABASE, "#4a88c7", 11)
+                .onAction(MainWindow::createNewDatabaseAction)
+                .build();
+
+        // 7. Role
+        AnAction newRole = AnAction.builder("file.new.role", "Role")
+                .description("Create a new database role or permission group")
+                .icon(FontAwesomeSolid.USER_SHIELD, "#e0a44c", 11)
+                .onAction(MainWindow::createNewRoleAction)
+                .build();
+
+        // 8. User
+        AnAction newUser = AnAction.builder("file.new.user", "User")
+                .description("Create a new database user account")
+                .icon(FontAwesomeSolid.USER, "#57965c", 11)
+                .onAction(MainWindow::createNewUserAction)
+                .build();
+
+        // 9. Virtual View
+        AnAction newVirtualView = AnAction.builder("file.new.virtualview", "Virtual View")
+                .description("Create a new virtual view or custom query view")
+                .icon(FontAwesomeSolid.TABLE, "#c77dbb", 11)
+                .onAction(MainWindow::createNewVirtualViewAction)
+                .build();
+
+        // 10. Data Source >
         ActionGroup dataSourceGroup = new ActionGroup("file.new.datasource.group", "Data Source", true,
                 FontAwesomeSolid.DATABASE, "#57965c", 11, "Data Source");
         dataSourceGroup.add(AnAction.builder("file.new.datasource.mysql", "MySQL")
@@ -66,31 +131,115 @@ public final class ActionRegistry {
                 .onAction(MainWindow::showNewConnectionDialog)
                 .build());
 
-        AnAction newConsole = AnAction.builder("file.new.console", "Query Console")
-                .description("Open a new query console for the selected connection")
-                .icon(FontAwesomeSolid.TERMINAL, "#6897bb", 11)
-                .accelerator(new KeyCodeCombination(KeyCode.N, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN))
-                .onAction(MainWindow::openConsoleForSelectedConnection)
+        // 11. Data Source from Cloud Provider >
+        ActionGroup cloudGroup = new ActionGroup("file.new.datasource.cloud", "Data Source from Cloud Provider", true,
+                FontAwesomeSolid.CLOUD, "#4a88c7", 11, "Data Source from Cloud Provider");
+
+        ActionGroup awsGroup = new ActionGroup("file.new.datasource.cloud.aws", "Amazon AWS", true);
+        awsGroup.add(AnAction.builder("cloud.aws.aurora.mysql", "Amazon Aurora MySQL")
+                .icon(FontAwesomeSolid.DATABASE, "#e0a44c", 11)
+                .onAction(ctx -> ctx.openDataSourceFromCloudDialog("AWS", ConnectionProfile.DatabaseType.MYSQL))
+                .build());
+        awsGroup.add(AnAction.builder("cloud.aws.aurora.postgres", "Amazon Aurora PostgreSQL")
+                .icon(FontAwesomeSolid.DATABASE, "#3592c4", 11)
+                .onAction(ctx -> ctx.openDataSourceFromCloudDialog("AWS", ConnectionProfile.DatabaseType.POSTGRESQL))
+                .build());
+        awsGroup.add(AnAction.builder("cloud.aws.redshift", "Amazon Redshift")
+                .icon(FontAwesomeSolid.DATABASE, "#e05555", 11)
+                .onAction(ctx -> ctx.openDataSourceFromCloudDialog("AWS", ConnectionProfile.DatabaseType.POSTGRESQL))
+                .build());
+
+        ActionGroup gcpGroup = new ActionGroup("file.new.datasource.cloud.gcp", "Google Cloud", true);
+        gcpGroup.add(AnAction.builder("cloud.gcp.mysql", "Google Cloud SQL for MySQL")
+                .icon(FontAwesomeSolid.DATABASE, "#4a88c7", 11)
+                .onAction(ctx -> ctx.openDataSourceFromCloudDialog("Google Cloud", ConnectionProfile.DatabaseType.MYSQL))
+                .build());
+        gcpGroup.add(AnAction.builder("cloud.gcp.postgres", "Google Cloud SQL for PostgreSQL")
+                .icon(FontAwesomeSolid.DATABASE, "#3592c4", 11)
+                .onAction(ctx -> ctx.openDataSourceFromCloudDialog("Google Cloud", ConnectionProfile.DatabaseType.POSTGRESQL))
+                .build());
+
+        ActionGroup azureGroup = new ActionGroup("file.new.datasource.cloud.azure", "Microsoft Azure", true);
+        azureGroup.add(AnAction.builder("cloud.azure.sql", "Azure SQL Database")
+                .icon(FontAwesomeSolid.DATABASE, "#c77dbb", 11)
+                .onAction(ctx -> ctx.openDataSourceFromCloudDialog("Azure", ConnectionProfile.DatabaseType.SQLSERVER))
+                .build());
+        azureGroup.add(AnAction.builder("cloud.azure.mysql", "Azure Database for MySQL")
+                .icon(FontAwesomeSolid.DATABASE, "#4a88c7", 11)
+                .onAction(ctx -> ctx.openDataSourceFromCloudDialog("Azure", ConnectionProfile.DatabaseType.MYSQL))
+                .build());
+        azureGroup.add(AnAction.builder("cloud.azure.postgres", "Azure Database for PostgreSQL")
+                .icon(FontAwesomeSolid.DATABASE, "#3592c4", 11)
+                .onAction(ctx -> ctx.openDataSourceFromCloudDialog("Azure", ConnectionProfile.DatabaseType.POSTGRESQL))
+                .build());
+
+        cloudGroup.add(awsGroup).add(gcpGroup).add(azureGroup);
+
+        // 12. Data Source Templates
+        AnAction dsTemplates = AnAction.builder("file.new.datasource.templates", "Data Source Templates")
+                .description("Pre-configured Docker, Localhost, and In-Memory database templates")
+                .icon(FontAwesomeSolid.LAYER_GROUP, "#a9b7c6", 11)
+                .onAction(MainWindow::showDataSourceTemplatesDialog)
                 .build();
 
-        AnAction newSqlFile = AnAction.builder("file.new.sqlfile", "SQL File…")
-                .description("Create a new SQL file")
-                .icon(FontAwesomeSolid.FILE_CODE, "#a9b7c6", 11)
-                .onAction(MainWindow::openNewSqlFile)
+        // 13. Data Source from File/Folder
+        AnAction dsFromFile = AnAction.builder("file.new.datasource.file", "Data Source from File/Folder")
+                .description("Create a data source from a SQLite database file, JSON, or CSV file")
+                .icon(FontAwesomeSolid.FOLDER_OPEN, "#e0a44c", 11)
+                .onAction(MainWindow::openDataSourceFromFileOrFolder)
                 .build();
 
-        AnAction newScratchFile = AnAction.builder("file.new.scratch", "Scratch File")
-                .description("Open a scratch SQL buffer")
-                .icon(FontAwesomeSolid.FILE, "#a9b7c6", 11)
-                .accelerator(new KeyCodeCombination(KeyCode.INSERT, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN))
-                .onAction(MainWindow::openNewScratchFile)
+        // 14. Data Source from URL
+        AnAction dsFromUrl = AnAction.builder("file.new.datasource.url", "Data Source from URL")
+                .description("Connect via JDBC URL or MongoDB URI")
+                .icon(FontAwesomeSolid.LINK, "#3592c4", 11)
+                .onAction(MainWindow::openDataSourceFromUrlDialog)
                 .build();
 
-        newGroup.add(dataSourceGroup)
-                .add(newConsole)
+        // 15. DDL Data Source
+        AnAction ddlDataSource = AnAction.builder("file.new.datasource.ddl", "DDL Data Source")
+                .description("Create an offline schema data source generated from DDL SQL files")
+                .icon(FontAwesomeSolid.DATABASE, "#57965c", 11)
+                .onAction(MainWindow::openDdlDataSourceDialog)
+                .build();
+
+        // 16. Folder
+        AnAction newFolder = AnAction.builder("file.new.folder", "Folder")
+                .description("Create a new organizational folder")
+                .icon(FontAwesomeSolid.FOLDER, "#e0a44c", 11)
+                .onAction(MainWindow::createNewFolderDialog)
+                .build();
+
+        // 17. Driver
+        AnAction driverAction = AnAction.builder("file.new.driver", "Driver")
+                .description("View and manage installed JDBC and database drivers")
+                .icon(FontAwesomeSolid.PLUG, "#57965c", 11)
+                .onAction(MainWindow::showDriversDialog)
+                .build();
+
+        // Assembling file.new matching DataGrip screenshot
+        newGroup.add(newProject)
                 .addSeparator()
                 .add(newSqlFile)
-                .add(newScratchFile);
+                .add(newScratchFile)
+                .add(newConsole)
+                .add(newQueryFile)
+                .addSeparator()
+                .add(newDatabase)
+                .add(newRole)
+                .add(newUser)
+                .addSeparator()
+                .add(newVirtualView)
+                .addSeparator()
+                .add(dataSourceGroup)
+                .add(cloudGroup)
+                .add(dsTemplates)
+                .add(dsFromFile)
+                .add(dsFromUrl)
+                .add(ddlDataSource)
+                .addSeparator()
+                .add(newFolder)
+                .add(driverAction);
 
         // Open...
         AnAction openSql = AnAction.builder("file.open.sql", "Open…")
