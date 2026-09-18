@@ -918,4 +918,87 @@ public class ActionRegistryTest {
         assertEquals("Select Previous Tab", prevTab.getText());
         assertEquals(KeyCode.LEFT, ((KeyCodeCombination) prevTab.getAccelerator()).getCode());
     }
+
+    @Test
+    public void testRunMenuRegistration() {
+        ActionGroup runMenu = actionManager.getGroup("menu.run");
+        assertNotNull(runMenu, "menu.run group should be registered");
+        assertEquals("Run", runMenu.getText());
+    }
+
+    @Test
+    public void testRunMenuStructureAndOrder() {
+        ActionGroup runMenu = actionManager.getGroup("menu.run");
+        assertNotNull(runMenu, "menu.run group should be registered");
+
+        List<AnAction> items = runMenu.getChildren();
+        assertEquals(6, items.size(), "Run menu should have 4 actions and 2 separators");
+
+        // Section 1: Edit Configurations…
+        assertInstanceOf(AnAction.class, items.get(0));
+        assertEquals("run.edit.configurations", items.get(0).getId());
+        assertEquals("Edit Configurations…", items.get(0).getText());
+
+        // Separator 1
+        assertInstanceOf(ActionSeparator.class, items.get(1));
+
+        // Section 2: Compare Data & Compare Schema Structure
+        assertInstanceOf(AnAction.class, items.get(2));
+        assertEquals("run.compare.data", items.get(2).getId());
+        assertEquals("Compare Data", items.get(2).getText());
+
+        assertInstanceOf(AnAction.class, items.get(3));
+        assertEquals("run.compare.schema", items.get(3).getId());
+        assertEquals("Compare Schema Structure", items.get(3).getText());
+
+        // Separator 2
+        assertInstanceOf(ActionSeparator.class, items.get(4));
+
+        // Section 3: Full-Text Search…
+        assertInstanceOf(AnAction.class, items.get(5));
+        assertEquals("run.fulltext.search", items.get(5).getId());
+        assertEquals("Full-Text Search…", items.get(5).getText());
+    }
+
+    @Test
+    public void testRunMenuAccelerators() {
+        // Compare Schema Structure: Ctrl+D
+        AnAction compareSchema = actionManager.getAction("run.compare.schema");
+        assertNotNull(compareSchema, "run.compare.schema should be registered");
+        assertNotNull(compareSchema.getAccelerator());
+        KeyCodeCombination csAcc = (KeyCodeCombination) compareSchema.getAccelerator();
+        assertEquals(KeyCode.D, csAcc.getCode());
+        assertEquals(KeyCombination.ModifierValue.DOWN, csAcc.getControl());
+
+        // Full-Text Search…: Ctrl+Alt+Shift+F
+        AnAction fullTextSearch = actionManager.getAction("run.fulltext.search");
+        assertNotNull(fullTextSearch, "run.fulltext.search should be registered");
+        assertNotNull(fullTextSearch.getAccelerator());
+        KeyCodeCombination ftsAcc = (KeyCodeCombination) fullTextSearch.getAccelerator();
+        assertEquals(KeyCode.F, ftsAcc.getCode());
+        assertEquals(KeyCombination.ModifierValue.DOWN, ftsAcc.getControl());
+        assertEquals(KeyCombination.ModifierValue.DOWN, ftsAcc.getAlt());
+        assertEquals(KeyCombination.ModifierValue.DOWN, ftsAcc.getShift());
+    }
+
+    @Test
+    public void testRunExecutionActionsPreserved() {
+        // run.statement: Ctrl+Enter
+        AnAction runStatement = actionManager.getAction("run.statement");
+        assertNotNull(runStatement, "run.statement must remain registered");
+        assertEquals("Execute Statement", runStatement.getText());
+        assertNotNull(runStatement.getAccelerator());
+        KeyCodeCombination rsAcc = (KeyCodeCombination) runStatement.getAccelerator();
+        assertEquals(KeyCode.ENTER, rsAcc.getCode());
+        assertEquals(KeyCombination.ModifierValue.DOWN, rsAcc.getControl());
+
+        // run.tool.window: Alt+4
+        AnAction runTool = actionManager.getAction("run.tool.window");
+        assertNotNull(runTool, "run.tool.window must remain registered");
+        assertEquals("Run Tool Window", runTool.getText());
+        assertNotNull(runTool.getAccelerator());
+        KeyCodeCombination rtAcc = (KeyCodeCombination) runTool.getAccelerator();
+        assertEquals(KeyCode.DIGIT4, rtAcc.getCode());
+        assertEquals(KeyCombination.ModifierValue.DOWN, rtAcc.getAlt());
+    }
 }
