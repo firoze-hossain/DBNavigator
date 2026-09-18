@@ -233,6 +233,26 @@ public class QueryTab extends Tab {
         suppressCompletion = false;
     }
 
+    public CodeArea getEditor() {
+        return editor;
+    }
+
+    public void formatSql() {
+        String selected = editor.getSelectedText();
+        if (selected != null && !selected.isBlank()) {
+            String formatted = SqlFormatter.format(selected);
+            editor.replaceSelection(formatted);
+        } else {
+            String text = editor.getText();
+            if (text != null && !text.isBlank()) {
+                int caret = editor.getCaretPosition();
+                String formatted = SqlFormatter.format(text);
+                editor.replaceText(formatted);
+                editor.moveTo(Math.min(caret, editor.getLength()));
+            }
+        }
+    }
+
     // ---------------------------------------------------------- completion
 
     private void setupCompletion() {
@@ -1110,7 +1130,7 @@ public class QueryTab extends Tab {
 
     // ------------------------------------------------------------- execute
 
-    private void execute() {
+    public void execute() {
         completionPopup.hide();
         String sql = selectedOrEditorText();
         if (sql.isBlank()) return;

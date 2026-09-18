@@ -24,8 +24,16 @@ import org.kordamp.ikonli.fontawesome5.FontAwesomeSolid;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
+
+import com.roze.dbnavigator.ui.action.ActionGroup;
+import com.roze.dbnavigator.ui.action.ActionManager;
+import com.roze.dbnavigator.ui.action.ActionRegistry;
+import com.roze.dbnavigator.ui.action.AnAction;
+import javafx.event.Event;
+import org.fxmisc.richtext.CodeArea;
 
 /**
  * Top-level layout: menu bar + toolbar (top), explorer (left), tabs (center),
@@ -59,8 +67,11 @@ public class MainWindow {
         this.stage = stage;
         this.schemaPane = new SchemaTreePane(this);
 
+        ActionManager actionManager = ActionManager.getInstance();
+        ActionRegistry.initialize(actionManager);
+
         root.getStyleClass().add("app-root");
-        root.setTop(new VBox(buildMenuBar(), buildToolbar()));
+        root.setTop(buildDataGripHeader(actionManager));
         root.setBottom(buildStatusBar());
 
         root.addEventFilter(javafx.scene.input.KeyEvent.KEY_PRESSED, e -> {
@@ -74,6 +85,9 @@ public class MainWindow {
         tabPane.getStyleClass().add("main-tabs");
         tabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.ALL_TABS);
         configureEditorTabPane(tabPane);
+        tabPane.getSelectionModel().selectedItemProperty().addListener((obs, o, n) -> {
+            actionManager.updateActions(this);
+        });
         showWelcomeTab();
 
         centerSplit = new SplitPane(schemaPane, tabPane);
@@ -158,114 +172,59 @@ public class MainWindow {
 
     // ------------------------------------------------------------- chrome
 
-    private MenuBar buildMenuBar() {
-        // ---- File ----
-        MenuItem newDataSource = new MenuItem("New Data Source…");
-        newDataSource.setGraphic(Icons.of(FontAwesomeSolid.PLUS_CIRCLE, "#57965c", 11));
-        newDataSource.setOnAction(e -> showNewConnectionDialog());
+    private Node buildDataGripHeader(ActionManager actionManager) {
+        // App logo icon on the left (DataGrip-style)
+        Label brandIcon = new Label();
+        brandIcon.setGraphic(Icons.of(FontAwesomeSolid.DATABASE, "#4a88c7", 13));
+        brandIcon.getStyleClass().add("header-brand-icon");
+        brandIcon.setTooltip(new Tooltip("DBNavigator Pro"));
 
-        MenuItem newConsole = new MenuItem("New Query Console");
-        newConsole.setAccelerator(new KeyCodeCombination(KeyCode.N,
-                KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN));
-        newConsole.setOnAction(e -> openConsoleForSelectedConnection());
+        // Menus: File, Edit, View, Navigate, Run, VCS, Window, Help
+        MenuBar menuBar = actionManager.buildMenuBar(ActionRegistry.getMainMenuBarGroups(actionManager), this);
 
-        MenuItem openSql = new MenuItem("Open SQL File in Console…");
-        openSql.setAccelerator(new KeyCodeCombination(KeyCode.O, KeyCombination.CONTROL_DOWN));
-        openSql.setOnAction(e -> openSqlFile());
+        HBox leftBox = new HBox(6, brandIcon, menuBar);
+        leftBox.setAlignment(Pos.CENTER_LEFT);
 
-        MenuItem saveSql = new MenuItem("Save Console As…");
-        saveSql.setAccelerator(new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN));
-        saveSql.setOnAction(e -> saveConsoleAs());
+        // Center: 4 middle icons + 3 dots "..."
+        ActionGroup middleGroup = actionManager.getGroup("group.middle");
+        HBox middleBox = actionManager.buildToolBar(middleGroup, this);
+        middleBox.setAlignment(Pos.CENTER);
 
-        // ---- Local History submenu ----
-        // Only "Show History…" is wired reliably right now (it always gives
-        // visible feedback — an Alert — instead of silently doing nothing).
-        // The other four items are left as-is per request; they'll get the
-        // same treatment in a follow-up.
-        MenuItem showHistory = new MenuItem("Show History…");
-        showHistory.setOnAction(e -> showLocalHistoryForCurrentConsole());
-        MenuItem showHistoryForSelection = new MenuItem("Show History for Selection…");
-        showHistoryForSelection.setOnAction(e -> withCurrentConsole(tab -> {
-            setStatus("Selection-scoped history isn't tracked separately yet — showing full file history");
-            tab.showLocalHistory(stage);
-        }));
-        MenuItem showProjectHistory = new MenuItem("Show Project History…");
-        showProjectHistory.setOnAction(e -> ProjectHistoryDialog.showProjectWide(stage, this::openHistoryEntry));
-        MenuItem recentChanges = new MenuItem("Recent Changes");
-        recentChanges.setOnAction(e -> ProjectHistoryDialog.showRecentChanges(stage, this::openHistoryEntry));
-        MenuItem putLabel = new MenuItem("Put Label…");
-        putLabel.setOnAction(e -> withCurrentConsole(tab -> {
-            TextInputDialog dialog = (TextInputDialog) DialogTheme.apply(new TextInputDialog());
-            dialog.initOwner(stage);
-            dialog.setTitle("Put Label");
-            dialog.setHeaderText(null);
-            dialog.setContentText("Label for this point in " + tab.getDisplayFileName() + ":");
-            dialog.showAndWait().ifPresent(label -> {
-                if (!label.isBlank()) {
-                    tab.putLocalHistoryLabel(label);
-                    setStatus("Labeled current state of " + tab.getDisplayFileName() + " as \"" + label + "\"");
-                }
-            });
-        }));
-        Menu localHistoryMenu = new Menu("Local History", null, showHistory, showHistoryForSelection,
-                showProjectHistory, recentChanges, new SeparatorMenuItem(), putLabel);
+        // Right: Search Everywhere & Settings buttons
+        Button searchButton = new Button();
+        searchButton.getStyleClass().add("header-action-button");
+        searchButton.setGraphic(Icons.of(FontAwesomeSolid.SEARCH, "#a9b7c6", 12));
+        searchButton.setTooltip(new Tooltip("Search Everywhere (Ctrl+Shift+F)"));
+        searchButton.setOnAction(e -> showSearchEverywhere());
 
-        MenuItem invalidateCaches = new MenuItem("Invalidate Caches…");
-        invalidateCaches.setOnAction(e -> InvalidateCachesDialog.show(stage));
+        Button settingsButton = new Button();
+        settingsButton.getStyleClass().add("header-action-button");
+        settingsButton.setGraphic(Icons.of(FontAwesomeSolid.COG, "#a9b7c6", 12));
+        settingsButton.setTooltip(new Tooltip("Settings"));
+        ContextMenu settingsMenu = buildSettingsContextMenu();
+        settingsButton.setOnAction(e ->
+                settingsMenu.show(settingsButton, javafx.geometry.Side.BOTTOM, 0, 4));
 
-        MenuItem settingsMenuItem = new MenuItem("Settings…");
-        settingsMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.COMMA,
-                KeyCombination.SHORTCUT_DOWN, KeyCombination.ALT_DOWN));
-        settingsMenuItem.setOnAction(e -> SettingsDialog.show(this));
+        HBox rightBox = new HBox(4, searchButton, settingsButton);
+        rightBox.setAlignment(Pos.CENTER_RIGHT);
 
-        MenuItem exit = new MenuItem("Exit");
-        exit.setOnAction(e -> stage.close());
+        BorderPane headerBar = new BorderPane();
+        headerBar.getStyleClass().add("app-header-bar");
+        headerBar.setLeft(leftBox);
+        headerBar.setCenter(middleBox);
+        headerBar.setRight(rightBox);
+        BorderPane.setAlignment(leftBox, Pos.CENTER_LEFT);
+        BorderPane.setAlignment(middleBox, Pos.CENTER);
+        BorderPane.setAlignment(rightBox, Pos.CENTER_RIGHT);
 
-        Menu fileMenu = new Menu("File", null, newDataSource, newConsole,
-                new SeparatorMenuItem(), openSql, saveSql, new SeparatorMenuItem(), localHistoryMenu,
-                new SeparatorMenuItem(), invalidateCaches, settingsMenuItem, new SeparatorMenuItem(), exit);
-
-        // ---- View ----
-        MenuItem refreshExplorer = new MenuItem("Refresh Database Explorer");
-        refreshExplorer.setOnAction(e -> schemaPane.reload());
-        MenuItem toggleRunPanel = new MenuItem("Run Tool Window");
-        toggleRunPanel.setOnAction(e -> {
-            if (runPanelVisible) hideRunPanel(); else showRunPanel();
-        });
-        Menu viewMenu = new Menu("View", null, refreshExplorer, toggleRunPanel);
-
-        // ---- Navigate ----
-        MenuItem searchEverywhere = new MenuItem("Search Everywhere…");
-        searchEverywhere.setAccelerator(new KeyCodeCombination(KeyCode.F,
-                KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN));
-        searchEverywhere.setOnAction(e -> showSearchEverywhere());
-        Menu navigateMenu = new Menu("Navigate", null, searchEverywhere);
-
-        // ---- Help ----
-        MenuItem checkUpdates = new MenuItem("Check for Updates…");
-        checkUpdates.setOnAction(e -> AppUpdateDialog.check(stage, false));
-
-        MenuItem about = new MenuItem("About DBNavigator Pro");
-        about.setOnAction(e -> {
-            Alert alert = (Alert) DialogTheme.apply(new Alert(Alert.AlertType.INFORMATION,
-                    "DBNavigator Pro 3.2\nA DataGrip-style database IDE built with JavaFX.\n"
-                    + "MySQL · MariaDB · PostgreSQL · SQL Server · Oracle · SQLite · MongoDB"));
-            alert.setHeaderText("DBNavigator Pro");
-            alert.initOwner(stage);
-            alert.showAndWait();
-        });
-        Menu helpMenu = new Menu("Help", null, checkUpdates, new SeparatorMenuItem(), about);
-
-        MenuBar menuBar = new MenuBar(fileMenu, viewMenu, navigateMenu, helpMenu);
-        menuBar.getStyleClass().add("app-menu-bar");
-        return menuBar;
+        return headerBar;
     }
 
     public void showSearchEverywhere() {
         new SearchDialog(stage, this).show();
     }
 
-    private void openSqlFile() {
+    public void openSqlFile() {
         FileChooser chooser = new FileChooser();
         chooser.setTitle("Open SQL File");
         chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("SQL files", "*.sql"));
@@ -293,7 +252,7 @@ public class MainWindow {
         }
     }
 
-    private void saveConsoleAs() {
+    public void saveConsoleAs() {
         Tab selected = currentSelectedTab();
         if (!(selected instanceof QueryTab queryTab)) {
             setStatus("Select a query console tab first");
@@ -319,7 +278,7 @@ public class MainWindow {
      * Always gives visible feedback: an Alert if no console is selected, or
      * if opening the diff view fails for any reason — never a silent no-op.
      */
-    private void showLocalHistoryForCurrentConsole() {
+    public void showLocalHistoryForCurrentConsole() {
         Tab selected = currentSelectedTab();
         if (!(selected instanceof QueryTab tab)) {
             Alert alert = (Alert) DialogTheme.apply(new Alert(Alert.AlertType.INFORMATION,
@@ -371,35 +330,7 @@ public class MainWindow {
         return null;
     }
 
-    private HBox buildToolbar() {
-        Button newConnection = new Button("New Data Source");
-        newConnection.setGraphic(Icons.of(FontAwesomeSolid.PLUS_CIRCLE, "#57965c", 12));
-        newConnection.setOnAction(e -> showNewConnectionDialog());
-
-        Button newConsole = new Button("New Console");
-        newConsole.setGraphic(Icons.of(FontAwesomeSolid.TERMINAL, "#6897bb", 12));
-        newConsole.setOnAction(e -> openConsoleForSelectedConnection());
-
-        Button runToggle = new Button("Run");
-        runToggle.setGraphic(Icons.of(FontAwesomeSolid.TERMINAL, "#57965c", 12));
-        runToggle.setTooltip(new Tooltip("Show/hide the Run panel"));
-        runToggle.setOnAction(e -> { if (runPanelVisible) hideRunPanel(); else showRunPanel(); });
-
-        Label brand = new Label("DBNavigator Pro");
-        brand.getStyleClass().add("brand-label");
-        brand.setGraphic(Icons.of(FontAwesomeSolid.DATABASE, "#4a88c7", 14));
-
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
-
-        Button searchButton = new Button();
-        searchButton.setGraphic(Icons.of(FontAwesomeSolid.SEARCH, "#a9b7c6", 13));
-        searchButton.setTooltip(new Tooltip("Search Everywhere (Ctrl+Shift+F)"));
-        searchButton.setOnAction(e -> showSearchEverywhere());
-
-        Button settingsButton = new Button();
-        settingsButton.setGraphic(Icons.of(FontAwesomeSolid.COG, "#a9b7c6", 13));
-        settingsButton.setTooltip(new Tooltip("Settings"));
+    private ContextMenu buildSettingsContextMenu() {
         ContextMenu settingsMenu = new ContextMenu();
         MenuItem openSettings = new MenuItem("Settings…");
         openSettings.setOnAction(e -> SettingsDialog.show(this));
@@ -417,15 +348,228 @@ public class MainWindow {
         refresh.setOnAction(e -> schemaPane.reload());
         settingsMenu.getItems().addAll(openSettings, openPlugins, new SeparatorMenuItem(),
                 themeMenu, new SeparatorMenuItem(), dataSources, refresh);
-        settingsButton.setOnAction(e ->
-                settingsMenu.show(settingsButton, javafx.geometry.Side.BOTTOM, 0, 4));
+        return settingsMenu;
+    }
 
-        HBox toolbar = new HBox(10, brand, new Separator(Orientation.VERTICAL),
-                newConnection, newConsole, runToggle, spacer, searchButton, settingsButton);
-        toolbar.setAlignment(Pos.CENTER_LEFT);
-        toolbar.setPadding(new Insets(8, 12, 8, 12));
-        toolbar.getStyleClass().add("app-toolbar");
-        return toolbar;
+    public void closeWindow() {
+        stage.close();
+    }
+
+    public boolean hasActiveTab() {
+        return currentSelectedTab() != null;
+    }
+
+    public boolean hasActiveConsole() {
+        Tab t = currentSelectedTab();
+        return t instanceof QueryTab || t instanceof MongoConsoleTab;
+    }
+
+    public boolean hasActiveQueryTab() {
+        return currentSelectedTab() instanceof QueryTab;
+    }
+
+    public void executeCurrentStatement() {
+        Tab tab = currentSelectedTab();
+        if (tab instanceof QueryTab qt) {
+            qt.execute();
+        } else if (tab instanceof MongoConsoleTab mt) {
+            mt.execute();
+        } else {
+            setStatus("Select a SQL or MongoDB console tab first");
+        }
+    }
+
+    public void formatCurrentSql() {
+        Tab tab = currentSelectedTab();
+        if (tab instanceof QueryTab qt) {
+            qt.formatSql();
+            setStatus("SQL formatted");
+        } else {
+            setStatus("Select a SQL console tab to format");
+        }
+    }
+
+    public void undoCurrentEditor() {
+        CodeArea editor = getActiveCodeArea();
+        if (editor != null && editor.isUndoAvailable()) {
+            editor.undo();
+        }
+    }
+
+    public void redoCurrentEditor() {
+        CodeArea editor = getActiveCodeArea();
+        if (editor != null && editor.isRedoAvailable()) {
+            editor.redo();
+        }
+    }
+
+    public void cutCurrentEditor() {
+        CodeArea editor = getActiveCodeArea();
+        if (editor != null) editor.cut();
+    }
+
+    public void copyCurrentEditor() {
+        CodeArea editor = getActiveCodeArea();
+        if (editor != null) editor.copy();
+    }
+
+    public void pasteCurrentEditor() {
+        CodeArea editor = getActiveCodeArea();
+        if (editor != null) editor.paste();
+    }
+
+    public void selectAllCurrentEditor() {
+        CodeArea editor = getActiveCodeArea();
+        if (editor != null) editor.selectAll();
+    }
+
+    private CodeArea getActiveCodeArea() {
+        Tab tab = currentSelectedTab();
+        if (tab instanceof QueryTab qt) return qt.getEditor();
+        if (tab instanceof MongoConsoleTab mt) return mt.getEditor();
+        return null;
+    }
+
+    public void selectNextTab() {
+        TabPane currentPane = activeTabPane != null ? activeTabPane : tabPane;
+        int size = currentPane.getTabs().size();
+        if (size > 1) {
+            int next = (currentPane.getSelectionModel().getSelectedIndex() + 1) % size;
+            currentPane.getSelectionModel().select(next);
+        }
+    }
+
+    public void selectPreviousTab() {
+        TabPane currentPane = activeTabPane != null ? activeTabPane : tabPane;
+        int size = currentPane.getTabs().size();
+        if (size > 1) {
+            int prev = (currentPane.getSelectionModel().getSelectedIndex() - 1 + size) % size;
+            currentPane.getSelectionModel().select(prev);
+        }
+    }
+
+    public void closeActiveTab() {
+        Tab selected = currentSelectedTab();
+        if (selected != null && selected.isClosable()) {
+            TabPane pane = selected.getTabPane();
+            if (pane != null) {
+                Event.fireEvent(selected, new Event(Tab.CLOSED_EVENT));
+                pane.getTabs().remove(selected);
+            }
+        }
+    }
+
+    public void closeOtherTabs() {
+        Tab selected = currentSelectedTab();
+        if (selected != null) {
+            for (TabPane pane : editorTabPanes()) {
+                List<Tab> toRemove = pane.getTabs().stream()
+                        .filter(t -> t != selected && t.isClosable())
+                        .toList();
+                pane.getTabs().removeAll(toRemove);
+            }
+        }
+    }
+
+    public void closeAllTabs() {
+        for (TabPane pane : editorTabPanes()) {
+            List<Tab> toRemove = pane.getTabs().stream()
+                    .filter(Tab::isClosable)
+                    .toList();
+            pane.getTabs().removeAll(toRemove);
+        }
+    }
+
+    public void splitActiveTabRight() {
+        Tab selected = currentSelectedTab();
+        if (selected != null) {
+            splitRight(selected);
+        }
+    }
+
+    public void splitActiveTabDown() {
+        Tab selected = currentSelectedTab();
+        if (selected != null) {
+            splitDown(selected);
+        }
+    }
+
+    public void unsplitAll() {
+        List<Tab> allTabs = new ArrayList<>();
+        for (TabPane pane : editorTabPanes()) {
+            allTabs.addAll(pane.getTabs());
+            if (pane != tabPane) {
+                pane.getTabs().clear();
+            }
+        }
+        tabPane.getTabs().setAll(allTabs);
+        centerSplit.getItems().setAll(schemaPane, tabPane);
+        centerSplit.setDividerPositions(0.22);
+        activeTabPane = tabPane;
+    }
+
+    public void showSettingsDialog() {
+        SettingsDialog.show(this);
+    }
+
+    public void showAboutDialog() {
+        Alert alert = (Alert) DialogTheme.apply(new Alert(Alert.AlertType.INFORMATION,
+                "DBNavigator Pro 3.2\nA DataGrip-style database IDE built with JavaFX.\n"
+                + "MySQL · MariaDB · PostgreSQL · SQL Server · Oracle · SQLite · MongoDB"));
+        alert.setHeaderText("DBNavigator Pro");
+        alert.initOwner(stage);
+        alert.showAndWait();
+    }
+
+    public void showCheckUpdatesDialog() {
+        AppUpdateDialog.check(stage, false);
+    }
+
+    public void showInvalidateCachesDialog() {
+        InvalidateCachesDialog.show(stage);
+    }
+
+    public void showProjectHistoryDialog() {
+        ProjectHistoryDialog.showProjectWide(stage, this::openHistoryEntry);
+    }
+
+    public void showRecentChangesDialog() {
+        ProjectHistoryDialog.showRecentChanges(stage, this::openHistoryEntry);
+    }
+
+    public void showPutLabelDialog() {
+        withCurrentConsole(tab -> {
+            TextInputDialog dialog = (TextInputDialog) DialogTheme.apply(new TextInputDialog());
+            dialog.initOwner(stage);
+            dialog.setTitle("Put Label");
+            dialog.setHeaderText(null);
+            dialog.setContentText("Label for this point in " + tab.getDisplayFileName() + ":");
+            dialog.showAndWait().ifPresent(label -> {
+                if (!label.isBlank()) {
+                    tab.putLocalHistoryLabel(label);
+                    setStatus("Labeled current state of " + tab.getDisplayFileName() + " as \"" + label + "\"");
+                }
+            });
+        });
+    }
+
+    public void showHistoryForSelection() {
+        withCurrentConsole(tab -> {
+            setStatus("Selection-scoped history isn't tracked separately yet — showing full file history");
+            tab.showLocalHistory(stage);
+        });
+    }
+
+    public void toggleRunPanel() {
+        if (runPanelVisible) hideRunPanel(); else showRunPanel();
+    }
+
+    public void focusOrToggleSchemaExplorer() {
+        double[] pos = centerSplit.getDividerPositions();
+        if (pos != null && pos.length > 0 && pos[0] < 0.05) {
+            centerSplit.setDividerPositions(0.22);
+        }
+        schemaPane.requestFocus();
     }
 
     private HBox buildStatusBar() {
@@ -534,7 +678,7 @@ public class MainWindow {
         });
     }
 
-    private void openConsoleForSelectedConnection() {
+    public void openConsoleForSelectedConnection() {
         var profiles = ConnectionStore.load().stream()
                 .filter(p -> p.getType().isRelational()).toList();
         if (profiles.isEmpty()) {
@@ -951,14 +1095,18 @@ public class MainWindow {
     private void configureEditorTabPane(TabPane pane) {
         pane.getSelectionModel().selectedItemProperty().addListener((obs, oldTab, newTab) -> {
             if (newTab != null) activeTabPane = pane;
+            ActionManager.getInstance().updateActions(this);
         });
         pane.focusedProperty().addListener((obs, wasFocused, focused) -> {
             if (focused) activeTabPane = pane;
+            ActionManager.getInstance().updateActions(this);
         });
         // A close/move can leave a leaf pane empty. Defer cleanup until the
         // tab move finishes, then promote its non-empty sibling(s).
-        pane.getTabs().addListener((javafx.collections.ListChangeListener<Tab>) change ->
-                Platform.runLater(this::collapseEmptyEditorGroups));
+        pane.getTabs().addListener((javafx.collections.ListChangeListener<Tab>) change -> {
+            Platform.runLater(this::collapseEmptyEditorGroups);
+            ActionManager.getInstance().updateActions(this);
+        });
         if (activeTabPane == null) activeTabPane = pane;
     }
 
