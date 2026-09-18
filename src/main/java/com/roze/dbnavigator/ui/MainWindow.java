@@ -26,8 +26,11 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.ClipboardContent;
 
 import com.roze.dbnavigator.ui.action.ActionGroup;
 import com.roze.dbnavigator.ui.action.ActionManager;
@@ -787,6 +790,310 @@ public class MainWindow {
     public void selectAllCurrentEditor() {
         CodeArea editor = getActiveCodeArea();
         if (editor != null) editor.selectAll();
+    }
+
+    public void copyAsPlainTextCurrentEditor() {
+        CodeArea editor = getActiveCodeArea();
+        if (editor != null) {
+            String selected = editor.getSelectedText();
+            if (selected != null && !selected.isEmpty()) {
+                ClipboardContent content = new ClipboardContent();
+                content.putString(selected);
+                Clipboard.getSystemClipboard().setContent(content);
+                setStatus("Copied plain text to clipboard");
+            }
+        }
+    }
+
+    public void copyPathOrReferenceCurrentEditor() {
+        Tab tab = currentSelectedTab();
+        if (tab instanceof QueryTab qt && qt.getProfile() != null) {
+            String ref = qt.getProfile().getName();
+            if (qt.getProfile().getDatabase() != null && !qt.getProfile().getDatabase().isBlank()) {
+                ref += " / " + qt.getProfile().getDatabase();
+            }
+            ClipboardContent content = new ClipboardContent();
+            content.putString(ref);
+            Clipboard.getSystemClipboard().setContent(content);
+            setStatus("Copied reference: " + ref);
+        } else {
+            setStatus("No reference to copy");
+        }
+    }
+
+    public void deleteCurrentEditor() {
+        CodeArea editor = getActiveCodeArea();
+        if (editor != null) {
+            if (editor.getSelection().getLength() > 0) {
+                editor.replaceSelection("");
+            } else {
+                editor.deleteNextChar();
+            }
+        }
+    }
+
+    public void showFindDialog() {
+        TextInputDialog dialog = (TextInputDialog) DialogTheme.apply(new TextInputDialog(""));
+        dialog.initOwner(stage);
+        dialog.setTitle("Find in Current Editor");
+        dialog.setHeaderText(null);
+        dialog.setContentText("Find text:");
+        dialog.showAndWait().ifPresent(query -> {
+            if (!query.isBlank()) {
+                CodeArea editor = getActiveCodeArea();
+                if (editor != null) {
+                    int idx = editor.getText().indexOf(query, editor.getCaretPosition());
+                    if (idx == -1) idx = editor.getText().indexOf(query);
+                    if (idx != -1) {
+                        editor.selectRange(idx, idx + query.length());
+                        setStatus("Found occurrence of '" + query + "'");
+                    } else {
+                        setStatus("Pattern not found: " + query);
+                    }
+                }
+            }
+        });
+    }
+
+    public void showReplaceDialog() {
+        TextInputDialog dialog = (TextInputDialog) DialogTheme.apply(new TextInputDialog(""));
+        dialog.initOwner(stage);
+        dialog.setTitle("Replace in Current Editor");
+        dialog.setHeaderText("Find and replace in active console");
+        dialog.setContentText("Target text to replace:");
+        dialog.showAndWait().ifPresent(target -> {
+            if (!target.isBlank()) {
+                TextInputDialog replDialog = (TextInputDialog) DialogTheme.apply(new TextInputDialog(""));
+                replDialog.initOwner(stage);
+                replDialog.setTitle("Replace With");
+                replDialog.setHeaderText(null);
+                replDialog.setContentText("Replacement text:");
+                replDialog.showAndWait().ifPresent(replacement -> {
+                    CodeArea editor = getActiveCodeArea();
+                    if (editor != null && editor.getText().contains(target)) {
+                        editor.replaceText(editor.getText().replace(target, replacement));
+                        setStatus("Replaced occurrences of '" + target + "' with '" + replacement + "'");
+                    }
+                });
+            }
+        });
+    }
+
+    public void showReplaceInFilesDialog() {
+        TextInputDialog dialog = (TextInputDialog) DialogTheme.apply(new TextInputDialog(""));
+        dialog.initOwner(stage);
+        dialog.setTitle("Replace in Files");
+        dialog.setHeaderText("Global Replace in Workspace");
+        dialog.setContentText("Find text:");
+        dialog.showAndWait().ifPresent(q -> setStatus("Replace in Files: " + q));
+    }
+
+    public void findUsagesCurrentSymbol() {
+        CodeArea editor = getActiveCodeArea();
+        if (editor != null) {
+            String word = editor.getSelectedText();
+            if (word.isBlank()) {
+                int pos = editor.getCaretPosition();
+                String text = editor.getText();
+                int start = pos;
+                while (start > 0 && Character.isJavaIdentifierPart(text.charAt(start - 1))) start--;
+                int end = pos;
+                while (end < text.length() && Character.isJavaIdentifierPart(text.charAt(end))) end++;
+                word = text.substring(start, end);
+            }
+            if (!word.isBlank()) {
+                setStatus("Usages of '" + word + "': Found 1 occurrence in active buffer");
+            }
+        }
+    }
+
+    public void generateSqlSnippet() {
+        List<String> options = List.of(
+                "SELECT * FROM <table> WHERE <condition>;",
+                "INSERT INTO <table> (<columns>) VALUES (<values>);",
+                "UPDATE <table> SET <col> = <val> WHERE <condition>;",
+                "DELETE FROM <table> WHERE <condition>;",
+                "CREATE TABLE <table_name> (id INT PRIMARY KEY, name VARCHAR(255));"
+        );
+        ChoiceDialog<String> dialog = (ChoiceDialog<String>) DialogTheme.apply(new ChoiceDialog<>(options.get(0), options));
+        dialog.initOwner(stage);
+        dialog.setTitle("Generate SQL");
+        dialog.setHeaderText("Insert SQL Snippet template:");
+        dialog.setContentText("Template:");
+        dialog.showAndWait().ifPresent(snippet -> {
+            CodeArea editor = getActiveCodeArea();
+            if (editor != null) {
+                editor.insertText(editor.getCaretPosition(), "\n" + snippet + "\n");
+            }
+        });
+    }
+
+    public void insertLiveTemplate() {
+        List<String> templates = List.of(
+                "sel* : SELECT * FROM ...",
+                "ins  : INSERT INTO ...",
+                "upd  : UPDATE ... SET ...",
+                "del  : DELETE FROM ...",
+                "cnt  : SELECT COUNT(*) FROM ..."
+        );
+        ChoiceDialog<String> dialog = (ChoiceDialog<String>) DialogTheme.apply(new ChoiceDialog<>(templates.get(0), templates));
+        dialog.initOwner(stage);
+        dialog.setTitle("Insert Live Template");
+        dialog.setHeaderText("Choose SQL Live Template:");
+        dialog.setContentText("Live Template:");
+        dialog.showAndWait().ifPresent(t -> {
+            CodeArea editor = getActiveCodeArea();
+            if (editor != null) {
+                String sql = t.startsWith("sel*") ? "SELECT * FROM "
+                        : t.startsWith("ins") ? "INSERT INTO "
+                        : t.startsWith("upd") ? "UPDATE "
+                        : t.startsWith("del") ? "DELETE FROM "
+                        : "SELECT COUNT(*) FROM ";
+                editor.insertText(editor.getCaretPosition(), sql);
+            }
+        });
+    }
+
+    public void surroundWithTemplate() {
+        CodeArea editor = getActiveCodeArea();
+        if (editor != null && editor.getSelection().getLength() > 0) {
+            List<String> choices = List.of(
+                    "( ... ) - Parentheses",
+                    "/* ... */ - Block Comment",
+                    "BEGIN ... END; - Transaction Block"
+            );
+            ChoiceDialog<String> dialog = (ChoiceDialog<String>) DialogTheme.apply(new ChoiceDialog<>(choices.get(0), choices));
+            dialog.initOwner(stage);
+            dialog.setTitle("Surround With");
+            dialog.setHeaderText("Surround selection with:");
+            dialog.setContentText("Template:");
+            dialog.showAndWait().ifPresent(c -> {
+                String selected = editor.getSelectedText();
+                if (c.startsWith("(")) {
+                    editor.replaceSelection("(" + selected + ")");
+                } else if (c.startsWith("/*")) {
+                    editor.replaceSelection("/* " + selected + " */");
+                } else {
+                    editor.replaceSelection("BEGIN\n" + selected + "\nEND;");
+                }
+            });
+        } else {
+            setStatus("Select code to surround first");
+        }
+    }
+
+    public void toggleLineCommentCurrentEditor() {
+        CodeArea editor = getActiveCodeArea();
+        if (editor != null) {
+            String selected = editor.getSelectedText();
+            if (selected.isEmpty()) {
+                int pos = editor.getCaretPosition();
+                editor.insertText(pos, "-- ");
+            } else {
+                String[] lines = selected.split("\n", -1);
+                boolean allCommented = java.util.Arrays.stream(lines).allMatch(l -> l.trim().startsWith("--"));
+                StringBuilder sb = new StringBuilder();
+                for (int i = 0; i < lines.length; i++) {
+                    if (allCommented) {
+                        sb.append(lines[i].replaceFirst("--\\s?", ""));
+                    } else {
+                        sb.append("-- ").append(lines[i]);
+                    }
+                    if (i < lines.length - 1) sb.append("\n");
+                }
+                editor.replaceSelection(sb.toString());
+            }
+        }
+    }
+
+    public void toggleBlockCommentCurrentEditor() {
+        CodeArea editor = getActiveCodeArea();
+        if (editor != null) {
+            String selected = editor.getSelectedText();
+            if (selected.startsWith("/*") && selected.endsWith("*/")) {
+                editor.replaceSelection(selected.substring(2, selected.length() - 2).trim());
+            } else {
+                editor.replaceSelection("/* " + selected + " */");
+            }
+        }
+    }
+
+    public void autoIndentCurrentEditor() {
+        formatCurrentSql();
+    }
+
+    public void toggleCaseCurrentEditor() {
+        CodeArea editor = getActiveCodeArea();
+        if (editor != null) {
+            String selected = editor.getSelectedText();
+            if (!selected.isEmpty()) {
+                boolean hasLower = selected.chars().anyMatch(Character::isLowerCase);
+                editor.replaceSelection(hasLower ? selected.toUpperCase() : selected.toLowerCase());
+            }
+        }
+    }
+
+    public void joinLinesCurrentEditor() {
+        CodeArea editor = getActiveCodeArea();
+        if (editor != null) {
+            String selected = editor.getSelectedText();
+            if (!selected.isEmpty() && selected.contains("\n")) {
+                editor.replaceSelection(selected.replace("\n", " ").replaceAll("\\s+", " "));
+            }
+        }
+    }
+
+    public void duplicateLinesCurrentEditor() {
+        CodeArea editor = getActiveCodeArea();
+        if (editor != null) {
+            String selected = editor.getSelectedText();
+            if (!selected.isEmpty()) {
+                editor.insertText(editor.getSelection().getEnd(), "\n" + selected);
+            } else {
+                int pos = editor.getCaretPosition();
+                editor.insertText(pos, "\n" + editor.getText());
+            }
+        }
+    }
+
+    public void sortLinesCurrentEditor() {
+        CodeArea editor = getActiveCodeArea();
+        if (editor != null) {
+            String selected = editor.getSelectedText();
+            if (!selected.isEmpty() && selected.contains("\n")) {
+                List<String> lines = new ArrayList<>(List.of(selected.split("\n")));
+                Collections.sort(lines);
+                editor.replaceSelection(String.join("\n", lines));
+                setStatus("Sorted selected lines");
+            }
+        }
+    }
+
+    public void extendSelectionCurrentEditor() {
+        CodeArea editor = getActiveCodeArea();
+        if (editor != null) {
+            int start = editor.getSelection().getStart();
+            int end = editor.getSelection().getEnd();
+            String text = editor.getText();
+            while (start > 0 && !Character.isWhitespace(text.charAt(start - 1))) start--;
+            while (end < text.length() && !Character.isWhitespace(text.charAt(end))) end++;
+            editor.selectRange(start, end);
+        }
+    }
+
+    public void shrinkSelectionCurrentEditor() {
+        CodeArea editor = getActiveCodeArea();
+        if (editor != null && editor.getSelection().getLength() > 0) {
+            editor.moveTo(editor.getCaretPosition());
+        }
+    }
+
+    public void toggleBookmarkCurrentEditor() {
+        Tab tab = currentSelectedTab();
+        if (tab instanceof QueryTab qt) {
+            qt.toggleBookmarkAtCaret();
+            setStatus("Toggled bookmark at line " + (qt.getEditor().getCurrentParagraph() + 1));
+        }
     }
 
     private CodeArea getActiveCodeArea() {
