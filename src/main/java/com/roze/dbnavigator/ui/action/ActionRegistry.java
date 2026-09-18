@@ -946,29 +946,130 @@ public final class ActionRegistry {
                 .addAll(increaseFont, decreaseFont, resetFont);
 
         // =========================================================================
-        // 4. NAVIGATE ACTIONS
+        // 4. NAVIGATE ACTIONS (Matching DataGrip)
         // =========================================================================
-        AnAction searchEverywhere = AnAction.builder("navigate.search.everywhere", "Search Everywhere…")
-                .description("Search tables, views, columns, connections, and actions")
+        // Section 1: Back, Forward
+        AnAction navBack = AnAction.builder("navigate.back", "Back")
+                .icon(FontAwesomeSolid.ARROW_LEFT, "#a9b7c6", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.LEFT, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN))
+                .enabledWhen(MainWindow::canNavigateBack)
+                .onAction(MainWindow::navigateBack)
+                .build();
+
+        AnAction navForward = AnAction.builder("navigate.forward", "Forward")
+                .icon(FontAwesomeSolid.ARROW_RIGHT, "#a9b7c6", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.RIGHT, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN))
+                .enabledWhen(MainWindow::canNavigateForward)
+                .onAction(MainWindow::navigateForward)
+                .build();
+
+        // Section 2: Search Everywhere, Database Object..., File..., Code..., Text...
+        AnAction searchEverywhere = AnAction.builder("navigate.search.everywhere", "Search Everywhere")
+                .description("Search tables, views, columns, connections, and actions (Double Shift)")
                 .icon(FontAwesomeSolid.SEARCH, "#a9b7c6", 11)
-                .accelerator(new KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN))
                 .onAction(MainWindow::showSearchEverywhere)
                 .build();
 
+        AnAction navDbObject = AnAction.builder("navigate.database.object", "Database Object…")
+                .accelerator(new KeyCodeCombination(KeyCode.N, KeyCombination.CONTROL_DOWN))
+                .onAction(MainWindow::showSearchDatabaseObjectsDialog)
+                .build();
+
+        AnAction navFile = AnAction.builder("navigate.file", "File…")
+                .accelerator(new KeyCodeCombination(KeyCode.N, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(MainWindow::showSearchFilesDialog)
+                .build();
+
+        AnAction navCode = AnAction.builder("navigate.code", "Code…")
+                .accelerator(new KeyCodeCombination(KeyCode.N, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(MainWindow::showSearchCodeDialog)
+                .build();
+
+        AnAction navText = AnAction.builder("navigate.text", "Text…")
+                .accelerator(new KeyCodeCombination(KeyCode.E, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(MainWindow::showSearchTextDialog)
+                .build();
+
+        // Section 3: Show Diagram...
+        AnAction navDiagram = AnAction.builder("navigate.show.diagram", "Show Diagram…")
+                .icon(FontAwesomeSolid.PROJECT_DIAGRAM, "#c77dbb", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.U, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(MainWindow::showCurrentDiagram)
+                .build();
+
+        // Section 4: Jump to Query Console..., Select In..., Declaration or Usages
+        AnAction jumpQueryConsole = AnAction.builder("navigate.jump.query.console", "Jump to Query Console…")
+                .icon(FontAwesomeSolid.TERMINAL, "#57965c", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.F10, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(MainWindow::jumpToQueryConsole)
+                .build();
+
+        AnAction selectIn = AnAction.builder("navigate.select.in", "Select In…")
+                .accelerator(new KeyCodeCombination(KeyCode.DIGIT1, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(MainWindow::selectInTarget)
+                .build();
+
+        AnAction declarationOrUsages = AnAction.builder("navigate.declaration.usages", "Declaration or Usages")
+                .accelerator(new KeyCodeCombination(KeyCode.B, KeyCombination.CONTROL_DOWN))
+                .onAction(MainWindow::navigateDeclarationOrUsages)
+                .build();
+
+        // Section 5: Scroll from Editor
+        AnAction scrollFromEditor = AnAction.builder("navigate.scroll.from.editor", "Scroll from Editor")
+                .icon(FontAwesomeSolid.CROSSHAIRS, "#a9b7c6", 11)
+                .onAction(MainWindow::scrollFromEditor)
+                .build();
+
+        // Section 6: Jump to Navigation Bar, File Path
+        AnAction jumpNavBar = AnAction.builder("navigate.jump.navbar", "Jump to Navigation Bar")
+                .accelerator(new KeyCodeCombination(KeyCode.HOME, KeyCombination.ALT_DOWN))
+                .onAction(MainWindow::jumpToNavigationBar)
+                .build();
+
+        AnAction filePath = AnAction.builder("navigate.file.path", "File Path")
+                .accelerator(new KeyCodeCombination(KeyCode.DIGIT2, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(MainWindow::showFilePathPopup)
+                .build();
+
+        // Section 7: Next Statement, Previous Statement
+        AnAction nextStatement = AnAction.builder("navigate.next.statement", "Next Statement")
+                .accelerator(new KeyCodeCombination(KeyCode.DOWN, KeyCombination.ALT_DOWN))
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(MainWindow::navigateToNextStatement)
+                .build();
+
+        AnAction prevStatement = AnAction.builder("navigate.prev.statement", "Previous Statement")
+                .accelerator(new KeyCodeCombination(KeyCode.UP, KeyCombination.ALT_DOWN))
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(MainWindow::navigateToPreviousStatement)
+                .build();
+
+        // Retain nextEditorTab and prevEditorTab for backward compatibility
         AnAction nextEditorTab = AnAction.builder("navigate.next.tab", "Select Next Tab")
                 .accelerator(new KeyCodeCombination(KeyCode.RIGHT, KeyCombination.ALT_DOWN))
                 .onAction(MainWindow::selectNextTab)
                 .build();
-
         AnAction prevEditorTab = AnAction.builder("navigate.prev.tab", "Select Previous Tab")
                 .accelerator(new KeyCodeCombination(KeyCode.LEFT, KeyCombination.ALT_DOWN))
                 .onAction(MainWindow::selectPreviousTab)
                 .build();
+        manager.registerAction(nextEditorTab);
+        manager.registerAction(prevEditorTab);
 
         ActionGroup navigateMenu = new ActionGroup("menu.navigate", "Navigate");
-        navigateMenu.add(searchEverywhere)
+        navigateMenu.addAll(navBack, navForward)
                 .addSeparator()
-                .addAll(nextEditorTab, prevEditorTab);
+                .addAll(searchEverywhere, navDbObject, navFile, navCode, navText)
+                .addSeparator()
+                .add(navDiagram)
+                .addSeparator()
+                .addAll(jumpQueryConsole, selectIn, declarationOrUsages)
+                .addSeparator()
+                .add(scrollFromEditor)
+                .addSeparator()
+                .addAll(jumpNavBar, filePath)
+                .addSeparator()
+                .addAll(nextStatement, prevStatement);
 
         // =========================================================================
         // 5. RUN ACTIONS

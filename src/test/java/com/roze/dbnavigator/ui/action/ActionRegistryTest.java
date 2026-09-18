@@ -721,4 +721,201 @@ public class ActionRegistryTest {
         assertEquals("Run", run.getText());
         assertEquals(KeyCode.DIGIT4, ((KeyCodeCombination) run.getAccelerator()).getCode());
     }
+
+    @Test
+    public void testNavigateMenuStructureAndOrder() {
+        ActionGroup navMenu = actionManager.getGroup("menu.navigate");
+        assertNotNull(navMenu, "menu.navigate group must be registered");
+        assertEquals("Navigate", navMenu.getText());
+
+        List<AnAction> items = navMenu.getChildren();
+        assertEquals(22, items.size(), "Navigate menu must have 16 actions and 6 separators");
+
+        int idx = 0;
+
+        // Section 1: Back, Forward
+        assertEquals("navigate.back", items.get(idx).getId());
+        assertEquals("Back", ((AnAction) items.get(idx++)).getText());
+        assertEquals("navigate.forward", items.get(idx).getId());
+        assertEquals("Forward", ((AnAction) items.get(idx++)).getText());
+
+        // Separator 1
+        assertInstanceOf(ActionSeparator.class, items.get(idx++));
+
+        // Section 2: Search Everywhere, Database Object..., File..., Code..., Text...
+        assertEquals("navigate.search.everywhere", items.get(idx).getId());
+        assertEquals("Search Everywhere", ((AnAction) items.get(idx++)).getText());
+        assertEquals("navigate.database.object", items.get(idx).getId());
+        assertEquals("Database Object…", ((AnAction) items.get(idx++)).getText());
+        assertEquals("navigate.file", items.get(idx).getId());
+        assertEquals("File…", ((AnAction) items.get(idx++)).getText());
+        assertEquals("navigate.code", items.get(idx).getId());
+        assertEquals("Code…", ((AnAction) items.get(idx++)).getText());
+        assertEquals("navigate.text", items.get(idx).getId());
+        assertEquals("Text…", ((AnAction) items.get(idx++)).getText());
+
+        // Separator 2
+        assertInstanceOf(ActionSeparator.class, items.get(idx++));
+
+        // Section 3: Show Diagram...
+        assertEquals("navigate.show.diagram", items.get(idx).getId());
+        assertEquals("Show Diagram…", ((AnAction) items.get(idx++)).getText());
+
+        // Separator 3
+        assertInstanceOf(ActionSeparator.class, items.get(idx++));
+
+        // Section 4: Jump to Query Console..., Select In..., Declaration or Usages
+        assertEquals("navigate.jump.query.console", items.get(idx).getId());
+        assertEquals("Jump to Query Console…", ((AnAction) items.get(idx++)).getText());
+        assertEquals("navigate.select.in", items.get(idx).getId());
+        assertEquals("Select In…", ((AnAction) items.get(idx++)).getText());
+        assertEquals("navigate.declaration.usages", items.get(idx).getId());
+        assertEquals("Declaration or Usages", ((AnAction) items.get(idx++)).getText());
+
+        // Separator 4
+        assertInstanceOf(ActionSeparator.class, items.get(idx++));
+
+        // Section 5: Scroll from Editor
+        assertEquals("navigate.scroll.from.editor", items.get(idx).getId());
+        assertEquals("Scroll from Editor", ((AnAction) items.get(idx++)).getText());
+
+        // Separator 5
+        assertInstanceOf(ActionSeparator.class, items.get(idx++));
+
+        // Section 6: Jump to Navigation Bar, File Path
+        assertEquals("navigate.jump.navbar", items.get(idx).getId());
+        assertEquals("Jump to Navigation Bar", ((AnAction) items.get(idx++)).getText());
+        assertEquals("navigate.file.path", items.get(idx).getId());
+        assertEquals("File Path", ((AnAction) items.get(idx++)).getText());
+
+        // Separator 6
+        assertInstanceOf(ActionSeparator.class, items.get(idx++));
+
+        // Section 7: Next Statement, Previous Statement
+        assertEquals("navigate.next.statement", items.get(idx).getId());
+        assertEquals("Next Statement", ((AnAction) items.get(idx++)).getText());
+        assertEquals("navigate.prev.statement", items.get(idx).getId());
+        assertEquals("Previous Statement", ((AnAction) items.get(idx++)).getText());
+
+        assertEquals(idx, items.size());
+    }
+
+    @Test
+    public void testNavigateAccelerators() {
+        // Back: Alt+Shift+Left
+        AnAction back = actionManager.getAction("navigate.back");
+        assertNotNull(back.getAccelerator());
+        KeyCodeCombination backAcc = (KeyCodeCombination) back.getAccelerator();
+        assertEquals(KeyCode.LEFT, backAcc.getCode());
+        assertEquals(KeyCombination.ModifierValue.DOWN, backAcc.getAlt());
+        assertEquals(KeyCombination.ModifierValue.DOWN, backAcc.getShift());
+
+        // Forward: Alt+Shift+Right
+        AnAction forward = actionManager.getAction("navigate.forward");
+        assertNotNull(forward.getAccelerator());
+        KeyCodeCombination fwdAcc = (KeyCodeCombination) forward.getAccelerator();
+        assertEquals(KeyCode.RIGHT, fwdAcc.getCode());
+        assertEquals(KeyCombination.ModifierValue.DOWN, fwdAcc.getAlt());
+        assertEquals(KeyCombination.ModifierValue.DOWN, fwdAcc.getShift());
+
+        // Database Object: Ctrl+N
+        AnAction dbObj = actionManager.getAction("navigate.database.object");
+        assertNotNull(dbObj.getAccelerator());
+        assertEquals(KeyCode.N, ((KeyCodeCombination) dbObj.getAccelerator()).getCode());
+
+        // File: Ctrl+Shift+N
+        AnAction file = actionManager.getAction("navigate.file");
+        assertNotNull(file.getAccelerator());
+        KeyCodeCombination fileAcc = (KeyCodeCombination) file.getAccelerator();
+        assertEquals(KeyCode.N, fileAcc.getCode());
+        assertEquals(KeyCombination.ModifierValue.DOWN, fileAcc.getShift());
+
+        // Code: Ctrl+Alt+Shift+N
+        AnAction code = actionManager.getAction("navigate.code");
+        assertNotNull(code.getAccelerator());
+        KeyCodeCombination codeAcc = (KeyCodeCombination) code.getAccelerator();
+        assertEquals(KeyCode.N, codeAcc.getCode());
+        assertEquals(KeyCombination.ModifierValue.DOWN, codeAcc.getAlt());
+        assertEquals(KeyCombination.ModifierValue.DOWN, codeAcc.getShift());
+
+        // Text: Ctrl+Alt+Shift+E
+        AnAction text = actionManager.getAction("navigate.text");
+        assertNotNull(text.getAccelerator());
+        KeyCodeCombination textAcc = (KeyCodeCombination) text.getAccelerator();
+        assertEquals(KeyCode.E, textAcc.getCode());
+        assertEquals(KeyCombination.ModifierValue.DOWN, textAcc.getAlt());
+        assertEquals(KeyCombination.ModifierValue.DOWN, textAcc.getShift());
+
+        // Show Diagram: Ctrl+Alt+Shift+U
+        AnAction diagram = actionManager.getAction("navigate.show.diagram");
+        assertNotNull(diagram.getAccelerator());
+        KeyCodeCombination diagAcc = (KeyCodeCombination) diagram.getAccelerator();
+        assertEquals(KeyCode.U, diagAcc.getCode());
+        assertEquals(KeyCombination.ModifierValue.DOWN, diagAcc.getAlt());
+        assertEquals(KeyCombination.ModifierValue.DOWN, diagAcc.getShift());
+
+        // Jump to Query Console: Ctrl+Shift+F10
+        AnAction jumpConsole = actionManager.getAction("navigate.jump.query.console");
+        assertNotNull(jumpConsole.getAccelerator());
+        KeyCodeCombination jcAcc = (KeyCodeCombination) jumpConsole.getAccelerator();
+        assertEquals(KeyCode.F10, jcAcc.getCode());
+        assertEquals(KeyCombination.ModifierValue.DOWN, jcAcc.getShift());
+
+        // Select In: Alt+Shift+1
+        AnAction selectIn = actionManager.getAction("navigate.select.in");
+        assertNotNull(selectIn.getAccelerator());
+        KeyCodeCombination siAcc = (KeyCodeCombination) selectIn.getAccelerator();
+        assertEquals(KeyCode.DIGIT1, siAcc.getCode());
+        assertEquals(KeyCombination.ModifierValue.DOWN, siAcc.getAlt());
+        assertEquals(KeyCombination.ModifierValue.DOWN, siAcc.getShift());
+
+        // Declaration or Usages: Ctrl+B
+        AnAction decl = actionManager.getAction("navigate.declaration.usages");
+        assertNotNull(decl.getAccelerator());
+        KeyCodeCombination declAcc = (KeyCodeCombination) decl.getAccelerator();
+        assertEquals(KeyCode.B, declAcc.getCode());
+        assertEquals(KeyCombination.ModifierValue.DOWN, declAcc.getControl());
+
+        // Jump to Navigation Bar: Alt+Home
+        AnAction jumpNav = actionManager.getAction("navigate.jump.navbar");
+        assertNotNull(jumpNav.getAccelerator());
+        KeyCodeCombination jnAcc = (KeyCodeCombination) jumpNav.getAccelerator();
+        assertEquals(KeyCode.HOME, jnAcc.getCode());
+        assertEquals(KeyCombination.ModifierValue.DOWN, jnAcc.getAlt());
+
+        // File Path: Ctrl+Alt+Shift+2
+        AnAction filePath = actionManager.getAction("navigate.file.path");
+        assertNotNull(filePath.getAccelerator());
+        KeyCodeCombination fpAcc = (KeyCodeCombination) filePath.getAccelerator();
+        assertEquals(KeyCode.DIGIT2, fpAcc.getCode());
+        assertEquals(KeyCombination.ModifierValue.DOWN, fpAcc.getAlt());
+        assertEquals(KeyCombination.ModifierValue.DOWN, fpAcc.getShift());
+
+        // Next Statement: Alt+Down
+        AnAction nextStmt = actionManager.getAction("navigate.next.statement");
+        assertNotNull(nextStmt.getAccelerator());
+        KeyCodeCombination nsAcc = (KeyCodeCombination) nextStmt.getAccelerator();
+        assertEquals(KeyCode.DOWN, nsAcc.getCode());
+        assertEquals(KeyCombination.ModifierValue.DOWN, nsAcc.getAlt());
+
+        // Previous Statement: Alt+Up
+        AnAction prevStmt = actionManager.getAction("navigate.prev.statement");
+        assertNotNull(prevStmt.getAccelerator());
+        KeyCodeCombination psAcc = (KeyCodeCombination) prevStmt.getAccelerator();
+        assertEquals(KeyCode.UP, psAcc.getCode());
+        assertEquals(KeyCombination.ModifierValue.DOWN, psAcc.getAlt());
+    }
+
+    @Test
+    public void testExistingTabNavigationPreserved() {
+        AnAction nextTab = actionManager.getAction("navigate.next.tab");
+        assertNotNull(nextTab, "navigate.next.tab must remain registered");
+        assertEquals("Select Next Tab", nextTab.getText());
+        assertEquals(KeyCode.RIGHT, ((KeyCodeCombination) nextTab.getAccelerator()).getCode());
+
+        AnAction prevTab = actionManager.getAction("navigate.prev.tab");
+        assertNotNull(prevTab, "navigate.prev.tab must remain registered");
+        assertEquals("Select Previous Tab", prevTab.getText());
+        assertEquals(KeyCode.LEFT, ((KeyCodeCombination) prevTab.getAccelerator()).getCode());
+    }
 }

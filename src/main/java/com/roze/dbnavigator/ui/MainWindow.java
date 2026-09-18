@@ -80,6 +80,10 @@ public class MainWindow {
     private boolean toolWindowBarsVisible = true;
     private int currentIdeZoom = 100;
 
+    private final java.util.Deque<Tab> backHistory = new java.util.ArrayDeque<>();
+    private final java.util.Deque<Tab> forwardHistory = new java.util.ArrayDeque<>();
+    private boolean navigatingHistory = false;
+
     public enum MainMenuPlacement {
         HAMBURGER, MERGE_TOOLBAR, ABOVE_TOOLBAR
     }
@@ -1823,6 +1827,10 @@ public class MainWindow {
     private void configureEditorTabPane(TabPane pane) {
         pane.getSelectionModel().selectedItemProperty().addListener((obs, oldTab, newTab) -> {
             if (newTab != null) activeTabPane = pane;
+            if (!navigatingHistory && oldTab != null && newTab != null && oldTab != newTab) {
+                backHistory.push(oldTab);
+                forwardHistory.clear();
+            }
             ActionManager.getInstance().updateActions(this);
         });
         pane.focusedProperty().addListener((obs, wasFocused, focused) -> {
@@ -2244,5 +2252,191 @@ public class MainWindow {
         com.roze.dbnavigator.db.AppSettingsStore.save(settings);
         applyEditorFontToOpenConsoles();
         setStatus("Editor font size reset to 13px");
+    }
+
+    // =========================================================================
+    // NAVIGATE ACTIONS
+    // =========================================================================
+
+    public void navigateBack() {
+        while (!backHistory.isEmpty()) {
+            Tab target = backHistory.pop();
+            if (target.getTabPane() != null) {
+                Tab current = currentSelectedTab();
+                if (current != null) {
+                    forwardHistory.push(current);
+                }
+                navigatingHistory = true;
+                try {
+                    selectTab(target);
+                    setStatus("Navigated back to " + target.getText());
+                    return;
+                } finally {
+                    navigatingHistory = false;
+                }
+            }
+        }
+        setStatus("No previous navigation history");
+    }
+
+    public void navigateForward() {
+        while (!forwardHistory.isEmpty()) {
+            Tab target = forwardHistory.pop();
+            if (target.getTabPane() != null) {
+                Tab current = currentSelectedTab();
+                if (current != null) {
+                    backHistory.push(current);
+                }
+                navigatingHistory = true;
+                try {
+                    selectTab(target);
+                    setStatus("Navigated forward to " + target.getText());
+                    return;
+                } finally {
+                    navigatingHistory = false;
+                }
+            }
+        }
+        setStatus("No forward navigation history");
+    }
+
+    public boolean canNavigateBack() {
+        return !backHistory.isEmpty();
+    }
+
+    public boolean canNavigateForward() {
+        return !forwardHistory.isEmpty();
+    }
+
+    public void showSearchDatabaseObjectsDialog() {
+        showSearchEverywhere();
+    }
+
+    public void showSearchFilesDialog() {
+        showRecentFilesDialog();
+    }
+
+    public void showSearchCodeDialog() {
+        showSearchEverywhere();
+    }
+
+    public void showSearchTextDialog() {
+        showSearchEverywhere();
+    }
+
+    public void showCurrentDiagram() {
+        Tab tab = currentSelectedTab();
+        if (tab instanceof QueryTab qt && qt.getProfile() != null) {
+            openDatabaseDiagramTab(qt.getProfile(), qt.getProfile().getDatabase());
+            return;
+        }
+        var profiles = ConnectionStore.load();
+        if (!profiles.isEmpty()) {
+            openDatabaseDiagramTab(profiles.get(0), profiles.get(0).getDatabase());
+            return;
+        }
+        setStatus("Connect to a database first to generate a diagram");
+    }
+
+    public void jumpToQueryConsole() {
+        for (TabPane pane : editorTabPanes()) {
+            for (Tab tab : pane.getTabs()) {
+                if (tab instanceof QueryTab qt) {
+                    selectTab(qt);
+                    setStatus("Jumped to query console: " + qt.getText());
+                    return;
+                }
+            }
+        }
+        openConsoleForSelectedConnection();
+    }
+
+    public void selectInTarget() {
+        if (!isDatabaseExplorerVisible()) {
+            toggleDatabaseExplorer();
+        }
+        schemaPane.requestFocus();
+        setStatus("Selected in Database Explorer");
+    }
+
+    public void navigateDeclarationOrUsages() {
+        findUsagesCurrentSymbol();
+    }
+
+    public void scrollFromEditor() {
+        Tab tab = currentSelectedTab();
+        if (tab instanceof QueryTab qt && qt.getProfile() != null) {
+            if (!isDatabaseExplorerVisible()) {
+                toggleDatabaseExplorer();
+            }
+            schemaPane.requestFocus();
+            setStatus("Located " + qt.getProfile().getName() + " in Explorer");
+        } else {
+            setStatus("No active database editor to locate");
+        }
+    }
+
+    public void jumpToNavigationBar() {
+        if (activeTabPane != null) {
+            activeTabPane.requestFocus();
+            setStatus("Focused Navigation Bar");
+        }
+    }
+
+    public void showFilePathPopup() {
+        Tab tab = currentSelectedTab();
+        if (tab instanceof QueryTab qt && qt.getProfile() != null) {
+            String path = qt.getProfile().getName() + " > "
+                    + (qt.getProfile().getDatabase() != null ? qt.getProfile().getDatabase() : "default")
+                    + " > " + qt.getDisplayFileName();
+            setStatus("Path: " + path);
+        } else if (tab != null) {
+            setStatus("Path: " + tab.getText());
+        }
+    }
+
+    public void navigateToNextStatement() {
+        CodeArea editor = getActiveCodeArea();
+        if (editor != null) {
+            String text = editor.getText();
+            int pos = editor.getCaretPosition();
+            int nextSemi = text.indexOf(';', pos);
+            if (nextSemi != -1) {
+                int nextPos = nextSemi + 1;
+                while (nextPos < text.length() && Character.isWhitespace(text.charAt(nextPos))) {
+                    nextPos++;
+                }
+                editor.moveTo(nextPos);
+                editor.requestFollowCaret();
+                setStatus("Navigated to next statement");
+                return;
+            }
+            setStatus("No next statement found");
+        }
+    }
+
+    public void navigateToPreviousStatement() {
+        CodeArea editor = getActiveCodeArea();
+        if (editor != null) {
+            String text = editor.getText();
+            int pos = editor.getCaretPosition();
+            int prevSemi = text.lastIndexOf(';', Math.max(0, pos - 2));
+            if (prevSemi != -1) {
+                int startPos = prevSemi + 1;
+                while (startPos < text.length() && Character.isWhitespace(text.charAt(startPos))) {
+                    startPos++;
+                }
+                editor.moveTo(startPos);
+                editor.requestFollowCaret();
+                setStatus("Navigated to previous statement");
+                return;
+            } else if (pos > 0) {
+                editor.moveTo(0);
+                editor.requestFollowCaret();
+                setStatus("Navigated to start of script");
+                return;
+            }
+            setStatus("Already at first statement");
+        }
     }
 }
