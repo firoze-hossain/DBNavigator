@@ -409,14 +409,316 @@ public class ActionRegistryTest {
     }
 
     @Test
-    public void testViewMenuPreserved() {
+    public void testViewMenuStructureAndOrder() {
         ActionGroup viewMenu = actionManager.getGroup("menu.view");
         assertNotNull(viewMenu, "menu.view should be registered");
         assertEquals("View", viewMenu.getText());
 
-        assertTrue(viewMenu.getChildren().stream().anyMatch(a -> "view.refresh.explorer".equals(a.getId())),
-                "View menu should retain view.refresh.explorer");
-        assertTrue(viewMenu.getChildren().stream().anyMatch(a -> "view.toggle.run".equals(a.getId())),
-                "View menu should retain view.toggle.run");
+        List<AnAction> items = viewMenu.getChildren();
+        assertEquals(11, items.size(), "View menu must contain 9 actions/groups and 2 separators");
+
+        int idx = 0;
+
+        // 1. Tool Windows >
+        assertInstanceOf(ActionGroup.class, items.get(idx));
+        assertEquals("view.toolwindows", items.get(idx).getId());
+        assertEquals("Tool Windows", ((ActionGroup) items.get(idx++)).getText());
+
+        // 2. Appearance >
+        assertInstanceOf(ActionGroup.class, items.get(idx));
+        assertEquals("view.appearance", items.get(idx).getId());
+        assertEquals("Appearance", ((ActionGroup) items.get(idx++)).getText());
+
+        // Separator 1
+        assertInstanceOf(ActionSeparator.class, items.get(idx++));
+
+        // 3. Recent Locations (Ctrl+Shift+E)
+        assertEquals("view.recent.locations", items.get(idx).getId());
+        assertEquals("Recent Locations", ((AnAction) items.get(idx++)).getText());
+
+        // 4. Recent Files (Ctrl+E)
+        assertEquals("view.recent.files", items.get(idx).getId());
+        assertEquals("Recent Files", ((AnAction) items.get(idx++)).getText());
+
+        // 5. Recently Changed Files
+        assertEquals("view.recent.changed.files", items.get(idx).getId());
+        assertEquals("Recently Changed Files", ((AnAction) items.get(idx++)).getText());
+
+        // 6. Recent Changes (Alt+Shift+C)
+        assertEquals("view.recent.changes", items.get(idx).getId());
+        assertEquals("Recent Changes", ((AnAction) items.get(idx++)).getText());
+
+        // Separator 2
+        assertInstanceOf(ActionSeparator.class, items.get(idx++));
+
+        // 7. Increase Font Size in All Editors (Alt+Shift+.)
+        assertEquals("view.font.increase", items.get(idx).getId());
+        assertEquals("Increase Font Size in All Editors", ((AnAction) items.get(idx++)).getText());
+
+        // 8. Decrease Font Size in All Editors (Alt+Shift+,)
+        assertEquals("view.font.decrease", items.get(idx).getId());
+        assertEquals("Decrease Font Size in All Editors", ((AnAction) items.get(idx++)).getText());
+
+        // 9. Reset Font Size in All Editors
+        assertEquals("view.font.reset", items.get(idx).getId());
+        assertEquals("Reset Font Size in All Editors", ((AnAction) items.get(idx++)).getText());
+
+        assertEquals(idx, items.size());
+    }
+
+    @Test
+    public void testToolWindowsSubmenu() {
+        ActionGroup twGroup = actionManager.getGroup("view.toolwindows");
+        assertNotNull(twGroup, "view.toolwindows group must be registered");
+        assertEquals("Tool Windows", twGroup.getText());
+
+        List<AnAction> items = twGroup.getChildren();
+        assertEquals(21, items.size(), "Tool Windows must have 20 tool windows + 1 separator");
+
+        int idx = 0;
+        assertEquals("view.toolwindow.commit", items.get(idx).getId());
+        assertEquals("Commit", ((AnAction) items.get(idx++)).getText());
+
+        assertEquals("view.toolwindow.database", items.get(idx).getId());
+        assertEquals("Database Explorer", ((AnAction) items.get(idx++)).getText());
+
+        assertEquals("view.toolwindow.files", items.get(idx).getId());
+        assertEquals("Files", ((AnAction) items.get(idx++)).getText());
+
+        assertEquals("view.toolwindow.find", items.get(idx).getId());
+        assertEquals("Find", ((AnAction) items.get(idx++)).getText());
+
+        assertEquals("view.toggle.run", items.get(idx).getId());
+        assertEquals("Run", ((AnAction) items.get(idx++)).getText());
+
+        assertEquals("view.toolwindow.debug", items.get(idx).getId());
+        assertEquals("Debug", ((AnAction) items.get(idx++)).getText());
+
+        assertEquals("view.toolwindow.problems", items.get(idx).getId());
+        assertEquals("Problems", ((AnAction) items.get(idx++)).getText());
+
+        assertEquals("view.toolwindow.structure", items.get(idx).getId());
+        assertEquals("Structure", ((AnAction) items.get(idx++)).getText());
+
+        assertEquals("view.toolwindow.services", items.get(idx).getId());
+        assertEquals("Services", ((AnAction) items.get(idx++)).getText());
+
+        assertEquals("view.toolwindow.vcs", items.get(idx).getId());
+        assertEquals("Version Control", ((AnAction) items.get(idx++)).getText());
+
+        assertEquals("view.toolwindow.ai", items.get(idx).getId());
+        assertEquals("AI Assistant", ((AnAction) items.get(idx++)).getText());
+
+        // Separator
+        assertInstanceOf(ActionSeparator.class, items.get(idx++));
+
+        assertEquals("view.toolwindow.backup.sync", items.get(idx).getId());
+        assertEquals("Backup and Sync History", ((AnAction) items.get(idx++)).getText());
+
+        assertEquals("view.toolwindow.bookmarks", items.get(idx).getId());
+        assertEquals("Bookmarks", ((AnAction) items.get(idx++)).getText());
+
+        assertEquals("view.toolwindow.coverage", items.get(idx).getId());
+        assertEquals("Coverage", ((AnAction) items.get(idx++)).getText());
+
+        assertEquals("view.toolwindow.dbchanges", items.get(idx).getId());
+        assertEquals("Database Changes", ((AnAction) items.get(idx++)).getText());
+
+        assertEquals("view.toolwindow.hierarchy", items.get(idx).getId());
+        assertEquals("Hierarchy", ((AnAction) items.get(idx++)).getText());
+
+        assertEquals("view.toolwindow.learn", items.get(idx).getId());
+        assertEquals("Learn", ((AnAction) items.get(idx++)).getText());
+
+        assertEquals("view.toolwindow.notifications", items.get(idx).getId());
+        assertEquals("Notifications", ((AnAction) items.get(idx++)).getText());
+
+        assertEquals("view.toolwindow.terminal", items.get(idx).getId());
+        assertEquals("Terminal", ((AnAction) items.get(idx++)).getText());
+
+        assertEquals("view.toolwindow.todo", items.get(idx).getId());
+        assertEquals("TODO", ((AnAction) items.get(idx++)).getText());
+
+        assertEquals(idx, items.size());
+    }
+
+    @Test
+    public void testAppearanceSubmenu() {
+        ActionGroup appGroup = actionManager.getGroup("view.appearance");
+        assertNotNull(appGroup, "view.appearance group must be registered");
+        assertEquals("Appearance", appGroup.getText());
+
+        List<AnAction> items = appGroup.getChildren();
+        assertEquals(16, items.size(), "Appearance must contain modes, toggles, submenus, and 3 separators");
+
+        int idx = 0;
+        assertEquals("view.appearance.presentation.mode", items.get(idx).getId());
+        assertEquals("Enter Presentation Mode", ((AnAction) items.get(idx++)).getText());
+
+        assertEquals("view.appearance.distraction.free", items.get(idx).getId());
+        assertEquals("Enter Distraction Free Mode", ((AnAction) items.get(idx++)).getText());
+
+        assertEquals("view.appearance.full.screen", items.get(idx).getId());
+        assertEquals("Enter Full Screen", ((AnAction) items.get(idx++)).getText());
+
+        assertEquals("view.appearance.zen.mode", items.get(idx).getId());
+        assertEquals("Enter Zen Mode", ((AnAction) items.get(idx++)).getText());
+
+        // Separator 1
+        assertInstanceOf(ActionSeparator.class, items.get(idx++));
+
+        assertEquals("view.appearance.compact.mode", items.get(idx).getId());
+        assertEquals("Compact Mode", ((AnAction) items.get(idx++)).getText());
+
+        assertEquals("view.appearance.zoom.ide", items.get(idx).getId());
+        assertEquals("Zoom IDE (Current: 100%)…", ((AnAction) items.get(idx++)).getText());
+
+        assertEquals("view.appearance.presentation.assistant", items.get(idx).getId());
+        assertEquals("Presentation Assistant", ((AnAction) items.get(idx++)).getText());
+
+        // Separator 2
+        assertInstanceOf(ActionSeparator.class, items.get(idx++));
+
+        assertEquals("view.appearance.mainmenu", items.get(idx).getId());
+        assertEquals("Main Menu", ((ActionGroup) items.get(idx++)).getText());
+
+        assertInstanceOf(ToggleAction.class, items.get(idx));
+        assertEquals("view.appearance.toolbar", items.get(idx).getId());
+        assertEquals("Toolbar", ((ToggleAction) items.get(idx++)).getText());
+
+        assertEquals("view.appearance.navbar", items.get(idx).getId());
+        assertEquals("Navigation Bar", ((ActionGroup) items.get(idx++)).getText());
+
+        assertEquals("view.appearance.toolwindowbars", items.get(idx).getId());
+        assertEquals("Tool Window Bars", ((AnAction) items.get(idx++)).getText());
+
+        // Separator 3
+        assertInstanceOf(ActionSeparator.class, items.get(idx++));
+
+        assertInstanceOf(ToggleAction.class, items.get(idx));
+        assertEquals("view.appearance.statusbar", items.get(idx).getId());
+        assertEquals("Status Bar", ((ToggleAction) items.get(idx++)).getText());
+
+        assertEquals("view.appearance.statusbar.widgets", items.get(idx).getId());
+        assertEquals("Status Bar Widgets", ((ActionGroup) items.get(idx++)).getText());
+
+        assertEquals(idx, items.size());
+    }
+
+    @Test
+    public void testMainMenuSubmenu() {
+        ActionGroup mmGroup = actionManager.getGroup("view.appearance.mainmenu");
+        assertNotNull(mmGroup, "view.appearance.mainmenu should be registered");
+
+        List<AnAction> items = mmGroup.getChildren();
+        assertEquals(3, items.size());
+        assertEquals("Hide under Hamburger Button", ((AnAction) items.get(0)).getText());
+        assertEquals("Merge with Main Toolbar", ((AnAction) items.get(1)).getText());
+        assertEquals("Show above Main Toolbar", ((AnAction) items.get(2)).getText());
+    }
+
+    @Test
+    public void testStatusBarWidgetsSubmenu() {
+        ActionGroup sbGroup = actionManager.getGroup("view.appearance.statusbar.widgets");
+        assertNotNull(sbGroup, "view.appearance.statusbar.widgets should be registered");
+
+        List<AnAction> items = sbGroup.getChildren();
+        assertEquals(20, items.size(), "Status Bar Widgets must have 17 widgets and 3 separators");
+
+        int idx = 0;
+        // Section 1
+        assertEquals("Status Text", ((AnAction) items.get(idx++)).getText());
+        assertEquals("File System Sync", ((AnAction) items.get(idx++)).getText());
+        assertEquals("Remote Development Wire Stats", ((AnAction) items.get(idx++)).getText());
+        assertInstanceOf(ActionSeparator.class, items.get(idx++));
+
+        // Section 2
+        assertEquals("Aggregator", ((AnAction) items.get(idx++)).getText());
+        assertEquals("Grid Position", ((AnAction) items.get(idx++)).getText());
+        assertEquals("Line:Column Number", ((AnAction) items.get(idx++)).getText());
+        assertEquals("Language Services", ((AnAction) items.get(idx++)).getText());
+        assertEquals("Line Separator", ((AnAction) items.get(idx++)).getText());
+        assertEquals("File Encoding", ((AnAction) items.get(idx++)).getText());
+        assertInstanceOf(ActionSeparator.class, items.get(idx++));
+
+        // Section 3
+        assertEquals("Power Save Mode", ((AnAction) items.get(idx++)).getText());
+        assertEquals("Editor Selection Mode", ((AnAction) items.get(idx++)).getText());
+        assertEquals("Indentation", ((AnAction) items.get(idx++)).getText());
+        assertEquals("JSON Schema", ((AnAction) items.get(idx++)).getText());
+        assertEquals("MCP Server", ((AnAction) items.get(idx++)).getText());
+        assertEquals("Read-Only Attribute", ((AnAction) items.get(idx++)).getText());
+        assertEquals("Notifications", ((AnAction) items.get(idx++)).getText());
+        assertInstanceOf(ActionSeparator.class, items.get(idx++));
+
+        // Section 4
+        assertEquals("Memory Indicator", ((AnAction) items.get(idx++)).getText());
+
+        assertEquals(idx, items.size());
+    }
+
+    @Test
+    public void testViewAccelerators() {
+        // Recent Locations: Ctrl+Shift+E
+        AnAction recentLoc = actionManager.getAction("view.recent.locations");
+        assertNotNull(recentLoc.getAccelerator());
+        KeyCodeCombination rlAcc = (KeyCodeCombination) recentLoc.getAccelerator();
+        assertEquals(KeyCode.E, rlAcc.getCode());
+        assertEquals(KeyCombination.ModifierValue.DOWN, rlAcc.getControl());
+        assertEquals(KeyCombination.ModifierValue.DOWN, rlAcc.getShift());
+
+        // Recent Files: Ctrl+E
+        AnAction recentFiles = actionManager.getAction("view.recent.files");
+        assertNotNull(recentFiles.getAccelerator());
+        KeyCodeCombination rfAcc = (KeyCodeCombination) recentFiles.getAccelerator();
+        assertEquals(KeyCode.E, rfAcc.getCode());
+        assertEquals(KeyCombination.ModifierValue.DOWN, rfAcc.getControl());
+
+        // Recent Changes: Alt+Shift+C
+        AnAction recentChanges = actionManager.getAction("view.recent.changes");
+        assertNotNull(recentChanges.getAccelerator());
+        KeyCodeCombination rcAcc = (KeyCodeCombination) recentChanges.getAccelerator();
+        assertEquals(KeyCode.C, rcAcc.getCode());
+        assertEquals(KeyCombination.ModifierValue.DOWN, rcAcc.getAlt());
+        assertEquals(KeyCombination.ModifierValue.DOWN, rcAcc.getShift());
+
+        // Increase Font Size: Alt+Shift+.
+        AnAction incFont = actionManager.getAction("view.font.increase");
+        assertNotNull(incFont.getAccelerator());
+        KeyCodeCombination ifAcc = (KeyCodeCombination) incFont.getAccelerator();
+        assertEquals(KeyCode.PERIOD, ifAcc.getCode());
+        assertEquals(KeyCombination.ModifierValue.DOWN, ifAcc.getAlt());
+        assertEquals(KeyCombination.ModifierValue.DOWN, ifAcc.getShift());
+
+        // Decrease Font Size: Alt+Shift+,
+        AnAction decFont = actionManager.getAction("view.font.decrease");
+        assertNotNull(decFont.getAccelerator());
+        KeyCodeCombination dfAcc = (KeyCodeCombination) decFont.getAccelerator();
+        assertEquals(KeyCode.COMMA, dfAcc.getCode());
+        assertEquals(KeyCombination.ModifierValue.DOWN, dfAcc.getAlt());
+        assertEquals(KeyCombination.ModifierValue.DOWN, dfAcc.getShift());
+
+        // Tool Windows: Database Explorer (Alt+1), Run (Alt+4), Terminal (Alt+F12)
+        AnAction twDb = actionManager.getAction("view.toolwindow.database");
+        assertEquals(KeyCode.DIGIT1, ((KeyCodeCombination) twDb.getAccelerator()).getCode());
+
+        AnAction twRun = actionManager.getAction("view.toggle.run");
+        assertEquals(KeyCode.DIGIT4, ((KeyCodeCombination) twRun.getAccelerator()).getCode());
+
+        AnAction twTerm = actionManager.getAction("view.toolwindow.terminal");
+        assertEquals(KeyCode.F12, ((KeyCodeCombination) twTerm.getAccelerator()).getCode());
+    }
+
+    @Test
+    public void testExistingActionsPreserved() {
+        AnAction refresh = actionManager.getAction("view.refresh.explorer");
+        assertNotNull(refresh, "view.refresh.explorer must remain registered in ActionManager");
+        assertEquals("Refresh Database Explorer", refresh.getText());
+        assertEquals(KeyCode.F5, ((KeyCodeCombination) refresh.getAccelerator()).getCode());
+
+        AnAction run = actionManager.getAction("view.toggle.run");
+        assertNotNull(run, "view.toggle.run must remain registered in ActionManager");
+        assertEquals("Run", run.getText());
+        assertEquals(KeyCode.DIGIT4, ((KeyCodeCombination) run.getAccelerator()).getCode());
     }
 }
