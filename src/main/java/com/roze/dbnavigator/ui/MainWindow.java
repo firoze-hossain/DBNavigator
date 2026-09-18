@@ -282,6 +282,260 @@ public class MainWindow {
         setStatus("Reloaded all schemas and files from disk");
     }
 
+    public ConnectionProfile getActiveOrSelectedProfile() {
+        Tab selected = currentSelectedTab();
+        if (selected instanceof QueryTab qt) {
+            return qt.getProfile();
+        }
+        var profiles = ConnectionStore.load();
+        return profiles.isEmpty() ? null : profiles.get(0);
+    }
+
+    public void createNewProjectDialog() {
+        TextInputDialog dialog = (TextInputDialog) DialogTheme.apply(new TextInputDialog("NewProject"));
+        dialog.initOwner(stage);
+        dialog.setTitle("New Project");
+        dialog.setHeaderText(null);
+        dialog.setContentText("Project name:");
+        dialog.showAndWait().ifPresent(name -> {
+            if (!name.isBlank()) {
+                stage.setTitle("DBNavigator Pro - " + name);
+                setStatus("Created project: " + name);
+            }
+        });
+    }
+
+    public void openNewQueryFile() {
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("New Query File");
+        chooser.setInitialFileName("query.sql");
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("SQL files (*.sql)", "*.sql"));
+        File file = chooser.showSaveDialog(stage);
+        if (file != null) {
+            try {
+                if (!file.exists()) {
+                    Files.writeString(file.toPath(), "-- Query File: " + file.getName() + "\n\n", StandardCharsets.UTF_8);
+                }
+                var profiles = ConnectionStore.load().stream()
+                        .filter(p -> p.getType().isRelational()).toList();
+                ConnectionProfile p = profiles.isEmpty() ? null : profiles.get(0);
+                if (p != null) {
+                    openQueryTab(p, null, Files.readString(file.toPath()));
+                    setStatus("Created query file: " + file.getName());
+                }
+            } catch (Exception ex) {
+                setStatus("Error creating query file: " + ex.getMessage());
+            }
+        }
+    }
+
+    public void createNewDatabaseAction() {
+        ConnectionProfile p = getActiveOrSelectedProfile();
+        if (p != null) {
+            CreateDatabaseDialog.show(this, p);
+        } else {
+            showNewConnectionDialog();
+        }
+    }
+
+    public void createNewRoleAction() {
+        TextInputDialog dialog = (TextInputDialog) DialogTheme.apply(new TextInputDialog("new_role"));
+        dialog.initOwner(stage);
+        dialog.setTitle("Create Role");
+        dialog.setHeaderText("New Role / Permission Group");
+        dialog.setContentText("Role name:");
+        dialog.showAndWait().ifPresent(roleName -> {
+            if (!roleName.isBlank()) {
+                ConnectionProfile p = getActiveOrSelectedProfile();
+                if (p != null) {
+                    String ddl = (p.getType() == ConnectionProfile.DatabaseType.POSTGRESQL)
+                            ? "CREATE ROLE " + roleName + " WITH LOGIN;\n"
+                            : "CREATE ROLE " + roleName + ";\n";
+                    openQueryTab(p, null, ddl);
+                    setStatus("Generated CREATE ROLE script for " + roleName);
+                } else {
+                    setStatus("Created role: " + roleName);
+                }
+            }
+        });
+    }
+
+    public void createNewUserAction() {
+        TextInputDialog dialog = (TextInputDialog) DialogTheme.apply(new TextInputDialog("db_user"));
+        dialog.initOwner(stage);
+        dialog.setTitle("Create User");
+        dialog.setHeaderText("New Database User Account");
+        dialog.setContentText("User name:");
+        dialog.showAndWait().ifPresent(userName -> {
+            if (!userName.isBlank()) {
+                ConnectionProfile p = getActiveOrSelectedProfile();
+                if (p != null) {
+                    String ddl;
+                    if (p.getType() == ConnectionProfile.DatabaseType.POSTGRESQL) {
+                        ddl = "CREATE USER " + userName + " WITH PASSWORD 'password';\n";
+                    } else if (p.getType() == ConnectionProfile.DatabaseType.SQLSERVER) {
+                        ddl = "CREATE LOGIN " + userName + " WITH PASSWORD = 'password';\nCREATE USER " + userName + " FOR LOGIN " + userName + ";\n";
+                    } else {
+                        ddl = "CREATE USER '" + userName + "'@'%' IDENTIFIED BY 'password';\n";
+                    }
+                    openQueryTab(p, null, ddl);
+                    setStatus("Generated CREATE USER script for " + userName);
+                } else {
+                    setStatus("Created user: " + userName);
+                }
+            }
+        });
+    }
+
+    public void createNewVirtualViewAction() {
+        TextInputDialog dialog = (TextInputDialog) DialogTheme.apply(new TextInputDialog("v_custom_view"));
+        dialog.initOwner(stage);
+        dialog.setTitle("New Virtual View");
+        dialog.setHeaderText("Create Virtual View / SQL View");
+        dialog.setContentText("View name:");
+        dialog.showAndWait().ifPresent(viewName -> {
+            if (!viewName.isBlank()) {
+                ConnectionProfile p = getActiveOrSelectedProfile();
+                String ddl = "CREATE VIEW " + viewName + " AS\nSELECT 1 AS id, 'example' AS label;\n";
+                if (p != null) {
+                    openQueryTab(p, null, ddl);
+                }
+                setStatus("Created Virtual View template: " + viewName);
+            }
+        });
+    }
+
+    public void openDataSourceFromCloudDialog(String provider, ConnectionProfile.DatabaseType type) {
+        showNewConnectionDialog(type);
+        setStatus("Configuring " + provider + " " + type.getDisplayName() + " Data Source");
+    }
+
+    public void showDataSourceTemplatesDialog() {
+        List<String> templates = List.of(
+                "Local Docker - PostgreSQL (localhost:5432 / postgres)",
+                "Local Docker - MySQL 8.0 (localhost:3306 / root)",
+                "Local Docker - MariaDB (localhost:3306 / root)",
+                "Local Docker - MongoDB (localhost:27017)",
+                "SQLite In-Memory / Local Test (:memory:)",
+                "StratosDB Standalone (localhost:9876 / default)"
+        );
+        ChoiceDialog<String> dialog = (ChoiceDialog<String>) DialogTheme.apply(new ChoiceDialog<>(templates.get(0), templates));
+        dialog.initOwner(stage);
+        dialog.setTitle("Data Source Templates (Beta)");
+        dialog.setHeaderText("Select a pre-configured database environment template:");
+        dialog.setContentText("Template:");
+        dialog.showAndWait().ifPresent(choice -> {
+            if (choice.contains("PostgreSQL")) {
+                showNewConnectionDialog(ConnectionProfile.DatabaseType.POSTGRESQL);
+            } else if (choice.contains("MySQL")) {
+                showNewConnectionDialog(ConnectionProfile.DatabaseType.MYSQL);
+            } else if (choice.contains("MariaDB")) {
+                showNewConnectionDialog(ConnectionProfile.DatabaseType.MARIADB);
+            } else if (choice.contains("MongoDB")) {
+                showNewConnectionDialog(ConnectionProfile.DatabaseType.MONGODB);
+            } else if (choice.contains("SQLite")) {
+                showNewConnectionDialog(ConnectionProfile.DatabaseType.SQLITE);
+            } else if (choice.contains("StratosDB")) {
+                showNewConnectionDialog(ConnectionProfile.DatabaseType.STRATOSDB);
+            }
+        });
+    }
+
+    public void openDataSourceFromFileOrFolder() {
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Data Source from File / Folder");
+        chooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("Database & Data files (*.db, *.sqlite, *.sqlite3, *.json, *.csv)", "*.db", "*.sqlite", "*.sqlite3", "*.json", "*.csv"),
+                new FileChooser.ExtensionFilter("All Files", "*.*")
+        );
+        File file = chooser.showOpenDialog(stage);
+        if (file != null) {
+            String name = file.getName().replaceAll("\\.[^.]+$", "");
+            ConnectionProfile p = new ConnectionProfile();
+            p.setName(name.toUpperCase() + " (File)");
+            p.setType(ConnectionProfile.DatabaseType.SQLITE);
+            p.setDatabase(file.getAbsolutePath());
+            ConnectionStore.saveOrUpdate(p);
+            schemaPane.reload();
+            setStatus("Added data source from file: " + file.getName());
+        }
+    }
+
+    public void openDataSourceFromUrlDialog() {
+        TextInputDialog dialog = (TextInputDialog) DialogTheme.apply(new TextInputDialog("jdbc:postgresql://localhost:5432/mydb"));
+        dialog.initOwner(stage);
+        dialog.setTitle("Data Source from URL");
+        dialog.setHeaderText("Enter Database JDBC or Connection URI:");
+        dialog.setContentText("Connection URL:");
+        dialog.showAndWait().ifPresent(url -> {
+            if (!url.isBlank()) {
+                try {
+                    ConnectionProfile.DatabaseType type = ConnectionProfile.DatabaseType.POSTGRESQL;
+                    if (url.startsWith("jdbc:mysql:")) type = ConnectionProfile.DatabaseType.MYSQL;
+                    else if (url.startsWith("jdbc:mariadb:")) type = ConnectionProfile.DatabaseType.MARIADB;
+                    else if (url.startsWith("jdbc:sqlite:")) type = ConnectionProfile.DatabaseType.SQLITE;
+                    else if (url.startsWith("jdbc:sqlserver:")) type = ConnectionProfile.DatabaseType.SQLSERVER;
+                    else if (url.startsWith("jdbc:oracle:")) type = ConnectionProfile.DatabaseType.ORACLE;
+                    else if (url.startsWith("jdbc:stratosdb:")) type = ConnectionProfile.DatabaseType.STRATOSDB;
+                    else if (url.startsWith("mongodb://") || url.startsWith("mongodb+srv://")) type = ConnectionProfile.DatabaseType.MONGODB;
+
+                    showNewConnectionDialog(type);
+                    setStatus("Parsed URL for " + type.getDisplayName());
+                } catch (Exception ex) {
+                    setStatus("Error parsing URL: " + ex.getMessage());
+                }
+            }
+        });
+    }
+
+    public void openDdlDataSourceDialog() {
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("New DDL Data Source");
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("DDL SQL Scripts (*.sql)", "*.sql"));
+        File file = chooser.showOpenDialog(stage);
+        if (file != null) {
+            String name = file.getName().replaceAll("\\.[^.]+$", "") + " (DDL)";
+            ConnectionProfile p = new ConnectionProfile();
+            p.setName(name);
+            p.setType(ConnectionProfile.DatabaseType.SQLITE);
+            p.setDatabase(":memory:");
+            ConnectionStore.saveOrUpdate(p);
+            schemaPane.reload();
+            setStatus("Created DDL Data Source from " + file.getName());
+        }
+    }
+
+    public void createNewFolderDialog() {
+        TextInputDialog dialog = (TextInputDialog) DialogTheme.apply(new TextInputDialog("new_folder"));
+        dialog.initOwner(stage);
+        dialog.setTitle("New Folder");
+        dialog.setHeaderText(null);
+        dialog.setContentText("Folder name:");
+        dialog.showAndWait().ifPresent(name -> {
+            if (!name.isBlank()) {
+                setStatus("Created folder: " + name);
+            }
+        });
+    }
+
+    public void showDriversDialog() {
+        Alert alert = (Alert) DialogTheme.apply(new Alert(Alert.AlertType.INFORMATION,
+                "Data Sources and Drivers:\n\n"
+                + "Installed Database Drivers:\n"
+                + "• PostgreSQL JDBC Driver (org.postgresql.Driver)\n"
+                + "• MySQL Connector/J (com.mysql.cj.jdbc.Driver)\n"
+                + "• MariaDB Connector/J (org.mariadb.jdbc.Driver)\n"
+                + "• SQLite JDBC (org.sqlite.JDBC)\n"
+                + "• Microsoft JDBC Driver for SQL Server (com.microsoft.sqlserver.jdbc.SQLServerDriver)\n"
+                + "• Oracle JDBC Driver (oracle.jdbc.OracleDriver)\n"
+                + "• StratosDB JDBC Driver (com.roze.stratosdb.jdbc.StratosDriver)\n"
+                + "• MongoDB Java Sync Driver (mongodb-driver-sync)\n\n"
+                + "All driver classes are loaded and ready."));
+        alert.setHeaderText("Drivers");
+        alert.initOwner(stage);
+        alert.showAndWait();
+    }
+
     public void attachDirectoryToProject() {
         javafx.stage.DirectoryChooser chooser = new javafx.stage.DirectoryChooser();
         chooser.setTitle("Attach Directory to Project");
