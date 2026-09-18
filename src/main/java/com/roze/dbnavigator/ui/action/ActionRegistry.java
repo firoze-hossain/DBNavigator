@@ -100,18 +100,28 @@ public final class ActionRegistry {
                 .onAction(MainWindow::openSqlFile)
                 .build();
 
+        AnAction saveAs = AnAction.builder("file.save.as", "Save As…")
+                .description("Save active console script to disk")
+                .accelerator(new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN))
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(MainWindow::saveConsoleAs)
+                .build();
+
         // Recent Projects
         ActionGroup recentProjectsGroup = new ActionGroup("file.recent", "Recent Projects");
         recentProjectsGroup.add(AnAction.builder("file.recent.none", "No Recent Projects")
                 .onAction(ctx -> {})
                 .build());
 
-        AnAction closeProject = AnAction.builder("file.close.project", "Close Project")
-                .onAction(MainWindow::closeAllTabs)
+        AnAction renameProject = AnAction.builder("file.rename.project", "Rename Project…")
+                .description("Rename the current project")
+                .onAction(MainWindow::renameProject)
                 .build();
 
-        AnAction remoteDev = AnAction.builder("file.remote.dev", "Remote Development…")
-                .onAction(ctx -> ctx.setStatus("Remote Development: Connected to remote hosts"))
+        AnAction attachDir = AnAction.builder("file.attach.directory", "Attach Directory to Project…")
+                .description("Attach an external directory to the project")
+                .icon(FontAwesomeSolid.FOLDER_PLUS, "#e0a44c", 11)
+                .onAction(MainWindow::attachDirectoryToProject)
                 .build();
 
         AnAction settings = AnAction.builder("file.settings", "Settings…")
@@ -121,11 +131,31 @@ public final class ActionRegistry {
                 .onAction(MainWindow::showSettingsDialog)
                 .build();
 
-        AnAction projectStructure = AnAction.builder("file.data.sources", "Project Structure…")
+        AnAction dataSources = AnAction.builder("file.data.sources", "Data Sources…")
                 .description("Manage Data Sources and Drivers")
                 .icon(FontAwesomeSolid.DATABASE, "#4a88c7", 11)
                 .accelerator(new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN))
                 .onAction(MainWindow::showNewConnectionDialog)
+                .build();
+
+        AnAction plugins = AnAction.builder("file.plugins", "Plugins…")
+                .description("Manage installed database and IDE plugins")
+                .onAction(MainWindow::showPluginsDialog)
+                .build();
+
+        AnAction sqlDialects = AnAction.builder("file.sql.dialects", "SQL Dialects…")
+                .description("Configure SQL dialects per project and file")
+                .onAction(MainWindow::showSqlDialectsDialog)
+                .build();
+
+        AnAction sqlScopes = AnAction.builder("file.sql.scopes", "SQL Resolution Scopes…")
+                .description("Configure database and schema resolution scopes")
+                .onAction(MainWindow::showSqlResolutionScopesDialog)
+                .build();
+
+        AnAction editDataSourcesXml = AnAction.builder("file.edit.datasources.xml", "Edit dataSources.xml")
+                .description("Open connections dataSources configuration file")
+                .onAction(MainWindow::editDataSourcesFile)
                 .build();
 
         ActionGroup fileProps = new ActionGroup("file.properties", "File Properties");
@@ -136,7 +166,7 @@ public final class ActionRegistry {
                 .onAction(ctx -> ctx.setStatus("Line Separator: LF"))
                 .build());
 
-        // Local History Submenu Group (preserved with all working items)
+        // Local History Submenu Group
         ActionGroup localHistoryGroup = new ActionGroup("file.local.history", "Local History");
         localHistoryGroup.add(AnAction.builder("history.show", "Show History…")
                 .description("Show local revision history for current console")
@@ -173,11 +203,7 @@ public final class ActionRegistry {
                 .onAction(MainWindow::reloadAllFromDisk)
                 .build();
 
-        AnAction repairIde = AnAction.builder("file.repair.ide", "Repair IDE")
-                .description("Repair and refresh cache indices")
-                .onAction(MainWindow::repairIde)
-                .build();
-
+        // Kept for Center 3-dots toolbar
         AnAction invalidateCaches = AnAction.builder("file.invalidate.caches", "Invalidate Caches…")
                 .description("Invalidate metadata caches and restart")
                 .icon(FontAwesomeSolid.SYNC_ALT, "#a9b7c6", 11)
@@ -192,16 +218,6 @@ public final class ActionRegistry {
                 .onAction(ctx -> ctx.setStatus("Default settings active"))
                 .build());
 
-        ActionGroup newProjectsSetup = new ActionGroup("file.new.projects.setup", "New Projects Setup");
-        newProjectsSetup.add(AnAction.builder("file.setup.settings", "Settings for New Projects…")
-                .onAction(MainWindow::showSettingsDialog)
-                .build());
-
-        AnAction saveAsTemplate = AnAction.builder("file.save.template", "Save File as Template…")
-                .enabledWhen(ctx -> false)
-                .onAction(ctx -> {})
-                .build();
-
         ActionGroup exportGroup = new ActionGroup("file.export", "Export");
         exportGroup.add(AnAction.builder("file.export.data", "Export Data…")
                 .icon(FontAwesomeSolid.FILE_EXPORT, "#e0a44c", 11)
@@ -209,6 +225,7 @@ public final class ActionRegistry {
                 .build());
 
         AnAction printAction = AnAction.builder("file.print", "Print…")
+                .icon(FontAwesomeSolid.PRINT, "#a9b7c6", 11)
                 .enabledWhen(ctx -> false)
                 .onAction(ctx -> {})
                 .build();
@@ -225,23 +242,24 @@ public final class ActionRegistry {
         ActionGroup fileMenu = new ActionGroup("menu.file", "File");
         fileMenu.add(newGroup)
                 .add(openSql)
+                .add(saveAs)
                 .add(recentProjectsGroup)
-                .add(closeProject)
-                .add(remoteDev)
+                .add(renameProject)
+                .add(attachDir)
                 .addSeparator()
                 .add(settings)
-                .add(projectStructure)
+                .add(dataSources)
+                .add(plugins)
+                .add(sqlDialects)
+                .add(sqlScopes)
+                .add(editDataSourcesXml)
+                .addSeparator()
                 .add(fileProps)
                 .add(localHistoryGroup)
                 .addSeparator()
                 .add(saveAll)
                 .add(reloadAll)
-                .add(repairIde)
-                .add(invalidateCaches)
                 .add(manageSettings)
-                .add(newProjectsSetup)
-                .add(saveAsTemplate)
-                .addSeparator()
                 .add(exportGroup)
                 .add(printAction)
                 .addSeparator()
