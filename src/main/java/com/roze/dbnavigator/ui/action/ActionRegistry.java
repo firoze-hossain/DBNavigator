@@ -1184,50 +1184,258 @@ public final class ActionRegistry {
                 .add(createGitRepo);
 
         // =========================================================================
-        // 7. WINDOW ACTIONS
+        // 7. WINDOW ACTIONS (Matching DataGrip)
         // =========================================================================
-        AnAction closeTab = AnAction.builder("window.close.tab", "Close Active Tab")
-                .accelerator(new KeyCodeCombination(KeyCode.W, KeyCombination.CONTROL_DOWN))
+        // Submenu 1: Layouts >
+        ActionGroup layoutsSubmenu = new ActionGroup("window.layouts", "Layouts", true);
+        AnAction layoutDefault = AnAction.builder("window.layouts.default", "Default")
+                .description("Restore default tool window layout")
+                .onAction(MainWindow::applyDefaultLayout)
+                .build();
+
+        ActionGroup customLayoutGroup = new ActionGroup("window.layouts.custom", "Custom", true);
+        AnAction customApply = AnAction.builder("window.layouts.custom.apply", "Apply")
+                .onAction(MainWindow::applyCustomLayout)
+                .build();
+        AnAction customSave = AnAction.builder("window.layouts.custom.save", "Save Changes into Current Layout")
+                .onAction(MainWindow::saveChangesIntoCurrentLayout)
+                .build();
+        AnAction customRestore = AnAction.builder("window.layouts.custom.restore", "Restore Current Layout")
+                .onAction(MainWindow::restoreCurrentLayout)
+                .build();
+        customLayoutGroup.addAll(customApply, customSave, customRestore);
+
+        AnAction saveLayoutAsNew = AnAction.builder("window.layouts.save.as.new", "Save Current Layout as New…")
+                .description("Save current tool window layout as a new preset")
+                .onAction(MainWindow::saveCurrentLayoutAsNew)
+                .build();
+
+        layoutsSubmenu.add(layoutDefault)
+                .add(customLayoutGroup)
+                .addSeparator()
+                .add(saveLayoutAsNew);
+
+        // Submenu 2: Active Tool Window >
+        ActionGroup activeToolWindowSubmenu = new ActionGroup("window.active.tool.window", "Active Tool Window", true);
+        AnAction hideActiveTw = AnAction.builder("window.toolwindow.hide.active", "Hide Active Tool Window")
+                .accelerator(new KeyCodeCombination(KeyCode.ESCAPE, KeyCombination.SHIFT_DOWN))
+                .onAction(MainWindow::hideActiveToolWindow)
+                .build();
+        AnAction hideSideTw = AnAction.builder("window.toolwindow.hide.side", "Hide Side Tool Windows")
+                .onAction(MainWindow::hideSideToolWindows)
+                .build();
+        AnAction hideBottomTw = AnAction.builder("window.toolwindow.hide.bottom", "Hide Bottom Tool Windows")
+                .onAction(MainWindow::hideBottomToolWindows)
+                .build();
+        AnAction hideAllTw = AnAction.builder("window.toolwindow.hide.all", "Hide All Windows")
+                .accelerator(new KeyCodeCombination(KeyCode.F12, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(MainWindow::hideAllToolWindows)
+                .build();
+        AnAction jumpLastTw = AnAction.builder("window.toolwindow.jump.last", "Jump to Last Tool Window")
+                .accelerator(new KeyCodeCombination(KeyCode.F12))
+                .onAction(MainWindow::jumpToLastToolWindow)
+                .build();
+        AnAction maximizeTw = AnAction.builder("window.toolwindow.maximize", "Maximize Tool Window")
+                .accelerator(new KeyCodeCombination(KeyCode.QUOTE, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(MainWindow::maximizeToolWindow)
+                .build();
+
+        AnAction selectNextTwTab = AnAction.builder("window.toolwindow.next.tab", "Select Next Tab")
+                .accelerator(new KeyCodeCombination(KeyCode.RIGHT, KeyCombination.ALT_DOWN))
+                .onAction(MainWindow::selectNextToolWindowTab)
+                .build();
+        AnAction selectPrevTwTab = AnAction.builder("window.toolwindow.prev.tab", "Select Previous Tab")
+                .accelerator(new KeyCodeCombination(KeyCode.LEFT, KeyCombination.ALT_DOWN))
+                .onAction(MainWindow::selectPrevToolWindowTab)
+                .build();
+        AnAction closeActiveTwTab = AnAction.builder("window.toolwindow.close.active.tab", "Close Active Tab")
+                .accelerator(new KeyCodeCombination(KeyCode.F4, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(MainWindow::closeActiveToolWindowTab)
+                .build();
+
+        ActionGroup viewModeSubmenu = new ActionGroup("window.toolwindow.view.mode", "View Mode", true);
+        viewModeSubmenu.addAll(
+                AnAction.builder("window.tw.viewmode.dock.pinned", "Dock Pinned").build(),
+                AnAction.builder("window.tw.viewmode.dock.unpinned", "Dock Unpinned").build(),
+                AnAction.builder("window.tw.viewmode.undock", "Undock").build(),
+                AnAction.builder("window.tw.viewmode.float", "Float").build(),
+                AnAction.builder("window.tw.viewmode.window", "Window").build()
+        );
+
+        ActionGroup moveToSubmenu = new ActionGroup("window.toolwindow.move.to", "Move to", true);
+        moveToSubmenu.addAll(
+                AnAction.builder("window.tw.moveto.left.top", "Left Top").build(),
+                AnAction.builder("window.tw.moveto.left.bottom", "Left Bottom").build(),
+                AnAction.builder("window.tw.moveto.bottom.left", "Bottom Left").build(),
+                AnAction.builder("window.tw.moveto.bottom.right", "Bottom Right").build(),
+                AnAction.builder("window.tw.moveto.right.top", "Right Top").build(),
+                AnAction.builder("window.tw.moveto.right.bottom", "Right Bottom").build()
+        );
+
+        AnAction groupTabs = AnAction.builder("window.toolwindow.group.tabs", "Group Tabs")
+                .onAction(MainWindow::toggleGroupToolWindowTabs)
+                .build();
+
+        ActionGroup resizeSubmenu = new ActionGroup("window.toolwindow.resize", "Resize", true);
+        resizeSubmenu.addAll(
+                AnAction.builder("window.tw.resize.left", "Stretch to Left").build(),
+                AnAction.builder("window.tw.resize.right", "Stretch to Right").build(),
+                AnAction.builder("window.tw.resize.top", "Stretch to Top").build(),
+                AnAction.builder("window.tw.resize.bottom", "Stretch to Bottom").build()
+        );
+
+        activeToolWindowSubmenu.addAll(hideActiveTw, hideSideTw, hideBottomTw, hideAllTw, jumpLastTw, maximizeTw)
+                .addSeparator()
+                .addAll(selectNextTwTab, selectPrevTwTab, closeActiveTwTab)
+                .addSeparator()
+                .addAll(viewModeSubmenu, moveToSubmenu, groupTabs, resizeSubmenu);
+
+        // Submenu 3: Editor Tabs >
+        ActionGroup editorTabsSubmenu = new ActionGroup("window.editor.tabs", "Editor Tabs", true);
+        AnAction editorNextTab = AnAction.builder("window.editor.next.tab", "Select Next Tab")
+                .accelerator(new KeyCodeCombination(KeyCode.RIGHT, KeyCombination.ALT_DOWN))
+                .enabledWhen(MainWindow::hasActiveTab)
+                .onAction(MainWindow::selectNextTab)
+                .build();
+        AnAction editorPrevTab = AnAction.builder("window.editor.prev.tab", "Select Previous Tab")
+                .accelerator(new KeyCodeCombination(KeyCode.LEFT, KeyCombination.ALT_DOWN))
+                .enabledWhen(MainWindow::hasActiveTab)
+                .onAction(MainWindow::selectPreviousTab)
+                .build();
+        AnAction pinTab = AnAction.builder("window.editor.pin.tab", "Pin Tab")
+                .enabledWhen(MainWindow::hasActiveTab)
+                .onAction(MainWindow::pinActiveTab)
+                .build();
+        AnAction keepTabOpen = AnAction.builder("window.editor.keep.tab.open", "Keep Tab Open")
+                .enabledWhen(MainWindow::hasActiveTab)
+                .onAction(MainWindow::keepTabOpen)
+                .build();
+
+        AnAction closeTab = AnAction.builder("window.close.tab", "Close Tab")
+                .accelerator(new KeyCodeCombination(KeyCode.F4, KeyCombination.CONTROL_DOWN))
                 .enabledWhen(MainWindow::hasActiveTab)
                 .onAction(MainWindow::closeActiveTab)
                 .build();
-
         AnAction closeOtherTabs = AnAction.builder("window.close.other.tabs", "Close Other Tabs")
                 .enabledWhen(MainWindow::hasActiveTab)
                 .onAction(MainWindow::closeOtherTabs)
                 .build();
-
         AnAction closeAllTabs = AnAction.builder("window.close.all.tabs", "Close All Tabs")
                 .enabledWhen(MainWindow::hasActiveTab)
                 .onAction(MainWindow::closeAllTabs)
                 .build();
-
-        AnAction reopenTab = AnAction.builder("window.reopen.tab", "Reopen Closed Tab")
-                .accelerator(new KeyCodeCombination(KeyCode.T, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN))
-                .onAction(MainWindow::reopenLastClosedTab)
+        AnAction closeUnmodified = AnAction.builder("window.close.unmodified.tabs", "Close Unmodified Tabs")
+                .enabledWhen(MainWindow::hasActiveTab)
+                .onAction(MainWindow::closeUnmodifiedTabs)
+                .build();
+        AnAction closeAllButPinned = AnAction.builder("window.close.all.but.pinned", "Close All but Pinned")
+                .enabledWhen(MainWindow::hasActiveTab)
+                .onAction(MainWindow::closeAllButPinnedTabs)
+                .build();
+        AnAction closeTabsLeft = AnAction.builder("window.close.tabs.left", "Close Tabs to the Left")
+                .enabledWhen(MainWindow::hasActiveTab)
+                .onAction(MainWindow::closeTabsToLeft)
+                .build();
+        AnAction closeTabsRight = AnAction.builder("window.close.tabs.right", "Close Tabs to the Right")
+                .enabledWhen(MainWindow::hasActiveTab)
+                .onAction(MainWindow::closeTabsToRight)
+                .build();
+        AnAction closeAllReadOnly = AnAction.builder("window.close.all.readonly", "Close All Read-Only")
+                .enabledWhen(MainWindow::hasActiveTab)
+                .onAction(MainWindow::closeAllReadOnlyTabs)
                 .build();
 
+        ActionGroup splitChooser = new ActionGroup("window.editor.split.chooser", "Split with Chooser Navigation", true);
         AnAction splitRight = AnAction.builder("window.split.right", "Split Right")
                 .icon(FontAwesomeSolid.COLUMNS, "#a9b7c6", 11)
                 .enabledWhen(MainWindow::hasActiveTab)
                 .onAction(MainWindow::splitActiveTabRight)
                 .build();
-
         AnAction splitDown = AnAction.builder("window.split.down", "Split Down")
                 .enabledWhen(MainWindow::hasActiveTab)
                 .onAction(MainWindow::splitActiveTabDown)
                 .build();
+        splitChooser.addAll(splitRight, splitDown);
 
+        AnAction stretchTop = AnAction.builder("window.editor.stretch.top", "Stretch Editor to Top")
+                .onAction(MainWindow::stretchEditorTop).build();
+        AnAction stretchLeft = AnAction.builder("window.editor.stretch.left", "Stretch Editor to Left")
+                .onAction(MainWindow::stretchEditorLeft).build();
+        AnAction stretchBottom = AnAction.builder("window.editor.stretch.bottom", "Stretch Editor to Bottom")
+                .onAction(MainWindow::stretchEditorBottom).build();
+        AnAction stretchRight = AnAction.builder("window.editor.stretch.right", "Stretch Editor to Right")
+                .onAction(MainWindow::stretchEditorRight).build();
+        AnAction changeSplitter = AnAction.builder("window.editor.change.splitter.orientation", "Change Splitter Orientation")
+                .onAction(MainWindow::changeSplitterOrientation).build();
+        AnAction maximizeSplits = AnAction.builder("window.editor.maximize.splits", "Maximize Editor/Normalize Splits")
+                .onAction(MainWindow::maximizeEditorSplits).build();
+        AnAction unsplit = AnAction.builder("window.editor.unsplit", "Unsplit")
+                .onAction(MainWindow::unsplitActive).build();
         AnAction unsplitAll = AnAction.builder("window.unsplit.all", "Unsplit All")
-                .onAction(MainWindow::unsplitAll)
+                .onAction(MainWindow::unsplitAll).build();
+        AnAction gotoNextSplitter = AnAction.builder("window.editor.goto.next.splitter", "Go to Next Splitter")
+                .onAction(MainWindow::goToNextSplitter).build();
+        AnAction gotoPrevSplitter = AnAction.builder("window.editor.goto.prev.splitter", "Go to Previous Splitter")
+                .onAction(MainWindow::goToPrevSplitter).build();
+
+        AnAction configEditorTabs = AnAction.builder("window.editor.configure.tabs", "Configure Editor Tabs…")
+                .onAction(MainWindow::showSettingsDialog)
+                .build();
+
+        editorTabsSubmenu.addAll(editorNextTab, editorPrevTab, pinTab, keepTabOpen)
+                .addSeparator()
+                .addAll(closeTab, closeOtherTabs, closeAllTabs, closeUnmodified, closeAllButPinned, closeTabsLeft, closeTabsRight, closeAllReadOnly)
+                .addSeparator()
+                .addAll(splitChooser, stretchTop, stretchLeft, stretchBottom, stretchRight, changeSplitter, maximizeSplits, unsplit, unsplitAll, gotoNextSplitter, gotoPrevSplitter)
+                .addSeparator()
+                .add(configEditorTabs);
+
+        // Submenu 4: Notifications >
+        ActionGroup notificationsSubmenu = new ActionGroup("window.notifications", "Notifications", true);
+        notificationsSubmenu.addAll(
+                AnAction.builder("window.notifications.close.first", "Close First")
+                        .onAction(MainWindow::closeFirstNotification).build(),
+                AnAction.builder("window.notifications.close.all", "Close All")
+                        .onAction(MainWindow::closeAllNotifications).build()
+        );
+
+        // Submenu 5: Processes >
+        ActionGroup processesSubmenu = new ActionGroup("window.processes", "Processes", true);
+        processesSubmenu.addAll(
+                AnAction.builder("window.processes.show", "Show")
+                        .onAction(MainWindow::showProcesses).build(),
+                AnAction.builder("window.processes.auto.show", "Auto Show")
+                        .onAction(MainWindow::toggleAutoShowProcesses).build()
+        );
+
+        // Top-Level Window Menu
+        AnAction nextProjectWindow = AnAction.builder("window.next.project", "Next Project Window")
+                .accelerator(new KeyCodeCombination(KeyCode.CLOSE_BRACKET, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN))
+                .onAction(MainWindow::nextProjectWindow)
+                .build();
+        AnAction prevProjectWindow = AnAction.builder("window.prev.project", "Previous Project Window")
+                .accelerator(new KeyCodeCombination(KeyCode.OPEN_BRACKET, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN))
+                .onAction(MainWindow::prevProjectWindow)
+                .build();
+
+        AnAction activeProjectWindow = AnAction.builder("window.project.active", "default")
+                .icon(FontAwesomeSolid.CHECK, "#a9b7c6", 11)
+                .onAction(MainWindow::showActiveProjectWindow)
                 .build();
 
         ActionGroup windowMenu = new ActionGroup("menu.window", "Window");
-        windowMenu.addAll(nextEditorTab, prevEditorTab)
+        windowMenu.addAll(layoutsSubmenu, activeToolWindowSubmenu, editorTabsSubmenu, notificationsSubmenu, processesSubmenu)
                 .addSeparator()
-                .addAll(closeTab, closeOtherTabs, closeAllTabs, reopenTab)
+                .addAll(nextProjectWindow, prevProjectWindow)
                 .addSeparator()
-                .addAll(splitRight, splitDown, unsplitAll);
+                .add(activeProjectWindow);
+
+        // Retain reopenTab in ActionManager for Ctrl+Shift+T
+        AnAction reopenTab = AnAction.builder("window.reopen.tab", "Reopen Closed Tab")
+                .accelerator(new KeyCodeCombination(KeyCode.T, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(MainWindow::reopenLastClosedTab)
+                .build();
+        manager.registerAction(reopenTab);
 
         // =========================================================================
         // 8. HELP ACTIONS
