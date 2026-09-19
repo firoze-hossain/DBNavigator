@@ -372,4 +372,44 @@ public class SettingsDialogTest {
         String nlDesc = SettingsDialog.getCategoryDescription("Editor / Natural Languages");
         assertEquals("Configure proofreading and natural language spelling checks.", nlDesc);
     }
+
+    @Test
+    public void testSchemasAndDtdsSubcategoriesMatchDataGrip() {
+        List<String> schemaChildren = SettingsDialog.getChildCategoryNames("Languages / Schemas and DTDs");
+        assertNotNull(schemaChildren);
+        assertEquals(4, schemaChildren.size(), "Schemas and DTDs must have 4 subcategories");
+
+        assertEquals("Default XML Schemas", schemaChildren.get(0));
+        assertEquals("JSON Schema Mappings", schemaChildren.get(1));
+        assertEquals("Remote JSON Schemas", schemaChildren.get(2));
+        assertEquals("XML Catalog", schemaChildren.get(3));
+    }
+
+    @Test
+    public void testDebuggerSubcategoriesMatchDataGrip() {
+        List<String> debuggerChildren = SettingsDialog.getChildCategoryNames("Tools / Debugger");
+        assertNotNull(debuggerChildren);
+        assertEquals(2, debuggerChildren.size(), "Debugger must have 2 subcategories");
+
+        assertEquals("Data Views", debuggerChildren.get(0));
+        assertEquals("Stepping", debuggerChildren.get(1));
+    }
+
+    @Test
+    public void testDiffMergeSubcategoriesMatchDataGrip() {
+        List<String> diffChildren = SettingsDialog.getChildCategoryNames("Tools / Diff & Merge");
+        assertNotNull(diffChildren);
+        assertEquals(1, diffChildren.size(), "Diff & Merge must have 1 subcategory");
+
+        assertEquals("External Diff Tools", diffChildren.get(0));
+    }
+
+    @Test
+    public void testMcpServerSubcategoriesMatchDataGrip() {
+        List<String> mcpChildren = SettingsDialog.getChildCategoryNames("Tools / MCP Server");
+        assertNotNull(mcpChildren);
+        assertEquals(1, mcpChildren.size(), "MCP Server must have 1 subcategory");
+
+        assertEquals("Exposed Tools", mcpChildren.get(0));
+    }
 }
