@@ -1093,4 +1093,199 @@ public class ActionRegistryTest {
         assertNotNull(actionManager.getAction("history.recent.changes"));
         assertNotNull(actionManager.getAction("history.put.label"));
     }
+
+    @Test
+    public void testWindowMenuRegistration() {
+        ActionGroup windowMenu = actionManager.getGroup("menu.window");
+        assertNotNull(windowMenu, "menu.window group should be registered");
+        assertEquals("Window", windowMenu.getText());
+    }
+
+    @Test
+    public void testWindowMenuStructureAndOrder() {
+        ActionGroup windowMenu = actionManager.getGroup("menu.window");
+        assertNotNull(windowMenu, "menu.window group should be registered");
+
+        List<AnAction> items = windowMenu.getChildren();
+        assertEquals(10, items.size(), "Window menu should contain 10 entries (5 submenus, 2 separators, 3 actions)");
+
+        // 5 Submenus
+        assertInstanceOf(ActionGroup.class, items.get(0));
+        assertEquals("window.layouts", items.get(0).getId());
+        assertEquals("Layouts", items.get(0).getText());
+
+        assertInstanceOf(ActionGroup.class, items.get(1));
+        assertEquals("window.active.tool.window", items.get(1).getId());
+        assertEquals("Active Tool Window", items.get(1).getText());
+
+        assertInstanceOf(ActionGroup.class, items.get(2));
+        assertEquals("window.editor.tabs", items.get(2).getId());
+        assertEquals("Editor Tabs", items.get(2).getText());
+
+        assertInstanceOf(ActionGroup.class, items.get(3));
+        assertEquals("window.notifications", items.get(3).getId());
+        assertEquals("Notifications", items.get(3).getText());
+
+        assertInstanceOf(ActionGroup.class, items.get(4));
+        assertEquals("window.processes", items.get(4).getId());
+        assertEquals("Processes", items.get(4).getText());
+
+        // Separator 1
+        assertInstanceOf(ActionSeparator.class, items.get(5));
+
+        // Next & Previous Project Window
+        assertInstanceOf(AnAction.class, items.get(6));
+        assertEquals("window.next.project", items.get(6).getId());
+        assertEquals("Next Project Window", items.get(6).getText());
+
+        assertInstanceOf(AnAction.class, items.get(7));
+        assertEquals("window.prev.project", items.get(7).getId());
+        assertEquals("Previous Project Window", items.get(7).getText());
+
+        // Separator 2
+        assertInstanceOf(ActionSeparator.class, items.get(8));
+
+        // Active project indicator
+        assertInstanceOf(AnAction.class, items.get(9));
+        assertEquals("window.project.active", items.get(9).getId());
+        assertEquals("default", items.get(9).getText());
+    }
+
+    @Test
+    public void testWindowLayoutsSubmenu() {
+        ActionGroup layouts = actionManager.getGroup("window.layouts");
+        assertNotNull(layouts);
+        assertTrue(layouts.isPopup());
+
+        List<AnAction> items = layouts.getChildren();
+        assertEquals(4, items.size());
+        assertEquals("window.layouts.default", items.get(0).getId());
+        assertEquals("window.layouts.custom", items.get(1).getId());
+        assertInstanceOf(ActionSeparator.class, items.get(2));
+        assertEquals("window.layouts.save.as.new", items.get(3).getId());
+    }
+
+    @Test
+    public void testWindowActiveToolWindowSubmenu() {
+        ActionGroup activeTw = actionManager.getGroup("window.active.tool.window");
+        assertNotNull(activeTw);
+        assertTrue(activeTw.isPopup());
+
+        // Hide Active Tool Window: Shift+Escape
+        AnAction hideActive = actionManager.getAction("window.toolwindow.hide.active");
+        assertNotNull(hideActive);
+        KeyCodeCombination haAcc = (KeyCodeCombination) hideActive.getAccelerator();
+        assertEquals(KeyCode.ESCAPE, haAcc.getCode());
+        assertEquals(KeyCombination.ModifierValue.DOWN, haAcc.getShift());
+
+        // Hide All Windows: Ctrl+Shift+F12
+        AnAction hideAll = actionManager.getAction("window.toolwindow.hide.all");
+        assertNotNull(hideAll);
+        KeyCodeCombination hallAcc = (KeyCodeCombination) hideAll.getAccelerator();
+        assertEquals(KeyCode.F12, hallAcc.getCode());
+        assertEquals(KeyCombination.ModifierValue.DOWN, hallAcc.getControl());
+        assertEquals(KeyCombination.ModifierValue.DOWN, hallAcc.getShift());
+
+        // Jump to Last Tool Window: F12
+        AnAction jumpLast = actionManager.getAction("window.toolwindow.jump.last");
+        assertNotNull(jumpLast);
+        KeyCodeCombination jlAcc = (KeyCodeCombination) jumpLast.getAccelerator();
+        assertEquals(KeyCode.F12, jlAcc.getCode());
+
+        // Maximize Tool Window: Ctrl+Shift+Quote
+        AnAction maxTw = actionManager.getAction("window.toolwindow.maximize");
+        assertNotNull(maxTw);
+        KeyCodeCombination maxAcc = (KeyCodeCombination) maxTw.getAccelerator();
+        assertEquals(KeyCode.QUOTE, maxAcc.getCode());
+        assertEquals(KeyCombination.ModifierValue.DOWN, maxAcc.getControl());
+        assertEquals(KeyCombination.ModifierValue.DOWN, maxAcc.getShift());
+
+        // Close Active Tab (tool window): Ctrl+Shift+F4
+        AnAction closeTwTab = actionManager.getAction("window.toolwindow.close.active.tab");
+        assertNotNull(closeTwTab);
+        KeyCodeCombination cttAcc = (KeyCodeCombination) closeTwTab.getAccelerator();
+        assertEquals(KeyCode.F4, cttAcc.getCode());
+        assertEquals(KeyCombination.ModifierValue.DOWN, cttAcc.getControl());
+        assertEquals(KeyCombination.ModifierValue.DOWN, cttAcc.getShift());
+
+        // Child submenus: View Mode, Move to, Resize
+        assertNotNull(actionManager.getGroup("window.toolwindow.view.mode"));
+        assertNotNull(actionManager.getGroup("window.toolwindow.move.to"));
+        assertNotNull(actionManager.getGroup("window.toolwindow.resize"));
+        assertNotNull(actionManager.getAction("window.toolwindow.group.tabs"));
+    }
+
+    @Test
+    public void testWindowEditorTabsSubmenu() {
+        ActionGroup editorTabs = actionManager.getGroup("window.editor.tabs");
+        assertNotNull(editorTabs);
+        assertTrue(editorTabs.isPopup());
+
+        // Close Tab: Ctrl+F4
+        AnAction closeTab = actionManager.getAction("window.close.tab");
+        assertNotNull(closeTab);
+        assertEquals("Close Tab", closeTab.getText());
+        KeyCodeCombination ctAcc = (KeyCodeCombination) closeTab.getAccelerator();
+        assertEquals(KeyCode.F4, ctAcc.getCode());
+        assertEquals(KeyCombination.ModifierValue.DOWN, ctAcc.getControl());
+
+        // Split with Chooser Navigation submenu
+        ActionGroup splitChooser = actionManager.getGroup("window.editor.split.chooser");
+        assertNotNull(splitChooser);
+        assertEquals(2, splitChooser.getChildren().size());
+        assertEquals("window.split.right", splitChooser.getChildren().get(0).getId());
+        assertEquals("window.split.down", splitChooser.getChildren().get(1).getId());
+
+        // Other editor tab actions
+        assertNotNull(actionManager.getAction("window.close.other.tabs"));
+        assertNotNull(actionManager.getAction("window.close.all.tabs"));
+        assertNotNull(actionManager.getAction("window.close.unmodified.tabs"));
+        assertNotNull(actionManager.getAction("window.close.all.but.pinned"));
+        assertNotNull(actionManager.getAction("window.close.tabs.left"));
+        assertNotNull(actionManager.getAction("window.close.tabs.right"));
+        assertNotNull(actionManager.getAction("window.close.all.readonly"));
+        assertNotNull(actionManager.getAction("window.editor.unsplit"));
+        assertNotNull(actionManager.getAction("window.unsplit.all"));
+        assertNotNull(actionManager.getAction("window.editor.configure.tabs"));
+    }
+
+    @Test
+    public void testWindowNotificationsAndProcessesSubmenus() {
+        ActionGroup notifications = actionManager.getGroup("window.notifications");
+        assertNotNull(notifications);
+        assertEquals(2, notifications.getChildren().size());
+        assertEquals("window.notifications.close.first", notifications.getChildren().get(0).getId());
+        assertEquals("window.notifications.close.all", notifications.getChildren().get(1).getId());
+
+        ActionGroup processes = actionManager.getGroup("window.processes");
+        assertNotNull(processes);
+        assertEquals(2, processes.getChildren().size());
+        assertEquals("window.processes.show", processes.getChildren().get(0).getId());
+        assertEquals("window.processes.auto.show", processes.getChildren().get(1).getId());
+    }
+
+    @Test
+    public void testWindowProjectAccelerators() {
+        AnAction nextProj = actionManager.getAction("window.next.project");
+        assertNotNull(nextProj);
+        KeyCodeCombination npAcc = (KeyCodeCombination) nextProj.getAccelerator();
+        assertEquals(KeyCode.CLOSE_BRACKET, npAcc.getCode());
+        assertEquals(KeyCombination.ModifierValue.DOWN, npAcc.getControl());
+        assertEquals(KeyCombination.ModifierValue.DOWN, npAcc.getAlt());
+
+        AnAction prevProj = actionManager.getAction("window.prev.project");
+        assertNotNull(prevProj);
+        KeyCodeCombination ppAcc = (KeyCodeCombination) prevProj.getAccelerator();
+        assertEquals(KeyCode.OPEN_BRACKET, ppAcc.getCode());
+        assertEquals(KeyCombination.ModifierValue.DOWN, ppAcc.getControl());
+        assertEquals(KeyCombination.ModifierValue.DOWN, ppAcc.getAlt());
+
+        // Reopen Closed Tab preserved: Ctrl+Shift+T
+        AnAction reopenTab = actionManager.getAction("window.reopen.tab");
+        assertNotNull(reopenTab);
+        KeyCodeCombination rtAcc = (KeyCodeCombination) reopenTab.getAccelerator();
+        assertEquals(KeyCode.T, rtAcc.getCode());
+        assertEquals(KeyCombination.ModifierValue.DOWN, rtAcc.getControl());
+        assertEquals(KeyCombination.ModifierValue.DOWN, rtAcc.getShift());
+    }
 }

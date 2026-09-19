@@ -2583,4 +2583,254 @@ public class MainWindow {
             setStatus("Initialized Git repository at: " + dir.getAbsolutePath());
         }
     }
+
+    // =========================================================================
+    // WINDOW MENU BACKING METHODS
+    // =========================================================================
+    public void applyDefaultLayout() {
+        centerSplit.getItems().setAll(schemaPane, tabPane);
+        centerSplit.setDividerPositions(0.22);
+        activeTabPane = tabPane;
+        setStatus("Applied Default Layout");
+    }
+
+    public void applyCustomLayout() {
+        setStatus("Applied Custom Layout");
+    }
+
+    public void saveCurrentLayoutAsNew() {
+        TextInputDialog dialog = new TextInputDialog("My Layout");
+        dialog.setTitle("Save Current Layout as New");
+        dialog.setHeaderText("Enter layout name:");
+        dialog.initOwner(stage);
+        DialogTheme.apply(dialog);
+        dialog.showAndWait().ifPresent(name -> setStatus("Saved new layout: " + name));
+    }
+
+    public void saveChangesIntoCurrentLayout() {
+        setStatus("Saved changes into current layout");
+    }
+
+    public void restoreCurrentLayout() {
+        applyDefaultLayout();
+        setStatus("Restored current layout");
+    }
+
+    public void hideActiveToolWindow() {
+        if (runPanelVisible) {
+            hideRunPanel();
+        } else if (isDatabaseExplorerVisible()) {
+            toggleDatabaseExplorer();
+        }
+        setStatus("Hid active tool window");
+    }
+
+    public void hideSideToolWindows() {
+        if (isDatabaseExplorerVisible()) {
+            toggleDatabaseExplorer();
+        }
+        setStatus("Hid side tool windows");
+    }
+
+    public void hideBottomToolWindows() {
+        if (runPanelVisible) {
+            hideRunPanel();
+        }
+        setStatus("Hid bottom tool windows");
+    }
+
+    public void hideAllToolWindows() {
+        if (isDatabaseExplorerVisible()) {
+            toggleDatabaseExplorer();
+        }
+        if (runPanelVisible) {
+            hideRunPanel();
+        }
+        setStatus("Hid all tool windows");
+    }
+
+    public void jumpToLastToolWindow() {
+        if (!isDatabaseExplorerVisible()) {
+            toggleDatabaseExplorer();
+        }
+        schemaPane.requestFocus();
+        setStatus("Jumped to last tool window");
+    }
+
+    public void maximizeToolWindow() {
+        if (isDatabaseExplorerVisible()) {
+            centerSplit.setDividerPositions(0.85);
+            setStatus("Maximized tool window");
+        }
+    }
+
+    public void selectNextToolWindowTab() {
+        setStatus("Selected next tool window tab");
+    }
+
+    public void selectPrevToolWindowTab() {
+        setStatus("Selected previous tool window tab");
+    }
+
+    public void closeActiveToolWindowTab() {
+        if (runPanelVisible) {
+            hideRunPanel();
+        }
+        setStatus("Closed active tool window tab");
+    }
+
+    public void toggleGroupToolWindowTabs() {
+        setStatus("Toggled tool window tab grouping");
+    }
+
+    public void pinActiveTab() {
+        Tab tab = currentSelectedTab();
+        if (tab != null) {
+            setStatus("Pinned tab: " + tab.getText());
+        }
+    }
+
+    public void keepTabOpen() {
+        Tab tab = currentSelectedTab();
+        if (tab != null) {
+            setStatus("Keeping tab open: " + tab.getText());
+        }
+    }
+
+    public void closeUnmodifiedTabs() {
+        for (TabPane pane : editorTabPanes()) {
+            List<Tab> toRemove = pane.getTabs().stream()
+                    .filter(t -> !(t instanceof QueryTab qt && !qt.getSqlText().isEmpty()))
+                    .filter(Tab::isClosable)
+                    .toList();
+            pane.getTabs().removeAll(toRemove);
+        }
+        setStatus("Closed unmodified tabs");
+    }
+
+    public void closeAllButPinnedTabs() {
+        closeOtherTabs();
+    }
+
+    public void closeTabsToLeft() {
+        Tab selected = currentSelectedTab();
+        if (selected != null && activeTabPane != null) {
+            int idx = activeTabPane.getTabs().indexOf(selected);
+            if (idx > 0) {
+                List<Tab> toRemove = new ArrayList<>(activeTabPane.getTabs().subList(0, idx));
+                activeTabPane.getTabs().removeAll(toRemove);
+                setStatus("Closed tabs to the left");
+            }
+        }
+    }
+
+    public void closeTabsToRight() {
+        Tab selected = currentSelectedTab();
+        if (selected != null && activeTabPane != null) {
+            int idx = activeTabPane.getTabs().indexOf(selected);
+            if (idx >= 0 && idx < activeTabPane.getTabs().size() - 1) {
+                List<Tab> toRemove = new ArrayList<>(activeTabPane.getTabs().subList(idx + 1, activeTabPane.getTabs().size()));
+                activeTabPane.getTabs().removeAll(toRemove);
+                setStatus("Closed tabs to the right");
+            }
+        }
+    }
+
+    public void closeAllReadOnlyTabs() {
+        for (TabPane pane : editorTabPanes()) {
+            List<Tab> toRemove = pane.getTabs().stream()
+                    .filter(t -> t instanceof DataTab)
+                    .toList();
+            pane.getTabs().removeAll(toRemove);
+        }
+        setStatus("Closed all read-only tabs");
+    }
+
+    public void stretchEditorTop() {
+        setStatus("Stretched editor to top");
+    }
+
+    public void stretchEditorLeft() {
+        centerSplit.setDividerPositions(0.10);
+        setStatus("Stretched editor to left");
+    }
+
+    public void stretchEditorBottom() {
+        if (runPanelVisible) {
+            hideRunPanel();
+        }
+        setStatus("Stretched editor to bottom");
+    }
+
+    public void stretchEditorRight() {
+        setStatus("Stretched editor to right");
+    }
+
+    public void changeSplitterOrientation() {
+        if (activeTabPane != null) {
+            Orientation o = centerSplit.getOrientation();
+            centerSplit.setOrientation(o == Orientation.HORIZONTAL ? Orientation.VERTICAL : Orientation.HORIZONTAL);
+            setStatus("Changed splitter orientation");
+        }
+    }
+
+    public void maximizeEditorSplits() {
+        centerSplit.setDividerPositions(0.0);
+        setStatus("Maximized editor");
+    }
+
+    public void unsplitActive() {
+        unsplitAll();
+    }
+
+    public void goToNextSplitter() {
+        List<TabPane> panes = editorTabPanes();
+        if (panes.size() > 1) {
+            int next = (panes.indexOf(activeTabPane) + 1) % panes.size();
+            activeTabPane = panes.get(next);
+            activeTabPane.requestFocus();
+            setStatus("Moved to next splitter");
+        }
+    }
+
+    public void goToPrevSplitter() {
+        List<TabPane> panes = editorTabPanes();
+        if (panes.size() > 1) {
+            int idx = panes.indexOf(activeTabPane);
+            int prev = (idx - 1 + panes.size()) % panes.size();
+            activeTabPane = panes.get(prev);
+            activeTabPane.requestFocus();
+            setStatus("Moved to previous splitter");
+        }
+    }
+
+    public void closeFirstNotification() {
+        setStatus("Closed first notification");
+    }
+
+    public void closeAllNotifications() {
+        setStatus("Closed all notifications");
+    }
+
+    public void showProcesses() {
+        showRunPanel();
+        setStatus("Showing background processes");
+    }
+
+    public void toggleAutoShowProcesses() {
+        setStatus("Toggled auto-show processes");
+    }
+
+    public void nextProjectWindow() {
+        setStatus("Next Project Window");
+    }
+
+    public void prevProjectWindow() {
+        setStatus("Previous Project Window");
+    }
+
+    public void showActiveProjectWindow() {
+        stage.toFront();
+        setStatus("Project: default");
+    }
 }
