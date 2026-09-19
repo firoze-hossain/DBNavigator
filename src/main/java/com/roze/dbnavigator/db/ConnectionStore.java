@@ -46,6 +46,9 @@ public final class ConnectionStore {
                     if (p.isSavePassword() && p.getPassword() != null && !p.getPassword().isEmpty()) {
                         p.setPassword(decode(p.getPassword()));
                     }
+                    if (p.getProjectName() == null || p.getProjectName().isBlank()) {
+                        p.setProjectName("default");
+                    }
                     profiles.add(p);
                 }
             } catch (IOException e) {
@@ -55,13 +58,34 @@ public final class ConnectionStore {
         return new ArrayList<>(profiles);
     }
 
+    /**
+     * Loads connection profiles belonging to a specific project.
+     * If projectName is "default", also returns profiles with null or empty projectName.
+     */
+    public static synchronized List<ConnectionProfile> loadForProject(String projectName) {
+        List<ConnectionProfile> all = load();
+        if (projectName == null || projectName.isBlank() || "default".equalsIgnoreCase(projectName.trim())) {
+            return all.stream()
+                    .filter(p -> p.getProjectName() == null || p.getProjectName().isBlank() || "default".equalsIgnoreCase(p.getProjectName()))
+                    .toList();
+        }
+        return all.stream()
+                .filter(p -> projectName.equalsIgnoreCase(p.getProjectName()))
+                .toList();
+    }
+
     public static synchronized void saveOrUpdate(ConnectionProfile profile) {
+        load();
+        if (profile.getProjectName() == null || profile.getProjectName().isBlank()) {
+            profile.setProjectName(ProjectStore.getCurrentProject().getName());
+        }
         profiles.removeIf(p -> p.getId().equals(profile.getId()));
         profiles.add(profile);
         persist();
     }
 
     public static synchronized void delete(ConnectionProfile profile) {
+        load();
         profiles.removeIf(p -> p.getId().equals(profile.getId()));
         persist();
     }

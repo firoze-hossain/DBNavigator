@@ -19,7 +19,7 @@ public class Main extends Application {
         Scene scene = new Scene(window.getRoot(), 1440, 900);
         ThemeManager.init(scene, AppSettingsStore.load().getTheme());
 
-        stage.setTitle("DBNavigator Pro");
+        window.updateWindowTitle();
         stage.setScene(scene);
         stage.setMinWidth(1000);
         stage.setMinHeight(650);

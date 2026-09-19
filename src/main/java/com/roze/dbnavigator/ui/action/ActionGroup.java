@@ -58,6 +58,13 @@ public class ActionGroup extends AnAction {
         return this;
     }
 
+    private java.util.function.BiConsumer<Menu, MainWindow> onMenuShowing;
+
+    public ActionGroup setOnMenuShowing(java.util.function.BiConsumer<Menu, MainWindow> onMenuShowing) {
+        this.onMenuShowing = onMenuShowing;
+        return this;
+    }
+
     public List<AnAction> getChildren() {
         return Collections.unmodifiableList(children);
     }
@@ -69,6 +76,9 @@ public class ActionGroup extends AnAction {
             menu.setGraphic(Icons.of(getIcon(), "#a9b7c6", 11));
         }
         populateMenuItems(menu.getItems(), ctx);
+        if (onMenuShowing != null) {
+            menu.setOnShowing(e -> onMenuShowing.accept(menu, ctx));
+        }
         return menu;
     }
 

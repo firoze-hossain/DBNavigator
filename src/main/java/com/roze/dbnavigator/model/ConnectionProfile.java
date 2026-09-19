@@ -85,6 +85,8 @@ public class ConnectionProfile {
     private OracleConnectionType oracleConnectionType = OracleConnectionType.SERVICE_NAME;
     private String oracleSid = "";
     private String oracleConnectString = "";
+    /** The project this connection belongs to; defaults to "default". */
+    private String projectName = "default";
 
     public ConnectionProfile() {}
 
@@ -314,10 +316,18 @@ public class ConnectionProfile {
         c.oracleConnectionType = oracleConnectionType;
         c.oracleSid = oracleSid;
         c.oracleConnectString = oracleConnectString;
+        c.projectName = (projectName != null && !projectName.isBlank()) ? projectName : "default";
         return c;
     }
 
     // Getters / setters (Jackson needs these)
+    public String getProjectName() {
+        return (projectName != null && !projectName.isBlank()) ? projectName : "default";
+    }
+    public void setProjectName(String projectName) {
+        this.projectName = (projectName != null && !projectName.isBlank()) ? projectName : "default";
+    }
+
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
     public String getName() { return name; }
