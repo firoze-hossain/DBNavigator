@@ -23,6 +23,10 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
+import com.roze.dbnavigator.db.ProjectStore;
+import javafx.geometry.Pos;
+import javafx.scene.layout.StackPane;
+
 /**
  * The DataGrip-style "Database Explorer": all connections in one lazy tree.
  * Double-click a table/collection to open it; right-click for actions.
@@ -33,23 +37,11 @@ public class SchemaTreePane extends VBox {
     private final TreeItem<DbObject> root = new TreeItem<>(new DbObject("root", Kind.MESSAGE));
     /** Maps every connection tree item to its profile. */
     private final Map<TreeItem<DbObject>, ConnectionProfile> connectionItems = new ConcurrentHashMap<>();
-    /**
-     * Registered by restoreExpansion/refreshNode right before
-     * programmatically expanding a node, so the existing lazy-load
-     * listener (see addConnectionNode/loadChildrenAsync) can call back
-     * exactly once real loading has actually finished. This is the
-     * correct, race-free way to know "children are really there now" -
-     * an earlier, real bug in this exact mechanism tried to learn this
-     * by observing the children list's own individual mutations from
-     * the outside instead, which fires once per single change (the
-     * initial clear(), then once per real child added), not once after
-     * the real rebuild as a whole is done - meaning it fired far too
-     * early, against an empty or partially-built list, and nothing ever
-     * actually got restored.
-     */
     private final Map<TreeItem<DbObject>, Runnable> pendingLoadCallbacks = new ConcurrentHashMap<>();
 
     private final MainWindow mainWindow;
+    private final ProjectWidget projectWidget;
+    private final VBox emptyWelcomeView;
 
     public SchemaTreePane(MainWindow mainWindow) {
         this.mainWindow = mainWindow;
@@ -57,6 +49,8 @@ public class SchemaTreePane extends VBox {
 
         Label header = new Label("Database Explorer");
         header.getStyleClass().add("panel-header");
+
+        this.projectWidget = new ProjectWidget(mainWindow);
 
         Button addButton = new Button();
         addButton.setGraphic(Icons.of(FontAwesomeSolid.PLUS, "#57965c", 11));
@@ -70,7 +64,8 @@ public class SchemaTreePane extends VBox {
 
         javafx.scene.layout.Region spacer = new javafx.scene.layout.Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-        HBox headerBox = new HBox(6, header, spacer, addButton, refreshButton);
+        HBox headerBox = new HBox(6, header, spacer, projectWidget, addButton, refreshButton);
+        headerBox.setAlignment(Pos.CENTER_LEFT);
         headerBox.setPadding(new Insets(8, 8, 8, 10));
         headerBox.getStyleClass().add("panel-header-box");
 
@@ -87,28 +82,109 @@ public class SchemaTreePane extends VBox {
             }
         });
 
-        getChildren().addAll(headerBox, tree);
+        this.emptyWelcomeView = buildEmptyWelcomeView();
+        StackPane contentPane = new StackPane(tree, emptyWelcomeView);
+        VBox.setVgrow(contentPane, Priority.ALWAYS);
+
+        getChildren().addAll(headerBox, contentPane);
+
         reload();
     }
 
-    /** Rebuilds the root list of connections from the store, preserving whichever nodes were already expanded (see restoreExpansion's own javadoc for why a full rebuild can't simply be avoided instead: there is no way to know a connection's own real children haven't changed without reloading them). */
+    public ProjectWidget getProjectWidget() {
+        return projectWidget;
+    }
+
+    /** Rebuilds the root list of connections for the current active project. */
     public void reload() {
         Set<String> expanded = new java.util.HashSet<>();
         capturePaths(root, expanded);
 
         root.getChildren().clear();
         connectionItems.clear();
-        for (ConnectionProfile profile : ConnectionStore.load()) {
+
+        String currentProject = (mainWindow != null && mainWindow.getProject() != null)
+                ? mainWindow.getProject().getName()
+                : "default";
+        List<ConnectionProfile> projectProfiles = ConnectionStore.loadForProject(currentProject);
+        for (ConnectionProfile profile : projectProfiles) {
             addConnectionNode(profile);
         }
-        if (root.getChildren().isEmpty()) {
-            root.getChildren().add(new TreeItem<>(
-                    new DbObject("No connections — click + to add one", Kind.MESSAGE)));
-        }
 
-        if (!expanded.isEmpty()) {
+        boolean isEmpty = projectProfiles.isEmpty();
+        emptyWelcomeView.setVisible(isEmpty);
+        emptyWelcomeView.setManaged(isEmpty);
+        tree.setVisible(!isEmpty);
+        tree.setManaged(!isEmpty);
+
+        if (!isEmpty && !expanded.isEmpty()) {
             restoreExpansion(root, expanded);
         }
+    }
+
+    private VBox buildEmptyWelcomeView() {
+        Label createHeader = new Label("Create Data Source");
+        createHeader.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 11px; -fx-padding: 6 0 2 0; -fx-font-weight: bold;");
+
+        Button pgBtn = buildEmptyTileButton("PostgreSQL", FontAwesomeSolid.DATABASE, "#3592c4",
+                () -> mainWindow.showNewConnectionDialog(ConnectionProfile.DatabaseType.POSTGRESQL));
+
+        Button mysqlBtn = buildEmptyTileButton("MySQL", FontAwesomeSolid.DATABASE, "#4a88c7",
+                () -> mainWindow.showNewConnectionDialog(ConnectionProfile.DatabaseType.MYSQL));
+
+        Button mssqlBtn = buildEmptyTileButton("Microsoft SQL Server", FontAwesomeSolid.DATABASE, "#c77dbb",
+                () -> mainWindow.showNewConnectionDialog(ConnectionProfile.DatabaseType.SQLSERVER));
+
+        Button allBtn = buildEmptyTileButton("All Data Sources >", FontAwesomeSolid.ELLIPSIS_H, "#868a91",
+                () -> mainWindow.showNewConnectionDialog());
+
+        Label cloudHeader = new Label("Connect to Cloud Provider");
+        cloudHeader.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 11px; -fx-padding: 12 0 2 0; -fx-font-weight: bold;");
+
+        Button gcpBtn = buildEmptyTileButton("Google Cloud", FontAwesomeSolid.CLOUD, "#4a88c7",
+                () -> mainWindow.openDataSourceFromCloudDialog("Google Cloud", ConnectionProfile.DatabaseType.POSTGRESQL));
+
+        Button awsBtn = buildEmptyTileButton("AWS", FontAwesomeSolid.CLOUD, "#e0a44c",
+                () -> mainWindow.openDataSourceFromCloudDialog("AWS", ConnectionProfile.DatabaseType.POSTGRESQL));
+
+        Button azureBtn = buildEmptyTileButton("Azure Cloud Explorer", FontAwesomeSolid.CLOUD, "#3592c4",
+                () -> mainWindow.openDataSourceFromCloudDialog("Azure", ConnectionProfile.DatabaseType.SQLSERVER));
+
+        Label demoHeader = new Label("Explore Demo Databases");
+        demoHeader.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 11px; -fx-padding: 12 0 2 0; -fx-font-weight: bold;");
+
+        Button demoPgBtn = buildEmptyTileButton("Demo PostgreSQL", FontAwesomeSolid.DATABASE, "#3592c4",
+                () -> mainWindow.showNewConnectionDialog(ConnectionProfile.DatabaseType.POSTGRESQL));
+
+        VBox tilesBox = new VBox(6,
+                createHeader, pgBtn, mysqlBtn, mssqlBtn, allBtn,
+                cloudHeader, gcpBtn, awsBtn, azureBtn,
+                demoHeader, demoPgBtn
+        );
+        tilesBox.setPadding(new Insets(10, 12, 16, 12));
+
+        ScrollPane scroll = new ScrollPane(tilesBox);
+        scroll.setFitToWidth(true);
+        scroll.setStyle("-fx-background-color: transparent; -fx-background: transparent;");
+        VBox.setVgrow(scroll, Priority.ALWAYS);
+
+        VBox container = new VBox(scroll);
+        VBox.setVgrow(container, Priority.ALWAYS);
+        return container;
+    }
+
+    private Button buildEmptyTileButton(String text, FontAwesomeSolid icon, String iconColor, Runnable onClick) {
+        Button btn = new Button(text);
+        btn.setGraphic(Icons.of(icon, iconColor, 12));
+        btn.setMaxWidth(Double.MAX_VALUE);
+        btn.setAlignment(Pos.CENTER_LEFT);
+        btn.setStyle("-fx-background-color: #2b2d30; -fx-background-radius: 6; -fx-text-fill: -text; -fx-font-size: 12px; -fx-padding: 8 12; -fx-cursor: hand;");
+        btn.setOnMouseEntered(e -> btn.setStyle("-fx-background-color: #35373c; -fx-background-radius: 6; -fx-text-fill: -text; -fx-font-size: 12px; -fx-padding: 8 12; -fx-cursor: hand;"));
+        btn.setOnMouseExited(e -> btn.setStyle("-fx-background-color: #2b2d30; -fx-background-radius: 6; -fx-text-fill: -text; -fx-font-size: 12px; -fx-padding: 8 12; -fx-cursor: hand;"));
+        btn.setOnAction(e -> {
+            if (onClick != null) onClick.run();
+        });
+        return btn;
     }
 
     public void addConnectionNode(ConnectionProfile profile) {

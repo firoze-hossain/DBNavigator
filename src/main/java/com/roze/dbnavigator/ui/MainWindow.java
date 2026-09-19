@@ -17,10 +17,15 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.*;
+import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 import org.kordamp.ikonli.fontawesome5.FontAwesomeSolid;
+
+import com.roze.dbnavigator.model.Project;
+import com.roze.dbnavigator.ui.dialog.NewProjectDialog;
+import com.roze.dbnavigator.ui.dialog.OpenProjectDialog;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
@@ -115,8 +120,15 @@ public class MainWindow {
             Map.entry("memory", false)
     ));
 
+    private Project currentProject;
+
     public MainWindow(Stage stage) {
+        this(stage, ProjectStore.getCurrentProject());
+    }
+
+    public MainWindow(Stage stage, Project project) {
         this.stage = stage;
+        this.currentProject = project != null ? project : ProjectStore.getCurrentProject();
         this.schemaPane = new SchemaTreePane(this);
 
         ActionManager actionManager = ActionManager.getInstance();
@@ -164,6 +176,23 @@ public class MainWindow {
             saveSession();
             schemaPane.saveTreeState();
         });
+        updateWindowTitle();
+    }
+
+    public Project getProject() {
+        return currentProject;
+    }
+
+    public void setProject(Project newProject) {
+        if (newProject == null) return;
+        this.currentProject = newProject;
+        updateWindowTitle();
+        if (schemaPane != null) {
+            schemaPane.reload();
+            if (schemaPane.getProjectWidget() != null) {
+                schemaPane.getProjectWidget().updateProject(newProject);
+            }
+        }
     }
 
     public Parent getRoot() { return root; }
@@ -344,17 +373,80 @@ public class MainWindow {
     }
 
     public void createNewProjectDialog() {
-        TextInputDialog dialog = (TextInputDialog) DialogTheme.apply(new TextInputDialog("NewProject"));
-        dialog.initOwner(stage);
-        dialog.setTitle("New Project");
-        dialog.setHeaderText(null);
-        dialog.setContentText("Project name:");
-        dialog.showAndWait().ifPresent(name -> {
-            if (!name.isBlank()) {
-                stage.setTitle("DBNavigator Pro - " + name);
-                setStatus("Created project: " + name);
-            }
-        });
+        createNewProjectFlow();
+    }
+
+    public void createNewProjectFlow() {
+        NewProjectDialog dialog = new NewProjectDialog(stage);
+        Project project = dialog.showAndWait();
+        if (project != null) {
+            switchProjectFlow(project);
+        }
+    }
+
+    public void openProjectFlow() {
+        DirectoryChooser chooser = new DirectoryChooser();
+        chooser.setTitle("Open Project Directory");
+        File defaultDir = new File(System.getProperty("user.home"), "DBNavigatorProjects");
+        if (!defaultDir.exists()) {
+            defaultDir = new File(System.getProperty("user.home"));
+        }
+        chooser.setInitialDirectory(defaultDir);
+        File selected = chooser.showDialog(stage);
+        if (selected != null) {
+            Project project = ProjectStore.createOrOpenProject(selected.getAbsolutePath());
+            switchProjectFlow(project);
+        }
+    }
+
+    public void switchProjectFlow(Project targetProject) {
+        if (targetProject == null) return;
+        Project current = this.currentProject;
+        if (current != null && current.getName().equalsIgnoreCase(targetProject.getName())
+                && current.getPath().equalsIgnoreCase(targetProject.getPath())) {
+            return;
+        }
+
+        OpenProjectDialog dialog = new OpenProjectDialog(stage, targetProject);
+        OpenProjectDialog.Result result = dialog.showAndWait();
+        if (result.getMode() == OpenProjectDialog.OpenMode.CANCEL) {
+            return;
+        }
+
+        if (result.getMode() == OpenProjectDialog.OpenMode.THIS_WINDOW) {
+            setProject(targetProject);
+            ProjectStore.setCurrentProject(targetProject);
+            setStatus("Opened project: " + targetProject.getName());
+        } else if (result.getMode() == OpenProjectDialog.OpenMode.NEW_WINDOW) {
+            openInNewWindow(targetProject);
+            setStatus("Opened project in new window: " + targetProject.getName());
+        } else if (result.getMode() == OpenProjectDialog.OpenMode.ATTACH) {
+            ProjectStore.saveOrUpdate(targetProject);
+            setStatus("Attached project: " + targetProject.getName());
+            schemaPane.reload();
+        }
+    }
+
+    public void openInNewWindow(Project targetProject) {
+        Stage newStage = new Stage();
+        targetProject.setLastOpened(System.currentTimeMillis());
+        ProjectStore.saveOrUpdate(targetProject);
+        MainWindow window = new MainWindow(newStage, targetProject);
+        Scene scene = new Scene(window.getRoot(), 1440, 900);
+        ThemeManager.init(scene, AppSettingsStore.load().getTheme());
+        window.updateWindowTitle();
+        newStage.setScene(scene);
+        newStage.setMinWidth(1000);
+        newStage.setMinHeight(650);
+        newStage.show();
+    }
+
+    public void updateWindowTitle() {
+        if (stage != null && currentProject != null) {
+            stage.setTitle("DBNavigator Pro - " + currentProject.getName() + " [" + currentProject.getDisplayPath() + "]");
+        } else if (stage != null) {
+            stage.setTitle("DBNavigator Pro");
+        }
     }
 
     public void openNewQueryFile() {
@@ -504,6 +596,7 @@ public class MainWindow {
         if (file != null) {
             String name = file.getName().replaceAll("\\.[^.]+$", "");
             ConnectionProfile p = new ConnectionProfile();
+            p.setProjectName(currentProject != null ? currentProject.getName() : "default");
             p.setName(name.toUpperCase() + " (File)");
             p.setType(ConnectionProfile.DatabaseType.SQLITE);
             p.setDatabase(file.getAbsolutePath());
@@ -548,6 +641,7 @@ public class MainWindow {
         if (file != null) {
             String name = file.getName().replaceAll("\\.[^.]+$", "") + " (DDL)";
             ConnectionProfile p = new ConnectionProfile();
+            p.setProjectName(currentProject != null ? currentProject.getName() : "default");
             p.setName(name);
             p.setType(ConnectionProfile.DatabaseType.SQLITE);
             p.setDatabase(":memory:");
@@ -589,24 +683,29 @@ public class MainWindow {
     }
 
     public void attachDirectoryToProject() {
-        javafx.stage.DirectoryChooser chooser = new javafx.stage.DirectoryChooser();
+        DirectoryChooser chooser = new DirectoryChooser();
         chooser.setTitle("Attach Directory to Project");
         File dir = chooser.showDialog(stage);
         if (dir != null) {
-            setStatus("Attached directory: " + dir.getAbsolutePath());
+            Project attached = ProjectStore.createOrOpenProject(dir.getAbsolutePath());
+            switchProjectFlow(attached);
         }
     }
 
     public void renameProject() {
-        TextInputDialog dialog = (TextInputDialog) DialogTheme.apply(new TextInputDialog("DBNavigator Project"));
+        Project current = this.currentProject;
+        String currentName = current != null ? current.getName() : "default";
+        TextInputDialog dialog = (TextInputDialog) DialogTheme.apply(new TextInputDialog(currentName));
         dialog.initOwner(stage);
         dialog.setTitle("Rename Project");
         dialog.setHeaderText(null);
         dialog.setContentText("Project name:");
         dialog.showAndWait().ifPresent(name -> {
-            if (!name.isBlank()) {
-                stage.setTitle("DBNavigator Pro - " + name);
-                setStatus("Renamed project to: " + name);
+            if (!name.isBlank() && current != null) {
+                current.setName(name.trim());
+                ProjectStore.saveOrUpdate(current);
+                setProject(current);
+                setStatus("Renamed project to: " + name.trim());
             }
         });
     }
@@ -1369,6 +1468,10 @@ public class MainWindow {
 
     public void showNewConnectionDialog(ConnectionProfile.DatabaseType type) {
         ConnectionProfile initial = new ConnectionProfile();
+        Project current = this.currentProject != null ? this.currentProject : ProjectStore.getCurrentProject();
+        if (current != null) {
+            initial.setProjectName(current.getName());
+        }
         if (type != null) {
             initial.setType(type);
             initial.setName("New " + type.getDisplayName());
@@ -1584,15 +1687,15 @@ public class MainWindow {
      * (consoles only, not data grids/diagrams/structure views).
      */
     private void restoreSession() {
-        List<ConnectionProfile> profiles = ConnectionStore.load();
+        String myProj = currentProject != null ? currentProject.getName() : "default";
+        List<ConnectionProfile> profiles = ConnectionStore.loadForProject(myProj);
 
         List<SessionStore.OpenTab> saved = SessionStore.load();
         for (SessionStore.OpenTab open : saved) {
             ConnectionProfile profile = profiles.stream()
                     .filter(p -> p.getId().equals(open.profileId()))
                     .findFirst().orElse(null);
-            // The connection this console belonged to was deleted since —
-            // nothing sensible to restore it against.
+            // The connection this console belonged to does not belong to this project or was deleted
             if (profile == null) continue;
             if (open.mongo()) {
                 MongoConsoleTab tab = new MongoConsoleTab(profile, open.catalog(), open.title());
@@ -1610,8 +1713,7 @@ public class MainWindow {
             ConnectionProfile profile = profiles.stream()
                     .filter(p -> p.getId().equals(open.profileId()))
                     .findFirst().orElse(null);
-            // Same real reasoning as above - the connection this data tab
-            // belonged to is simply gone now.
+            // Same reasoning as above
             if (profile == null) continue;
             DbObject obj = new DbObject(open.name(), open.kind(), open.catalog(), open.schema());
             // Mirrors MetadataService's own, real, exact condition for when a
@@ -1654,29 +1756,38 @@ public class MainWindow {
      * using its full display text exactly as before.
      */
     private void saveSession() {
-        List<SessionStore.OpenTab> open = new java.util.ArrayList<>();
-        List<SessionStore.OpenDataTab> openDataTabs = new java.util.ArrayList<>();
+        String myProj = currentProject != null ? currentProject.getName() : "default";
+        List<ConnectionProfile> myProfiles = ConnectionStore.loadForProject(myProj);
+        java.util.Set<String> myProfileIds = myProfiles.stream().map(ConnectionProfile::getId).collect(java.util.stream.Collectors.toSet());
+
+        // Keep tabs from other projects so this window closing doesn't wipe them
+        List<SessionStore.OpenTab> allOpen = new java.util.ArrayList<>(SessionStore.load());
+        allOpen.removeIf(t -> myProfileIds.contains(t.profileId()));
+
+        List<SessionStore.OpenDataTab> allDataTabs = new java.util.ArrayList<>(SessionStore.loadDataTabs());
+        allDataTabs.removeIf(t -> myProfileIds.contains(t.profileId()));
+
         for (TabPane pane : editorTabPanes()) {
             for (Tab t : pane.getTabs()) {
                 if (t instanceof QueryTab qt) {
-                    open.add(new SessionStore.OpenTab(
+                    allOpen.add(new SessionStore.OpenTab(
                             qt.getProfile().getId(), qt.getCatalog(), qt.getSqlText(), qt.getFileId(), false));
                 } else if (t instanceof MongoConsoleTab mt) {
-                    open.add(new SessionStore.OpenTab(mt.getProfileForReopen().getId(),
+                    allOpen.add(new SessionStore.OpenTab(mt.getProfileForReopen().getId(),
                             mt.getCurrentDatabase(), mt.getScriptText(), t.getText(), true));
                 } else if (t instanceof DataTab dt) {
                     DbObject table = dt.getTableForReopen();
-                    openDataTabs.add(new SessionStore.OpenDataTab(dt.getProfileForReopen().getId(),
+                    allDataTabs.add(new SessionStore.OpenDataTab(dt.getProfileForReopen().getId(),
                             table.getName(), table.getKind(), table.getCatalog(), table.getSchema(), false));
                 } else if (t instanceof MongoCollectionTab mc) {
                     DbObject collection = mc.getCollectionForReopen();
-                    openDataTabs.add(new SessionStore.OpenDataTab(mc.getProfileForReopen().getId(),
+                    allDataTabs.add(new SessionStore.OpenDataTab(mc.getProfileForReopen().getId(),
                             collection.getName(), collection.getKind(), collection.getCatalog(), collection.getSchema(), true));
                 }
             }
         }
-        SessionStore.save(open);
-        SessionStore.saveDataTabs(openDataTabs);
+        SessionStore.save(allOpen);
+        SessionStore.saveDataTabs(allDataTabs);
     }
 
     // ------------------------------------------------------------- split view

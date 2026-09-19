@@ -2,6 +2,7 @@ package com.roze.dbnavigator.ui.action;
 
 import com.roze.dbnavigator.model.ConnectionProfile;
 import com.roze.dbnavigator.ui.MainWindow;
+import javafx.scene.control.MenuItem;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
@@ -258,6 +259,21 @@ public final class ActionRegistry {
 
         // Recent Projects
         ActionGroup recentProjectsGroup = new ActionGroup("file.recent", "Recent Projects");
+        recentProjectsGroup.setOnMenuShowing((menu, ctx) -> {
+            menu.getItems().clear();
+            java.util.List<com.roze.dbnavigator.model.Project> recents = com.roze.dbnavigator.db.ProjectStore.getRecentProjects();
+            if (recents.isEmpty()) {
+                MenuItem none = new MenuItem("No Recent Projects");
+                none.setDisable(true);
+                menu.getItems().add(none);
+            } else {
+                for (com.roze.dbnavigator.model.Project p : recents) {
+                    MenuItem item = new MenuItem(p.getName() + " (" + p.getDisplayPath() + ")");
+                    item.setOnAction(e -> ctx.switchProjectFlow(p));
+                    menu.getItems().add(item);
+                }
+            }
+        });
         recentProjectsGroup.add(AnAction.builder("file.recent.none", "No Recent Projects")
                 .onAction(ctx -> {})
                 .build());
