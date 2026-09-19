@@ -25,6 +25,14 @@ public final class AppSettingsStore {
         public boolean autoDownloadUpdates = false;
         public String updateChannel = "Stable";
         public String updateEndpoint = "";
+        public int queryTimeoutSeconds = 30;
+        public int maxResultRows = 500;
+        public boolean autoCommit = true;
+        public int pageSize = 100;
+        public boolean showEmptySchemas = false;
+        public String csvDelimiter = ",";
+        public String csvQuoteChar = "\"";
+        public String keymapPreset = "DataGrip Default";
 
         public Theme getTheme() { return theme; }
         public void setTheme(Theme theme) { this.theme = theme; }
@@ -44,6 +52,22 @@ public final class AppSettingsStore {
         public void setUpdateChannel(String value) { this.updateChannel = value; }
         public String getUpdateEndpoint() { return updateEndpoint; }
         public void setUpdateEndpoint(String value) { this.updateEndpoint = value; }
+        public int getQueryTimeoutSeconds() { return queryTimeoutSeconds; }
+        public void setQueryTimeoutSeconds(int queryTimeoutSeconds) { this.queryTimeoutSeconds = queryTimeoutSeconds; }
+        public int getMaxResultRows() { return maxResultRows; }
+        public void setMaxResultRows(int maxResultRows) { this.maxResultRows = maxResultRows; }
+        public boolean isAutoCommit() { return autoCommit; }
+        public void setAutoCommit(boolean autoCommit) { this.autoCommit = autoCommit; }
+        public int getPageSize() { return pageSize; }
+        public void setPageSize(int pageSize) { this.pageSize = pageSize; }
+        public boolean isShowEmptySchemas() { return showEmptySchemas; }
+        public void setShowEmptySchemas(boolean showEmptySchemas) { this.showEmptySchemas = showEmptySchemas; }
+        public String getCsvDelimiter() { return csvDelimiter; }
+        public void setCsvDelimiter(String csvDelimiter) { this.csvDelimiter = csvDelimiter; }
+        public String getCsvQuoteChar() { return csvQuoteChar; }
+        public void setCsvQuoteChar(String csvQuoteChar) { this.csvQuoteChar = csvQuoteChar; }
+        public String getKeymapPreset() { return keymapPreset; }
+        public void setKeymapPreset(String keymapPreset) { this.keymapPreset = keymapPreset; }
     }
 
     private static final Path FILE =
