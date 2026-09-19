@@ -282,10 +282,66 @@ public final class SettingsDialog {
                 "Customize the font family, font size, and line spacing for SQL consoles and editors."));
         editor.getChildren().add(general);
 
-        editor.getChildren().add(new CategoryDef("editor.color_scheme", "Color Scheme", "Editor / Color Scheme",
-                "Customize syntax highlighting colors for keywords, strings, comments, and identifiers."));
-        editor.getChildren().add(new CategoryDef("editor.code_style", "Code Style", "Editor / Code Style",
-                "Configure code formatting rules, indentation, keyword casing, and line wrapping for SQL."));
+        // Color Scheme (26 subcategories from DataGrip)
+        CategoryDef colorScheme = new CategoryDef("editor.color_scheme", "Color Scheme", "Editor / Color Scheme",
+                "Configure colors and the font for source code and console output:");
+        colorScheme.getChildren().add(new CategoryDef("cs.general", "General", "Editor / Color Scheme / General", "Configure general editor colors."));
+        colorScheme.getChildren().add(new CategoryDef("cs.lang_defaults", "Language Defaults", "Editor / Color Scheme / Language Defaults", "Configure default syntax highlight tokens."));
+        colorScheme.getChildren().add(new CategoryDef("cs.font", "Color Scheme Font", "Editor / Color Scheme / Color Scheme Font", "Configure primary and fallback fonts for the color scheme."));
+        colorScheme.getChildren().add(new CategoryDef("cs.console_font", "Console Font", "Editor / Color Scheme / Console Font", "Configure font for console output."));
+        colorScheme.getChildren().add(new CategoryDef("cs.code_review", "Code Review", "Editor / Color Scheme / Code Review", "Colors for diff and code review comments."));
+        colorScheme.getChildren().add(new CategoryDef("cs.console_colors", "Console Colors", "Editor / Color Scheme / Console Colors", "ANSI console output colors."));
+        colorScheme.getChildren().add(new CategoryDef("cs.debugger", "Debugger", "Editor / Color Scheme / Debugger", "Execution point and breakpoint colors."));
+        colorScheme.getChildren().add(new CategoryDef("cs.diff_merge", "Diff & Merge", "Editor / Color Scheme / Diff & Merge", "Colors for inserted, modified, and deleted lines."));
+        colorScheme.getChildren().add(new CategoryDef("cs.user_types", "User-Defined File Types", "Editor / Color Scheme / User-Defined File Types", "Custom file type colors."));
+        colorScheme.getChildren().add(new CategoryDef("cs.vcs", "VCS", "Editor / Color Scheme / VCS", "Version control file status colors."));
+        colorScheme.getChildren().add(new CategoryDef("cs.data_editor", "Data Editor and Viewer", "Editor / Color Scheme / Data Editor and Viewer", "Grid table cell and row colors."));
+        colorScheme.getChildren().add(new CategoryDef("cs.database", "Database", "Editor / Color Scheme / Database", "Database object identifier colors."));
+        colorScheme.getChildren().add(new CategoryDef("cs.diagrams", "Diagrams", "Editor / Color Scheme / Diagrams", "ER diagram node and link colors."));
+        colorScheme.getChildren().add(new CategoryDef("cs.html", "HTML", "Editor / Color Scheme / HTML", "HTML tag and attribute colors."));
+        colorScheme.getChildren().add(new CategoryDef("cs.json", "JSON", "Editor / Color Scheme / JSON", "JSON key and value colors."));
+        colorScheme.getChildren().add(new CategoryDef("cs.markdown", "Markdown", "Editor / Color Scheme / Markdown", "Markdown header and code colors."));
+        colorScheme.getChildren().add(new CategoryDef("cs.mermaid", "Mermaid", "Editor / Color Scheme / Mermaid", "Mermaid node and relationship colors."));
+        colorScheme.getChildren().add(new CategoryDef("cs.regexp", "RegExp", "Editor / Color Scheme / RegExp", "Regular expression syntax colors."));
+        colorScheme.getChildren().add(new CategoryDef("cs.sql", "SQL", "Editor / Color Scheme / SQL", "SQL keyword, function, and string colors."));
+        colorScheme.getChildren().add(new CategoryDef("cs.table_diff", "Table Diff", "Editor / Color Scheme / Table Diff", "Data comparison diff colors."));
+        colorScheme.getChildren().add(new CategoryDef("cs.xml", "XML", "Editor / Color Scheme / XML", "XML tag and attribute colors."));
+        colorScheme.getChildren().add(new CategoryDef("cs.xpath", "XPath", "Editor / Color Scheme / XPath", "XPath expression colors."));
+        colorScheme.getChildren().add(new CategoryDef("cs.xslt", "XSLT", "Editor / Color Scheme / XSLT", "XSLT template colors."));
+        colorScheme.getChildren().add(new CategoryDef("cs.yaml", "YAML", "Editor / Color Scheme / YAML", "YAML key and value colors."));
+        colorScheme.getChildren().add(new CategoryDef("cs.by_scope", "By Scope", "Editor / Color Scheme / By Scope", "Color highlighting by project scope."));
+        colorScheme.getChildren().add(new CategoryDef("cs.images", "Images", "Editor / Color Scheme / Images", "Image preview background grid colors."));
+        editor.getChildren().add(colorScheme);
+
+        // Code Style with SQL (12 dialects) and file types
+        CategoryDef codeStyle = new CategoryDef("editor.code_style", "Code Style", "Editor / Code Style",
+                "Configure code formatting rules, indentation, keyword casing, and line wrapping for SQL.");
+
+        CategoryDef codeStyleSql = new CategoryDef("editor.code_style.sql", "SQL", "Editor / Code Style / SQL",
+                "Set of code styles based on SQL.");
+        codeStyleSql.getChildren().add(new CategoryDef("code_style.sql.general", "General", "Editor / Code Style / SQL / General", "General SQL formatting and casing."));
+        codeStyleSql.getChildren().add(new CategoryDef("code_style.sql.sql2016", "SQL:2016, Generic", "Editor / Code Style / SQL / SQL:2016, Generic", "ANSI SQL:2016 formatting rules."));
+        codeStyleSql.getChildren().add(new CategoryDef("code_style.sql.derby", "Apache Derby", "Editor / Code Style / SQL / Apache Derby", "Apache Derby SQL code style."));
+        codeStyleSql.getChildren().add(new CategoryDef("code_style.sql.db2", "Db2", "Editor / Code Style / SQL / Db2", "IBM Db2 code style."));
+        codeStyleSql.getChildren().add(new CategoryDef("code_style.sql.h2", "H2", "Editor / Code Style / SQL / H2", "H2 Database code style."));
+        codeStyleSql.getChildren().add(new CategoryDef("code_style.sql.hsqldb", "HSQLDB", "Editor / Code Style / SQL / HSQLDB", "HSQLDB code style."));
+        codeStyleSql.getChildren().add(new CategoryDef("code_style.sql.mssql", "MS SQL Server, MS Azure", "Editor / Code Style / SQL / MS SQL Server, MS Azure", "Microsoft T-SQL code style."));
+        codeStyleSql.getChildren().add(new CategoryDef("code_style.sql.mysql", "MySQL, MariaDB", "Editor / Code Style / SQL / MySQL, MariaDB", "MySQL and MariaDB code style."));
+        codeStyleSql.getChildren().add(new CategoryDef("code_style.sql.oracle", "Oracle", "Editor / Code Style / SQL / Oracle", "Oracle PL/SQL code style."));
+        codeStyleSql.getChildren().add(new CategoryDef("code_style.sql.postgres", "PostgreSQL, Greenplum, Redshift", "Editor / Code Style / SQL / PostgreSQL, Greenplum, Redshift", "PostgreSQL dialect code style."));
+        codeStyleSql.getChildren().add(new CategoryDef("code_style.sql.sqlite", "SQLite", "Editor / Code Style / SQL / SQLite", "SQLite SQL code style."));
+        codeStyleSql.getChildren().add(new CategoryDef("code_style.sql.sybase", "Sybase ASE", "Editor / Code Style / SQL / Sybase ASE", "SAP Sybase ASE code style."));
+        codeStyle.getChildren().add(codeStyleSql);
+
+        codeStyle.getChildren().add(new CategoryDef("code_style.html", "HTML", "Editor / Code Style / HTML", "HTML formatting rules."));
+        codeStyle.getChildren().add(new CategoryDef("code_style.json", "JSON", "Editor / Code Style / JSON", "JSON formatting rules."));
+        codeStyle.getChildren().add(new CategoryDef("code_style.markdown", "Markdown", "Editor / Code Style / Markdown", "Markdown formatting rules."));
+        codeStyle.getChildren().add(new CategoryDef("code_style.mermaid", "Mermaid", "Editor / Code Style / Mermaid", "Mermaid formatting rules."));
+        codeStyle.getChildren().add(new CategoryDef("code_style.xml", "XML", "Editor / Code Style / XML", "XML formatting rules."));
+        codeStyle.getChildren().add(new CategoryDef("code_style.yaml", "YAML", "Editor / Code Style / YAML", "YAML formatting rules."));
+        codeStyle.getChildren().add(new CategoryDef("code_style.other", "Other File Types", "Editor / Code Style / Other File Types", "Fallback code styles."));
+        editor.getChildren().add(codeStyle);
+
         editor.getChildren().add(new CategoryDef("editor.inspections", "Inspections", "Editor / Inspections",
                 "Configure SQL inspections, code smell detection, and static analysis warnings."));
         editor.getChildren().add(new CategoryDef("editor.templates", "File and Code Templates", "Editor / File and Code Templates",
@@ -304,8 +360,14 @@ public final class SettingsDialog {
                 "Configure quick-fix intentions for SQL statements and schemas."));
         editor.getChildren().add(new CategoryDef("editor.language_injections", "Language Injections", "Editor / Language Injections",
                 "Inject SQL syntax highlighting inside string literals."));
-        editor.getChildren().add(new CategoryDef("editor.natural_languages", "Natural Languages", "Editor / Natural Languages",
-                "Spell checking and natural language proofreading in comments."));
+
+        // Natural Languages with Grammar & Style and Spelling
+        CategoryDef naturalLanguages = new CategoryDef("editor.natural_languages", "Natural Languages", "Editor / Natural Languages",
+                "Configure proofreading and natural language spelling checks.");
+        naturalLanguages.getChildren().add(new CategoryDef("nl.grammar_style", "Grammar and Style", "Editor / Natural Languages / Grammar and Style", "Grammar inspection rules."));
+        naturalLanguages.getChildren().add(new CategoryDef("nl.spelling", "Spelling", "Editor / Natural Languages / Spelling", "Dictionaries and spelling checks."));
+        editor.getChildren().add(naturalLanguages);
+
         editor.getChildren().add(new CategoryDef("editor.reader_mode", "Reader Mode", "Editor / Reader Mode",
                 "Optimize editor presentation for read-only schema definitions and logs."));
         editor.getChildren().add(new CategoryDef("editor.textmate_bundles", "TextMate Bundles", "Editor / TextMate Bundles",
@@ -438,7 +500,7 @@ public final class SettingsDialog {
         // Content Area Top Bar: Breadcrumb + Back/Forward/Pin
         Label breadcrumb = new Label("Database");
         breadcrumb.getStyleClass().add("panel-header");
-        breadcrumb.setStyle("-fx-font-size: 13px; -fx-text-fill: #868a91;");
+        breadcrumb.setStyle("-fx-font-size: 13px; -fx-text-fill: #dfe1e5; -fx-font-weight: bold;");
 
         Button backBtn = new Button("←");
         backBtn.setTooltip(new Tooltip("Back"));
@@ -510,6 +572,8 @@ public final class SettingsDialog {
                     p.setExpanded(true);
                     p = p.getParent();
                 }
+                String targetPath = getFullPath(target);
+                breadcrumb.setText(targetPath.replace(" / ", "  \u203a  "));
                 tree.getSelectionModel().select(target);
                 tree.scrollTo(tree.getRow(target));
             }
@@ -519,7 +583,7 @@ public final class SettingsDialog {
         tree.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
             if (newVal == null) return;
             String fullPath = getFullPath(newVal);
-            breadcrumb.setText(fullPath.replace(" / ", " \u203a "));
+            breadcrumb.setText(fullPath.replace(" / ", "  \u203a  "));
 
             if (!navigatingHistory[0]) {
                 if (historyCursor[0] < history.size() - 1) {
@@ -616,6 +680,7 @@ public final class SettingsDialog {
             TreeItem<String> dbItem = itemIndex.get("Database");
             if (dbItem != null) {
                 tree.getSelectionModel().select(dbItem);
+                breadcrumb.setText("Database");
             }
         }
 
@@ -709,6 +774,14 @@ public final class SettingsDialog {
             return buildMcpServerPanel(cat);
         } else if ("Editor / General / Smart Keys".equals(fullPath) || "Smart Keys".equals(fullPath)) {
             return buildSmartKeysPanel(cat, navigateTo);
+        } else if ("Editor / Color Scheme".equals(fullPath) || "Color Scheme".equals(fullPath)) {
+            return buildColorSchemeLandingPanel(cat, navigateTo);
+        } else if ("Editor / Code Style / SQL".equals(fullPath)) {
+            return buildCodeStyleSqlLandingPanel(cat, navigateTo);
+        } else if ("Editor / Code Style".equals(fullPath) || "Code Style".equals(fullPath)) {
+            return buildCodeStylePanel(cat, navigateTo);
+        } else if ("Editor / Natural Languages".equals(fullPath) || "Natural Languages".equals(fullPath)) {
+            return buildNaturalLanguagesPanel(cat, navigateTo);
         }
 
         // Category landing overview page (DataGrip style with description & blue clickable links)
@@ -1657,6 +1730,318 @@ public final class SettingsDialog {
         grid.add(timeoutSpinner, 1, 1);
 
         VBox panel = new VBox(14, title, grid, keepAlive);
+        panel.setPadding(new Insets(4, 8, 16, 8));
+        return panel;
+    }
+
+    private static VBox buildColorSchemeLandingPanel(CategoryDef cat, java.util.function.Consumer<String> navigateTo) {
+        // Scheme selector row
+        Label schemeLabel = new Label("Scheme:");
+        schemeLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: -text;");
+
+        ComboBox<String> schemeCombo = new ComboBox<>();
+        schemeCombo.getItems().addAll("Islands Dark Theme default", "Darcula", "High Contrast", "Light");
+        schemeCombo.getSelectionModel().select(0);
+        schemeCombo.setPrefWidth(240);
+
+        Button gearBtn = new Button("⚙");
+        gearBtn.setTooltip(new Tooltip("Scheme actions (Duplicate, Export, Restore)"));
+
+        Hyperlink themeLink = new Hyperlink("Change IDE Theme...");
+        themeLink.setStyle("-fx-text-fill: #3574F0; -fx-font-size: 13px;");
+        themeLink.setOnAction(e -> navigateTo.accept("Appearance & Behavior / Appearance"));
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        Button helpBtn = new Button("?");
+        helpBtn.setTooltip(new Tooltip("Help on Color Schemes"));
+        helpBtn.setStyle("-fx-font-weight: bold; -fx-min-width: 26px; -fx-min-height: 26px; -fx-background-radius: 13;");
+
+        HBox topBar = new HBox(10, schemeLabel, schemeCombo, gearBtn, themeLink, spacer, helpBtn);
+        topBar.setAlignment(Pos.CENTER_LEFT);
+
+        // Description
+        String descText = cat != null && cat.getDescription() != null ? cat.getDescription()
+                : "Configure colors and the font for source code and console output:";
+        Label desc = new Label(descText);
+        desc.setWrapText(true);
+        desc.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 13px; -fx-padding: 6 0 2 0;");
+
+        // 2-column Grid of 26 subcategories
+        GridPane linkGrid = new GridPane();
+        linkGrid.setHgap(36);
+        linkGrid.setVgap(6);
+        linkGrid.setPadding(new Insets(6, 0, 10, 0));
+
+        List<CategoryDef> children = cat != null ? cat.getChildren() : Collections.emptyList();
+        int half = (children.size() + 1) / 2;
+        for (int i = 0; i < children.size(); i++) {
+            CategoryDef child = children.get(i);
+            Hyperlink link = new Hyperlink(child.getName());
+            link.setStyle("-fx-text-fill: #3574F0; -fx-font-size: 13px; -fx-padding: 2 0; -fx-border-width: 0;");
+            link.setOnAction(e -> navigateTo.accept(child.getPath()));
+            linkGrid.add(link, i / half, i % half);
+        }
+
+        VBox panel = new VBox(12, topBar, desc, linkGrid);
+        panel.setPadding(new Insets(4, 8, 16, 8));
+        return panel;
+    }
+
+    private static VBox buildCodeStylePanel(CategoryDef cat, java.util.function.Consumer<String> navigateTo) {
+        // Scheme selector row
+        Label schemeLabel = new Label("Scheme:");
+        schemeLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: -text;");
+
+        ComboBox<String> schemeCombo = new ComboBox<>();
+        schemeCombo.getItems().addAll("Default IDE", "Project");
+        schemeCombo.getSelectionModel().select(0);
+        schemeCombo.setPrefWidth(180);
+
+        Button gearBtn = new Button("⚙");
+        gearBtn.setTooltip(new Tooltip("Scheme actions (Duplicate, Import/Export)"));
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        Button helpBtn = new Button("?");
+        helpBtn.setTooltip(new Tooltip("Help on Code Style"));
+        helpBtn.setStyle("-fx-font-weight: bold; -fx-min-width: 26px; -fx-min-height: 26px; -fx-background-radius: 13;");
+
+        HBox topBar = new HBox(10, schemeLabel, schemeCombo, gearBtn, spacer, helpBtn);
+        topBar.setAlignment(Pos.CENTER_LEFT);
+
+        // Warning / Indents Detection banner
+        Label warnIcon = new Label("⚠");
+        warnIcon.setStyle("-fx-text-fill: #E5A84B; -fx-font-size: 14px; -fx-font-weight: bold;");
+
+        Label bannerText = new Label("Settings may be overridden by Indents Detection");
+        bannerText.setStyle("-fx-text-fill: -text; -fx-font-size: 12px;");
+
+        Hyperlink disableLink = new Hyperlink("Disable");
+        disableLink.setStyle("-fx-text-fill: #3574F0; -fx-font-size: 12px; -fx-border-width: 0; -fx-padding: 0;");
+
+        HBox banner = new HBox(8, warnIcon, bannerText, disableLink);
+        banner.setAlignment(Pos.CENTER_LEFT);
+        banner.setStyle("-fx-background-color: #2b2d30; -fx-padding: 8 12; -fx-background-radius: 4; -fx-border-color: #3e4248; -fx-border-radius: 4;");
+
+        // Segmented Tabs: [ General ] [ Formatter ]
+        Button tabGeneral = new Button("General");
+        tabGeneral.setStyle("-fx-background-color: #3574F0; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 4 0 0 4;");
+
+        Button tabFormatter = new Button("Formatter");
+        tabFormatter.setStyle("-fx-background-color: #393b40; -fx-text-fill: -text-dim; -fx-background-radius: 0 4 4 0;");
+
+        HBox tabHeader = new HBox(0, tabGeneral, tabFormatter);
+        tabHeader.setPadding(new Insets(4, 0, 4, 0));
+
+        // General settings content
+        // 1. Line separator
+        Label lineSepLabel = new Label("Line separator:");
+        lineSepLabel.setPrefWidth(120);
+        lineSepLabel.setStyle("-fx-text-fill: -text;");
+        ComboBox<String> lineSepCombo = new ComboBox<>();
+        lineSepCombo.getItems().addAll("System-Dependent", "Unix and macOS (\n)", "Windows (\r\n)", "Classic macOS (\r)");
+        lineSepCombo.getSelectionModel().select(0);
+        lineSepCombo.setPrefWidth(180);
+        Label lineSepHint = new Label("Applied to new files");
+        lineSepHint.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 11px;");
+        HBox lineSepRow = new HBox(10, lineSepLabel, lineSepCombo, lineSepHint);
+        lineSepRow.setAlignment(Pos.CENTER_LEFT);
+
+        // 2. Hard wrap at
+        Label hardWrapLabel = new Label("Hard wrap at:");
+        hardWrapLabel.setPrefWidth(120);
+        hardWrapLabel.setStyle("-fx-text-fill: -text;");
+        TextField hardWrapField = new TextField("120");
+        hardWrapField.setPrefWidth(60);
+        Label columnsLabel = new Label("columns");
+        columnsLabel.setStyle("-fx-text-fill: -text-dim;");
+        CheckBox wrapOnTyping = new CheckBox("Wrap on typing");
+        wrapOnTyping.setSelected(false);
+        HBox hardWrapRow = new HBox(10, hardWrapLabel, hardWrapField, columnsLabel, wrapOnTyping);
+        hardWrapRow.setAlignment(Pos.CENTER_LEFT);
+
+        // 3. Visual guides
+        Label visualGuidesLabel = new Label("Visual guides:");
+        visualGuidesLabel.setPrefWidth(120);
+        visualGuidesLabel.setStyle("-fx-text-fill: -text;");
+        TextField visualGuidesField = new TextField("");
+        visualGuidesField.setPromptText("Optional");
+        visualGuidesField.setPrefWidth(180);
+        Label guidesColumnsLabel = new Label("columns");
+        guidesColumnsLabel.setStyle("-fx-text-fill: -text-dim;");
+        HBox visualGuidesRow = new HBox(10, visualGuidesLabel, visualGuidesField, guidesColumnsLabel);
+        visualGuidesRow.setAlignment(Pos.CENTER_LEFT);
+
+        Label guidesHint = new Label("Specify one guide (80) or several (80, 120)");
+        guidesHint.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 11px; -fx-padding: 0 0 0 130;");
+
+        // 4. Indents detection checkbox
+        CheckBox indentDetectionCheck = new CheckBox("Detect and use existing file indents for editing");
+        indentDetectionCheck.setSelected(true);
+        disableLink.setOnAction(e -> {
+            indentDetectionCheck.setSelected(false);
+            banner.setVisible(false);
+            banner.setManaged(false);
+        });
+
+        indentDetectionCheck.selectedProperty().addListener((obs, oldVal, newVal) -> {
+            banner.setVisible(newVal);
+            banner.setManaged(newVal);
+        });
+
+        // Configured Code Styles subtree links
+        Label codeStylesSubHeader = new Label("Configured Code Styles:");
+        codeStylesSubHeader.setStyle("-fx-font-weight: bold; -fx-text-fill: -text; -fx-font-size: 13px; -fx-padding: 8 0 2 0;");
+
+        GridPane stylesGrid = new GridPane();
+        stylesGrid.setHgap(28);
+        stylesGrid.setVgap(6);
+
+        List<CategoryDef> children = cat != null ? cat.getChildren() : Collections.emptyList();
+        int half = (children.size() + 1) / 2;
+        for (int i = 0; i < children.size(); i++) {
+            CategoryDef child = children.get(i);
+            Hyperlink link = new Hyperlink(child.getName());
+            link.setStyle("-fx-text-fill: #3574F0; -fx-font-size: 13px; -fx-padding: 2 0; -fx-border-width: 0;");
+            link.setOnAction(e -> navigateTo.accept(child.getPath()));
+            stylesGrid.add(link, i / half, i % half);
+        }
+
+        VBox generalContent = new VBox(10, lineSepRow, hardWrapRow, visualGuidesRow, guidesHint, indentDetectionCheck,
+                codeStylesSubHeader, stylesGrid);
+
+        // Tab switching behavior
+        Label formatterPlaceholder = new Label("Formatter markers and external formatting tool options are configured per file type.");
+        formatterPlaceholder.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 12px; -fx-padding: 10 0;");
+        formatterPlaceholder.setVisible(false);
+        formatterPlaceholder.setManaged(false);
+
+        tabGeneral.setOnAction(e -> {
+            tabGeneral.setStyle("-fx-background-color: #3574F0; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 4 0 0 4;");
+            tabFormatter.setStyle("-fx-background-color: #393b40; -fx-text-fill: -text-dim; -fx-background-radius: 0 4 4 0;");
+            generalContent.setVisible(true);
+            generalContent.setManaged(true);
+            formatterPlaceholder.setVisible(false);
+            formatterPlaceholder.setManaged(false);
+        });
+
+        tabFormatter.setOnAction(e -> {
+            tabFormatter.setStyle("-fx-background-color: #3574F0; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 0 4 4 0;");
+            tabGeneral.setStyle("-fx-background-color: #393b40; -fx-text-fill: -text-dim; -fx-background-radius: 4 0 0 4;");
+            generalContent.setVisible(false);
+            generalContent.setManaged(false);
+            formatterPlaceholder.setVisible(true);
+            formatterPlaceholder.setManaged(true);
+        });
+
+        VBox panel = new VBox(12, topBar, banner, tabHeader, generalContent, formatterPlaceholder);
+        panel.setPadding(new Insets(4, 8, 16, 8));
+        return panel;
+    }
+
+    private static VBox buildCodeStyleSqlLandingPanel(CategoryDef cat, java.util.function.Consumer<String> navigateTo) {
+        // Description
+        String descText = cat != null && cat.getDescription() != null ? cat.getDescription()
+                : "Set of code styles based on SQL.";
+        Label desc = new Label(descText);
+        desc.setWrapText(true);
+        desc.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 13px; -fx-padding: 2 0 6 0;");
+
+        // 2-column Grid of 12 SQL Dialects
+        GridPane dialectGrid = new GridPane();
+        dialectGrid.setHgap(36);
+        dialectGrid.setVgap(6);
+        dialectGrid.setPadding(new Insets(6, 0, 10, 0));
+
+        List<CategoryDef> children = cat != null ? cat.getChildren() : Collections.emptyList();
+        int half = (children.size() + 1) / 2;
+        for (int i = 0; i < children.size(); i++) {
+            CategoryDef child = children.get(i);
+            Hyperlink link = new Hyperlink(child.getName());
+            link.setStyle("-fx-text-fill: #3574F0; -fx-font-size: 13px; -fx-padding: 2 0; -fx-border-width: 0;");
+            link.setOnAction(e -> navigateTo.accept(child.getPath()));
+            dialectGrid.add(link, i / half, i % half);
+        }
+
+        VBox panel = new VBox(12, desc, dialectGrid);
+        panel.setPadding(new Insets(4, 8, 16, 8));
+        return panel;
+    }
+
+    private static VBox buildNaturalLanguagesPanel(CategoryDef cat, java.util.function.Consumer<String> navigateTo) {
+        // Languages table / list
+        Label installedLabel = new Label("Installed languages:");
+        installedLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: -text; -fx-font-size: 13px;");
+
+        ListView<String> langListView = new ListView<>();
+        langListView.getItems().addAll("English (USA)");
+        langListView.getSelectionModel().select(0);
+        langListView.setPrefHeight(90);
+        langListView.setMaxHeight(110);
+        langListView.setStyle("-fx-background-color: #2b2d30; -fx-control-inner-background: #2b2d30;");
+
+        Button addLangBtn = new Button("+");
+        addLangBtn.setTooltip(new Tooltip("Add Natural Language"));
+        addLangBtn.setStyle("-fx-min-width: 26px; -fx-min-height: 24px;");
+
+        Button removeLangBtn = new Button("—");
+        removeLangBtn.setTooltip(new Tooltip("Remove Natural Language"));
+        removeLangBtn.setStyle("-fx-min-width: 26px; -fx-min-height: 24px;");
+
+        HBox langToolbar = new HBox(4, addLangBtn, removeLangBtn);
+        langToolbar.setAlignment(Pos.CENTER_LEFT);
+
+        VBox langBox = new VBox(6, installedLabel, langListView, langToolbar);
+
+        // Hyperlink to proofreading inspections
+        Hyperlink proofreadingLink = new Hyperlink("Configure 'Proofreading' inspections...");
+        proofreadingLink.setStyle("-fx-text-fill: #3574F0; -fx-font-size: 13px; -fx-padding: 4 0; -fx-border-width: 0;");
+        proofreadingLink.setOnAction(e -> navigateTo.accept("Editor / Inspections"));
+
+        // Language Processing section
+        Label processingHeader = new Label("Language processing");
+        processingHeader.setStyle("-fx-font-weight: bold; -fx-text-fill: -text; -fx-font-size: 13px; -fx-padding: 8 0 2 0;");
+
+        RadioButton localRadio = new RadioButton("Local");
+        localRadio.setSelected(true);
+
+        Hyperlink enableCloudLink = new Hyperlink("Enable Cloud");
+        enableCloudLink.setStyle("-fx-text-fill: #3574F0; -fx-font-size: 13px; -fx-padding: 0; -fx-border-width: 0;");
+
+        Label cloudHint = new Label("Powered by JetBrains AI Cloud Service. Provides improved grammar checks, style suggestions, and full-sentence rephrasing.");
+        cloudHint.setWrapText(true);
+        cloudHint.setMaxWidth(620);
+        cloudHint.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 11px;");
+
+        VBox cloudBox = new VBox(2, enableCloudLink, cloudHint);
+        HBox processingRow = new HBox(16, localRadio, cloudBox);
+        processingRow.setAlignment(Pos.TOP_LEFT);
+
+        // Checkboxes
+        CheckBox autoFixCheck = new CheckBox("Automatically fix simple issues as you type (e.g., convert hyphens to dashes)");
+        autoFixCheck.setSelected(true);
+
+        CheckBox oxfordSpellingCheck = new CheckBox("Use Oxford Spelling for British English");
+        oxfordSpellingCheck.setSelected(true);
+
+        // Subtree links (Grammar & Style, Spelling)
+        Label subRulesHeader = new Label("Rules and Dictionaries:");
+        subRulesHeader.setStyle("-fx-font-weight: bold; -fx-text-fill: -text; -fx-font-size: 13px; -fx-padding: 8 0 2 0;");
+
+        VBox rulesBox = new VBox(6);
+        List<CategoryDef> children = cat != null ? cat.getChildren() : Collections.emptyList();
+        for (CategoryDef child : children) {
+            Hyperlink link = new Hyperlink(child.getName());
+            link.setStyle("-fx-text-fill: #3574F0; -fx-font-size: 13px; -fx-padding: 2 0; -fx-border-width: 0;");
+            link.setOnAction(e -> navigateTo.accept(child.getPath()));
+            rulesBox.getChildren().add(link);
+        }
+
+        VBox panel = new VBox(12, langBox, proofreadingLink, processingHeader, processingRow, autoFixCheck,
+                oxfordSpellingCheck, subRulesHeader, rulesBox);
         panel.setPadding(new Insets(4, 8, 16, 8));
         return panel;
     }

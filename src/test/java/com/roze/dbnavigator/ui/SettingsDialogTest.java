@@ -282,4 +282,94 @@ public class SettingsDialogTest {
         String toolsDesc = SettingsDialog.getCategoryDescription("Tools");
         assertEquals("Configure integration with third-party applications, specify the SSH Terminal connection settings, manage server certificates and tasks, configure diagrams layout, etc.", toolsDesc);
     }
+
+    @Test
+    public void testColorSchemeSubcategoriesMatchDataGrip() {
+        List<String> csChildren = SettingsDialog.getChildCategoryNames("Editor / Color Scheme");
+        assertNotNull(csChildren);
+        assertEquals(26, csChildren.size(), "Color Scheme must have exactly 26 subcategories");
+
+        assertEquals("General", csChildren.get(0));
+        assertEquals("Language Defaults", csChildren.get(1));
+        assertEquals("Color Scheme Font", csChildren.get(2));
+        assertEquals("Console Font", csChildren.get(3));
+        assertEquals("Code Review", csChildren.get(4));
+        assertEquals("Console Colors", csChildren.get(5));
+        assertEquals("Debugger", csChildren.get(6));
+        assertEquals("Diff & Merge", csChildren.get(7));
+        assertEquals("User-Defined File Types", csChildren.get(8));
+        assertEquals("VCS", csChildren.get(9));
+        assertEquals("Data Editor and Viewer", csChildren.get(10));
+        assertEquals("Database", csChildren.get(11));
+        assertEquals("Diagrams", csChildren.get(12));
+        assertEquals("HTML", csChildren.get(13));
+        assertEquals("JSON", csChildren.get(14));
+        assertEquals("Markdown", csChildren.get(15));
+        assertEquals("Mermaid", csChildren.get(16));
+        assertEquals("RegExp", csChildren.get(17));
+        assertEquals("SQL", csChildren.get(18));
+        assertEquals("Table Diff", csChildren.get(19));
+        assertEquals("XML", csChildren.get(20));
+        assertEquals("XPath", csChildren.get(21));
+        assertEquals("XSLT", csChildren.get(22));
+        assertEquals("YAML", csChildren.get(23));
+        assertEquals("By Scope", csChildren.get(24));
+        assertEquals("Images", csChildren.get(25));
+
+        String desc = SettingsDialog.getCategoryDescription("Editor / Color Scheme");
+        assertEquals("Configure colors and the font for source code and console output:", desc);
+    }
+
+    @Test
+    public void testCodeStyleSubcategoriesAndSqlDialectsMatchDataGrip() {
+        List<String> codeStyleChildren = SettingsDialog.getChildCategoryNames("Editor / Code Style");
+        assertNotNull(codeStyleChildren);
+        assertEquals(8, codeStyleChildren.size(), "Code Style must have 8 file type / language subcategories");
+
+        assertEquals("SQL", codeStyleChildren.get(0));
+        assertEquals("HTML", codeStyleChildren.get(1));
+        assertEquals("JSON", codeStyleChildren.get(2));
+        assertEquals("Markdown", codeStyleChildren.get(3));
+        assertEquals("Mermaid", codeStyleChildren.get(4));
+        assertEquals("XML", codeStyleChildren.get(5));
+        assertEquals("YAML", codeStyleChildren.get(6));
+        assertEquals("Other File Types", codeStyleChildren.get(7));
+
+        String csDesc = SettingsDialog.getCategoryDescription("Editor / Code Style");
+        assertEquals("Configure code formatting rules, indentation, keyword casing, and line wrapping for SQL.", csDesc);
+
+        // 12 SQL Dialects under Code Style > SQL
+        List<String> sqlDialects = SettingsDialog.getChildCategoryNames("Editor / Code Style / SQL");
+        assertNotNull(sqlDialects);
+        assertEquals(12, sqlDialects.size(), "Code Style > SQL must have 12 dialect options");
+
+        assertEquals("General", sqlDialects.get(0));
+        assertEquals("SQL:2016, Generic", sqlDialects.get(1));
+        assertEquals("Apache Derby", sqlDialects.get(2));
+        assertEquals("Db2", sqlDialects.get(3));
+        assertEquals("H2", sqlDialects.get(4));
+        assertEquals("HSQLDB", sqlDialects.get(5));
+        assertEquals("MS SQL Server, MS Azure", sqlDialects.get(6));
+        assertEquals("MySQL, MariaDB", sqlDialects.get(7));
+        assertEquals("Oracle", sqlDialects.get(8));
+        assertEquals("PostgreSQL, Greenplum, Redshift", sqlDialects.get(9));
+        assertEquals("SQLite", sqlDialects.get(10));
+        assertEquals("Sybase ASE", sqlDialects.get(11));
+
+        String sqlDesc = SettingsDialog.getCategoryDescription("Editor / Code Style / SQL");
+        assertEquals("Set of code styles based on SQL.", sqlDesc);
+    }
+
+    @Test
+    public void testNaturalLanguagesSubcategoriesMatchDataGrip() {
+        List<String> nlChildren = SettingsDialog.getChildCategoryNames("Editor / Natural Languages");
+        assertNotNull(nlChildren);
+        assertEquals(2, nlChildren.size(), "Natural Languages must have 2 subcategories");
+
+        assertEquals("Grammar and Style", nlChildren.get(0));
+        assertEquals("Spelling", nlChildren.get(1));
+
+        String nlDesc = SettingsDialog.getCategoryDescription("Editor / Natural Languages");
+        assertEquals("Configure proofreading and natural language spelling checks.", nlDesc);
+    }
 }
