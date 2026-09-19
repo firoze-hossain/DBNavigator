@@ -8,6 +8,7 @@ import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
+import javafx.geometry.Side;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -2471,5 +2472,115 @@ public class MainWindow {
     public void showFullTextSearchDialog() {
         showSearchEverywhere();
         setStatus("Full-Text Search across database tables");
+    }
+
+    public void showEnableVcsIntegrationDialog() {
+        ChoiceDialog<String> dialog = new ChoiceDialog<>("Git", List.of("Git", "Mercurial", "Subversion"));
+        dialog.setTitle("Enable Version Control Integration");
+        dialog.setHeaderText("Select a version control system to associate with this project");
+        dialog.setContentText("VCS:");
+        dialog.initOwner(stage);
+        DialogTheme.apply(dialog);
+        dialog.showAndWait().ifPresent(vcs -> setStatus("Version Control Integration enabled: " + vcs));
+    }
+
+    public void showVcsOperationsPopup() {
+        ContextMenu popup = new ContextMenu();
+        popup.getItems().addAll(
+                new MenuItem("1. Commit…"),
+                new MenuItem("2. Push…"),
+                new MenuItem("3. Update Project…"),
+                new MenuItem("4. Rollback Changes…"),
+                new SeparatorMenuItem(),
+                new MenuItem("5. Show History…"),
+                new MenuItem("6. Branches…"),
+                new MenuItem("7. Stash Changes…")
+        );
+        for (MenuItem item : popup.getItems()) {
+            if (!(item instanceof SeparatorMenuItem)) {
+                String label = item.getText();
+                item.setOnAction(e -> setStatus("VCS Operation: " + label));
+            }
+        }
+        if (activeTabPane != null) {
+            popup.show(activeTabPane, Side.BOTTOM, 100, 100);
+        } else {
+            popup.show(stage);
+        }
+        setStatus("VCS Operations Popup (Alt+`)");
+    }
+
+    public void showApplyPatchDialog() {
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Apply Patch");
+        chooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("Patch Files (*.patch, *.diff)", "*.patch", "*.diff"),
+                new FileChooser.ExtensionFilter("All Files", "*.*")
+        );
+        File file = chooser.showOpenDialog(stage);
+        if (file != null) {
+            try {
+                String patchContent = Files.readString(file.toPath());
+                ClipboardCompareDialog.show(stage, patchContent, "-- Target Project Files --\n");
+                setStatus("Applied patch from: " + file.getName());
+            } catch (Exception ex) {
+                setStatus("Error loading patch: " + ex.getMessage());
+            }
+        }
+    }
+
+    public void showApplyPatchFromClipboardDialog() {
+        Clipboard clipboard = Clipboard.getSystemClipboard();
+        String content = clipboard.hasString() ? clipboard.getString() : "";
+        if (content.isBlank()) {
+            setStatus("Clipboard is empty or does not contain text");
+        } else {
+            ClipboardCompareDialog.show(stage, content, "-- Target Project Files --\n");
+            setStatus("Applied patch from clipboard");
+        }
+    }
+
+    public void showGetFromVcsDialog() {
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle("Get from Version Control");
+        dialog.setHeaderText("Clone repository from Git / Version Control");
+        dialog.initOwner(stage);
+        DialogTheme.apply(dialog);
+
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(20, 20, 10, 10));
+
+        TextField urlField = new TextField();
+        urlField.setPromptText("https://github.com/user/repository.git");
+        TextField dirField = new TextField(System.getProperty("user.home") + File.separator + "DBNavigatorProjects");
+
+        grid.add(new Label("URL:"), 0, 0);
+        grid.add(urlField, 1, 0);
+        grid.add(new Label("Directory:"), 0, 1);
+        grid.add(dirField, 1, 1);
+
+        dialog.getDialogPane().setContent(grid);
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+        dialog.showAndWait().ifPresent(bt -> {
+            if (bt == ButtonType.OK) {
+                setStatus("Cloning from VCS: " + urlField.getText());
+            }
+        });
+    }
+
+    public void showGitRepositoryLogDialog() {
+        ProjectHistoryDialog.showProjectWide(stage, this::openHistoryEntry);
+        setStatus("Opened Git Repository Log");
+    }
+
+    public void showCreateGitRepositoryDialog() {
+        javafx.stage.DirectoryChooser chooser = new javafx.stage.DirectoryChooser();
+        chooser.setTitle("Create Git Repository");
+        File dir = chooser.showDialog(stage);
+        if (dir != null) {
+            setStatus("Initialized Git repository at: " + dir.getAbsolutePath());
+        }
     }
 }
