@@ -408,8 +408,19 @@ public final class SettingsDialog {
                 "Configure Markdown preview layout, syntax extensions, and code fence styling."));
         languages.getChildren().add(new CategoryDef("lang.mermaid", "Mermaid", "Languages / Mermaid",
                 "Configure Mermaid diagram rendering engine, layout themes, and zoom controls."));
-        languages.getChildren().add(new CategoryDef("lang.schemas_dtds", "Schemas and DTDs", "Languages / Schemas and DTDs",
-                "Manage XML/JSON schema catalogs, DTD declarations, and URI mappings."));
+
+        CategoryDef schemasDtds = new CategoryDef("lang.schemas_dtds", "Schemas and DTDs", "Languages / Schemas and DTDs",
+                "Manage XML/JSON schema catalogs, DTD declarations, and URI mappings.");
+        schemasDtds.getChildren().add(new CategoryDef("schemas.xml_default", "Default XML Schemas", "Languages / Schemas and DTDs / Default XML Schemas",
+                "Default XML schema catalog and namespace definitions."));
+        schemasDtds.getChildren().add(new CategoryDef("schemas.json_mappings", "JSON Schema Mappings", "Languages / Schemas and DTDs / JSON Schema Mappings",
+                "Map JSON files to schemas for auto-completion and validation."));
+        schemasDtds.getChildren().add(new CategoryDef("schemas.remote_json", "Remote JSON Schemas", "Languages / Schemas and DTDs / Remote JSON Schemas",
+                "Download and cache schemas from SchemaStore.org and custom URLs."));
+        schemasDtds.getChildren().add(new CategoryDef("schemas.xml_catalog", "XML Catalog", "Languages / Schemas and DTDs / XML Catalog",
+                "OASIS XML catalog definitions and public identifier mappings."));
+        languages.getChildren().add(schemasDtds);
+
         languages.getChildren().add(new CategoryDef("lang.xslt", "XSLT", "Languages / XSLT",
                 "Configure XSLT processor runtimes and template transformation parameters."));
         languages.getChildren().add(new CategoryDef("lang.xslt_associations", "XSLT File Associations", "Languages / XSLT File Associations",
@@ -425,20 +436,37 @@ public final class SettingsDialog {
                 "Reformat code, optimize imports, and run script checks automatically on save."));
         tools.getChildren().add(new CategoryDef("tools.coverage", "Coverage", "Tools / Coverage",
                 "Configure code coverage runners, suite tracking, and result gutters."));
-        tools.getChildren().add(new CategoryDef("tools.debugger", "Debugger", "Tools / Debugger",
-                "Configure SQL routine debugging, breakpoints, and value inspection."));
+
+        CategoryDef debugger = new CategoryDef("tools.debugger", "Debugger", "Tools / Debugger",
+                "Configure SQL routine debugging, breakpoints, and value inspection.");
+        debugger.getChildren().add(new CategoryDef("tools.debugger.data_views", "Data Views", "Tools / Debugger / Data Views",
+                "Configure variables view, memory views, and type renderers."));
+        debugger.getChildren().add(new CategoryDef("tools.debugger.stepping", "Stepping", "Tools / Debugger / Stepping",
+                "Configure statement stepping filters and skip rules."));
+        tools.getChildren().add(debugger);
+
         tools.getChildren().add(new CategoryDef("tools.diagrams", "Diagrams", "Tools / Diagrams",
                 "Configure ER diagram layout engine, relationship link styles, and table nodes."));
-        tools.getChildren().add(new CategoryDef("tools.diff_merge", "Diff & Merge", "Tools / Diff & Merge",
-                "Configure difference viewers, external diff tools, and three-way merge tools."));
+
+        CategoryDef diffMerge = new CategoryDef("tools.diff_merge", "Diff & Merge", "Tools / Diff & Merge",
+                "Configure difference viewers, external diff tools, and three-way merge tools.");
+        diffMerge.getChildren().add(new CategoryDef("tools.diff_merge.external", "External Diff Tools", "Tools / Diff & Merge / External Diff Tools",
+                "Configure third-party diff and merge utility executables."));
+        tools.getChildren().add(diffMerge);
+
         tools.getChildren().add(new CategoryDef("tools.external_tools", "External Tools", "Tools / External Tools",
                 "Define custom external tools, command arguments, and macro variables."));
         tools.getChildren().add(new CategoryDef("tools.features_suggester", "Features Suggester", "Tools / Features Suggester",
                 "Configure smart tips suggesting IDE productivity features and shortcuts."));
         tools.getChildren().add(new CategoryDef("tools.features_trainer", "Features Trainer", "Tools / Features Trainer",
                 "Interactive tutorials for learning database IDE workflows and navigation."));
-        tools.getChildren().add(new CategoryDef("tools.mcp_server", "MCP Server", "Tools / MCP Server",
-                "Configure Model Context Protocol (MCP) server endpoints, tools, and sidecar integration."));
+
+        CategoryDef mcpServer = new CategoryDef("tools.mcp_server", "MCP Server", "Tools / MCP Server",
+                "Configure Model Context Protocol (MCP) server endpoints, tools, and sidecar integration.");
+        mcpServer.getChildren().add(new CategoryDef("tools.mcp_server.exposed_tools", "Exposed Tools", "Tools / MCP Server / Exposed Tools",
+                "Manage tools and database capabilities exposed over MCP."));
+        tools.getChildren().add(mcpServer);
+
         tools.getChildren().add(new CategoryDef("tools.rsync", "Rsync", "Tools / Rsync",
                 "Configure remote synchronization commands, rsync executable path, and options."));
         tools.getChildren().add(new CategoryDef("tools.ssh", "SSH Configurations", "Tools / SSH Configurations",
@@ -764,6 +792,12 @@ public final class SettingsDialog {
             return buildMarkdownPanel(cat);
         } else if ("Languages / Mermaid".equals(fullPath) || "Mermaid".equals(fullPath)) {
             return buildMermaidPanel(cat);
+        } else if ("Languages / Schemas and DTDs".equals(fullPath) || "Schemas and DTDs".equals(fullPath)) {
+            return buildSchemasDtdsPanel(cat);
+        } else if ("Tools / Debugger".equals(fullPath) || "Debugger".equals(fullPath)) {
+            return buildDebuggerPanel(cat);
+        } else if ("Tools / Diff & Merge".equals(fullPath) || "Diff & Merge".equals(fullPath)) {
+            return buildDiffMergePanel(cat);
         } else if ("Tools / Terminal".equals(fullPath) || "Terminal".equals(fullPath)) {
             return buildToolsPanel(cat, navigateTo);
         } else if ("Tools / SSH Configurations".equals(fullPath) || "SSH Configurations".equals(fullPath)) {
@@ -1669,38 +1703,220 @@ public final class SettingsDialog {
         return panel;
     }
 
+    private static VBox buildSchemasDtdsPanel(CategoryDef cat) {
+        // 1. External schemas and DTDs
+        Label externalLabel = new Label("External schemas and DTDs:");
+        externalLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: -text; -fx-font-size: 13px;");
+
+        Button addExtBtn = new Button("+");
+        addExtBtn.setTooltip(new Tooltip("Add External Schema or DTD"));
+        addExtBtn.setStyle("-fx-min-width: 26px; -fx-min-height: 22px;");
+
+        Button removeExtBtn = new Button("—");
+        removeExtBtn.setTooltip(new Tooltip("Remove"));
+        removeExtBtn.setStyle("-fx-min-width: 26px; -fx-min-height: 22px;");
+
+        Button editExtBtn = new Button("✏");
+        editExtBtn.setTooltip(new Tooltip("Edit"));
+        editExtBtn.setStyle("-fx-min-width: 26px; -fx-min-height: 22px;");
+
+        HBox extToolbar = new HBox(4, addExtBtn, removeExtBtn, editExtBtn);
+        extToolbar.setAlignment(Pos.CENTER_LEFT);
+
+        Label noResources = new Label("No external resources");
+        noResources.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 13px;");
+
+        StackPane emptyBox = new StackPane(noResources);
+        emptyBox.setPrefHeight(130);
+        emptyBox.setMaxHeight(150);
+        emptyBox.setStyle("-fx-background-color: #2b2d30; -fx-border-color: #3e4248; -fx-border-radius: 4; -fx-background-radius: 4;");
+
+        VBox extBox = new VBox(6, externalLabel, extToolbar, emptyBox);
+
+        // 2. Ignored schemas and DTDs
+        Label ignoredLabel = new Label("Ignored schemas and DTDs:");
+        ignoredLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: -text; -fx-font-size: 13px; -fx-padding: 8 0 0 0;");
+
+        Button addIgnoredBtn = new Button("+");
+        addIgnoredBtn.setTooltip(new Tooltip("Add Ignored Schema or DTD"));
+        addIgnoredBtn.setStyle("-fx-min-width: 26px; -fx-min-height: 22px;");
+
+        Button removeIgnoredBtn = new Button("—");
+        removeIgnoredBtn.setTooltip(new Tooltip("Remove"));
+        removeIgnoredBtn.setStyle("-fx-min-width: 26px; -fx-min-height: 22px;");
+
+        Button editIgnoredBtn = new Button("✏");
+        editIgnoredBtn.setTooltip(new Tooltip("Edit"));
+        editIgnoredBtn.setStyle("-fx-min-width: 26px; -fx-min-height: 22px;");
+
+        HBox ignoredToolbar = new HBox(4, addIgnoredBtn, removeIgnoredBtn, editIgnoredBtn);
+        ignoredToolbar.setAlignment(Pos.CENTER_LEFT);
+
+        ListView<String> ignoredList = new ListView<>();
+        ignoredList.getItems().addAll(
+                "http://exslt.org/common",
+                "http://exslt.org/dates-and-times",
+                "http://exslt.org/dynamic",
+                "http://exslt.org/math",
+                "http://exslt.org/sets",
+                "http://exslt.org/strings",
+                "http://relaxng.org/ns/compatibility/annotations/1.0",
+                "urn:idea:xslt-plugin#extensions"
+        );
+        ignoredList.setPrefHeight(180);
+        ignoredList.setStyle("-fx-background-color: #2b2d30; -fx-control-inner-background: #2b2d30; -fx-font-family: monospace; -fx-font-size: 12px;");
+        VBox.setVgrow(ignoredList, Priority.ALWAYS);
+
+        VBox ignoredBox = new VBox(6, ignoredLabel, ignoredToolbar, ignoredList);
+        VBox.setVgrow(ignoredBox, Priority.ALWAYS);
+
+        VBox panel = new VBox(12, extBox, ignoredBox);
+        panel.setPadding(new Insets(4, 8, 16, 8));
+        return panel;
+    }
+
+    private static VBox buildDebuggerPanel(CategoryDef cat) {
+        CheckBox showDebugWindow = new CheckBox("Show debug window on breakpoint");
+        showDebugWindow.setSelected(true);
+
+        CheckBox focusApp = new CheckBox("Focus application on breakpoint");
+        focusApp.setSelected(true);
+        focusApp.setPadding(new Insets(0, 0, 0, 20));
+        focusApp.disableProperty().bind(showDebugWindow.selectedProperty().not());
+
+        CheckBox hideOnTermination = new CheckBox("Hide debug window on process termination");
+        hideOnTermination.setSelected(false);
+
+        CheckBox scrollToCenter = new CheckBox("Scroll execution point to center");
+        scrollToCenter.setSelected(false);
+
+        CheckBox clickLineRunToCursor = new CheckBox("Click line number to perform run to cursor");
+        clickLineRunToCursor.setSelected(true);
+
+        VBox checksBox = new VBox(10, showDebugWindow, focusApp, hideOnTermination, scrollToCenter, clickLineRunToCursor);
+
+        // Breakpoint removal section
+        Label removeBreakpointLabel = new Label("Remove breakpoint:");
+        removeBreakpointLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: -text; -fx-font-size: 13px; -fx-padding: 8 0 2 0;");
+
+        ToggleGroup removeGroup = new ToggleGroup();
+        RadioButton clickLeftMouse = new RadioButton("Click with left mouse button");
+        clickLeftMouse.setToggleGroup(removeGroup);
+        clickLeftMouse.setSelected(true);
+
+        RadioButton dragOrMiddleClick = new RadioButton("Drag to the editor or click with middle mouse button");
+        dragOrMiddleClick.setToggleGroup(removeGroup);
+
+        CheckBox confirmRemoval = new CheckBox("Confirm removal of conditional or logging breakpoints");
+        confirmRemoval.setSelected(false);
+        confirmRemoval.setPadding(new Insets(4, 0, 0, 0));
+
+        VBox removeBox = new VBox(8, removeBreakpointLabel, clickLeftMouse, dragOrMiddleClick, confirmRemoval);
+
+        VBox panel = new VBox(14, checksBox, removeBox);
+        panel.setPadding(new Insets(4, 8, 16, 8));
+        return panel;
+    }
+
+    private static VBox buildDiffMergePanel(CategoryDef cat) {
+        // 1. Diff section
+        Label diffHeader = new Label("Diff");
+        diffHeader.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: -text;");
+
+        Label contextLinesLabel = new Label("Context lines:");
+        contextLinesLabel.setPrefWidth(90);
+        contextLinesLabel.setStyle("-fx-text-fill: -text;");
+
+        Slider contextSlider = new Slider(0, 4, 2); // 0=1, 1=2, 2=4, 3=8, 4=Disable
+        contextSlider.setMajorTickUnit(1);
+        contextSlider.setMinorTickCount(0);
+        contextSlider.setSnapToTicks(true);
+        contextSlider.setShowTickMarks(true);
+        contextSlider.setShowTickLabels(false);
+        contextSlider.setPrefWidth(160);
+
+        HBox sliderRow = new HBox(10, contextLinesLabel, contextSlider);
+        sliderRow.setAlignment(Pos.CENTER_LEFT);
+
+        Label tickLabel1 = new Label("1");
+        Label tickLabel2 = new Label("2");
+        Label tickLabel4 = new Label("4");
+        Label tickLabel8 = new Label("8");
+        Label tickLabelDisable = new Label("Disable");
+        HBox tickLabels = new HBox(22, tickLabel1, tickLabel2, tickLabel4, tickLabel8, tickLabelDisable);
+        tickLabels.setStyle("-fx-font-size: 10px; -fx-text-fill: -text-dim;");
+        tickLabels.setPadding(new Insets(-4, 0, 4, 102));
+
+        CheckBox nextFileCheck = new CheckBox("Go to the next file after reaching last change");
+        nextFileCheck.setSelected(true);
+
+        Label histLabel = new Label("Include diffs in navigation history:");
+        histLabel.setStyle("-fx-text-fill: -text;");
+        ComboBox<String> histCombo = new ComboBox<>();
+        histCombo.getItems().addAll("Until the diff is closed", "Always", "Never");
+        histCombo.getSelectionModel().select(0);
+        histCombo.setPrefWidth(180);
+        HBox histRow = new HBox(10, histLabel, histCombo);
+        histRow.setAlignment(Pos.CENTER_LEFT);
+
+        VBox diffBox = new VBox(8, diffHeader, sliderRow, tickLabels, nextFileCheck, histRow);
+
+        // 2. Merge section
+        Label mergeHeader = new Label("Merge");
+        mergeHeader.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: -text; -fx-padding: 8 0 0 0;");
+
+        CheckBox autoNonConflicting = new CheckBox("Automatically apply non-conflicting changes");
+        autoNonConflicting.setSelected(false);
+
+        CheckBox autoResolveImports = new CheckBox("Automatically resolve conflicts in import statements");
+        autoResolveImports.setSelected(false);
+
+        CheckBox highlightModifiedLines = new CheckBox("Highlight modified lines in gutter");
+        highlightModifiedLines.setSelected(true);
+
+        VBox mergeBox = new VBox(10, mergeHeader, autoNonConflicting, autoResolveImports, highlightModifiedLines);
+
+        VBox panel = new VBox(14, diffBox, mergeBox);
+        panel.setPadding(new Insets(4, 8, 16, 8));
+        return panel;
+    }
+
     private static VBox buildMcpServerPanel(CategoryDef cat) {
-        Label title = new Label("MCP Server");
-        title.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: -text;");
+        CheckBox enableMcp = new CheckBox("Enable MCP Server");
+        enableMcp.setSelected(false);
+        enableMcp.setStyle("-fx-font-weight: bold; -fx-text-fill: -text;");
 
-        CheckBox enableMcp = new CheckBox("Enable Model Context Protocol (MCP) sidecar server");
-        enableMcp.setSelected(true);
+        Label desc1 = new Label("The MCP Server allows external AI clients to use functionality from the IDE, integrating the power of your IDE into your AI tools. ");
+        desc1.setWrapText(true);
+        desc1.setMaxWidth(620);
+        desc1.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 12px;");
 
-        Label transportLabel = new Label("Transport mode:");
-        ComboBox<String> transportCombo = new ComboBox<>();
-        transportCombo.getItems().addAll("Standard I/O (stdio)", "Server-Sent Events (SSE)");
-        transportCombo.getSelectionModel().select(0);
-        transportCombo.setPrefWidth(220);
+        Hyperlink allMcpToolsLink = new Hyperlink("All MCP Tools ↗");
+        allMcpToolsLink.setStyle("-fx-text-fill: #3574F0; -fx-font-size: 12px; -fx-padding: 0; -fx-border-width: 0;");
 
-        Label portLabel = new Label("Port / Endpoint:");
-        TextField portField = new TextField("8088");
-        portField.setPrefWidth(100);
+        HBox descRow = new HBox(4, desc1, allMcpToolsLink);
+        descRow.setAlignment(Pos.CENTER_LEFT);
 
-        CheckBox shareSchema = new CheckBox("Expose active schema introspections to AI assistants");
-        shareSchema.setSelected(true);
+        Label desc2 = new Label("When enabled, these detected clients can be auto-configured to use IDE features in one click:\n• Junie\n• VSCode\n• Codex\n• GitHub Copilot CLI");
+        desc2.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 12px; -fx-line-spacing: 2;");
 
-        CheckBox allowQueryExec = new CheckBox("Allow read-only query execution via MCP tools");
-        allowQueryExec.setSelected(true);
+        VBox infoBox = new VBox(8, enableMcp, descRow, desc2);
 
-        GridPane grid = new GridPane();
-        grid.setHgap(12);
-        grid.setVgap(10);
-        grid.add(transportLabel, 0, 0);
-        grid.add(transportCombo, 1, 0);
-        grid.add(portLabel, 0, 1);
-        grid.add(portField, 1, 1);
+        // Terminal Sessions section
+        Label terminalHeader = new Label("Terminal Sessions");
+        terminalHeader.setStyle("-fx-font-weight: bold; -fx-text-fill: -text; -fx-font-size: 13px; -fx-padding: 8 0 0 0;");
 
-        VBox panel = new VBox(14, title, enableMcp, grid, shareSchema, allowQueryExec);
+        Separator sep = new Separator();
+
+        CheckBox terminalSuggestions = new CheckBox("Show setup suggestions for Codex and Claude terminal sessions");
+        terminalSuggestions.setSelected(true);
+
+        Label terminalHint = new Label("Shows the terminal banner when Codex or Claude starts without a matching DataGrip MCP setup.");
+        terminalHint.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 11px; -fx-padding: 0 0 0 22;");
+
+        VBox terminalBox = new VBox(6, terminalHeader, sep, terminalSuggestions, terminalHint);
+
+        VBox panel = new VBox(14, infoBox, terminalBox);
         panel.setPadding(new Insets(4, 8, 16, 8));
         return panel;
     }
