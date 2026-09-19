@@ -234,6 +234,48 @@ public final class SettingsDialog {
 
         CategoryDef general = new CategoryDef("editor.general", "General", "Editor / General",
                 "Configure editor mouse control, scrolling, caret placement, and code folding.");
+        general.getChildren().add(new CategoryDef("editor.general.auto_import", "Auto Import", "Editor / General / Auto Import",
+                "Configure auto-import behavior for schemas, tables, and namespaces."));
+        general.getChildren().add(new CategoryDef("editor.general.appearance", "Appearance", "Editor / General / Appearance",
+                "Configure code appearance, line numbers, indent guides, and breadcrumbs."));
+        general.getChildren().add(new CategoryDef("editor.general.breadcrumbs", "Breadcrumbs", "Editor / General / Breadcrumbs",
+                "Configure breadcrumb placement at top or bottom of the editor."));
+
+        CategoryDef codeCompletion = new CategoryDef("editor.general.code_completion", "Code Completion", "Editor / General / Code Completion",
+                "Provides code suggestions while typing, displayed either in a popup or inline in the editor");
+        codeCompletion.getChildren().add(new CategoryDef("editor.general.code_completion.popup", "Popup", "Editor / General / Code Completion / Popup",
+                "Configure completion popup triggers, delay, and sorting."));
+        codeCompletion.getChildren().add(new CategoryDef("editor.general.code_completion.inline", "Inline", "Editor / General / Code Completion / Inline",
+                "Configure inline completion suggestions and tab acceptance."));
+        general.getChildren().add(codeCompletion);
+
+        general.getChildren().add(new CategoryDef("editor.general.code_folding", "Code Folding", "Editor / General / Code Folding",
+                "Configure code folding for statements, comments, and subqueries."));
+        general.getChildren().add(new CategoryDef("editor.general.editor_tabs", "Editor Tabs", "Editor / General / Editor Tabs",
+                "Configure tab placement, tab closing policy, and multi-row tabs."));
+        general.getChildren().add(new CategoryDef("editor.general.gutter_icons", "Gutter Icons", "Editor / General / Gutter Icons",
+                "Configure run, breakpoint, and line-marker icons in the left gutter."));
+        general.getChildren().add(new CategoryDef("editor.general.output_console", "Output Console", "Editor / General / Output Console",
+                "Configure console buffer size, folding, and cyclic buffer limits."));
+        general.getChildren().add(new CategoryDef("editor.general.postfix_completion", "Postfix Completion", "Editor / General / Postfix Completion",
+                "Configure postfix completion templates and expansions."));
+
+        CategoryDef smartKeys = new CategoryDef("editor.general.smart_keys", "Smart Keys", "Editor / General / Smart Keys",
+                "Configure smart typing, auto-closing quotes/brackets, and indent behavior.");
+        smartKeys.getChildren().add(new CategoryDef("editor.general.smart_keys.yaml", "YAML", "Editor / General / Smart Keys / YAML",
+                "Configure smart indentation and key handling for YAML files."));
+        smartKeys.getChildren().add(new CategoryDef("editor.general.smart_keys.json", "JSON", "Editor / General / Smart Keys / JSON",
+                "Configure quote escaping and auto-comma in JSON files."));
+        smartKeys.getChildren().add(new CategoryDef("editor.general.smart_keys.markdown", "Markdown", "Editor / General / Smart Keys / Markdown",
+                "Configure table formatting and link wrapping in Markdown."));
+        smartKeys.getChildren().add(new CategoryDef("editor.general.smart_keys.html_css", "HTML/CSS", "Editor / General / Smart Keys / HTML/CSS",
+                "Configure tag auto-closing and attribute completion."));
+        smartKeys.getChildren().add(new CategoryDef("editor.general.smart_keys.sql", "SQL", "Editor / General / Smart Keys / SQL",
+                "Configure clause auto-capitalization and alias insertion."));
+        general.getChildren().add(smartKeys);
+
+        general.getChildren().add(new CategoryDef("editor.general.sticky_lines", "Sticky Lines", "Editor / General / Sticky Lines",
+                "Keep current scope header visible at the top of the editor while scrolling."));
         general.getChildren().add(new CategoryDef("editor.code_editing", "Code Editing", "Editor / General / Code Editing",
                 "Configure code completion, quote pairing, and auto-insertion rules."));
         general.getChildren().add(new CategoryDef("editor.font", "Font", "Editor / General / Font",
@@ -665,6 +707,8 @@ public final class SettingsDialog {
             return buildDiagramsPanel(cat);
         } else if ("Tools / MCP Server".equals(fullPath) || "MCP Server".equals(fullPath)) {
             return buildMcpServerPanel(cat);
+        } else if ("Editor / General / Smart Keys".equals(fullPath) || "Smart Keys".equals(fullPath)) {
+            return buildSmartKeysPanel(cat, navigateTo);
         }
 
         // Category landing overview page (DataGrip style with description & blue clickable links)
@@ -801,37 +845,298 @@ public final class SettingsDialog {
         Label title = new Label("General");
         title.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: -text;");
 
+        // 1. Mouse Control
         Label mouseControl = new Label("Mouse Control");
         mouseControl.setStyle("-fx-font-weight: bold; -fx-text-fill: -text;");
 
-        CheckBox ctrlScrollCheck = new CheckBox("Change font size with Ctrl+Mouse Wheel in the editor");
+        CheckBox ctrlScrollCheck = new CheckBox("Change font size with Ctrl+Mouse Wheel in:");
         ctrlScrollCheck.setSelected(settings.isCtrlScrollZoomEnabled());
 
-        Label caretSection = new Label("Caret and Scrolling");
-        caretSection.setStyle("-fx-font-weight: bold; -fx-text-fill: -text;");
+        RadioButton activeEditorRadio = new RadioButton("Active editor");
+        RadioButton allEditorsRadio = new RadioButton("All editors");
+        ToggleGroup zoomGroup = new ToggleGroup();
+        activeEditorRadio.setToggleGroup(zoomGroup);
+        allEditorsRadio.setToggleGroup(zoomGroup);
+        activeEditorRadio.setSelected(true);
+        activeEditorRadio.disableProperty().bind(ctrlScrollCheck.selectedProperty().not());
+        allEditorsRadio.disableProperty().bind(ctrlScrollCheck.selectedProperty().not());
 
-        CheckBox caretBlinking = new CheckBox("Enable caret blinking");
-        caretBlinking.setSelected(true);
+        HBox zoomRow = new HBox(12, ctrlScrollCheck, activeEditorRadio, allEditorsRadio);
+        zoomRow.setAlignment(Pos.CENTER_LEFT);
 
-        CheckBox highlightLine = new CheckBox("Highlight current line");
-        highlightLine.setSelected(true);
+        CheckBox moveCodeDnd = new CheckBox("Move code fragments with drag-and-drop");
+        moveCodeDnd.setSelected(true);
+        Label dndHint = new Label("To copy, hold Ctrl while dragging");
+        dndHint.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 11px;");
+        HBox dndRow = new HBox(8, moveCodeDnd, dndHint);
+        dndRow.setAlignment(Pos.CENTER_LEFT);
 
-        CheckBox showLineNumbers = new CheckBox("Show line numbers");
-        showLineNumbers.setSelected(true);
+        VBox mouseBox = new VBox(6, mouseControl, zoomRow, dndRow);
 
-        CheckBox stripTrailingSpaces = new CheckBox("Strip trailing spaces on save");
-        stripTrailingSpaces.setSelected(true);
+        // 2. Soft Wraps
+        Label softWraps = new Label("Soft Wraps");
+        softWraps.setStyle("-fx-font-weight: bold; -fx-text-fill: -text;");
 
-        Label hint = new Label("Scroll with Ctrl held over any SQL console to zoom that editor's text in or out. "
-                + "Ctrl+Plus / Ctrl+Minus also work in any console.");
-        hint.getStyleClass().add("console-status");
-        hint.setWrapText(true);
-        hint.setMaxWidth(480);
+        CheckBox softWrapFilesCheck = new CheckBox("Soft-wrap these files:");
+        softWrapFilesCheck.setSelected(false);
+        TextField softWrapPattern = new TextField("*.md; *.txt; *.rst; *.adoc");
+        softWrapPattern.setPrefWidth(240);
+        HBox softWrapRow = new HBox(10, softWrapFilesCheck, softWrapPattern);
+        softWrapRow.setAlignment(Pos.CENTER_LEFT);
+        Label softWrapHint = new Label("Use * and ? as wildcards and ; to separate patterns");
+        softWrapHint.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 11px; -fx-padding: 0 0 0 20;");
+
+        CheckBox useOriginalIndent = new CheckBox("Use the original line's indent for wrapped fragments");
+        useOriginalIndent.setSelected(true);
+
+        Label addIndentLabel = new Label("Add additional indent:");
+        Spinner<Integer> addIndentSpinner = new Spinner<>(0, 32, 0, 1);
+        addIndentSpinner.setPrefWidth(70);
+        Label symbolsLabel = new Label("symbols");
+        HBox indentRow = new HBox(8, addIndentLabel, addIndentSpinner, symbolsLabel);
+        indentRow.setAlignment(Pos.CENTER_LEFT);
+        indentRow.setPadding(new Insets(0, 0, 0, 20));
+
+        CheckBox softWrapIndicators = new CheckBox("Only show soft-wrap indicators for the current line");
+        softWrapIndicators.setSelected(true);
+
+        VBox softWrapBox = new VBox(6, softWraps, softWrapRow, softWrapHint, useOriginalIndent, indentRow, softWrapIndicators);
+
+        // 3. Virtual Space
+        Label virtualSpace = new Label("Virtual Space");
+        virtualSpace.setStyle("-fx-font-weight: bold; -fx-text-fill: -text;");
+
+        Label caretPlacementLabel = new Label("Allow caret placement:");
+        CheckBox afterEndOfLine = new CheckBox("After the end of line");
+        CheckBox insideTabs = new CheckBox("Inside tabs");
+        HBox placementRow = new HBox(12, caretPlacementLabel, afterEndOfLine, insideTabs);
+        placementRow.setAlignment(Pos.CENTER_LEFT);
+
+        CheckBox virtualSpaceBottom = new CheckBox("Show virtual space at the bottom of the file");
+        virtualSpaceBottom.setSelected(false);
+
+        VBox virtualSpaceBox = new VBox(6, virtualSpace, placementRow, virtualSpaceBottom);
+
+        // 4. Scroll Offset
+        Label scrollOffset = new Label("Scroll Offset");
+        scrollOffset.setStyle("-fx-font-weight: bold; -fx-text-fill: -text;");
+
+        Label vertOffsetLbl = new Label("Vertical scroll offset:");
+        Spinner<Integer> vertOffset = new Spinner<>(0, 50, 1, 1);
+        vertOffset.setPrefWidth(70);
+
+        Label vertJumpLbl = new Label("Vertical scroll jump:");
+        Spinner<Integer> vertJump = new Spinner<>(0, 50, 0, 1);
+        vertJump.setPrefWidth(70);
+
+        Label horizOffsetLbl = new Label("Horizontal scroll offset:");
+        Spinner<Integer> horizOffset = new Spinner<>(0, 50, 3, 1);
+        horizOffset.setPrefWidth(70);
+
+        Label horizJumpLbl = new Label("Horizontal scroll jump:");
+        Spinner<Integer> horizJump = new Spinner<>(0, 50, 0, 1);
+        horizJump.setPrefWidth(70);
+
+        GridPane scrollGrid = new GridPane();
+        scrollGrid.setHgap(12);
+        scrollGrid.setVgap(8);
+        scrollGrid.add(vertOffsetLbl, 0, 0);
+        scrollGrid.add(vertOffset, 1, 0);
+        scrollGrid.add(vertJumpLbl, 0, 1);
+        scrollGrid.add(vertJump, 1, 1);
+        scrollGrid.add(horizOffsetLbl, 0, 2);
+        scrollGrid.add(horizOffset, 1, 2);
+        scrollGrid.add(horizJumpLbl, 0, 3);
+        scrollGrid.add(horizJump, 1, 3);
+
+        VBox scrollOffsetBox = new VBox(6, scrollOffset, scrollGrid);
+
+        // 5. Caret Movement
+        Label caretMovement = new Label("Caret Movement");
+        caretMovement.setStyle("-fx-font-weight: bold; -fx-text-fill: -text;");
+
+        Label wordsLbl = new Label("When moving by words:");
+        ComboBox<String> wordsCombo = new ComboBox<>();
+        wordsCombo.getItems().addAll(
+                "Jump to the current word boundaries  DataGrip default",
+                "Always jump to word start",
+                "Always jump to word end"
+        );
+        wordsCombo.getSelectionModel().select(0);
+        wordsCombo.setPrefWidth(320);
+
+        Label lineBreakLbl = new Label("Upon line break:");
+        ComboBox<String> lineBreakCombo = new ComboBox<>();
+        lineBreakCombo.getItems().addAll(
+                "Jump to the next/previous line boundaries  DataGrip default",
+                "Jump to the beginning of next line"
+        );
+        lineBreakCombo.getSelectionModel().select(0);
+        lineBreakCombo.setPrefWidth(320);
+
+        GridPane caretGrid = new GridPane();
+        caretGrid.setHgap(12);
+        caretGrid.setVgap(8);
+        caretGrid.add(wordsLbl, 0, 0);
+        caretGrid.add(wordsCombo, 1, 0);
+        caretGrid.add(lineBreakLbl, 0, 1);
+        caretGrid.add(lineBreakCombo, 1, 1);
+
+        VBox caretMoveBox = new VBox(6, caretMovement, caretGrid);
+
+        // 6. Scrolling
+        Label scrolling = new Label("Scrolling");
+        scrolling.setStyle("-fx-font-weight: bold; -fx-text-fill: -text;");
+
+        CheckBox smoothScrolling = new CheckBox("Enable smooth scrolling");
+        smoothScrolling.setSelected(true);
+
+        Label caretBehaviorLbl = new Label("Caret behavior:");
+        RadioButton keepCaretInPlace = new RadioButton("Keep the caret in place, scroll editor canvas");
+        RadioButton moveCaret = new RadioButton("Move caret, minimize editor scrolling");
+        ToggleGroup caretScrollGroup = new ToggleGroup();
+        keepCaretInPlace.setToggleGroup(caretScrollGroup);
+        moveCaret.setToggleGroup(caretScrollGroup);
+        keepCaretInPlace.setSelected(true);
+
+        VBox scrollingBox = new VBox(6, scrolling, smoothScrolling, caretBehaviorLbl,
+                new VBox(4, keepCaretInPlace, moveCaret));
+        ((VBox) scrollingBox.getChildren().get(3)).setPadding(new Insets(0, 0, 0, 16));
+
+        // 7. Rich-Text Copy
+        Label richTextCopy = new Label("Rich-Text Copy");
+        richTextCopy.setStyle("-fx-font-weight: bold; -fx-text-fill: -text;");
+
+        CheckBox copyAsRichText = new CheckBox("Copy (Ctrl+C) as rich text");
+        copyAsRichText.setSelected(true);
+        Label richTextHint = new Label("All formatting will be copied, including font, colors and so on");
+        richTextHint.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 11px;");
+        HBox richTextRow = new HBox(8, copyAsRichText, richTextHint);
+        richTextRow.setAlignment(Pos.CENTER_LEFT);
+
+        Label schemeLbl = new Label("Color scheme for copied fragment:");
+        ComboBox<String> schemeCombo = new ComboBox<>();
+        schemeCombo.getItems().addAll("Active scheme", "Darcula", "High Contrast", "Light");
+        schemeCombo.getSelectionModel().select(0);
+        schemeCombo.setPrefWidth(200);
+        HBox schemeRow = new HBox(10, schemeLbl, schemeCombo);
+        schemeRow.setAlignment(Pos.CENTER_LEFT);
+
+        VBox richTextBox = new VBox(6, richTextCopy, richTextRow, schemeRow);
+
+        // 8. On Save
+        Label onSave = new Label("On Save");
+        onSave.setStyle("-fx-font-weight: bold; -fx-text-fill: -text;");
+
+        CheckBox removeTrailingSpaces = new CheckBox("Remove trailing spaces on:");
+        removeTrailingSpaces.setSelected(true);
+        ComboBox<String> trailingLinesCombo = new ComboBox<>();
+        trailingLinesCombo.getItems().addAll("Modified lines", "All lines");
+        trailingLinesCombo.getSelectionModel().select(0);
+        trailingLinesCombo.setPrefWidth(140);
+        HBox trailingRow = new HBox(10, removeTrailingSpaces, trailingLinesCombo);
+        trailingRow.setAlignment(Pos.CENTER_LEFT);
+
+        CheckBox keepTrailingSpacesOnCaret = new CheckBox("Keep trailing spaces on caret line");
+        keepTrailingSpacesOnCaret.setSelected(true);
+        keepTrailingSpacesOnCaret.setPadding(new Insets(0, 0, 0, 16));
+
+        CheckBox removeTrailingBlankLines = new CheckBox("Remove trailing blank lines at the end of saved files");
+        removeTrailingBlankLines.setSelected(false);
+
+        CheckBox ensureLineBreak = new CheckBox("Ensure every saved file ends with a line break");
+        ensureLineBreak.setSelected(false);
+
+        VBox onSaveBox = new VBox(6, onSave, trailingRow, keepTrailingSpacesOnCaret, removeTrailingBlankLines, ensureLineBreak);
 
         inputs.put("ctrlScrollCheck", ctrlScrollCheck);
 
-        VBox panel = new VBox(12, title, mouseControl, ctrlScrollCheck, hint, new Separator(),
-                caretSection, caretBlinking, highlightLine, showLineNumbers, stripTrailingSpaces);
+        VBox panel = new VBox(14, title, mouseBox, new Separator(), softWrapBox, new Separator(),
+                virtualSpaceBox, new Separator(), scrollOffsetBox, new Separator(), caretMoveBox, new Separator(),
+                scrollingBox, new Separator(), richTextBox, new Separator(), onSaveBox);
+        panel.setPadding(new Insets(4, 8, 16, 8));
+        return panel;
+    }
+
+    private static VBox buildSmartKeysPanel(CategoryDef cat, java.util.function.Consumer<String> navigateTo) {
+        Label title = new Label("Smart Keys");
+        title.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: -text;");
+
+        CheckBox homeNonWhitespace = new CheckBox("Home moves caret to first non-whitespace character");
+        homeNonWhitespace.setSelected(true);
+
+        CheckBox endIndentPos = new CheckBox("End on blank line moves caret to indent position");
+        endIndentPos.setSelected(true);
+
+        CheckBox insertPairedBrackets = new CheckBox("Insert paired brackets (), [], {}, <>");
+        insertPairedBrackets.setSelected(true);
+
+        CheckBox insertPairQuote = new CheckBox("Insert pair quote");
+        insertPairQuote.setSelected(true);
+
+        CheckBox reformatOnCloseBrace = new CheckBox("Reformat block on typing '}'");
+        reformatOnCloseBrace.setSelected(true);
+
+        CheckBox useCamelHumps = new CheckBox("Use \"CamelHumps\" words");
+        useCamelHumps.setSelected(false);
+
+        CheckBox honorCamelHumps = new CheckBox("Honor \"CamelHumps\" words settings when selecting on double click");
+        honorCamelHumps.setSelected(true);
+
+        CheckBox surroundSelection = new CheckBox("Surround selection on typing quote or brace");
+        surroundSelection.setSelected(true);
+
+        CheckBox multiCarets = new CheckBox("Add multiple carets on double Ctrl with arrow keys");
+        multiCarets.setSelected(true);
+
+        CheckBox jumpOutsideBracket = new CheckBox("Jump outside closing bracket/quote with Tab when typing");
+        jumpOutsideBracket.setSelected(true);
+
+        Label enterSection = new Label("Enter");
+        enterSection.setStyle("-fx-font-weight: bold; -fx-text-fill: -text;");
+
+        CheckBox smartIndent = new CheckBox("Smart indent");
+        smartIndent.setSelected(true);
+
+        CheckBox insertPairBraceEnter = new CheckBox("Insert pair '}'");
+        insertPairBraceEnter.setSelected(true);
+
+        CheckBox closeBlockComment = new CheckBox("Close block comment");
+        closeBlockComment.setSelected(true);
+
+        VBox enterBox = new VBox(6, enterSection, smartIndent, insertPairBraceEnter, closeBlockComment);
+
+        Label unindentLabel = new Label("Unindent on Backspace:");
+        ComboBox<String> unindentCombo = new ComboBox<>();
+        unindentCombo.getItems().addAll("To proper indent position", "To nearest indent boundary", "Disabled");
+        unindentCombo.getSelectionModel().select(0);
+        unindentCombo.setPrefWidth(220);
+
+        Label reformatPasteLabel = new Label("Reformat on paste:");
+        ComboBox<String> reformatPasteCombo = new ComboBox<>();
+        reformatPasteCombo.getItems().addAll("None", "Indent each line", "Reformat block");
+        reformatPasteCombo.getSelectionModel().select(0);
+        reformatPasteCombo.setPrefWidth(160);
+
+        CheckBox reformatLineBreaks = new CheckBox("Reformat again to remove custom line breaks");
+        reformatLineBreaks.setSelected(false);
+
+        GridPane dropdownsGrid = new GridPane();
+        dropdownsGrid.setHgap(12);
+        dropdownsGrid.setVgap(8);
+        dropdownsGrid.add(unindentLabel, 0, 0);
+        dropdownsGrid.add(unindentCombo, 1, 0);
+        dropdownsGrid.add(reformatPasteLabel, 0, 1);
+        dropdownsGrid.add(reformatPasteCombo, 1, 1);
+
+        VBox panel = new VBox(10, title,
+                homeNonWhitespace, endIndentPos, insertPairedBrackets, insertPairQuote,
+                reformatOnCloseBrace, useCamelHumps, honorCamelHumps, surroundSelection,
+                multiCarets, jumpOutsideBracket,
+                new Separator(),
+                enterBox,
+                new Separator(),
+                dropdownsGrid, reformatLineBreaks);
         panel.setPadding(new Insets(4, 8, 16, 8));
         return panel;
     }

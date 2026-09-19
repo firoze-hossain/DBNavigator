@@ -106,9 +106,41 @@ public class SettingsDialogTest {
 
         // Subtree under General
         List<String> genChildren = SettingsDialog.getChildCategoryNames("Editor / General");
-        assertEquals(2, genChildren.size());
-        assertEquals("Code Editing", genChildren.get(0));
-        assertEquals("Font", genChildren.get(1));
+        assertEquals(13, genChildren.size(), "General should have 13 children");
+        assertEquals("Auto Import", genChildren.get(0));
+        assertEquals("Appearance", genChildren.get(1));
+        assertEquals("Breadcrumbs", genChildren.get(2));
+        assertEquals("Code Completion", genChildren.get(3));
+        assertEquals("Code Folding", genChildren.get(4));
+        assertEquals("Editor Tabs", genChildren.get(5));
+        assertEquals("Gutter Icons", genChildren.get(6));
+        assertEquals("Output Console", genChildren.get(7));
+        assertEquals("Postfix Completion", genChildren.get(8));
+        assertEquals("Smart Keys", genChildren.get(9));
+        assertEquals("Sticky Lines", genChildren.get(10));
+        assertEquals("Code Editing", genChildren.get(11));
+        assertEquals("Font", genChildren.get(12));
+
+        // Subtree under Code Completion
+        List<String> ccChildren = SettingsDialog.getChildCategoryNames("Editor / General / Code Completion");
+        assertEquals(2, ccChildren.size());
+        assertEquals("Popup", ccChildren.get(0));
+        assertEquals("Inline", ccChildren.get(1));
+
+        // Subtree under Smart Keys
+        List<String> skChildren = SettingsDialog.getChildCategoryNames("Editor / General / Smart Keys");
+        assertEquals(5, skChildren.size());
+        assertEquals("YAML", skChildren.get(0));
+        assertEquals("JSON", skChildren.get(1));
+        assertEquals("Markdown", skChildren.get(2));
+        assertEquals("HTML/CSS", skChildren.get(3));
+        assertEquals("SQL", skChildren.get(4));
+    }
+
+    @Test
+    public void testCodeCompletionDescription() {
+        String desc = SettingsDialog.getCategoryDescription("Editor / General / Code Completion");
+        assertEquals("Provides code suggestions while typing, displayed either in a popup or inline in the editor", desc);
     }
 
     @Test
