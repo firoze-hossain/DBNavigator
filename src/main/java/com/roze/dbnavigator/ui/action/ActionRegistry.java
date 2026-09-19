@@ -1438,8 +1438,135 @@ public final class ActionRegistry {
         manager.registerAction(reopenTab);
 
         // =========================================================================
-        // 8. HELP ACTIONS
+        // 8. HELP ACTIONS (Matching DataGrip - Register... excluded per user instruction)
         // =========================================================================
+        // Section 1: Welcome & Find Action
+        AnAction welcomeAction = AnAction.builder("help.welcome", "Welcome")
+                .description("Open Welcome dialog")
+                .onAction(MainWindow::showWelcomeDialog)
+                .build();
+
+        AnAction findHelpAction = AnAction.builder("help.find.action", "Find Action…")
+                .description("Find action or command across IDE (Ctrl+Shift+A)")
+                .accelerator(new KeyCodeCombination(KeyCode.A, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(MainWindow::showFindActionDialog)
+                .build();
+
+        // Section 2: Help
+        AnAction helpAction = AnAction.builder("help.help", "Help")
+                .icon(FontAwesomeSolid.QUESTION_CIRCLE, "#a9b7c6", 11)
+                .onAction(MainWindow::showOnlineHelp)
+                .build();
+
+        // Section 3: Tip of the Day, My Productivity, Learn IDE Features
+        AnAction tipOfDay = AnAction.builder("help.tip.of.the.day", "Tip of the Day")
+                .onAction(MainWindow::showTipOfTheDayDialog)
+                .build();
+
+        AnAction myProductivity = AnAction.builder("help.my.productivity", "My Productivity")
+                .onAction(MainWindow::showProductivityGuideDialog)
+                .build();
+
+        AnAction learnFeatures = AnAction.builder("help.learn.features", "Learn IDE Features")
+                .icon(FontAwesomeSolid.GRADUATION_CAP, "#a9b7c6", 11)
+                .onAction(MainWindow::showLearnIdeFeaturesDialog)
+                .build();
+
+        // Section 4: What's New
+        AnAction whatsNew = AnAction.builder("help.whats.new", "What's New in DBNavigator")
+                .onAction(MainWindow::showWhatsNewDialog)
+                .build();
+
+        // Section 5: Getting Started, YouTube, Shortcuts PDF
+        AnAction gettingStarted = AnAction.builder("help.getting.started", "Getting Started")
+                .onAction(MainWindow::showGettingStartedDialog)
+                .build();
+
+        AnAction youtube = AnAction.builder("help.youtube", "DataGrip on YouTube")
+                .onAction(MainWindow::showYouTubeChannel)
+                .build();
+
+        AnAction shortcutsPdf = AnAction.builder("help.shortcuts.pdf", "Keyboard Shortcuts PDF")
+                .onAction(MainWindow::showKeyboardShortcutsPdf)
+                .build();
+
+        // Section 6: Support, Bug Report, Feedback
+        AnAction contactSupport = AnAction.builder("help.contact.support", "Contact Support…")
+                .onAction(MainWindow::showContactSupportDialog)
+                .build();
+
+        AnAction bugReport = AnAction.builder("help.bug.report", "Submit a Bug Report…")
+                .onAction(MainWindow::showSubmitBugReportDialog)
+                .build();
+
+        AnAction submitFeedback = AnAction.builder("help.submit.feedback", "Submit Feedback…")
+                .onAction(MainWindow::showSubmitFeedbackDialog)
+                .build();
+
+        // Section 7: Logs, Profiling, Memory Snapshot, Diagnostic Tools >
+        AnAction showLogInFiles = AnAction.builder("help.show.log.in.files", "Show Log in Files")
+                .onAction(MainWindow::showLogInFiles)
+                .build();
+
+        AnAction showSqlLogInFiles = AnAction.builder("help.show.sql.log.in.files", "Show SQL Log in Files")
+                .onAction(MainWindow::showSqlLogInFiles)
+                .build();
+
+        AnAction collectLogs = AnAction.builder("help.collect.logs", "Collect Logs and Diagnostic Data")
+                .onAction(MainWindow::showCollectLogsDialog)
+                .build();
+
+        AnAction cpuProfiling = AnAction.builder("help.cpu.profiling", "Start CPU Usage Profiling")
+                .onAction(MainWindow::startCpuProfiling)
+                .build();
+
+        AnAction captureMemory = AnAction.builder("help.capture.memory.snapshot", "Capture Memory Snapshot")
+                .icon(FontAwesomeSolid.CAMERA, "#a9b7c6", 11)
+                .onAction(MainWindow::captureMemorySnapshot)
+                .build();
+
+        // Submenu: Diagnostic Tools >
+        ActionGroup diagnosticTools = new ActionGroup("help.diagnostic.tools", "Diagnostic Tools", true);
+        diagnosticTools.addAll(
+                AnAction.builder("help.diagnostic.activity.monitor", "Activity Monitor…")
+                        .onAction(MainWindow::showActivityMonitorDialog).build(),
+                AnAction.builder("help.diagnostic.dump.threads", "Dump Threads")
+                        .onAction(MainWindow::dumpThreads).build(),
+                AnAction.builder("help.diagnostic.debug.log.settings", "Debug Log Settings…")
+                        .onAction(MainWindow::showDebugLogSettingsDialog).build(),
+                AnAction.builder("help.diagnostic.special.files", "Special Files and Folders…")
+                        .onAction(MainWindow::showSpecialFilesFoldersDialog).build(),
+                AnAction.builder("help.diagnostic.start.cpu.profiling", "Start CPU Usage Profiling")
+                        .onAction(MainWindow::startCpuProfiling).build(),
+                AnAction.builder("help.diagnostic.start.async.profiler", "Start Async profiler")
+                        .onAction(MainWindow::startAsyncProfiler).build(),
+                AnAction.builder("help.diagnostic.capture.memory.snapshot", "Capture Memory Snapshot")
+                        .icon(FontAwesomeSolid.CAMERA, "#a9b7c6", 11)
+                        .onAction(MainWindow::captureMemorySnapshot).build(),
+                AnAction.builder("help.diagnostic.profile.indexing", "Profile Indexing")
+                        .onAction(MainWindow::profileIndexing).build(),
+                AnAction.builder("help.diagnostic.open.indexing.diagnostics", "Open Indexing Diagnostics")
+                        .onAction(MainWindow::openIndexingDiagnostics).build()
+        );
+
+        // Section 8: Memory, Custom Properties & VM Options, Delete Leftover Dirs
+        AnAction changeMemory = AnAction.builder("help.change.memory.settings", "Change Memory Settings")
+                .onAction(MainWindow::showChangeMemorySettingsDialog)
+                .build();
+
+        AnAction customProperties = AnAction.builder("help.custom.properties", "Edit Custom Properties…")
+                .onAction(MainWindow::editCustomProperties)
+                .build();
+
+        AnAction customVmOptions = AnAction.builder("help.custom.vm.options", "Edit Custom VM Options…")
+                .onAction(MainWindow::editCustomVmOptions)
+                .build();
+
+        AnAction deleteLeftoverDirs = AnAction.builder("help.delete.leftover.dirs", "Delete Leftover IDE Directories…")
+                .onAction(MainWindow::deleteLeftoverDirectories)
+                .build();
+
+        // Section 9: Updates & About (Register... is excluded per user instruction)
         AnAction checkUpdates = AnAction.builder("help.updates", "Check for Updates…")
                 .icon(FontAwesomeSolid.DOWNLOAD, "#a9b7c6", 11)
                 .onAction(MainWindow::showCheckUpdatesDialog)
@@ -1451,9 +1578,23 @@ public final class ActionRegistry {
                 .build();
 
         ActionGroup helpMenu = new ActionGroup("menu.help", "Help");
-        helpMenu.add(checkUpdates)
+        helpMenu.addAll(welcomeAction, findHelpAction)
                 .addSeparator()
-                .add(about);
+                .add(helpAction)
+                .addSeparator()
+                .addAll(tipOfDay, myProductivity, learnFeatures)
+                .addSeparator()
+                .add(whatsNew)
+                .addSeparator()
+                .addAll(gettingStarted, youtube, shortcutsPdf)
+                .addSeparator()
+                .addAll(contactSupport, bugReport, submitFeedback)
+                .addSeparator()
+                .addAll(showLogInFiles, showSqlLogInFiles, collectLogs, cpuProfiling, captureMemory, diagnosticTools)
+                .addSeparator()
+                .addAll(changeMemory, customProperties, customVmOptions, deleteLeftoverDirs)
+                .addSeparator()
+                .addAll(checkUpdates, about);
 
         // =========================================================================
         // 9. MIDDLE HEADER ACTIONS (4 ICONS + THREE DOTS ...)
