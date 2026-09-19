@@ -1129,10 +1129,59 @@ public final class ActionRegistry {
         manager.registerAction(runToolWindow);
 
         // =========================================================================
-        // 6. VCS ACTIONS
+        // 6. VCS ACTIONS (Matching DataGrip)
         // =========================================================================
+        // Section 1: Integration & Operations Popup
+        AnAction enableIntegration = AnAction.builder("vcs.enable.integration", "Enable Version Control Integration…")
+                .description("Select a version control system to associate with this project")
+                .onAction(MainWindow::showEnableVcsIntegrationDialog)
+                .build();
+
+        AnAction vcsOperations = AnAction.builder("vcs.operations.popup", "VCS Operations Popup…")
+                .description("Show quick popup with VCS operations")
+                .accelerator(new KeyCodeCombination(KeyCode.BACK_QUOTE, KeyCombination.ALT_DOWN))
+                .onAction(MainWindow::showVcsOperationsPopup)
+                .build();
+
+        // Section 2: Patches
+        AnAction applyPatch = AnAction.builder("vcs.apply.patch", "Apply Patch…")
+                .description("Apply a patch from file to project")
+                .onAction(MainWindow::showApplyPatchDialog)
+                .build();
+
+        AnAction applyPatchClipboard = AnAction.builder("vcs.apply.patch.clipboard", "Apply Patch from Clipboard…")
+                .description("Apply a patch from clipboard to project")
+                .onAction(MainWindow::showApplyPatchFromClipboardDialog)
+                .build();
+
+        // Section 3: VCS Checkout, Browse, Init
+        AnAction getFromVcs = AnAction.builder("vcs.get.from.vcs", "Get from Version Control…")
+                .description("Clone repository from version control")
+                .onAction(MainWindow::showGetFromVcsDialog)
+                .build();
+
+        ActionGroup browseVcsRepo = new ActionGroup("vcs.browse.repository", "Browse VCS Repository", true);
+        AnAction showGitLog = AnAction.builder("vcs.browse.git.log", "Show Git Repository Log…")
+                .description("Show Git repository log and commit history")
+                .onAction(MainWindow::showGitRepositoryLogDialog)
+                .build();
+        browseVcsRepo.add(showGitLog);
+
+        AnAction createGitRepo = AnAction.builder("vcs.create.git.repository", "Create Git Repository…")
+                .description("Initialize a new Git repository")
+                .onAction(MainWindow::showCreateGitRepositoryDialog)
+                .build();
+
         ActionGroup vcsMenu = new ActionGroup("menu.vcs", "VCS");
-        vcsMenu.add(localHistoryGroup);
+        vcsMenu.add(enableIntegration)
+                .add(vcsOperations)
+                .addSeparator()
+                .add(applyPatch)
+                .add(applyPatchClipboard)
+                .addSeparator()
+                .add(getFromVcs)
+                .add(browseVcsRepo)
+                .add(createGitRepo);
 
         // =========================================================================
         // 7. WINDOW ACTIONS

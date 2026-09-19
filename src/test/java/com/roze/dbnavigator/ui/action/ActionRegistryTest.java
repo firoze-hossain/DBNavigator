@@ -1001,4 +1001,96 @@ public class ActionRegistryTest {
         assertEquals(KeyCode.DIGIT4, rtAcc.getCode());
         assertEquals(KeyCombination.ModifierValue.DOWN, rtAcc.getAlt());
     }
+
+    @Test
+    public void testVcsMenuRegistration() {
+        ActionGroup vcsMenu = actionManager.getGroup("menu.vcs");
+        assertNotNull(vcsMenu, "menu.vcs group should be registered");
+        assertEquals("VCS", vcsMenu.getText());
+    }
+
+    @Test
+    public void testVcsMenuStructureAndOrder() {
+        ActionGroup vcsMenu = actionManager.getGroup("menu.vcs");
+        assertNotNull(vcsMenu, "menu.vcs group should be registered");
+
+        List<AnAction> items = vcsMenu.getChildren();
+        assertEquals(9, items.size(), "VCS menu should contain 9 entries (6 actions, 1 submenu group, 2 separators)");
+
+        // Section 1: Integration & Operations Popup
+        assertInstanceOf(AnAction.class, items.get(0));
+        assertEquals("vcs.enable.integration", items.get(0).getId());
+        assertEquals("Enable Version Control Integration…", items.get(0).getText());
+
+        assertInstanceOf(AnAction.class, items.get(1));
+        assertEquals("vcs.operations.popup", items.get(1).getId());
+        assertEquals("VCS Operations Popup…", items.get(1).getText());
+
+        // Separator 1
+        assertInstanceOf(ActionSeparator.class, items.get(2));
+
+        // Section 2: Patches
+        assertInstanceOf(AnAction.class, items.get(3));
+        assertEquals("vcs.apply.patch", items.get(3).getId());
+        assertEquals("Apply Patch…", items.get(3).getText());
+
+        assertInstanceOf(AnAction.class, items.get(4));
+        assertEquals("vcs.apply.patch.clipboard", items.get(4).getId());
+        assertEquals("Apply Patch from Clipboard…", items.get(4).getText());
+
+        // Separator 2
+        assertInstanceOf(ActionSeparator.class, items.get(5));
+
+        // Section 3: VCS Checkout, Browse, Init
+        assertInstanceOf(AnAction.class, items.get(6));
+        assertEquals("vcs.get.from.vcs", items.get(6).getId());
+        assertEquals("Get from Version Control…", items.get(6).getText());
+
+        assertInstanceOf(ActionGroup.class, items.get(7));
+        assertEquals("vcs.browse.repository", items.get(7).getId());
+        assertEquals("Browse VCS Repository", items.get(7).getText());
+        assertTrue(((ActionGroup) items.get(7)).isPopup());
+
+        assertInstanceOf(AnAction.class, items.get(8));
+        assertEquals("vcs.create.git.repository", items.get(8).getId());
+        assertEquals("Create Git Repository…", items.get(8).getText());
+    }
+
+    @Test
+    public void testVcsBrowseRepositorySubmenu() {
+        ActionGroup browseRepo = actionManager.getGroup("vcs.browse.repository");
+        assertNotNull(browseRepo, "vcs.browse.repository submenu group should be registered");
+        assertTrue(browseRepo.isPopup());
+
+        List<AnAction> children = browseRepo.getChildren();
+        assertEquals(1, children.size(), "Browse VCS Repository should have 1 child");
+
+        assertInstanceOf(AnAction.class, children.get(0));
+        assertEquals("vcs.browse.git.log", children.get(0).getId());
+        assertEquals("Show Git Repository Log…", children.get(0).getText());
+    }
+
+    @Test
+    public void testVcsOperationsAccelerator() {
+        AnAction vcsOps = actionManager.getAction("vcs.operations.popup");
+        assertNotNull(vcsOps, "vcs.operations.popup should be registered");
+        assertNotNull(vcsOps.getAccelerator());
+
+        KeyCodeCombination acc = (KeyCodeCombination) vcsOps.getAccelerator();
+        assertEquals(KeyCode.BACK_QUOTE, acc.getCode());
+        assertEquals(KeyCombination.ModifierValue.DOWN, acc.getAlt());
+    }
+
+    @Test
+    public void testLocalHistoryPreserved() {
+        ActionGroup localHistory = actionManager.getGroup("file.local.history");
+        assertNotNull(localHistory, "file.local.history should remain registered");
+        assertEquals("Local History", localHistory.getText());
+
+        assertNotNull(actionManager.getAction("history.show"));
+        assertNotNull(actionManager.getAction("history.show.selection"));
+        assertNotNull(actionManager.getAction("history.show.project"));
+        assertNotNull(actionManager.getAction("history.recent.changes"));
+        assertNotNull(actionManager.getAction("history.put.label"));
+    }
 }
