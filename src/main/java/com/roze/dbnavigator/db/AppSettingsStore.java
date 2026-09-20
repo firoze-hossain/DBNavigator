@@ -6,6 +6,8 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * App-wide preferences (theme, editor font, etc.), persisted to
@@ -33,6 +35,18 @@ public final class AppSettingsStore {
         public String csvDelimiter = ",";
         public String csvQuoteChar = "\"";
         public String keymapPreset = "DataGrip Default";
+        public List<ExecuteActionConfig> executeActions = defaultExecuteActions();
+        public String scriptSplitting = "Into valid ANSI SQL statements or by separator";
+        public boolean reviewParametersBeforeExecution = true;
+        public boolean warnUnsafeQueries = true;
+
+        private static List<ExecuteActionConfig> defaultExecuteActions() {
+            List<ExecuteActionConfig> list = new ArrayList<>();
+            list.add(new ExecuteActionConfig("Execute", "Ctrl+Enter", "Ask what to execute", "Nothing", "Exactly as separate statements", false));
+            list.add(new ExecuteActionConfig("Execute (2)", "Ctrl+Shift+Enter", "Smallest statement", "Nothing", "Exactly as separate statements", false));
+            list.add(new ExecuteActionConfig("Execute (3)", "Ctrl+Alt+Enter", "Whole script", "Nothing", "Exactly as separate statements", false));
+            return list;
+        }
 
         public Theme getTheme() { return theme; }
         public void setTheme(Theme theme) { this.theme = theme; }
@@ -68,6 +82,67 @@ public final class AppSettingsStore {
         public void setCsvQuoteChar(String csvQuoteChar) { this.csvQuoteChar = csvQuoteChar; }
         public String getKeymapPreset() { return keymapPreset; }
         public void setKeymapPreset(String keymapPreset) { this.keymapPreset = keymapPreset; }
+        public List<ExecuteActionConfig> getExecuteActions() {
+            if (executeActions == null || executeActions.isEmpty()) {
+                executeActions = defaultExecuteActions();
+            }
+            return executeActions;
+        }
+        public void setExecuteActions(List<ExecuteActionConfig> executeActions) {
+            this.executeActions = (executeActions == null || executeActions.isEmpty())
+                    ? defaultExecuteActions() : executeActions;
+        }
+        public ExecuteActionConfig getExecuteAction(int index) {
+            List<ExecuteActionConfig> list = getExecuteActions();
+            if (index >= 0 && index < list.size()) return list.get(index);
+            return list.get(0);
+        }
+        public String getScriptSplitting() { return scriptSplitting; }
+        public void setScriptSplitting(String scriptSplitting) { this.scriptSplitting = scriptSplitting; }
+        public boolean isReviewParametersBeforeExecution() { return reviewParametersBeforeExecution; }
+        public void setReviewParametersBeforeExecution(boolean reviewParametersBeforeExecution) {
+            this.reviewParametersBeforeExecution = reviewParametersBeforeExecution;
+        }
+        public boolean isWarnUnsafeQueries() { return warnUnsafeQueries; }
+        public void setWarnUnsafeQueries(boolean warnUnsafeQueries) { this.warnUnsafeQueries = warnUnsafeQueries; }
+    }
+
+    public static class ExecuteActionConfig {
+        private String name = "Execute";
+        private String shortcut = "Ctrl+Enter";
+        private String whenCaretInside = "Ask what to execute";
+        private String whenCaretOutside = "Nothing";
+        private String forSelection = "Exactly as separate statements";
+        private boolean openResultsInNewTab = false;
+
+        public ExecuteActionConfig() {}
+
+        public ExecuteActionConfig(String name, String shortcut, String whenCaretInside,
+                                   String whenCaretOutside, String forSelection, boolean openResultsInNewTab) {
+            this.name = name;
+            this.shortcut = shortcut;
+            this.whenCaretInside = whenCaretInside;
+            this.whenCaretOutside = whenCaretOutside;
+            this.forSelection = forSelection;
+            this.openResultsInNewTab = openResultsInNewTab;
+        }
+
+        public ExecuteActionConfig copy() {
+            return new ExecuteActionConfig(name, shortcut, whenCaretInside, whenCaretOutside, forSelection, openResultsInNewTab);
+        }
+
+        public String getName() { return name; }
+        public void setName(String name) { this.name = name; }
+        public String getShortcut() { return shortcut; }
+        public void setShortcut(String shortcut) { this.shortcut = shortcut; }
+        public String getWhenCaretInside() { return whenCaretInside; }
+        public void setWhenCaretInside(String whenCaretInside) { this.whenCaretInside = whenCaretInside; }
+        public String getWhenCaretOutside() { return whenCaretOutside; }
+        public void setWhenCaretOutside(String whenCaretOutside) { this.whenCaretOutside = whenCaretOutside; }
+        public String getForSelection() { return forSelection; }
+        public void setForSelection(String forSelection) { this.forSelection = forSelection; }
+        public boolean isOpenResultsInNewTab() { return openResultsInNewTab; }
+        public void setOpenResultsInNewTab(boolean openResultsInNewTab) { this.openResultsInNewTab = openResultsInNewTab; }
     }
 
     private static final Path FILE =

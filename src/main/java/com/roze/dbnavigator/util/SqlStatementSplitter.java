@@ -47,14 +47,32 @@ public final class SqlStatementSplitter {
             "TYPE\\s+BODY|TYPE)\\b|DECLARE\\b|BEGIN\\b)",
             Pattern.CASE_INSENSITIVE);
 
+    public static final String MODE_ANSI_OR_SEPARATOR = "Into valid ANSI SQL statements or by separator";
+    public static final String MODE_ANSI_ONLY = "Into ANSI SQL statements";
+    public static final String MODE_SEPARATOR_ONLY = "By statement separator";
+
+    private static final Pattern ANSI_STATEMENT_START = Pattern.compile(
+            "(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|TRUNCATE|MERGE|WITH|USE|EXEC|EXECUTE|CALL|GRANT|REVOKE|COMMIT|ROLLBACK|EXPLAIN|DESCRIBE|SHOW)\\b",
+            Pattern.CASE_INSENSITIVE);
+
     private SqlStatementSplitter() {}
 
     public static List<Statement> split(String sql) {
+        return split(sql, MODE_ANSI_OR_SEPARATOR);
+    }
+
+    public static List<Statement> split(String sql, String splittingMode) {
         List<Statement> statements = new ArrayList<>();
         if (sql == null || sql.isEmpty()) return statements;
 
+        String mode = (splittingMode == null || splittingMode.isBlank())
+                ? MODE_ANSI_OR_SEPARATOR : splittingMode;
+        boolean allowSeparator = !MODE_ANSI_ONLY.equals(mode);
+        boolean allowAnsiBoundary = !MODE_SEPARATOR_ONLY.equals(mode);
+
         int n = sql.length();
         int stmtStart = 0;
+        int depth = 0;
         boolean inSingleQuote = false;
         boolean inDoubleQuote = false;
         boolean inLineComment = false;
@@ -94,6 +112,9 @@ public final class SqlStatementSplitter {
             if (c == '\'') { inSingleQuote = true; i++; continue; }
             if (c == '"') { inDoubleQuote = true; i++; continue; }
 
+            if (c == '(' || c == '[' || c == '{') { depth++; i++; continue; }
+            if (c == ')' || c == ']' || c == '}') { if (depth > 0) depth--; i++; continue; }
+
             if (inPlsqlBlock) {
                 if (c == '/' && isStandaloneSlashAt(sql, i)) {
                     addIfNotBlank(statements, sql, stmtStart, i, true);
@@ -104,10 +125,25 @@ public final class SqlStatementSplitter {
                 continue;
             }
 
-            if (c == ';') {
+            if (allowSeparator && c == ';') {
                 addIfNotBlank(statements, sql, stmtStart, i + 1, false);
                 stmtStart = i + 1;
                 inPlsqlBlock = looksLikePlsqlBlockStart(sql, stmtStart);
+                i++;
+                continue;
+            }
+
+            // ANSI boundary check: at depth 0, right after a newline, check if next statement starts
+            if (allowAnsiBoundary && depth == 0 && c == '\n') {
+                int nextTrivia = skipLeadingTrivia(sql, i + 1);
+                if (nextTrivia < n) {
+                    String prefix = sql.substring(stmtStart, i).strip();
+                    if (!prefix.isEmpty() && ANSI_STATEMENT_START.matcher(sql).region(nextTrivia, n).lookingAt()) {
+                        addIfNotBlank(statements, sql, stmtStart, i, false);
+                        stmtStart = i + 1;
+                        inPlsqlBlock = looksLikePlsqlBlockStart(sql, stmtStart);
+                    }
+                }
             }
             i++;
         }
