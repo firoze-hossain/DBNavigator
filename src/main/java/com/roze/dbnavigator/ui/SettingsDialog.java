@@ -774,6 +774,8 @@ public final class SettingsDialog {
             return buildFontPanel(settings, inputs);
         } else if ("Database / Query Execution".equals(fullPath)) {
             return buildQueryExecutionPanel(settings, inputs, navigateTo);
+        } else if ("Database / Query Execution / Output and Results".equals(fullPath) || "Output and Results".equals(fullPath)) {
+            return buildOutputAndResultsPanel(settings, inputs);
         } else if ("Database / Data Editor and Viewer".equals(fullPath) || "Appearance & Behavior / Data Editor and Viewer".equals(fullPath)) {
             return buildDataEditorPanel(settings, inputs);
         } else if ("Database / Database Explorer".equals(fullPath)) {
@@ -1311,7 +1313,198 @@ public final class SettingsDialog {
 
     private static VBox buildQueryExecutionPanel(AppSettingsStore.Settings settings, Map<String, Object> inputs,
                                                  java.util.function.Consumer<String> navigateTo) {
-        Label title = new Label("Query Execution");
+        // Deep copy working actions so modifications stay staged until Apply/OK
+        List<AppSettingsStore.ExecuteActionConfig> workingActions = new ArrayList<>();
+        for (AppSettingsStore.ExecuteActionConfig act : settings.getExecuteActions()) {
+            workingActions.add(act.copy());
+        }
+        while (workingActions.size() < 3) {
+            int idx = workingActions.size() + 1;
+            String shortcut = idx == 1 ? "Ctrl+Enter" : (idx == 2 ? "Ctrl+Shift+Enter" : "Ctrl+Alt+Enter");
+            workingActions.add(new AppSettingsStore.ExecuteActionConfig(
+                    "Execute" + (idx > 1 ? " (" + idx + ")" : ""),
+                    shortcut,
+                    "Ask what to execute",
+                    "Nothing",
+                    "Exactly as separate statements",
+                    false));
+        }
+
+        inputs.put("executeActions", workingActions);
+
+        // Left Action List (Execute, Execute (2), Execute (3))
+        ListView<AppSettingsStore.ExecuteActionConfig> actionList = new ListView<>();
+        actionList.getItems().setAll(workingActions);
+        actionList.setPrefWidth(210);
+        actionList.setPrefHeight(160);
+        actionList.getStyleClass().add("completion-list");
+        actionList.setStyle("-fx-border-color: #43454a; -fx-border-width: 1px; -fx-border-radius: 4px;");
+
+        actionList.setCellFactory(lv -> new ListCell<>() {
+            @Override
+            protected void updateItem(AppSettingsStore.ExecuteActionConfig item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                    setGraphic(null);
+                } else {
+                    Label nameLabel = new Label(item.getName());
+                    nameLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: -text; -fx-font-size: 12px;");
+
+                    Region spacer = new Region();
+                    HBox.setHgrow(spacer, Priority.ALWAYS);
+
+                    Label scLabel = new Label(item.getShortcut() != null ? item.getShortcut() : "");
+                    scLabel.setStyle("-fx-text-fill: #7c7f86; -fx-font-size: 11px;");
+
+                    HBox row = new HBox(8, nameLabel, spacer, scLabel);
+                    row.setAlignment(Pos.CENTER_LEFT);
+                    setGraphic(row);
+                    setText(null);
+                }
+            }
+        });
+
+        // Right side controls for selected execution action
+        Label shortcutTitle = new Label("Shortcut:");
+        shortcutTitle.setStyle("-fx-text-fill: -text;");
+        Label shortcutLink = new Label("Ctrl+Enter");
+        shortcutLink.setStyle("-fx-text-fill: #3574F0; -fx-font-weight: bold; -fx-cursor: hand;");
+        HBox shortcutBox = new HBox(8, shortcutTitle, shortcutLink);
+        shortcutBox.setAlignment(Pos.CENTER_LEFT);
+
+        Label whenInsideLabel = new Label("When caret inside statement execute:");
+        ComboBox<String> whenInsideCombo = new ComboBox<>();
+        whenInsideCombo.getItems().addAll(
+                "Ask what to execute",
+                "Smallest subquery or statement",
+                "Smallest statement",
+                "Largest statement",
+                "Largest statement or batch",
+                "Whole script",
+                "Everything from caret"
+        );
+        whenInsideCombo.setPrefWidth(300);
+
+        Label whenOutsideLabel = new Label("When caret outside statement execute:");
+        ComboBox<String> whenOutsideCombo = new ComboBox<>();
+        whenOutsideCombo.getItems().addAll(
+                "Nothing",
+                "Whole script",
+                "Everything below caret"
+        );
+        whenOutsideCombo.setPrefWidth(300);
+
+        Label forSelectionLabel = new Label("For selection execute:");
+        ComboBox<String> forSelectionCombo = new ComboBox<>();
+        forSelectionCombo.getItems().addAll(
+                "Exactly as a single statement",
+                "Exactly as separate statements",
+                "Smart expand to script"
+        );
+        forSelectionCombo.setPrefWidth(300);
+
+        CheckBox openResultsCheck = new CheckBox("Open results in new tab");
+
+        GridPane actionGrid = new GridPane();
+        actionGrid.setHgap(14);
+        actionGrid.setVgap(12);
+        actionGrid.add(whenInsideLabel, 0, 0);
+        actionGrid.add(whenInsideCombo, 1, 0);
+        actionGrid.add(whenOutsideLabel, 0, 1);
+        actionGrid.add(whenOutsideCombo, 1, 1);
+        actionGrid.add(forSelectionLabel, 0, 2);
+        actionGrid.add(forSelectionCombo, 1, 2);
+
+        VBox rightActionBox = new VBox(12, shortcutBox, actionGrid, openResultsCheck);
+        HBox.setHgrow(rightActionBox, Priority.ALWAYS);
+
+        boolean[] updatingFromSelection = new boolean[]{false};
+
+        Runnable loadSelectedAction = () -> {
+            AppSettingsStore.ExecuteActionConfig selected = actionList.getSelectionModel().getSelectedItem();
+            if (selected == null) return;
+            updatingFromSelection[0] = true;
+            try {
+                shortcutLink.setText(selected.getShortcut() != null && !selected.getShortcut().isBlank()
+                        ? selected.getShortcut() : "(None)");
+                whenInsideCombo.setValue(selected.getWhenCaretInside());
+                whenOutsideCombo.setValue(selected.getWhenCaretOutside());
+                forSelectionCombo.setValue(selected.getForSelection());
+                openResultsCheck.setSelected(selected.isOpenResultsInNewTab());
+            } finally {
+                updatingFromSelection[0] = false;
+            }
+        };
+
+        whenInsideCombo.valueProperty().addListener((o, oldVal, newVal) -> {
+            if (!updatingFromSelection[0] && newVal != null) {
+                AppSettingsStore.ExecuteActionConfig sel = actionList.getSelectionModel().getSelectedItem();
+                if (sel != null) sel.setWhenCaretInside(newVal);
+            }
+        });
+
+        whenOutsideCombo.valueProperty().addListener((o, oldVal, newVal) -> {
+            if (!updatingFromSelection[0] && newVal != null) {
+                AppSettingsStore.ExecuteActionConfig sel = actionList.getSelectionModel().getSelectedItem();
+                if (sel != null) sel.setWhenCaretOutside(newVal);
+            }
+        });
+
+        forSelectionCombo.valueProperty().addListener((o, oldVal, newVal) -> {
+            if (!updatingFromSelection[0] && newVal != null) {
+                AppSettingsStore.ExecuteActionConfig sel = actionList.getSelectionModel().getSelectedItem();
+                if (sel != null) sel.setForSelection(newVal);
+            }
+        });
+
+        openResultsCheck.selectedProperty().addListener((o, oldVal, newVal) -> {
+            if (!updatingFromSelection[0] && newVal != null) {
+                AppSettingsStore.ExecuteActionConfig sel = actionList.getSelectionModel().getSelectedItem();
+                if (sel != null) sel.setOpenResultsInNewTab(newVal);
+            }
+        });
+
+        actionList.getSelectionModel().selectedIndexProperty().addListener((o, oldIdx, newIdx) -> {
+            loadSelectedAction.run();
+        });
+
+        actionList.getSelectionModel().select(0);
+        loadSelectedAction.run();
+
+        HBox topBox = new HBox(18, actionList, rightActionBox);
+        topBox.setAlignment(Pos.TOP_LEFT);
+
+        // Bottom Section
+        Label scriptSplitLabel = new Label("Split a script for execution in Generic and ANSI SQL dialects:");
+        ComboBox<String> scriptSplittingCombo = new ComboBox<>();
+        scriptSplittingCombo.getItems().addAll(
+                "Into valid ANSI SQL statements or by separator",
+                "Into ANSI SQL statements",
+                "By statement separator"
+        );
+        scriptSplittingCombo.setValue(settings.getScriptSplitting());
+        scriptSplittingCombo.setPrefWidth(350);
+
+        CheckBox reviewParamsCheck = new CheckBox("Review parameters before execution");
+        reviewParamsCheck.setSelected(settings.isReviewParametersBeforeExecution());
+
+        CheckBox warnUnsafeCheck = new CheckBox("Show warning before running potentially unsafe queries");
+        warnUnsafeCheck.setSelected(settings.isWarnUnsafeQueries());
+
+        inputs.put("scriptSplittingCombo", scriptSplittingCombo);
+        inputs.put("reviewParamsCheck", reviewParamsCheck);
+        inputs.put("warnUnsafeCheck", warnUnsafeCheck);
+
+        VBox bottomBox = new VBox(10, scriptSplitLabel, scriptSplittingCombo, reviewParamsCheck, warnUnsafeCheck);
+
+        VBox panel = new VBox(18, topBox, new Separator(), bottomBox);
+        panel.setPadding(new Insets(4, 8, 16, 8));
+        return panel;
+    }
+
+    private static VBox buildOutputAndResultsPanel(AppSettingsStore.Settings settings, Map<String, Object> inputs) {
+        Label title = new Label("Output and Results");
         title.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: -text;");
 
         Label timeoutLabel = new Label("Query timeout (seconds):");
@@ -1345,18 +1538,7 @@ public final class SettingsDialog {
         inputs.put("maxRowsSpinner", maxRowsSpinner);
         inputs.put("autoCommit", autoCommit);
 
-        HBox links = new HBox(16);
-        Hyperlink resultsLink = new Hyperlink("Output and Results");
-        resultsLink.setStyle("-fx-text-fill: #3574F0;");
-        resultsLink.setOnAction(e -> navigateTo.accept("Database / Query Execution / Output and Results"));
-
-        Hyperlink paramsLink = new Hyperlink("User Parameters");
-        paramsLink.setStyle("-fx-text-fill: #3574F0;");
-        paramsLink.setOnAction(e -> navigateTo.accept("Database / Query Execution / User Parameters"));
-        links.getChildren().addAll(resultsLink, paramsLink);
-
-        VBox panel = new VBox(12, title, grid, autoCommit, singleTxScript, highlightExec, new Separator(),
-                new Label("Related pages:"), links);
+        VBox panel = new VBox(14, title, grid, autoCommit, singleTxScript, highlightExec);
         panel.setPadding(new Insets(4, 8, 16, 8));
         return panel;
     }
@@ -2348,6 +2530,22 @@ public final class SettingsDialog {
         if (inputs.containsKey("autoCommit")) {
             CheckBox cb = (CheckBox) inputs.get("autoCommit");
             settings.setAutoCommit(cb.isSelected());
+        }
+        if (inputs.containsKey("executeActions")) {
+            List<AppSettingsStore.ExecuteActionConfig> list = (List<AppSettingsStore.ExecuteActionConfig>) inputs.get("executeActions");
+            settings.setExecuteActions(list);
+        }
+        if (inputs.containsKey("scriptSplittingCombo")) {
+            ComboBox<String> combo = (ComboBox<String>) inputs.get("scriptSplittingCombo");
+            if (combo.getValue() != null) settings.setScriptSplitting(combo.getValue());
+        }
+        if (inputs.containsKey("reviewParamsCheck")) {
+            CheckBox cb = (CheckBox) inputs.get("reviewParamsCheck");
+            settings.setReviewParametersBeforeExecution(cb.isSelected());
+        }
+        if (inputs.containsKey("warnUnsafeCheck")) {
+            CheckBox cb = (CheckBox) inputs.get("warnUnsafeCheck");
+            settings.setWarnUnsafeQueries(cb.isSelected());
         }
         if (inputs.containsKey("pageSizeCombo")) {
             ComboBox<Integer> combo = (ComboBox<Integer>) inputs.get("pageSizeCombo");

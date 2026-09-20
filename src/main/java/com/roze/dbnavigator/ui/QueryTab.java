@@ -1,5 +1,6 @@
 package com.roze.dbnavigator.ui;
 
+import com.roze.dbnavigator.db.AppSettingsStore;
 import com.roze.dbnavigator.db.ClientRegistry;
 import com.roze.dbnavigator.db.LocalHistoryStore;
 import com.roze.dbnavigator.db.MetadataService;
@@ -9,12 +10,15 @@ import com.roze.dbnavigator.model.ConnectionProfile.DatabaseType;
 import com.roze.dbnavigator.model.DbObject;
 import com.roze.dbnavigator.model.QueryResult;
 import com.roze.dbnavigator.util.AppExecutor;
+import com.roze.dbnavigator.util.QueryExecutionResolver;
 import com.roze.dbnavigator.util.SqlReformatter;
 import com.roze.dbnavigator.util.SqlStatementSplitter;
+import com.roze.dbnavigator.util.UnsafeQueryDetector;
 import javafx.application.Platform;
 import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
+import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.input.Clipboard;
@@ -62,6 +66,9 @@ public class QueryTab extends Tab {
     private final String catalog;   // nullable: default database of the profile
     private final CodeArea editor = SqlHighlighter.createEditor();
     private final ResultGrid resultGrid = new ResultGrid();
+    private final TabPane resultsTabPane = new TabPane();
+    private int resultTabCounter = 1;
+    private QueryExecutionChooserPopup activeChooserPopup;
     private final SplitPane editorResultSplit = new SplitPane();
     private final Label statusLabel = new Label("Ready");
     private final Spinner<Integer> limitSpinner = new Spinner<>(10, 100_000, 500, 100);
@@ -71,7 +78,7 @@ public class QueryTab extends Tab {
     private final Button statementsButton = new Button();
     private final Button submitButton = new Button("Submit");
     private final Button revertButton = new Button("Revert");
-    private final GridEditManager editManager;
+    private GridEditManager editManager;
 
     private final AtomicReference<java.sql.Statement> runningStatement = new AtomicReference<>();
     private final Popup historyPopup = new Popup();
@@ -120,8 +127,22 @@ public class QueryTab extends Tab {
         // ---- Toolbar ----
         runButton.setGraphic(Icons.of(FontAwesomeSolid.PLAY, "#57965c", 11));
         runButton.getStyleClass().add("run-button");
-        runButton.setTooltip(new Tooltip("Execute (Ctrl+Enter)"));
-        runButton.setOnAction(e -> execute());
+        runButton.setTooltip(new Tooltip("Execute (Ctrl+Enter) — Right-click for options"));
+        runButton.setOnAction(e -> executeAction(0));
+
+        ContextMenu runMenu = new ContextMenu();
+        MenuItem exec1 = new MenuItem("Execute (Ctrl+Enter)");
+        exec1.setOnAction(e -> executeAction(0));
+        MenuItem exec2 = new MenuItem("Execute (2) (Ctrl+Shift+Enter)");
+        exec2.setOnAction(e -> executeAction(1));
+        MenuItem exec3 = new MenuItem("Execute (3) (Ctrl+Alt+Enter)");
+        exec3.setOnAction(e -> executeAction(2));
+        MenuItem toFile = new MenuItem("Execute to File…");
+        toFile.setOnAction(e -> executeToFile());
+        MenuItem explain = new MenuItem("Explain Plan");
+        explain.setOnAction(e -> showExecutionPlan());
+        runMenu.getItems().addAll(exec1, exec2, exec3, new SeparatorMenuItem(), toFile, explain);
+        runButton.setContextMenu(runMenu);
 
         cancelButton.setGraphic(Icons.of(FontAwesomeSolid.STOP_CIRCLE, "#e05555", 11));
         cancelButton.setTooltip(new Tooltip("Cancel the running query"));
@@ -147,7 +168,7 @@ public class QueryTab extends Tab {
 
         Button exportButton = new Button("Export CSV");
         exportButton.setGraphic(Icons.of(FontAwesomeSolid.FILE_CSV, "#e0a44c", 11));
-        exportButton.setOnAction(e -> resultGrid.exportCsv());
+        exportButton.setOnAction(e -> activeResultGrid().exportCsv());
 
         limitSpinner.setEditable(true);
         limitSpinner.setPrefWidth(95);
@@ -196,7 +217,17 @@ public class QueryTab extends Tab {
         pager.addOverflowItem("Refresh (re-run query)", this::rerunLastSql);
 
         // ---- Layout ----
-        editorResultSplit.getItems().addAll(editorScroll, resultGrid);
+        Tab initialResultTab = new Tab("Result 1", resultGrid);
+        initialResultTab.setClosable(false);
+        resultsTabPane.getTabs().add(initialResultTab);
+        resultsTabPane.setStyle("-fx-tab-min-width: 80px;");
+        resultsTabPane.getSelectionModel().selectedItemProperty().addListener((obs, oldTab, newTab) -> {
+            if (newTab != null && newTab.getContent() instanceof ResultGrid grid) {
+                editManager = new GridEditManager(profile, catalog, grid,
+                        submitButton, revertButton, this::rerunLastSql, statusLabel::setText);
+            }
+        });
+        editorResultSplit.getItems().addAll(editorScroll, resultsTabPane);
         editorResultSplit.setOrientation(Orientation.VERTICAL);
         editorResultSplit.setDividerPositions(0.45);
 
@@ -219,8 +250,14 @@ public class QueryTab extends Tab {
         CompletionService.preload(profile, catalog);
 
         root.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
-            if (new KeyCodeCombination(KeyCode.ENTER, KeyCombination.CONTROL_DOWN).match(e)) {
-                execute();
+            if (new KeyCodeCombination(KeyCode.ENTER, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN).match(e)) {
+                executeAction(1);
+                e.consume();
+            } else if (new KeyCodeCombination(KeyCode.ENTER, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN).match(e)) {
+                executeAction(2);
+                e.consume();
+            } else if (new KeyCodeCombination(KeyCode.ENTER, KeyCombination.CONTROL_DOWN).match(e)) {
+                executeAction(0);
                 e.consume();
             }
         });
@@ -578,6 +615,7 @@ public class QueryTab extends Tab {
         if (completionPopup.isShowing()) completionPopup.hide();
         if (historyPopup.isShowing()) historyPopup.hide();
         if (statementsPopup.isShowing()) statementsPopup.hide();
+        if (activeChooserPopup != null && activeChooserPopup.isShowing()) activeChooserPopup.hide();
     }
 
     /** Recomputes syntax highlighting and overlays the current-statement highlight in one combined pass. */
@@ -761,8 +799,12 @@ public class QueryTab extends Tab {
         Menu explainPlan = new Menu("Explain Plan");
         explainPlan.getItems().add(action("Show Execution Plan", null, this::showExecutionPlan));
         menu.getItems().add(explainPlan);
-        menu.getItems().add(action("Execute",
-                new KeyCodeCombination(KeyCode.ENTER, KeyCombination.SHORTCUT_DOWN), this::execute));
+        menu.getItems().add(action("Execute (Ctrl+Enter)",
+                new KeyCodeCombination(KeyCode.ENTER, KeyCombination.SHORTCUT_DOWN), () -> executeAction(0)));
+        menu.getItems().add(action("Execute (2) (Ctrl+Shift+Enter)",
+                new KeyCodeCombination(KeyCode.ENTER, KeyCombination.SHORTCUT_DOWN, KeyCombination.SHIFT_DOWN), () -> executeAction(1)));
+        menu.getItems().add(action("Execute (3) (Ctrl+Alt+Enter)",
+                new KeyCodeCombination(KeyCode.ENTER, KeyCombination.SHORTCUT_DOWN, KeyCombination.ALT_DOWN), () -> executeAction(2)));
         if (hasSelection) {
             menu.getItems().add(action("Execute to File\u2026", null, this::executeToFile));
         }
@@ -1131,42 +1173,145 @@ public class QueryTab extends Tab {
     // ------------------------------------------------------------- execute
 
     public void execute() {
-        completionPopup.hide();
-        String sql = selectedOrEditorText();
-        if (sql.isBlank()) return;
-        resolveParametersThenRun(sql, resolved -> {
-            List<String> statements = SqlStatementSplitter.split(resolved).stream()
-                    // A PL/SQL block's own trailing ";" (right after its final
-                    // END) is mandatory grammar, not a separator — stripping it
-                    // the way a plain statement's separator ";" gets stripped
-                    // would send Oracle an invalid, unterminated block.
-                    .map(s -> (s.plsqlBlock() ? s.text() : stripTrailingSemicolon(s.text())).strip())
-                    .filter(s -> !s.isEmpty())
-                    .toList();
-            if (statements.size() > 1) {
-                executeStatementsSequentially(statements);
-            } else if (!statements.isEmpty()) {
-                executeSql(statements.get(0));
-            }
-        });
+        executeAction(0);
     }
 
-    /**
-     * Runs several statements one at a time, in the order they appear — the
-     * same semantics DataGrip uses for a multi-statement selection or a
-     * whole script. This exists because joining them back into one
-     * semicolon-separated string and sending that to Statement.execute()
-     * only happens to work on drivers lenient enough to accept several
-     * statements in a single call (MySQL/SQL Server/PostgreSQL all
-     * tolerate it); Oracle's driver does not — it parses the first
-     * statement, then rejects everything after its semicolon with
-     * "ORA-00933: SQL command not properly ended," since as far as Oracle
-     * is concerned that first statement should have been the entire input.
-     * Stops at the first failing statement, matching typical script
-     * semantics — later statements are often only valid because earlier
-     * ones already succeeded (e.g. INSERTs into a table a prior CREATE
-     * TABLE just made).
-     */
+    public void executeAction(int actionIndex) {
+        completionPopup.hide();
+        dismissTransientPopups();
+
+        AppSettingsStore.Settings settings = AppSettingsStore.load();
+        List<AppSettingsStore.ExecuteActionConfig> actions = settings.getExecuteActions();
+        AppSettingsStore.ExecuteActionConfig actionConfig;
+        if (actions != null && actionIndex >= 0 && actionIndex < actions.size()) {
+            actionConfig = actions.get(actionIndex);
+        } else {
+            actionConfig = new AppSettingsStore.ExecuteActionConfig(
+                    "Execute", "Ctrl+Enter",
+                    "Ask what to execute", "Nothing", "Exactly as separate statements", false);
+        }
+
+        String fullText = editor.getText();
+        if (fullText == null || fullText.isBlank()) {
+            return;
+        }
+
+        IndexRange selection = editor.getSelection();
+        int caretPosition = editor.getCaretPosition();
+        String scriptSplittingMode = settings.getScriptSplitting();
+
+        QueryExecutionResolver.ResolvedExecution resolved = QueryExecutionResolver.resolve(
+                fullText, selection, caretPosition, actionConfig, scriptSplittingMode);
+
+        switch (resolved.getActionType()) {
+            case NO_OP -> statusLabel.setText(resolved.getSummary());
+            case ASK_CHOOSER -> showChooserPopup(resolved.getCandidates(), actionConfig);
+            case EXECUTE -> proceedWithExecution(resolved.getStatements(), actionConfig);
+        }
+    }
+
+    private void showChooserPopup(List<QueryExecutionResolver.CandidateOption> candidates,
+                                  AppSettingsStore.ExecuteActionConfig actionConfig) {
+        if (candidates == null || candidates.isEmpty()) return;
+        dismissTransientPopups();
+
+        activeChooserPopup = new QueryExecutionChooserPopup(candidates, chosen -> {
+            activeChooserPopup = null;
+            proceedWithExecution(chosen.statements(), actionConfig);
+        });
+
+        Optional<Bounds> caretBounds = editor.getCaretBounds();
+        if (caretBounds.isPresent()) {
+            Bounds b = caretBounds.get();
+            activeChooserPopup.showAtNode(editor, b.getMinX(), b.getMaxY() + 4);
+        } else {
+            Point2D p = editor.localToScreen(20, 40);
+            if (p != null) {
+                activeChooserPopup.showAtNode(editor, p.getX(), p.getY());
+            } else {
+                activeChooserPopup.showAtNode(editor, 100, 100);
+            }
+        }
+    }
+
+    private void proceedWithExecution(List<String> rawStatements, AppSettingsStore.ExecuteActionConfig actionConfig) {
+        if (rawStatements == null || rawStatements.isEmpty()) return;
+
+        List<String> cleaned = rawStatements.stream()
+                .map(String::strip)
+                .filter(s -> !s.isEmpty())
+                .toList();
+        if (cleaned.isEmpty()) return;
+
+        AppSettingsStore.Settings settings = AppSettingsStore.load();
+
+        // 1. Warn before running potentially unsafe queries if enabled
+        if (settings.isWarnUnsafeQueries()) {
+            List<String> unsafe = UnsafeQueryDetector.detectUnsafeQueries(cleaned);
+            if (!unsafe.isEmpty()) {
+                Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+                alert.initOwner(mainWindow.getOwnerWindow());
+                alert.setTitle("Potentially Unsafe Query");
+                alert.setHeaderText("The statement(s) you are about to execute may modify or delete data without a WHERE clause or drop schema objects:");
+                StringBuilder sb = new StringBuilder();
+                for (String s : unsafe) {
+                    sb.append("• ").append(compactSql(s)).append("\n");
+                }
+                sb.append("\nDo you want to proceed with execution?");
+                alert.setContentText(sb.toString());
+                ButtonType executeAnywayBtn = new ButtonType("Execute Anyway", ButtonBar.ButtonData.OK_DONE);
+                alert.getButtonTypes().setAll(executeAnywayBtn, ButtonType.CANCEL);
+                Optional<ButtonType> resp = alert.showAndWait();
+                if (resp.isEmpty() || resp.get() != executeAnywayBtn) {
+                    statusLabel.setText("Execution cancelled by user");
+                    return;
+                }
+            }
+        }
+
+        // 2. Review parameters before execution if enabled
+        if (settings.isReviewParametersBeforeExecution()) {
+            resolveBatchParametersThenRun(cleaned, resolved -> executeResolvedStatements(resolved, actionConfig));
+        } else {
+            executeResolvedStatements(cleaned, actionConfig);
+        }
+    }
+
+    private void executeResolvedStatements(List<String> statements, AppSettingsStore.ExecuteActionConfig actionConfig) {
+        if (statements == null || statements.isEmpty()) return;
+
+        if (statements.size() > 1) {
+            executeStatementsSequentially(statements);
+        } else {
+            String singleSql = statements.get(0);
+            if (actionConfig.isOpenResultsInNewTab()) {
+                prepareNewResultTab(singleSql);
+            }
+            executeSql(singleSql);
+        }
+    }
+
+    private void prepareNewResultTab(String sql) {
+        resultTabCounter++;
+        String title = "Result " + resultTabCounter;
+        ResultGrid newGrid = new ResultGrid();
+        newGrid.setSortRequestListener(this::sortByColumn);
+        Tab tab = new Tab(title, newGrid);
+        tab.setClosable(true);
+        resultsTabPane.getTabs().add(tab);
+        resultsTabPane.getSelectionModel().select(tab);
+        editManager = new GridEditManager(profile, catalog, newGrid,
+                submitButton, revertButton, this::rerunLastSql, statusLabel::setText);
+    }
+
+    private ResultGrid activeResultGrid() {
+        Tab selected = resultsTabPane.getSelectionModel().getSelectedItem();
+        if (selected != null && selected.getContent() instanceof ResultGrid grid) {
+            return grid;
+        }
+        return resultGrid;
+    }
+
     private void executeStatementsSequentially(List<String> statements) {
         setRunningState(true);
         showDataPanel(false);
@@ -1210,32 +1355,37 @@ public class QueryTab extends Tab {
                             + " statement(s): " + msg);
                     output.markFinished(-1);
                     setRunningState(false);
-                    // Whatever ran before the failure may still have changed
-                    // the schema (e.g. CREATE TABLE succeeded, the following
-                    // INSERT failed) — the explorer should reflect that.
                     if (finalSchemaChanged) mainWindow.refreshSchemaExplorer(profile);
                 });
             }
         });
     }
 
-    /**
-     * DataGrip-style named-parameter flow: if the SQL has no {@code :name}
-     * placeholders, runs {@code onReady} immediately with the text unchanged.
-     * Otherwise shows the Parameters dialog first; only on Execute does
-     * {@code onReady} get called, with each placeholder substituted for its
-     * typed value (closing the dialog without Execute aborts — nothing runs).
-     */
-    private void resolveParametersThenRun(String sql, java.util.function.Consumer<String> onReady) {
-        List<com.roze.dbnavigator.util.SqlParameters.Parameter> params =
-                com.roze.dbnavigator.util.SqlParameters.detect(sql);
-        if (params.isEmpty()) {
-            onReady.accept(sql);
+    private void resolveBatchParametersThenRun(List<String> statements, java.util.function.Consumer<List<String>> onReady) {
+        List<com.roze.dbnavigator.util.SqlParameters.Parameter> allParams = new ArrayList<>();
+        for (String stmt : statements) {
+            for (com.roze.dbnavigator.util.SqlParameters.Parameter p : com.roze.dbnavigator.util.SqlParameters.detect(stmt)) {
+                if (allParams.stream().noneMatch(existing -> existing.name().equalsIgnoreCase(p.name()))) {
+                    allParams.add(p);
+                }
+            }
+        }
+        if (allParams.isEmpty()) {
+            onReady.accept(statements);
             return;
         }
-        ParametersDialog.show(mainWindow.getOwnerWindow(), params).ifPresent(values -> {
-            String resolved = com.roze.dbnavigator.util.SqlParameters.substitute(sql, values);
+        ParametersDialog.show(mainWindow.getOwnerWindow(), allParams).ifPresent(values -> {
+            List<String> resolved = new ArrayList<>();
+            for (String stmt : statements) {
+                resolved.add(com.roze.dbnavigator.util.SqlParameters.substitute(stmt, values));
+            }
             onReady.accept(resolved);
+        });
+    }
+
+    private void resolveParametersThenRun(String sql, java.util.function.Consumer<String> onReady) {
+        resolveBatchParametersThenRun(List.of(sql), list -> {
+            if (!list.isEmpty()) onReady.accept(list.get(0));
         });
     }
 
@@ -1344,7 +1494,7 @@ public class QueryTab extends Tab {
                     } else {
                         showDataPanel(false);
                         editManager.configureReadOnly(null);
-                        resultGrid.showResult(null);
+                        activeResultGrid().showResult(null);
                         String completion = "Completed successfully: " + finalCursor.getMessage()
                                 + " in " + finalCursor.getExecutionMillis() + " ms.";
                         statusLabel.setText(completion);
@@ -1369,7 +1519,7 @@ public class QueryTab extends Tab {
                 Platform.runLater(() -> {
                     showDataPanel(false);
                     editManager.configureReadOnly(null);
-                    resultGrid.showResult(null);
+                    activeResultGrid().showResult(null);
                     if (cancelled) {
                         statusLabel.setText("Query cancelled by user");
                     } else if (timedOut) {
@@ -1400,12 +1550,12 @@ public class QueryTab extends Tab {
 
     /** Adds/removes the actual grid from the split so commands never leave a blank data area. */
     private void showDataPanel(boolean show) {
-        boolean isShown = editorResultSplit.getItems().contains(resultGrid);
+        boolean isShown = editorResultSplit.getItems().contains(resultsTabPane);
         if (show && !isShown) {
-            editorResultSplit.getItems().add(resultGrid);
+            editorResultSplit.getItems().add(resultsTabPane);
             editorResultSplit.setDividerPositions(0.45);
         } else if (!show && isShown) {
-            editorResultSplit.getItems().remove(resultGrid);
+            editorResultSplit.getItems().remove(resultsTabPane);
         }
     }
 
@@ -1546,9 +1696,9 @@ public class QueryTab extends Tab {
         } else {
             editManager.configureReadOnly(pageResult);
         }
-        resultGrid.setRowNumberOffset(currentPageStart);
-        resultGrid.setCurrentSort(currentSortColumn, currentSortDirection);
-        resultGrid.showResult(pageResult);
+        activeResultGrid().setRowNumberOffset(currentPageStart);
+        activeResultGrid().setCurrentSort(currentSortColumn, currentSortDirection);
+        activeResultGrid().showResult(pageResult);
 
         long fromDisplay = pageRows.isEmpty() ? 0 : currentPageStart + 1L;
         long toDisplay = currentPageStart + pageRows.size();
