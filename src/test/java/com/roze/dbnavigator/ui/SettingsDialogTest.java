@@ -721,4 +721,127 @@ public class SettingsDialogTest {
         assertEquals("$SCHEMA$.$NAME$", loaded.getEditorTabTitleTemplate());
         assertFalse(loaded.isUseTemplateForQueryFiles());
     }
+
+    @Test
+    public void testSqlDialectsSettingsDefaultsAndSerialization() throws Exception {
+        AppSettingsStore.Settings settings = new AppSettingsStore.Settings();
+
+        assertEquals("<None>", settings.getGlobalSqlDialect());
+        assertEquals("<None>", settings.getProjectSqlDialect());
+        assertNotNull(settings.getSqlDialectMappings());
+        assertTrue(settings.getSqlDialectMappings().isEmpty());
+
+        List<String> dialects = AppSettingsStore.Settings.defaultDialectList();
+        assertTrue(dialects.size() >= 30, "Should have at least 30 default dialects");
+        assertTrue(dialects.contains("<None>"));
+        assertTrue(dialects.contains("PostgreSQL"));
+        assertTrue(dialects.contains("MySQL"));
+        assertTrue(dialects.contains("Oracle"));
+        assertTrue(dialects.contains("Microsoft SQL Server"));
+        assertTrue(dialects.contains("Generic SQL"));
+        assertTrue(dialects.contains("Snowflake"));
+        assertTrue(dialects.contains("ClickHouse"));
+        assertTrue(dialects.contains("Google BigQuery"));
+
+        AppSettingsStore.SqlDialectMappingConfig m = new AppSettingsStore.SqlDialectMappingConfig("/path/file.sql", "PostgreSQL");
+        assertEquals("/path/file.sql", m.getPath());
+        assertEquals("PostgreSQL", m.getDialect());
+        AppSettingsStore.SqlDialectMappingConfig copy = m.copy();
+        assertEquals(m.getPath(), copy.getPath());
+        assertEquals(m.getDialect(), copy.getDialect());
+        assertTrue(m.toString().contains("/path/file.sql"));
+
+        // Mutate
+        settings.setGlobalSqlDialect("PostgreSQL");
+        settings.setProjectSqlDialect("MySQL");
+        settings.getSqlDialectMappings().add(new AppSettingsStore.SqlDialectMappingConfig("/proj/src/query.sql", "Oracle"));
+
+        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        String json = mapper.writeValueAsString(settings);
+        AppSettingsStore.Settings loaded = mapper.readValue(json, AppSettingsStore.Settings.class);
+
+        assertEquals("PostgreSQL", loaded.getGlobalSqlDialect());
+        assertEquals("MySQL", loaded.getProjectSqlDialect());
+        assertEquals(1, loaded.getSqlDialectMappings().size());
+        assertEquals("/proj/src/query.sql", loaded.getSqlDialectMappings().get(0).getPath());
+        assertEquals("Oracle", loaded.getSqlDialectMappings().get(0).getDialect());
+    }
+
+    @Test
+    public void testSqlResolutionScopesSettingsDefaultsAndSerialization() throws Exception {
+        AppSettingsStore.Settings settings = new AppSettingsStore.Settings();
+
+        assertEquals("<Default> (<Everything>)", settings.getProjectResolutionScope());
+        assertNotNull(settings.getSqlResolutionScopeMappings());
+        assertTrue(settings.getSqlResolutionScopeMappings().isEmpty());
+
+        AppSettingsStore.SqlResolutionScopeMappingConfig s = new AppSettingsStore.SqlResolutionScopeMappingConfig("/src/dir", "postgres@localhost/erpdb");
+        assertEquals("/src/dir", s.getPath());
+        assertEquals("postgres@localhost/erpdb", s.getScope());
+        AppSettingsStore.SqlResolutionScopeMappingConfig copy = s.copy();
+        assertEquals(s.getPath(), copy.getPath());
+        assertEquals(s.getScope(), copy.getScope());
+        assertTrue(s.toString().contains("/src/dir"));
+
+        // Mutate
+        settings.setProjectResolutionScope("postgres@localhost/nexadb");
+        settings.getSqlResolutionScopeMappings().add(new AppSettingsStore.SqlResolutionScopeMappingConfig("/proj/queries", "postgres@localhost/postgres"));
+
+        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        String json = mapper.writeValueAsString(settings);
+        AppSettingsStore.Settings loaded = mapper.readValue(json, AppSettingsStore.Settings.class);
+
+        assertEquals("postgres@localhost/nexadb", loaded.getProjectResolutionScope());
+        assertEquals(1, loaded.getSqlResolutionScopeMappings().size());
+        assertEquals("/proj/queries", loaded.getSqlResolutionScopeMappings().get(0).getPath());
+        assertEquals("postgres@localhost/postgres", loaded.getSqlResolutionScopeMappings().get(0).getScope());
+    }
+
+    @Test
+    public void testDatabaseOtherSettingsDefaultsAndSerialization() throws Exception {
+        AppSettingsStore.Settings settings = new AppSettingsStore.Settings();
+
+        // Check defaults matching DataGrip screenshot
+        assertTrue(settings.isConfirmCancellationForModifySchemaDialogs());
+        assertTrue(settings.isShowPreviewOfValidScriptWhenUpdatingSource());
+        assertTrue(settings.isSuggestDumpingDdlForNewMappings());
+        assertEquals("Append to existing console", settings.getGenerateContextTemplates());
+        assertNotNull(settings.getVirtualForeignKeys());
+        assertEquals(1, settings.getVirtualForeignKeys().size());
+        assertEquals("(.*)_(?i)id", settings.getVirtualForeignKeys().get(0).getColumnPattern());
+        assertEquals("$1\\.(?i)id", settings.getVirtualForeignKeys().get(0).getTargetColumnPattern());
+        assertEquals("Playground", settings.getDefaultResolveModeForConsoles());
+        assertEquals("", settings.getStatementDelimiter());
+
+        AppSettingsStore.VirtualForeignKeyRule rule = new AppSettingsStore.VirtualForeignKeyRule("usr_(.*)", "$1\\.id");
+        assertEquals("usr_(.*)", rule.getColumnPattern());
+        assertEquals("$1\\.id", rule.getTargetColumnPattern());
+        AppSettingsStore.VirtualForeignKeyRule copy = rule.copy();
+        assertEquals(rule.getColumnPattern(), copy.getColumnPattern());
+        assertEquals(rule.getTargetColumnPattern(), copy.getTargetColumnPattern());
+        assertTrue(rule.toString().contains("usr_(.*)"));
+
+        // Mutate
+        settings.setConfirmCancellationForModifySchemaDialogs(false);
+        settings.setShowPreviewOfValidScriptWhenUpdatingSource(false);
+        settings.setSuggestDumpingDdlForNewMappings(false);
+        settings.setGenerateContextTemplates("Create new console");
+        settings.getVirtualForeignKeys().add(new AppSettingsStore.VirtualForeignKeyRule("fk_(.*)", "$1\\.guid"));
+        settings.setDefaultResolveModeForConsoles("Auto-detect");
+        settings.setStatementDelimiter(";;");
+
+        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        String json = mapper.writeValueAsString(settings);
+        AppSettingsStore.Settings loaded = mapper.readValue(json, AppSettingsStore.Settings.class);
+
+        assertFalse(loaded.isConfirmCancellationForModifySchemaDialogs());
+        assertFalse(loaded.isShowPreviewOfValidScriptWhenUpdatingSource());
+        assertFalse(loaded.isSuggestDumpingDdlForNewMappings());
+        assertEquals("Create new console", loaded.getGenerateContextTemplates());
+        assertEquals(2, loaded.getVirtualForeignKeys().size());
+        assertEquals("fk_(.*)", loaded.getVirtualForeignKeys().get(1).getColumnPattern());
+        assertEquals("$1\\.guid", loaded.getVirtualForeignKeys().get(1).getTargetColumnPattern());
+        assertEquals("Auto-detect", loaded.getDefaultResolveModeForConsoles());
+        assertEquals(";;", loaded.getStatementDelimiter());
+    }
 }
