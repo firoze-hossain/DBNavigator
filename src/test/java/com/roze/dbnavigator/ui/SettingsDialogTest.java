@@ -5,6 +5,7 @@ import javafx.scene.control.TreeItem;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -596,5 +597,128 @@ public class SettingsDialogTest {
         assertTrue(loaded.isAllowOpenStandardLinks());
         assertTrue(loaded.isAllowOpenLocalFileLinks());
         assertTrue(loaded.isAssumeHttpIfNoProtocol());
+    }
+
+    @Test
+    public void testProjectLevelCategoriesContainExpected() {
+        Set<String> projectCategories = SettingsDialog.PROJECT_LEVEL_CATEGORIES;
+        assertNotNull(projectCategories);
+        assertTrue(projectCategories.contains("Database Explorer"));
+        assertTrue(projectCategories.contains("SQL Dialects"));
+        assertTrue(projectCategories.contains("SQL Resolution Scopes"));
+        assertTrue(projectCategories.contains("Version Control"));
+        assertTrue(projectCategories.contains("Build Tools"));
+        assertTrue(projectCategories.contains("Actions on Save"));
+        assertTrue(projectCategories.contains("Coverage"));
+        assertTrue(projectCategories.contains("SSH Configurations"));
+        assertTrue(projectCategories.contains("Terminal"));
+    }
+
+    @Test
+    public void testResolveEditorTabTitleTokens() {
+        // Fallbacks
+        assertEquals("query.sql", SettingsDialog.resolveEditorTabTitle(null, "query.sql", "PostgreSQL", "public", "postgres", "public"));
+        assertEquals("console", SettingsDialog.resolveEditorTabTitle("", null, "PostgreSQL", "public", "postgres", "public"));
+
+        // Default template: $NAME$ [$DATASOURCE$]
+        assertEquals("console_1 [PostgreSQL]", SettingsDialog.resolveEditorTabTitle(
+                "$NAME$ [$DATASOURCE$]", "console_1", "PostgreSQL", "public", "postgres", "public"));
+
+        // Full placeholders
+        String template = "$SCHEMA$.$NAME$ ($DATABASE$ / $DATASOURCE$ / $SEARCH_PATH$)";
+        String resolved = SettingsDialog.resolveEditorTabTitle(
+                template, "test.sql", "MySQL_Prod", "myschema", "mydb", "myschema");
+        assertEquals("myschema.test.sql (mydb / MySQL_Prod / myschema)", resolved);
+    }
+
+    @Test
+    public void testDatabaseExplorerSettingsDefaultsAndSerialization() throws Exception {
+        AppSettingsStore.Settings settings = new AppSettingsStore.Settings();
+
+        // Defaults from DataGrip screenshot
+        assertTrue(settings.isRememberFilterState());
+        assertTrue(settings.isShowDatabaseColors());
+        assertTrue(settings.isColorDatabaseExplorer());
+        assertTrue(settings.isColorEditorTabHeaders());
+        assertFalse(settings.isColorEditorBackgrounds());
+        assertTrue(settings.isColorEditorToolbars());
+
+        // Mutate
+        settings.setRememberFilterState(false);
+        settings.setShowDatabaseColors(false);
+        settings.setColorDatabaseExplorer(false);
+        settings.setColorEditorTabHeaders(false);
+        settings.setColorEditorBackgrounds(true);
+        settings.setColorEditorToolbars(false);
+
+        // Serialization round trip
+        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        String json = mapper.writeValueAsString(settings);
+        AppSettingsStore.Settings loaded = mapper.readValue(json, AppSettingsStore.Settings.class);
+
+        assertFalse(loaded.isRememberFilterState());
+        assertFalse(loaded.isShowDatabaseColors());
+        assertFalse(loaded.isColorDatabaseExplorer());
+        assertFalse(loaded.isColorEditorTabHeaders());
+        assertTrue(loaded.isColorEditorBackgrounds());
+        assertFalse(loaded.isColorEditorToolbars());
+    }
+
+    @Test
+    public void testAiToolsSettingsDefaultsAndSerialization() throws Exception {
+        AppSettingsStore.Settings settings = new AppSettingsStore.Settings();
+
+        // Defaults from DataGrip screenshot (all disabled by default)
+        assertFalse(settings.isAiReadDatabaseSchemas());
+        assertFalse(settings.isAiModifyDatabaseSchemas());
+        assertFalse(settings.isAiReadDatabaseData());
+        assertFalse(settings.isAiModifyDatabaseData());
+
+        // Mutate
+        settings.setAiReadDatabaseSchemas(true);
+        settings.setAiModifyDatabaseSchemas(true);
+        settings.setAiReadDatabaseData(true);
+        settings.setAiModifyDatabaseData(true);
+
+        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        String json = mapper.writeValueAsString(settings);
+        AppSettingsStore.Settings loaded = mapper.readValue(json, AppSettingsStore.Settings.class);
+
+        assertTrue(loaded.isAiReadDatabaseSchemas());
+        assertTrue(loaded.isAiModifyDatabaseSchemas());
+        assertTrue(loaded.isAiReadDatabaseData());
+        assertTrue(loaded.isAiModifyDatabaseData());
+    }
+
+    @Test
+    public void testQueryFilesAndConsolesSettingsDefaultsAndSerialization() throws Exception {
+        AppSettingsStore.Settings settings = new AppSettingsStore.Settings();
+
+        // Defaults from DataGrip screenshot
+        assertTrue(settings.isShowDataSourceNameInFileTree());
+        assertTrue(settings.isUseAttachedSearchPathColorInFileTree());
+        assertTrue(settings.isUseAttachedDataSourceIconForQueryFiles());
+        assertEquals("console", settings.getDefaultConsoleFileName());
+        assertEquals("$NAME$ [$DATASOURCE$]", settings.getEditorTabTitleTemplate());
+        assertTrue(settings.isUseTemplateForQueryFiles());
+
+        // Mutate
+        settings.setShowDataSourceNameInFileTree(false);
+        settings.setUseAttachedSearchPathColorInFileTree(false);
+        settings.setUseAttachedDataSourceIconForQueryFiles(false);
+        settings.setDefaultConsoleFileName("scratch_query");
+        settings.setEditorTabTitleTemplate("$SCHEMA$.$NAME$");
+        settings.setUseTemplateForQueryFiles(false);
+
+        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        String json = mapper.writeValueAsString(settings);
+        AppSettingsStore.Settings loaded = mapper.readValue(json, AppSettingsStore.Settings.class);
+
+        assertFalse(loaded.isShowDataSourceNameInFileTree());
+        assertFalse(loaded.isUseAttachedSearchPathColorInFileTree());
+        assertFalse(loaded.isUseAttachedDataSourceIconForQueryFiles());
+        assertEquals("scratch_query", loaded.getDefaultConsoleFileName());
+        assertEquals("$SCHEMA$.$NAME$", loaded.getEditorTabTitleTemplate());
+        assertFalse(loaded.isUseTemplateForQueryFiles());
     }
 }

@@ -128,6 +128,28 @@ public final class AppSettingsStore {
         public boolean allowOpenLocalFileLinks = false;
         public boolean assumeHttpIfNoProtocol = false;
 
+        // Database Explorer Settings (DataGrip Alignment)
+        public boolean rememberFilterState = true;
+        public boolean showDatabaseColors = true;
+        public boolean colorDatabaseExplorer = true;
+        public boolean colorEditorTabHeaders = true;
+        public boolean colorEditorBackgrounds = false;
+        public boolean colorEditorToolbars = true;
+
+        // AI Tools Settings (DataGrip Alignment)
+        public boolean aiReadDatabaseSchemas = false;
+        public boolean aiModifyDatabaseSchemas = false;
+        public boolean aiReadDatabaseData = false;
+        public boolean aiModifyDatabaseData = false;
+
+        // Query Files and Consoles Settings (DataGrip Alignment)
+        public boolean showDataSourceNameInFileTree = true;
+        public boolean useAttachedSearchPathColorInFileTree = true;
+        public boolean useAttachedDataSourceIconForQueryFiles = true;
+        public String defaultConsoleFileName = "console";
+        public String editorTabTitleTemplate = "$NAME$ [$DATASOURCE$]";
+        public boolean useTemplateForQueryFiles = true;
+
         public static List<UserParameterPattern> defaultUserParameterPatterns() {
             List<UserParameterPattern> list = new ArrayList<>();
             list.add(new UserParameterPattern("\"#name#\"", "everywhere", "XML", true, false));
@@ -479,6 +501,61 @@ public final class AppSettingsStore {
 
         public boolean isAssumeHttpIfNoProtocol() { return assumeHttpIfNoProtocol; }
         public void setAssumeHttpIfNoProtocol(boolean assumeHttpIfNoProtocol) { this.assumeHttpIfNoProtocol = assumeHttpIfNoProtocol; }
+
+        // Database Explorer Getters and Setters
+        public boolean isRememberFilterState() { return rememberFilterState; }
+        public void setRememberFilterState(boolean rememberFilterState) { this.rememberFilterState = rememberFilterState; }
+
+        public boolean isShowDatabaseColors() { return showDatabaseColors; }
+        public void setShowDatabaseColors(boolean showDatabaseColors) { this.showDatabaseColors = showDatabaseColors; }
+
+        public boolean isColorDatabaseExplorer() { return colorDatabaseExplorer; }
+        public void setColorDatabaseExplorer(boolean colorDatabaseExplorer) { this.colorDatabaseExplorer = colorDatabaseExplorer; }
+
+        public boolean isColorEditorTabHeaders() { return colorEditorTabHeaders; }
+        public void setColorEditorTabHeaders(boolean colorEditorTabHeaders) { this.colorEditorTabHeaders = colorEditorTabHeaders; }
+
+        public boolean isColorEditorBackgrounds() { return colorEditorBackgrounds; }
+        public void setColorEditorBackgrounds(boolean colorEditorBackgrounds) { this.colorEditorBackgrounds = colorEditorBackgrounds; }
+
+        public boolean isColorEditorToolbars() { return colorEditorToolbars; }
+        public void setColorEditorToolbars(boolean colorEditorToolbars) { this.colorEditorToolbars = colorEditorToolbars; }
+
+        // AI Tools Getters and Setters
+        public boolean isAiReadDatabaseSchemas() { return aiReadDatabaseSchemas; }
+        public void setAiReadDatabaseSchemas(boolean aiReadDatabaseSchemas) { this.aiReadDatabaseSchemas = aiReadDatabaseSchemas; }
+
+        public boolean isAiModifyDatabaseSchemas() { return aiModifyDatabaseSchemas; }
+        public void setAiModifyDatabaseSchemas(boolean aiModifyDatabaseSchemas) { this.aiModifyDatabaseSchemas = aiModifyDatabaseSchemas; }
+
+        public boolean isAiReadDatabaseData() { return aiReadDatabaseData; }
+        public void setAiReadDatabaseData(boolean aiReadDatabaseData) { this.aiReadDatabaseData = aiReadDatabaseData; }
+
+        public boolean isAiModifyDatabaseData() { return aiModifyDatabaseData; }
+        public void setAiModifyDatabaseData(boolean aiModifyDatabaseData) { this.aiModifyDatabaseData = aiModifyDatabaseData; }
+
+        // Query Files and Consoles Getters and Setters
+        public boolean isShowDataSourceNameInFileTree() { return showDataSourceNameInFileTree; }
+        public void setShowDataSourceNameInFileTree(boolean showDataSourceNameInFileTree) { this.showDataSourceNameInFileTree = showDataSourceNameInFileTree; }
+
+        public boolean isUseAttachedSearchPathColorInFileTree() { return useAttachedSearchPathColorInFileTree; }
+        public void setUseAttachedSearchPathColorInFileTree(boolean useAttachedSearchPathColorInFileTree) { this.useAttachedSearchPathColorInFileTree = useAttachedSearchPathColorInFileTree; }
+
+        public boolean isUseAttachedDataSourceIconForQueryFiles() { return useAttachedDataSourceIconForQueryFiles; }
+        public void setUseAttachedDataSourceIconForQueryFiles(boolean useAttachedDataSourceIconForQueryFiles) { this.useAttachedDataSourceIconForQueryFiles = useAttachedDataSourceIconForQueryFiles; }
+
+        public String getDefaultConsoleFileName() { return defaultConsoleFileName; }
+        public void setDefaultConsoleFileName(String defaultConsoleFileName) {
+            this.defaultConsoleFileName = (defaultConsoleFileName != null && !defaultConsoleFileName.isBlank()) ? defaultConsoleFileName.trim() : "console";
+        }
+
+        public String getEditorTabTitleTemplate() { return editorTabTitleTemplate; }
+        public void setEditorTabTitleTemplate(String editorTabTitleTemplate) {
+            this.editorTabTitleTemplate = (editorTabTitleTemplate != null && !editorTabTitleTemplate.isBlank()) ? editorTabTitleTemplate.trim() : "$NAME$ [$DATASOURCE$]";
+        }
+
+        public boolean isUseTemplateForQueryFiles() { return useTemplateForQueryFiles; }
+        public void setUseTemplateForQueryFiles(boolean useTemplateForQueryFiles) { this.useTemplateForQueryFiles = useTemplateForQueryFiles; }
     }
 
     public static class UserParameterPattern {
