@@ -16,11 +16,16 @@ import javafx.stage.Popup;
 import org.kordamp.ikonli.fontawesome5.FontAwesomeSolid;
 import org.kordamp.ikonli.javafx.FontIcon;
 
+import com.roze.dbnavigator.db.AppSettingsStore;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -94,6 +99,28 @@ public class ResultGrid extends TableView<List<String>> {
             // Column zero is the generated row number, not a database value.
             if (getColumns().indexOf(column) > 0) edit(cell.getIndex(), column);
         });
+
+        applySettings();
+    }
+
+    public void applySettings() {
+        try {
+            AppSettingsStore.Settings settings = AppSettingsStore.load();
+            if (settings.isUseCustomFont()) {
+                setStyle(String.format(Locale.US,
+                        "-fx-font-family: '%s'; -fx-font-size: %.1fpt;",
+                        settings.getCustomFontFamily(), settings.getCustomFontSize()));
+            } else {
+                setStyle("");
+            }
+            if (settings.isAlternateRowColors()) {
+                getStyleClass().remove("no-zebra");
+            } else {
+                if (!getStyleClass().contains("no-zebra")) {
+                    getStyleClass().add("no-zebra");
+                }
+            }
+        } catch (Exception ignored) {}
     }
 
     private boolean isEditingCell() {
@@ -148,6 +175,8 @@ public class ResultGrid extends TableView<List<String>> {
         getItems().clear();
         if (result == null || !result.isResultSet()) return;
 
+        applySettings();
+
         TableColumn<List<String>, Void> serialCol = new TableColumn<>("#");
         serialCol.setSortable(false);
         serialCol.setPrefWidth(56);
@@ -173,21 +202,13 @@ public class ResultGrid extends TableView<List<String>> {
             TableColumn<List<String>, String> col = new TableColumn<>(columnName);
             col.setCellValueFactory(data -> {
                 List<String> row = data.getValue();
-                String value = index < row.size() ? row.get(index) : null;
-                return new ReadOnlyStringWrapper(value == null ? "NULL" : value);
+                String raw = index < row.size() ? row.get(index) : null;
+                return new ReadOnlyStringWrapper(formatDisplayValue(raw, index));
             });
             col.setPrefWidth(Math.max(90, Math.min(280, columnNames.get(i).length() * 12 + 40)));
             if (columnNames.get(i).equalsIgnoreCase("ctid")
                     || columnNames.get(i).equalsIgnoreCase("tableoid")) col.setVisible(false);
 
-            // JavaFX's own click-to-sort only reorders whatever rows are
-            // currently loaded in memory (a page, or whatever's been fetched
-            // so far by the console's cursor) — silently wrong for anything
-            // that isn't the complete result. Sorting for real means
-            // re-fetching from the database with an ORDER BY, which is what
-            // the sort icon below actually does; the built-in mechanism is
-            // switched off so a stray header click can't trigger the wrong
-            // (in-memory-only) kind of sort instead.
             col.setSortable(false);
             col.setText(null);
             col.setGraphic(buildSortableHeader(columnName));
@@ -205,6 +226,8 @@ public class ResultGrid extends TableView<List<String>> {
                         refresh();
                     }
                 });
+            } else {
+                col.setCellFactory(c -> new ReadOnlyCell(index));
             }
             getColumns().add(col);
         }
@@ -360,11 +383,147 @@ public class ResultGrid extends TableView<List<String>> {
                 field.setText(item == null ? "" : item);
                 setText(null);
                 setGraphic(editor);
+            } else if (isBooleanColumn(columnIndex) && "Checkboxes".equalsIgnoreCase(AppSettingsStore.load().getShowBooleanValuesAs()) && item != null && !item.equalsIgnoreCase("NULL")) {
+                CheckBox cb = new CheckBox();
+                cb.setSelected("true".equalsIgnoreCase(item) || "1".equals(item) || "t".equalsIgnoreCase(item));
+                cb.setDisable(!isEditable());
+                cb.setStyle("-fx-opacity: 1.0;");
+                if (isEditable()) {
+                    cb.setOnAction(e -> {
+                        String newVal = cb.isSelected() ? "true" : "false";
+                        commitEdit(newVal);
+                    });
+                }
+                setGraphic(cb);
+                setText(null);
             } else {
                 setText(item);
                 setGraphic(null);
             }
         }
+    }
+
+    private class ReadOnlyCell extends TableCell<List<String>, String> {
+        private final int columnIndex;
+
+        ReadOnlyCell(int columnIndex) {
+            this.columnIndex = columnIndex;
+        }
+
+        @Override
+        protected void updateItem(String item, boolean empty) {
+            super.updateItem(item, empty);
+            if (empty || item == null) {
+                setText(null);
+                setGraphic(null);
+            } else if (isBooleanColumn(columnIndex) && "Checkboxes".equalsIgnoreCase(AppSettingsStore.load().getShowBooleanValuesAs()) && !item.equalsIgnoreCase("NULL")) {
+                CheckBox cb = new CheckBox();
+                cb.setSelected("true".equalsIgnoreCase(item) || "1".equals(item) || "t".equalsIgnoreCase(item));
+                cb.setDisable(true);
+                cb.setStyle("-fx-opacity: 1.0;");
+                setGraphic(cb);
+                setText(null);
+            } else {
+                setGraphic(null);
+                setText(item);
+            }
+        }
+    }
+
+    private String formatDisplayValue(String rawValue, int columnIndex) {
+        if (rawValue == null) return "NULL";
+        AppSettingsStore.Settings settings = AppSettingsStore.load();
+
+        // Byte limit truncation
+        int maxBytes = settings.getMaxBytesLoadedPerValue();
+        if (maxBytes > 0 && rawValue.length() > maxBytes) {
+            rawValue = rawValue.substring(0, maxBytes) + "… [truncated]";
+        }
+
+        // Binary detection
+        if (isBinaryColumn(columnIndex)) {
+            if (settings.isDetectBinaryAsUuid() && isUuidLike(rawValue)) {
+                return formatUuid(rawValue);
+            }
+        }
+
+        // Numeric column formatting
+        if (isNumericColumn(columnIndex)) {
+            if (rawValue.equalsIgnoreCase("Infinity")) return settings.getInfinityText();
+            if (rawValue.equalsIgnoreCase("-Infinity")) return "-" + settings.getInfinityText();
+            if (rawValue.equalsIgnoreCase("NaN")) return settings.getNanText();
+
+            if (settings.isEnableNumberPattern() || settings.isEnableGroupingSeparator() || !settings.getDecimalSeparator().equals(".")) {
+                try {
+                    double num = Double.parseDouble(rawValue);
+                    DecimalFormatSymbols symbols = new DecimalFormatSymbols(Locale.US);
+                    if (!settings.getDecimalSeparator().isEmpty()) {
+                        symbols.setDecimalSeparator(settings.getDecimalSeparator().charAt(0));
+                    }
+                    if (settings.isEnableGroupingSeparator() && !settings.getGroupingSeparator().isEmpty()) {
+                        symbols.setGroupingSeparator(settings.getGroupingSeparator().charAt(0));
+                    }
+                    DecimalFormat df;
+                    if (settings.isEnableNumberPattern() && !settings.getNumberPattern().isBlank()) {
+                        df = new DecimalFormat(settings.getNumberPattern(), symbols);
+                    } else {
+                        df = new DecimalFormat("#,##0.######", symbols);
+                    }
+                    df.setGroupingUsed(settings.isEnableGroupingSeparator());
+                    return df.format(num);
+                } catch (Exception ignored) {}
+            }
+        }
+
+        // Date/Time formatting
+        if (isDateColumn(columnIndex)) {
+            try {
+                if (settings.isEnableDate() && rawValue.matches("\\d{4}-\\d{2}-\\d{2}")) {
+                    LocalDate d = LocalDate.parse(rawValue);
+                    return d.format(DateTimeFormatter.ofPattern(settings.getDatePattern(), Locale.US));
+                }
+                if (settings.isEnableDatetimeTimestamp() && rawValue.contains(" ") && !rawValue.contains("+") && !rawValue.contains("Z")) {
+                    String clean = rawValue.length() > 19 ? rawValue.substring(0, 19) : rawValue;
+                    clean = clean.replace('T', ' ');
+                    DateTimeFormatter inFmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.US);
+                    LocalDateTime dt = LocalDateTime.parse(clean, inFmt);
+                    return dt.format(DateTimeFormatter.ofPattern(settings.getDatetimeTimestampPattern(), Locale.US));
+                }
+            } catch (Exception ignored) {}
+        }
+
+        return rawValue;
+    }
+
+    private boolean isBooleanColumn(int index) {
+        if (index >= columnTypes.size()) return false;
+        String type = columnTypes.get(index).toLowerCase(Locale.ROOT);
+        return type.contains("bool") || type.contains("bit");
+    }
+
+    private boolean isNumericColumn(int index) {
+        if (index >= columnTypes.size()) return false;
+        String type = columnTypes.get(index).toLowerCase(Locale.ROOT);
+        return type.contains("int") || type.contains("num") || type.contains("dec")
+                || type.contains("float") || type.contains("double") || type.contains("real");
+    }
+
+    private boolean isBinaryColumn(int index) {
+        if (index >= columnTypes.size()) return false;
+        String type = columnTypes.get(index).toLowerCase(Locale.ROOT);
+        return type.contains("blob") || type.contains("byte") || type.contains("binary") || type.contains("raw");
+    }
+
+    private static boolean isUuidLike(String s) {
+        return s != null && s.replace("-", "").matches("[0-9a-fA-F]{32}");
+    }
+
+    private static String formatUuid(String s) {
+        String clean = s.replace("-", "");
+        if (clean.length() == 32) {
+            return clean.substring(0, 8) + "-" + clean.substring(8, 12) + "-" + clean.substring(12, 16) + "-" + clean.substring(16, 20) + "-" + clean.substring(20);
+        }
+        return s;
     }
 
     // ---------------------------------------------------------- clipboard

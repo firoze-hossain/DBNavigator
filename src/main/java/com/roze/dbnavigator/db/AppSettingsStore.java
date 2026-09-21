@@ -57,6 +57,73 @@ public final class AppSettingsStore {
         public boolean substituteInsideSqlStrings = false;
         public List<UserParameterPattern> userParameterPatterns = defaultUserParameterPatterns();
 
+        // Data Editor and Viewer (DataGrip Alignment)
+        // 1. General / Fetch Limits
+        public boolean limitPageSize = true;
+        public int resultSetPrefetchSize = 2000;
+        public int filterHistorySize = 10;
+        public int maxBytesLoadedPerValue = 204800;
+        public boolean showFirstDataRowsInPreview = true;
+        public int previewDataRows = 10;
+
+        // 2. Controls Customization
+        public boolean enablePagingInEditorResults = false;
+        public String gridPaginationPosition = "Grid bottom (floating)";
+        public boolean showQuickActionsToolbar = true;
+        public boolean enableQuickActionsCustomization = true;
+
+        // 3. Data Presentation
+        public boolean useCustomFont = false;
+        public String customFontFamily = "JetBrains Mono";
+        public double customFontSize = 13.0;
+        public double customLineHeight = 1.2;
+        public boolean alternateRowColors = false;
+        public String showBooleanValuesAs = "Text";
+        public String automaticallyTransposeTables = "Never";
+        public boolean detectBinaryAsText = true;
+        public boolean detectBinaryAsUuid = true;
+        public boolean enableLocalFilterByDefault = true;
+        public boolean enableImmediateCompletionInGridTextCells = true;
+        public String displayTemporalDataInTimeZone = "";
+
+        // 4. Custom Number Formats
+        public String decimalSeparator = ".";
+        public boolean enableGroupingSeparator = false;
+        public String groupingSeparator = "";
+        public String infinityText = "Infinity";
+        public String nanText = "NaN";
+        public boolean enableNumberPattern = false;
+        public String numberPattern = "";
+
+        // 5. Custom Date/Time Formats
+        public boolean enableDatetimeTimestamp = false;
+        public String datetimeTimestampPattern = "yyyy-MM-dd HH:mm:ss";
+        public boolean enableDatetimeTimestampWithZone = false;
+        public String datetimeTimestampWithZonePattern = "yyyy-MM-dd HH:mm:ss Z";
+        public boolean enableTime = false;
+        public String timePattern = "HH:mm:ss";
+        public boolean enableTimeWithZone = false;
+        public String timeWithZonePattern = "HH:mm:ss Z";
+        public boolean enableDate = false;
+        public String datePattern = "yyyy-MM-dd";
+
+        // 6. Data Sorting
+        public boolean sortViaOrderBy = true;
+        public boolean sortTablesByNumericPk = false;
+        public String sortTablesByNumericPkDirection = "Ascending";
+        public String addColumnsToSorting = "⌥Click";
+
+        // 7. Data Modification
+        public boolean submitChangesImmediately = false;
+        public boolean enableEditingForQueriesWithJoin = true;
+        public boolean showDmlPreviewForQueriesWithJoin = true;
+
+        // 8. URL Click Settings
+        public boolean allowOpenSecureLinks = false;
+        public boolean allowOpenStandardLinks = false;
+        public boolean allowOpenLocalFileLinks = false;
+        public boolean assumeHttpIfNoProtocol = false;
+
         public static List<UserParameterPattern> defaultUserParameterPatterns() {
             List<UserParameterPattern> list = new ArrayList<>();
             list.add(new UserParameterPattern("\"#name#\"", "everywhere", "XML", true, false));
@@ -182,6 +249,195 @@ public final class AppSettingsStore {
         public void setUserParameterPatterns(List<UserParameterPattern> patterns) {
             this.userParameterPatterns = (patterns == null || patterns.isEmpty()) ? defaultUserParameterPatterns() : patterns;
         }
+
+        // Data Editor and Viewer Getters and Setters
+        public boolean isLimitPageSize() { return limitPageSize; }
+        public void setLimitPageSize(boolean limitPageSize) { this.limitPageSize = limitPageSize; }
+
+        public int getResultSetPrefetchSize() { return resultSetPrefetchSize; }
+        public void setResultSetPrefetchSize(int resultSetPrefetchSize) { this.resultSetPrefetchSize = resultSetPrefetchSize; }
+
+        public int getFilterHistorySize() { return filterHistorySize; }
+        public void setFilterHistorySize(int filterHistorySize) { this.filterHistorySize = filterHistorySize; }
+
+        public int getMaxBytesLoadedPerValue() { return maxBytesLoadedPerValue; }
+        public void setMaxBytesLoadedPerValue(int maxBytesLoadedPerValue) { this.maxBytesLoadedPerValue = maxBytesLoadedPerValue; }
+
+        public boolean isShowFirstDataRowsInPreview() { return showFirstDataRowsInPreview; }
+        public void setShowFirstDataRowsInPreview(boolean showFirstDataRowsInPreview) { this.showFirstDataRowsInPreview = showFirstDataRowsInPreview; }
+
+        public int getPreviewDataRows() { return previewDataRows; }
+        public void setPreviewDataRows(int previewDataRows) { this.previewDataRows = previewDataRows; }
+
+        public boolean isEnablePagingInEditorResults() { return enablePagingInEditorResults; }
+        public void setEnablePagingInEditorResults(boolean enablePagingInEditorResults) { this.enablePagingInEditorResults = enablePagingInEditorResults; }
+
+        public String getGridPaginationPosition() { return gridPaginationPosition; }
+        public void setGridPaginationPosition(String gridPaginationPosition) {
+            this.gridPaginationPosition = gridPaginationPosition != null ? gridPaginationPosition : "Grid bottom (floating)";
+        }
+
+        public boolean isShowQuickActionsToolbar() { return showQuickActionsToolbar; }
+        public void setShowQuickActionsToolbar(boolean showQuickActionsToolbar) { this.showQuickActionsToolbar = showQuickActionsToolbar; }
+
+        public boolean isEnableQuickActionsCustomization() { return enableQuickActionsCustomization; }
+        public void setEnableQuickActionsCustomization(boolean enableQuickActionsCustomization) { this.enableQuickActionsCustomization = enableQuickActionsCustomization; }
+
+        public boolean isUseCustomFont() { return useCustomFont; }
+        public void setUseCustomFont(boolean useCustomFont) { this.useCustomFont = useCustomFont; }
+
+        public String getCustomFontFamily() { return customFontFamily; }
+        public void setCustomFontFamily(String customFontFamily) {
+            this.customFontFamily = (customFontFamily != null && !customFontFamily.isBlank()) ? customFontFamily : "JetBrains Mono";
+        }
+
+        public double getCustomFontSize() { return customFontSize; }
+        public void setCustomFontSize(double customFontSize) { this.customFontSize = customFontSize > 0 ? customFontSize : 13.0; }
+
+        public double getCustomLineHeight() { return customLineHeight; }
+        public void setCustomLineHeight(double customLineHeight) { this.customLineHeight = customLineHeight > 0 ? customLineHeight : 1.2; }
+
+        public boolean isAlternateRowColors() { return alternateRowColors; }
+        public void setAlternateRowColors(boolean alternateRowColors) { this.alternateRowColors = alternateRowColors; }
+
+        public String getShowBooleanValuesAs() { return showBooleanValuesAs; }
+        public void setShowBooleanValuesAs(String showBooleanValuesAs) {
+            this.showBooleanValuesAs = (showBooleanValuesAs != null && !showBooleanValuesAs.isBlank()) ? showBooleanValuesAs : "Text";
+        }
+
+        public String getAutomaticallyTransposeTables() { return automaticallyTransposeTables; }
+        public void setAutomaticallyTransposeTables(String automaticallyTransposeTables) {
+            this.automaticallyTransposeTables = (automaticallyTransposeTables != null && !automaticallyTransposeTables.isBlank()) ? automaticallyTransposeTables : "Never";
+        }
+
+        public boolean isDetectBinaryAsText() { return detectBinaryAsText; }
+        public void setDetectBinaryAsText(boolean detectBinaryAsText) { this.detectBinaryAsText = detectBinaryAsText; }
+
+        public boolean isDetectBinaryAsUuid() { return detectBinaryAsUuid; }
+        public void setDetectBinaryAsUuid(boolean detectBinaryAsUuid) { this.detectBinaryAsUuid = detectBinaryAsUuid; }
+
+        public boolean isEnableLocalFilterByDefault() { return enableLocalFilterByDefault; }
+        public void setEnableLocalFilterByDefault(boolean enableLocalFilterByDefault) { this.enableLocalFilterByDefault = enableLocalFilterByDefault; }
+
+        public boolean isEnableImmediateCompletionInGridTextCells() { return enableImmediateCompletionInGridTextCells; }
+        public void setEnableImmediateCompletionInGridTextCells(boolean enableImmediateCompletionInGridTextCells) {
+            this.enableImmediateCompletionInGridTextCells = enableImmediateCompletionInGridTextCells;
+        }
+
+        public String getDisplayTemporalDataInTimeZone() { return displayTemporalDataInTimeZone; }
+        public void setDisplayTemporalDataInTimeZone(String displayTemporalDataInTimeZone) {
+            this.displayTemporalDataInTimeZone = displayTemporalDataInTimeZone != null ? displayTemporalDataInTimeZone : "";
+        }
+
+        public String getDecimalSeparator() { return decimalSeparator; }
+        public void setDecimalSeparator(String decimalSeparator) {
+            this.decimalSeparator = (decimalSeparator != null && !decimalSeparator.isBlank()) ? decimalSeparator : ".";
+        }
+
+        public boolean isEnableGroupingSeparator() { return enableGroupingSeparator; }
+        public void setEnableGroupingSeparator(boolean enableGroupingSeparator) { this.enableGroupingSeparator = enableGroupingSeparator; }
+
+        public String getGroupingSeparator() { return groupingSeparator; }
+        public void setGroupingSeparator(String groupingSeparator) {
+            this.groupingSeparator = groupingSeparator != null ? groupingSeparator : "";
+        }
+
+        public String getInfinityText() { return infinityText; }
+        public void setInfinityText(String infinityText) {
+            this.infinityText = (infinityText != null && !infinityText.isBlank()) ? infinityText : "Infinity";
+        }
+
+        public String getNanText() { return nanText; }
+        public void setNanText(String nanText) {
+            this.nanText = (nanText != null && !nanText.isBlank()) ? nanText : "NaN";
+        }
+
+        public boolean isEnableNumberPattern() { return enableNumberPattern; }
+        public void setEnableNumberPattern(boolean enableNumberPattern) { this.enableNumberPattern = enableNumberPattern; }
+
+        public String getNumberPattern() { return numberPattern; }
+        public void setNumberPattern(String numberPattern) {
+            this.numberPattern = numberPattern != null ? numberPattern : "";
+        }
+
+        public boolean isEnableDatetimeTimestamp() { return enableDatetimeTimestamp; }
+        public void setEnableDatetimeTimestamp(boolean enableDatetimeTimestamp) { this.enableDatetimeTimestamp = enableDatetimeTimestamp; }
+
+        public String getDatetimeTimestampPattern() { return datetimeTimestampPattern; }
+        public void setDatetimeTimestampPattern(String datetimeTimestampPattern) {
+            this.datetimeTimestampPattern = (datetimeTimestampPattern != null && !datetimeTimestampPattern.isBlank()) ? datetimeTimestampPattern : "yyyy-MM-dd HH:mm:ss";
+        }
+
+        public boolean isEnableDatetimeTimestampWithZone() { return enableDatetimeTimestampWithZone; }
+        public void setEnableDatetimeTimestampWithZone(boolean enableDatetimeTimestampWithZone) {
+            this.enableDatetimeTimestampWithZone = enableDatetimeTimestampWithZone;
+        }
+
+        public String getDatetimeTimestampWithZonePattern() { return datetimeTimestampWithZonePattern; }
+        public void setDatetimeTimestampWithZonePattern(String datetimeTimestampWithZonePattern) {
+            this.datetimeTimestampWithZonePattern = (datetimeTimestampWithZonePattern != null && !datetimeTimestampWithZonePattern.isBlank()) ? datetimeTimestampWithZonePattern : "yyyy-MM-dd HH:mm:ss Z";
+        }
+
+        public boolean isEnableTime() { return enableTime; }
+        public void setEnableTime(boolean enableTime) { this.enableTime = enableTime; }
+
+        public String getTimePattern() { return timePattern; }
+        public void setTimePattern(String timePattern) {
+            this.timePattern = (timePattern != null && !timePattern.isBlank()) ? timePattern : "HH:mm:ss";
+        }
+
+        public boolean isEnableTimeWithZone() { return enableTimeWithZone; }
+        public void setEnableTimeWithZone(boolean enableTimeWithZone) { this.enableTimeWithZone = enableTimeWithZone; }
+
+        public String getTimeWithZonePattern() { return timeWithZonePattern; }
+        public void setTimeWithZonePattern(String timeWithZonePattern) {
+            this.timeWithZonePattern = (timeWithZonePattern != null && !timeWithZonePattern.isBlank()) ? timeWithZonePattern : "HH:mm:ss Z";
+        }
+
+        public boolean isEnableDate() { return enableDate; }
+        public void setEnableDate(boolean enableDate) { this.enableDate = enableDate; }
+
+        public String getDatePattern() { return datePattern; }
+        public void setDatePattern(String datePattern) {
+            this.datePattern = (datePattern != null && !datePattern.isBlank()) ? datePattern : "yyyy-MM-dd";
+        }
+
+        public boolean isSortViaOrderBy() { return sortViaOrderBy; }
+        public void setSortViaOrderBy(boolean sortViaOrderBy) { this.sortViaOrderBy = sortViaOrderBy; }
+
+        public boolean isSortTablesByNumericPk() { return sortTablesByNumericPk; }
+        public void setSortTablesByNumericPk(boolean sortTablesByNumericPk) { this.sortTablesByNumericPk = sortTablesByNumericPk; }
+
+        public String getSortTablesByNumericPkDirection() { return sortTablesByNumericPkDirection; }
+        public void setSortTablesByNumericPkDirection(String sortTablesByNumericPkDirection) {
+            this.sortTablesByNumericPkDirection = (sortTablesByNumericPkDirection != null && !sortTablesByNumericPkDirection.isBlank()) ? sortTablesByNumericPkDirection : "Ascending";
+        }
+
+        public String getAddColumnsToSorting() { return addColumnsToSorting; }
+        public void setAddColumnsToSorting(String addColumnsToSorting) {
+            this.addColumnsToSorting = (addColumnsToSorting != null && !addColumnsToSorting.isBlank()) ? addColumnsToSorting : "⌥Click";
+        }
+
+        public boolean isSubmitChangesImmediately() { return submitChangesImmediately; }
+        public void setSubmitChangesImmediately(boolean submitChangesImmediately) { this.submitChangesImmediately = submitChangesImmediately; }
+
+        public boolean isEnableEditingForQueriesWithJoin() { return enableEditingForQueriesWithJoin; }
+        public void setEnableEditingForQueriesWithJoin(boolean enableEditingForQueriesWithJoin) { this.enableEditingForQueriesWithJoin = enableEditingForQueriesWithJoin; }
+
+        public boolean isShowDmlPreviewForQueriesWithJoin() { return showDmlPreviewForQueriesWithJoin; }
+        public void setShowDmlPreviewForQueriesWithJoin(boolean showDmlPreviewForQueriesWithJoin) { this.showDmlPreviewForQueriesWithJoin = showDmlPreviewForQueriesWithJoin; }
+
+        public boolean isAllowOpenSecureLinks() { return allowOpenSecureLinks; }
+        public void setAllowOpenSecureLinks(boolean allowOpenSecureLinks) { this.allowOpenSecureLinks = allowOpenSecureLinks; }
+
+        public boolean isAllowOpenStandardLinks() { return allowOpenStandardLinks; }
+        public void setAllowOpenStandardLinks(boolean allowOpenStandardLinks) { this.allowOpenStandardLinks = allowOpenStandardLinks; }
+
+        public boolean isAllowOpenLocalFileLinks() { return allowOpenLocalFileLinks; }
+        public void setAllowOpenLocalFileLinks(boolean allowOpenLocalFileLinks) { this.allowOpenLocalFileLinks = allowOpenLocalFileLinks; }
+
+        public boolean isAssumeHttpIfNoProtocol() { return assumeHttpIfNoProtocol; }
+        public void setAssumeHttpIfNoProtocol(boolean assumeHttpIfNoProtocol) { this.assumeHttpIfNoProtocol = assumeHttpIfNoProtocol; }
     }
 
     public static class UserParameterPattern {
