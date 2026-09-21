@@ -412,4 +412,189 @@ public class SettingsDialogTest {
 
         assertEquals("Exposed Tools", mcpChildren.get(0));
     }
+
+    @Test
+    public void testDataEditorAndViewerSettings() throws Exception {
+        AppSettingsStore.Settings settings = new AppSettingsStore.Settings();
+
+        // Check defaults matching DataGrip screenshots
+        assertTrue(settings.isLimitPageSize());
+        assertEquals(100, settings.getPageSize());
+        assertEquals(2000, settings.getResultSetPrefetchSize());
+        assertEquals(10, settings.getFilterHistorySize());
+        assertEquals(204800, settings.getMaxBytesLoadedPerValue());
+        assertTrue(settings.isShowFirstDataRowsInPreview());
+        assertEquals(10, settings.getPreviewDataRows());
+
+        assertFalse(settings.isEnablePagingInEditorResults());
+        assertEquals("Grid bottom (floating)", settings.getGridPaginationPosition());
+        assertTrue(settings.isShowQuickActionsToolbar());
+        assertTrue(settings.isEnableQuickActionsCustomization());
+
+        assertFalse(settings.isUseCustomFont());
+        assertEquals("JetBrains Mono", settings.getCustomFontFamily());
+        assertEquals(13.0, settings.getCustomFontSize(), 0.001);
+        assertEquals(1.2, settings.getCustomLineHeight(), 0.001);
+        assertFalse(settings.isAlternateRowColors());
+        assertEquals("Text", settings.getShowBooleanValuesAs());
+        assertEquals("Never", settings.getAutomaticallyTransposeTables());
+        assertTrue(settings.isDetectBinaryAsText());
+        assertTrue(settings.isDetectBinaryAsUuid());
+        assertTrue(settings.isEnableLocalFilterByDefault());
+        assertTrue(settings.isEnableImmediateCompletionInGridTextCells());
+
+        assertEquals(".", settings.getDecimalSeparator());
+        assertFalse(settings.isEnableGroupingSeparator());
+        assertEquals("", settings.getGroupingSeparator());
+        assertEquals("Infinity", settings.getInfinityText());
+        assertEquals("NaN", settings.getNanText());
+        assertFalse(settings.isEnableNumberPattern());
+
+        assertFalse(settings.isEnableDatetimeTimestamp());
+        assertEquals("yyyy-MM-dd HH:mm:ss", settings.getDatetimeTimestampPattern());
+        assertFalse(settings.isEnableDatetimeTimestampWithZone());
+        assertEquals("yyyy-MM-dd HH:mm:ss Z", settings.getDatetimeTimestampWithZonePattern());
+        assertFalse(settings.isEnableTime());
+        assertEquals("HH:mm:ss", settings.getTimePattern());
+        assertFalse(settings.isEnableTimeWithZone());
+        assertEquals("HH:mm:ss Z", settings.getTimeWithZonePattern());
+        assertFalse(settings.isEnableDate());
+        assertEquals("yyyy-MM-dd", settings.getDatePattern());
+
+        assertTrue(settings.isSortViaOrderBy());
+        assertFalse(settings.isSortTablesByNumericPk());
+        assertEquals("Ascending", settings.getSortTablesByNumericPkDirection());
+        assertEquals("⌥Click", settings.getAddColumnsToSorting());
+
+        assertFalse(settings.isSubmitChangesImmediately());
+        assertTrue(settings.isEnableEditingForQueriesWithJoin());
+        assertTrue(settings.isShowDmlPreviewForQueriesWithJoin());
+
+        assertFalse(settings.isAllowOpenSecureLinks());
+        assertFalse(settings.isAllowOpenStandardLinks());
+        assertFalse(settings.isAllowOpenLocalFileLinks());
+        assertFalse(settings.isAssumeHttpIfNoProtocol());
+
+        // Test mutating and setters
+        settings.setLimitPageSize(false);
+        settings.setPageSize(500);
+        settings.setResultSetPrefetchSize(5000);
+        settings.setFilterHistorySize(25);
+        settings.setMaxBytesLoadedPerValue(1024000);
+        settings.setShowFirstDataRowsInPreview(false);
+        settings.setPreviewDataRows(20);
+
+        settings.setEnablePagingInEditorResults(true);
+        settings.setGridPaginationPosition("Bottom");
+        settings.setShowQuickActionsToolbar(false);
+        settings.setEnableQuickActionsCustomization(false);
+
+        settings.setUseCustomFont(true);
+        settings.setCustomFontFamily("Consolas");
+        settings.setCustomFontSize(14.0);
+        settings.setCustomLineHeight(1.4);
+        settings.setAlternateRowColors(true);
+        settings.setShowBooleanValuesAs("Checkboxes");
+        settings.setAutomaticallyTransposeTables("Always");
+        settings.setDetectBinaryAsText(false);
+        settings.setDetectBinaryAsUuid(false);
+        settings.setEnableLocalFilterByDefault(false);
+        settings.setEnableImmediateCompletionInGridTextCells(false);
+
+        settings.setDecimalSeparator(",");
+        settings.setEnableGroupingSeparator(true);
+        settings.setGroupingSeparator(" ");
+        settings.setInfinityText("INF");
+        settings.setNanText("NONE");
+        settings.setEnableNumberPattern(true);
+        settings.setNumberPattern("#,##0.00");
+
+        settings.setEnableDatetimeTimestamp(true);
+        settings.setDatetimeTimestampPattern("dd/MM/yyyy HH:mm");
+        settings.setEnableDatetimeTimestampWithZone(true);
+        settings.setDatetimeTimestampWithZonePattern("dd/MM/yyyy HH:mm z");
+        settings.setEnableTime(true);
+        settings.setTimePattern("HH:mm");
+        settings.setEnableTimeWithZone(true);
+        settings.setTimeWithZonePattern("HH:mm z");
+        settings.setEnableDate(true);
+        settings.setDatePattern("dd/MM/yyyy");
+
+        settings.setSortViaOrderBy(false);
+        settings.setSortTablesByNumericPk(true);
+        settings.setSortTablesByNumericPkDirection("Descending");
+        settings.setAddColumnsToSorting("Click");
+
+        settings.setSubmitChangesImmediately(true);
+        settings.setEnableEditingForQueriesWithJoin(false);
+        settings.setShowDmlPreviewForQueriesWithJoin(false);
+
+        settings.setAllowOpenSecureLinks(true);
+        settings.setAllowOpenStandardLinks(true);
+        settings.setAllowOpenLocalFileLinks(true);
+        settings.setAssumeHttpIfNoProtocol(true);
+
+        // JSON serialization round-trip verification
+        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        String json = mapper.writeValueAsString(settings);
+        AppSettingsStore.Settings loaded = mapper.readValue(json, AppSettingsStore.Settings.class);
+
+        assertFalse(loaded.isLimitPageSize());
+        assertEquals(500, loaded.getPageSize());
+        assertEquals(5000, loaded.getResultSetPrefetchSize());
+        assertEquals(25, loaded.getFilterHistorySize());
+        assertEquals(1024000, loaded.getMaxBytesLoadedPerValue());
+        assertFalse(loaded.isShowFirstDataRowsInPreview());
+        assertEquals(20, loaded.getPreviewDataRows());
+
+        assertTrue(loaded.isEnablePagingInEditorResults());
+        assertEquals("Bottom", loaded.getGridPaginationPosition());
+        assertFalse(loaded.isShowQuickActionsToolbar());
+        assertFalse(loaded.isEnableQuickActionsCustomization());
+
+        assertTrue(loaded.isUseCustomFont());
+        assertEquals("Consolas", loaded.getCustomFontFamily());
+        assertEquals(14.0, loaded.getCustomFontSize(), 0.001);
+        assertEquals(1.4, loaded.getCustomLineHeight(), 0.001);
+        assertTrue(loaded.isAlternateRowColors());
+        assertEquals("Checkboxes", loaded.getShowBooleanValuesAs());
+        assertEquals("Always", loaded.getAutomaticallyTransposeTables());
+        assertFalse(loaded.isDetectBinaryAsText());
+        assertFalse(loaded.isDetectBinaryAsUuid());
+        assertFalse(loaded.isEnableLocalFilterByDefault());
+        assertFalse(loaded.isEnableImmediateCompletionInGridTextCells());
+
+        assertEquals(",", loaded.getDecimalSeparator());
+        assertTrue(loaded.isEnableGroupingSeparator());
+        assertEquals(" ", loaded.getGroupingSeparator());
+        assertEquals("INF", loaded.getInfinityText());
+        assertEquals("NONE", loaded.getNanText());
+        assertTrue(loaded.isEnableNumberPattern());
+        assertEquals("#,##0.00", loaded.getNumberPattern());
+
+        assertTrue(loaded.isEnableDatetimeTimestamp());
+        assertEquals("dd/MM/yyyy HH:mm", loaded.getDatetimeTimestampPattern());
+        assertTrue(loaded.isEnableDatetimeTimestampWithZone());
+        assertEquals("dd/MM/yyyy HH:mm z", loaded.getDatetimeTimestampWithZonePattern());
+        assertTrue(loaded.isEnableTime());
+        assertEquals("HH:mm", loaded.getTimePattern());
+        assertTrue(loaded.isEnableTimeWithZone());
+        assertEquals("HH:mm z", loaded.getTimeWithZonePattern());
+        assertTrue(loaded.isEnableDate());
+        assertEquals("dd/MM/yyyy", loaded.getDatePattern());
+
+        assertFalse(loaded.isSortViaOrderBy());
+        assertTrue(loaded.isSortTablesByNumericPk());
+        assertEquals("Descending", loaded.getSortTablesByNumericPkDirection());
+        assertEquals("Click", loaded.getAddColumnsToSorting());
+
+        assertTrue(loaded.isSubmitChangesImmediately());
+        assertFalse(loaded.isEnableEditingForQueriesWithJoin());
+        assertFalse(loaded.isShowDmlPreviewForQueriesWithJoin());
+
+        assertTrue(loaded.isAllowOpenSecureLinks());
+        assertTrue(loaded.isAllowOpenStandardLinks());
+        assertTrue(loaded.isAllowOpenLocalFileLinks());
+        assertTrue(loaded.isAssumeHttpIfNoProtocol());
+    }
 }

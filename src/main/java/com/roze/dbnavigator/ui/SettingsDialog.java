@@ -15,6 +15,10 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
@@ -779,7 +783,7 @@ public final class SettingsDialog {
             return buildOutputAndResultsPanel(settings, inputs);
         } else if ("Database / Query Execution / User Parameters".equals(fullPath) || "User Parameters".equals(fullPath)) {
             return buildUserParametersPanel(settings, inputs);
-        } else if ("Database / Data Editor and Viewer".equals(fullPath) || "Appearance & Behavior / Data Editor and Viewer".equals(fullPath)) {
+        } else if ("Database / Data Editor and Viewer".equals(fullPath) || "Appearance & Behavior / Data Editor and Viewer".equals(fullPath) || "Data Editor and Viewer".equals(fullPath)) {
             return buildDataEditorPanel(settings, inputs);
         } else if ("Database / Database Explorer".equals(fullPath)) {
             return buildDatabaseExplorerPanel(settings, inputs);
@@ -1806,43 +1810,495 @@ public final class SettingsDialog {
         return panel;
     }
 
+    private static HBox createSectionHeader(String title) {
+        Label label = new Label(title);
+        label.setStyle("-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: -text;");
+        Separator sep = new Separator();
+        HBox.setHgrow(sep, Priority.ALWAYS);
+        sep.setStyle("-fx-opacity: 0.35;");
+        HBox box = new HBox(10, label, sep);
+        box.setAlignment(Pos.CENTER_LEFT);
+        box.setPadding(new Insets(12, 0, 4, 0));
+        return box;
+    }
+
+    private static String formatSampleNumber(String pattern, String decSep, boolean useGroup, String groupSep) {
+        try {
+            double val = 123456789.123456;
+            DecimalFormatSymbols symbols = new DecimalFormatSymbols(Locale.US);
+            if (decSep != null && !decSep.isEmpty()) {
+                symbols.setDecimalSeparator(decSep.charAt(0));
+            }
+            if (useGroup && groupSep != null && !groupSep.isEmpty()) {
+                symbols.setGroupingSeparator(groupSep.charAt(0));
+            }
+            DecimalFormat df;
+            if (pattern != null && !pattern.isBlank()) {
+                df = new DecimalFormat(pattern, symbols);
+            } else {
+                df = new DecimalFormat("#,##0.######", symbols);
+            }
+            df.setGroupingUsed(useGroup);
+            return df.format(val);
+        } catch (Exception e) {
+            return "123456789.123456";
+        }
+    }
+
+    private static String formatSampleDateTime(String pattern) {
+        if (pattern == null || pattern.isBlank()) return "";
+        try {
+            ZonedDateTime now = ZonedDateTime.now();
+            DateTimeFormatter dtf = DateTimeFormatter.ofPattern(pattern, Locale.US);
+            return dtf.format(now);
+        } catch (Exception e) {
+            return "[Invalid format]";
+        }
+    }
+
+    private static void showHelpAlert(String title, String content) {
+        try {
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle(title);
+            alert.setHeaderText(title);
+            alert.setContentText(content);
+            alert.showAndWait();
+        } catch (Exception ignored) {}
+    }
+
     private static VBox buildDataEditorPanel(AppSettingsStore.Settings settings, Map<String, Object> inputs) {
-        Label title = new Label("Data Editor and Viewer");
-        title.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: -text;");
+        // 1. General / Fetch Limits (Top section in DataGrip)
+        GridPane limitsGrid = new GridPane();
+        limitsGrid.setHgap(14);
+        limitsGrid.setVgap(8);
 
-        Label pageLabel = new Label("Page size (rows per page):");
-        ComboBox<Integer> pageSizeCombo = new ComboBox<>();
-        pageSizeCombo.getItems().addAll(50, 100, 200, 500, 1000);
-        pageSizeCombo.getSelectionModel().select(Integer.valueOf(settings.getPageSize()));
-        pageSizeCombo.setPrefWidth(120);
+        CheckBox limitPageSizeCheck = new CheckBox("Limit page size to:");
+        limitPageSizeCheck.setSelected(settings.isLimitPageSize());
+        TextField pageSizeField = new TextField(String.valueOf(settings.getPageSize()));
+        pageSizeField.setPrefWidth(90);
+        pageSizeField.disableProperty().bind(limitPageSizeCheck.selectedProperty().not());
+        HBox pageSizeBox = new HBox(8, pageSizeField);
+        pageSizeBox.setAlignment(Pos.CENTER_LEFT);
 
-        Label binaryLabel = new Label("Display binary data as:");
-        ComboBox<String> binaryCombo = new ComboBox<>();
-        binaryCombo.getItems().addAll("Hexadecimal (HEX)", "Plain text (UTF-8)", "Base64");
-        binaryCombo.getSelectionModel().select(0);
-        binaryCombo.setPrefWidth(180);
+        limitsGrid.add(limitPageSizeCheck, 0, 0);
+        limitsGrid.add(pageSizeBox, 1, 0);
 
-        Label nullLabel = new Label("NULL value display:");
-        TextField nullText = new TextField("<null>");
-        nullText.setPrefWidth(140);
+        Label prefetchLabel = new Label("Result set prefetch size:");
+        TextField prefetchField = new TextField(String.valueOf(settings.getResultSetPrefetchSize()));
+        prefetchField.setPrefWidth(90);
+        limitsGrid.add(prefetchLabel, 0, 1);
+        limitsGrid.add(prefetchField, 1, 1);
 
-        CheckBox zebraCheck = new CheckBox("Colorize alternating rows (zebra striping)");
-        zebraCheck.setSelected(true);
+        Label filterHistLabel = new Label("Filter history size:");
+        TextField filterHistField = new TextField(String.valueOf(settings.getFilterHistorySize()));
+        filterHistField.setPrefWidth(90);
+        limitsGrid.add(filterHistLabel, 0, 2);
+        limitsGrid.add(filterHistField, 1, 2);
 
-        GridPane grid = new GridPane();
-        grid.setHgap(14);
-        grid.setVgap(10);
-        grid.add(pageLabel, 0, 0);
-        grid.add(pageSizeCombo, 1, 0);
-        grid.add(binaryLabel, 0, 1);
-        grid.add(binaryCombo, 1, 1);
-        grid.add(nullLabel, 0, 2);
-        grid.add(nullText, 1, 2);
+        Label maxBytesLabel = new Label("Maximum number of bytes loaded per value:");
+        TextField maxBytesField = new TextField(String.valueOf(settings.getMaxBytesLoadedPerValue()));
+        maxBytesField.setPrefWidth(90);
+        limitsGrid.add(maxBytesLabel, 0, 3);
+        limitsGrid.add(maxBytesField, 1, 3);
 
-        inputs.put("pageSizeCombo", pageSizeCombo);
+        CheckBox showFirstRowsCheck = new CheckBox("Show first");
+        showFirstRowsCheck.setSelected(settings.isShowFirstDataRowsInPreview());
+        TextField previewDataRowsField = new TextField(String.valueOf(settings.getPreviewDataRows()));
+        previewDataRowsField.setPrefWidth(60);
+        previewDataRowsField.disableProperty().bind(showFirstRowsCheck.selectedProperty().not());
+        Label previewSuffix = new Label("data rows in preview");
+        HBox showFirstBox = new HBox(6, showFirstRowsCheck, previewDataRowsField, previewSuffix);
+        showFirstBox.setAlignment(Pos.CENTER_LEFT);
+        limitsGrid.add(showFirstBox, 0, 4, 2, 1);
 
-        VBox panel = new VBox(14, title, grid, zebraCheck);
-        panel.setPadding(new Insets(4, 8, 16, 8));
+        // 2. Controls Customization
+        HBox controlsSection = createSectionHeader("Controls Customization");
+
+        CheckBox enablePagingCheck = new CheckBox("Enable paging in in-editor results by default");
+        enablePagingCheck.setSelected(settings.isEnablePagingInEditorResults());
+
+        Label paginationPosLabel = new Label("Position of the grid pagination control:");
+        ComboBox<String> paginationPosCombo = new ComboBox<>();
+        paginationPosCombo.getItems().addAll(
+                "Grid bottom (floating)",
+                "Grid bottom left (floating)",
+                "Grid bottom right (floating)",
+                "Data editor toolbar"
+        );
+        paginationPosCombo.setValue(settings.getGridPaginationPosition());
+        paginationPosCombo.setPrefWidth(220);
+        HBox paginationPosRow = new HBox(10, paginationPosLabel, paginationPosCombo);
+        paginationPosRow.setAlignment(Pos.CENTER_LEFT);
+
+        CheckBox showQuickActionsCheck = new CheckBox("Show the quick actions popup toolbar for cells");
+        showQuickActionsCheck.setSelected(settings.isShowQuickActionsToolbar());
+
+        CheckBox enableQuickActionsCustomizationCheck = new CheckBox("Enable customization of the quick actions popup toolbar");
+        enableQuickActionsCustomizationCheck.setSelected(settings.isEnableQuickActionsCustomization());
+        enableQuickActionsCustomizationCheck.setPadding(new Insets(0, 0, 0, 22));
+        enableQuickActionsCustomizationCheck.disableProperty().bind(showQuickActionsCheck.selectedProperty().not());
+
+        VBox controlsBox = new VBox(8, enablePagingCheck, paginationPosRow, showQuickActionsCheck, enableQuickActionsCustomizationCheck);
+
+        // 3. Data Presentation
+        HBox dataPresSection = createSectionHeader("Data Presentation");
+
+        CheckBox useCustomFontCheck = new CheckBox("Use custom font:");
+        useCustomFontCheck.setSelected(settings.isUseCustomFont());
+
+        ComboBox<String> fontCombo = new ComboBox<>();
+        List<String> families = new ArrayList<>(Font.getFamilies());
+        if (!families.contains("JetBrains Mono")) families.add(0, "JetBrains Mono");
+        fontCombo.getItems().addAll(families);
+        fontCombo.setValue(settings.getCustomFontFamily());
+        fontCombo.setPrefWidth(220);
+
+        Label sizeLabel = new Label("Size:");
+        TextField sizeField = new TextField(String.valueOf(settings.getCustomFontSize()));
+        sizeField.setPrefWidth(60);
+
+        Label lineHeightLabel = new Label("Line height:");
+        TextField lineHeightField = new TextField(String.valueOf(settings.getCustomLineHeight()));
+        lineHeightField.setPrefWidth(60);
+
+        fontCombo.disableProperty().bind(useCustomFontCheck.selectedProperty().not());
+        sizeField.disableProperty().bind(useCustomFontCheck.selectedProperty().not());
+        lineHeightField.disableProperty().bind(useCustomFontCheck.selectedProperty().not());
+
+        HBox fontRow = new HBox(8, useCustomFontCheck, fontCombo, sizeLabel, sizeField, lineHeightLabel, lineHeightField);
+        fontRow.setAlignment(Pos.CENTER_LEFT);
+
+        CheckBox alternateRowColorsCheck = new CheckBox("Alternate row colors");
+        alternateRowColorsCheck.setSelected(settings.isAlternateRowColors());
+
+        Label booleanLabel = new Label("Show boolean values as:");
+        ComboBox<String> booleanCombo = new ComboBox<>();
+        booleanCombo.getItems().addAll("Text", "Checkboxes");
+        booleanCombo.setValue(settings.getShowBooleanValuesAs());
+        booleanCombo.setPrefWidth(160);
+        HBox booleanRow = new HBox(12, booleanLabel, booleanCombo);
+        booleanRow.setAlignment(Pos.CENTER_LEFT);
+
+        Label transposeLabel = new Label("Automatically transpose tables:");
+        ComboBox<String> transposeCombo = new ComboBox<>();
+        transposeCombo.getItems().addAll("Never", "If a table has one record", "Always");
+        transposeCombo.setValue(settings.getAutomaticallyTransposeTables());
+        transposeCombo.setPrefWidth(200);
+        HBox transposeRow = new HBox(12, transposeLabel, transposeCombo);
+        transposeRow.setAlignment(Pos.CENTER_LEFT);
+
+        Label binaryLabel = new Label("Automatically detect binary values:");
+        CheckBox binaryTextCheck = new CheckBox("Text");
+        binaryTextCheck.setSelected(settings.isDetectBinaryAsText());
+        CheckBox binaryUuidCheck = new CheckBox("UUID");
+        binaryUuidCheck.setSelected(settings.isDetectBinaryAsUuid());
+        HBox binaryRow = new HBox(12, binaryLabel, binaryTextCheck, binaryUuidCheck);
+        binaryRow.setAlignment(Pos.CENTER_LEFT);
+
+        CheckBox localFilterCheck = new CheckBox("Enable local filter by default");
+        localFilterCheck.setSelected(settings.isEnableLocalFilterByDefault());
+
+        CheckBox immediateCompletionCheck = new CheckBox("Enable immediate completion in grid text cells");
+        immediateCompletionCheck.setSelected(settings.isEnableImmediateCompletionInGridTextCells());
+
+        Label temporalTzLabel = new Label("Display temporal data in time zone:");
+        TextField temporalTzField = new TextField(settings.getDisplayTemporalDataInTimeZone());
+        temporalTzField.setPromptText("e.g. UTC, GMT+6, America/New_York");
+        temporalTzField.setPrefWidth(240);
+        HBox temporalTzRow = new HBox(12, temporalTzLabel, temporalTzField);
+        temporalTzRow.setAlignment(Pos.CENTER_LEFT);
+
+        VBox dataPresBox = new VBox(8, fontRow, alternateRowColorsCheck, booleanRow, transposeRow, binaryRow, localFilterCheck, immediateCompletionCheck, temporalTzRow);
+
+        // 4. Custom Number Formats
+        HBox numFormatSection = createSectionHeader("Custom Number Formats");
+
+        Hyperlink numPatternsLink = new Hyperlink("Number patterns ↗");
+        numPatternsLink.setStyle("-fx-text-fill: #4da3ff; -fx-padding: 0;");
+        numPatternsLink.setOnAction(e -> showHelpAlert("Number Patterns",
+                "Number patterns follow java.text.DecimalFormat specifications:\n\n"
+                + "• 0 : Digit, zero shows as 0\n"
+                + "• # : Digit, zero shows as absent\n"
+                + "• . : Decimal separator position\n"
+                + "• , : Grouping separator position\n\n"
+                + "Examples:\n"
+                + "  #,##0.00  -> 123,456,789.12\n"
+                + "  0.0000    -> 123456789.1234\n"
+                + "  #,###     -> 123,456,789"));
+
+        Label decSepLabel = new Label("Decimal separator:");
+        TextField decSepField = new TextField(settings.getDecimalSeparator());
+        decSepField.setPrefWidth(60);
+        HBox decSepRow = new HBox(12, decSepLabel, decSepField);
+        decSepRow.setAlignment(Pos.CENTER_LEFT);
+
+        CheckBox groupingSepCheck = new CheckBox("Grouping separator:");
+        groupingSepCheck.setSelected(settings.isEnableGroupingSeparator());
+        TextField groupingSepField = new TextField(settings.getGroupingSeparator());
+        groupingSepField.setPrefWidth(120);
+        groupingSepField.disableProperty().bind(groupingSepCheck.selectedProperty().not());
+        VBox groupingBox = new VBox(4, groupingSepCheck, groupingSepField);
+
+        Label infLabel = new Label("Infinity:");
+        TextField infField = new TextField(settings.getInfinityText());
+        infField.setPrefWidth(140);
+        HBox infRow = new HBox(12, infLabel, infField);
+        infRow.setAlignment(Pos.CENTER_LEFT);
+
+        Label nanLabel = new Label("NaN:");
+        TextField nanField = new TextField(settings.getNanText());
+        nanField.setPrefWidth(140);
+        HBox nanRow = new HBox(12, nanLabel, nanField);
+        nanRow.setAlignment(Pos.CENTER_LEFT);
+
+        CheckBox numPatternCheck = new CheckBox("Number pattern");
+        numPatternCheck.setSelected(settings.isEnableNumberPattern());
+        TextField numPatternField = new TextField(settings.getNumberPattern());
+        numPatternField.setPrefWidth(180);
+        numPatternField.disableProperty().bind(numPatternCheck.selectedProperty().not());
+
+        Label numPreviewLabel = new Label();
+        numPreviewLabel.setStyle("-fx-text-fill: -text-dim; -fx-font-family: monospace;");
+        Runnable updateNumPreview = () -> {
+            numPreviewLabel.setText(formatSampleNumber(
+                    numPatternCheck.isSelected() ? numPatternField.getText() : null,
+                    decSepField.getText(),
+                    groupingSepCheck.isSelected(),
+                    groupingSepField.getText()
+            ));
+        };
+        decSepField.textProperty().addListener((o, ov, nv) -> updateNumPreview.run());
+        groupingSepField.textProperty().addListener((o, ov, nv) -> updateNumPreview.run());
+        groupingSepCheck.selectedProperty().addListener((o, ov, nv) -> updateNumPreview.run());
+        numPatternField.textProperty().addListener((o, ov, nv) -> updateNumPreview.run());
+        numPatternCheck.selectedProperty().addListener((o, ov, nv) -> updateNumPreview.run());
+        updateNumPreview.run();
+
+        HBox numPatternRow = new HBox(10, numPatternField, numPreviewLabel);
+        numPatternRow.setAlignment(Pos.CENTER_LEFT);
+        VBox numPatternBox = new VBox(4, numPatternCheck, numPatternRow);
+
+        VBox numFormatsBox = new VBox(8, numPatternsLink, decSepRow, groupingBox, infRow, nanRow, numPatternBox);
+
+        // 5. Custom Date/Time Formats
+        HBox dateTimeSection = createSectionHeader("Custom Date/Time Formats");
+
+        Hyperlink datePatternsLink = new Hyperlink("Date patterns ↗");
+        datePatternsLink.setStyle("-fx-text-fill: #4da3ff; -fx-padding: 0;");
+        datePatternsLink.setOnAction(e -> showHelpAlert("Date Patterns",
+                "Date and time patterns follow java.time.format.DateTimeFormatter:\n\n"
+                + "• yyyy : 4-digit year (e.g. 2026)\n"
+                + "• MM   : 2-digit month (01-12)\n"
+                + "• dd   : 2-digit day (01-31)\n"
+                + "• HH   : 24-hour hour (00-23)\n"
+                + "• mm   : 2-digit minute (00-59)\n"
+                + "• ss   : 2-digit second (00-59)\n"
+                + "• Z    : Zone offset (+0600)\n"
+                + "• zzz  : Zone name (e.g. GMT)"));
+
+        // Datetime/timestamp
+        CheckBox dtTsCheck = new CheckBox("Datetime/timestamp");
+        dtTsCheck.setSelected(settings.isEnableDatetimeTimestamp());
+        TextField dtTsField = new TextField(settings.getDatetimeTimestampPattern());
+        dtTsField.setPrefWidth(200);
+        dtTsField.disableProperty().bind(dtTsCheck.selectedProperty().not());
+        Label dtTsPreview = new Label(formatSampleDateTime(dtTsField.getText()));
+        dtTsPreview.setStyle("-fx-text-fill: -text-dim; -fx-font-family: monospace;");
+        dtTsField.textProperty().addListener((o, ov, nv) -> dtTsPreview.setText(formatSampleDateTime(nv)));
+        HBox dtTsRow = new HBox(10, dtTsField, dtTsPreview);
+        dtTsRow.setAlignment(Pos.CENTER_LEFT);
+        VBox dtTsBox = new VBox(4, dtTsCheck, dtTsRow);
+
+        // Datetime/timestamp with time zone
+        CheckBox dtTzCheck = new CheckBox("Datetime/timestamp with time zone");
+        dtTzCheck.setSelected(settings.isEnableDatetimeTimestampWithZone());
+        TextField dtTzField = new TextField(settings.getDatetimeTimestampWithZonePattern());
+        dtTzField.setPrefWidth(200);
+        dtTzField.disableProperty().bind(dtTzCheck.selectedProperty().not());
+        Label dtTzPreview = new Label(formatSampleDateTime(dtTzField.getText()));
+        dtTzPreview.setStyle("-fx-text-fill: -text-dim; -fx-font-family: monospace;");
+        dtTzField.textProperty().addListener((o, ov, nv) -> dtTzPreview.setText(formatSampleDateTime(nv)));
+        HBox dtTzRow = new HBox(10, dtTzField, dtTzPreview);
+        dtTzRow.setAlignment(Pos.CENTER_LEFT);
+        VBox dtTzBox = new VBox(4, dtTzCheck, dtTzRow);
+
+        // Time
+        CheckBox timeCheck = new CheckBox("Time");
+        timeCheck.setSelected(settings.isEnableTime());
+        TextField timeField = new TextField(settings.getTimePattern());
+        timeField.setPrefWidth(200);
+        timeField.disableProperty().bind(timeCheck.selectedProperty().not());
+        Label timePreview = new Label(formatSampleDateTime(timeField.getText()));
+        timePreview.setStyle("-fx-text-fill: -text-dim; -fx-font-family: monospace;");
+        timeField.textProperty().addListener((o, ov, nv) -> timePreview.setText(formatSampleDateTime(nv)));
+        HBox timeRow = new HBox(10, timeField, timePreview);
+        timeRow.setAlignment(Pos.CENTER_LEFT);
+        VBox timeBox = new VBox(4, timeCheck, timeRow);
+
+        // Time with time zone
+        CheckBox timeTzCheck = new CheckBox("Time with time zone");
+        timeTzCheck.setSelected(settings.isEnableTimeWithZone());
+        TextField timeTzField = new TextField(settings.getTimeWithZonePattern());
+        timeTzField.setPrefWidth(200);
+        timeTzField.disableProperty().bind(timeTzCheck.selectedProperty().not());
+        Label timeTzPreview = new Label(formatSampleDateTime(timeTzField.getText()));
+        timeTzPreview.setStyle("-fx-text-fill: -text-dim; -fx-font-family: monospace;");
+        timeTzField.textProperty().addListener((o, ov, nv) -> timeTzPreview.setText(formatSampleDateTime(nv)));
+        HBox timeTzRow = new HBox(10, timeTzField, timeTzPreview);
+        timeTzRow.setAlignment(Pos.CENTER_LEFT);
+        VBox timeTzBox = new VBox(4, timeTzCheck, timeTzRow);
+
+        // Date
+        CheckBox dateCheck = new CheckBox("Date");
+        dateCheck.setSelected(settings.isEnableDate());
+        TextField dateField = new TextField(settings.getDatePattern());
+        dateField.setPrefWidth(200);
+        dateField.disableProperty().bind(dateCheck.selectedProperty().not());
+        Label datePreview = new Label(formatSampleDateTime(dateField.getText()));
+        datePreview.setStyle("-fx-text-fill: -text-dim; -fx-font-family: monospace;");
+        dateField.textProperty().addListener((o, ov, nv) -> datePreview.setText(formatSampleDateTime(nv)));
+        HBox dateRow = new HBox(10, dateField, datePreview);
+        dateRow.setAlignment(Pos.CENTER_LEFT);
+        VBox dateBox = new VBox(4, dateCheck, dateRow);
+
+        VBox dateTimeFormatsBox = new VBox(8, datePatternsLink, dtTsBox, dtTzBox, timeBox, timeTzBox, dateBox);
+
+        // 6. Data Sorting
+        HBox dataSortingSection = createSectionHeader("Data Sorting");
+
+        CheckBox sortViaOrderByCheck = new CheckBox("Sort via ORDER BY");
+        sortViaOrderByCheck.setSelected(settings.isSortViaOrderBy());
+
+        CheckBox sortNumericPkCheck = new CheckBox("Sort tables by numeric primary key:");
+        sortNumericPkCheck.setSelected(settings.isSortTablesByNumericPk());
+
+        ToggleGroup pkDirGroup = new ToggleGroup();
+        RadioButton ascRadio = new RadioButton("Ascending");
+        ascRadio.setToggleGroup(pkDirGroup);
+        RadioButton descRadio = new RadioButton("Descending");
+        descRadio.setToggleGroup(pkDirGroup);
+        if ("Descending".equalsIgnoreCase(settings.getSortTablesByNumericPkDirection())) {
+            descRadio.setSelected(true);
+        } else {
+            ascRadio.setSelected(true);
+        }
+        ascRadio.disableProperty().bind(sortNumericPkCheck.selectedProperty().not());
+        descRadio.disableProperty().bind(sortNumericPkCheck.selectedProperty().not());
+        HBox pkSortRow = new HBox(14, ascRadio, descRadio);
+        pkSortRow.setPadding(new Insets(0, 0, 0, 22));
+
+        Label addColsLabel = new Label("Add columns to sorting:");
+        ToggleGroup addColsGroup = new ToggleGroup();
+        RadioButton altClickRadio = new RadioButton("⌥Click");
+        altClickRadio.setToggleGroup(addColsGroup);
+        RadioButton clickRadio = new RadioButton("Click");
+        clickRadio.setToggleGroup(addColsGroup);
+        if ("Click".equalsIgnoreCase(settings.getAddColumnsToSorting())) {
+            clickRadio.setSelected(true);
+        } else {
+            altClickRadio.setSelected(true);
+        }
+        HBox addColsRow = new HBox(14, altClickRadio, clickRadio);
+
+        VBox sortingBox = new VBox(8, sortViaOrderByCheck, sortNumericPkCheck, pkSortRow, addColsLabel, addColsRow);
+
+        // 7. Data Modification
+        HBox modificationSection = createSectionHeader("Data Modification");
+
+        CheckBox submitImmediatelyCheck = new CheckBox("Submit changes immediately");
+        submitImmediatelyCheck.setSelected(settings.isSubmitChangesImmediately());
+
+        CheckBox enableEditingJoinCheck = new CheckBox("Enable editing for queries with JOIN clauses");
+        enableEditingJoinCheck.setSelected(settings.isEnableEditingForQueriesWithJoin());
+
+        CheckBox showDmlPreviewJoinCheck = new CheckBox("Show DML preview before submitting changes for queries with JOIN clauses");
+        showDmlPreviewJoinCheck.setSelected(settings.isShowDmlPreviewForQueriesWithJoin());
+        showDmlPreviewJoinCheck.disableProperty().bind(enableEditingJoinCheck.selectedProperty().not());
+
+        VBox modificationBox = new VBox(8, submitImmediatelyCheck, enableEditingJoinCheck, showDmlPreviewJoinCheck);
+
+        // 8. URL Click Settings
+        HBox urlSection = createSectionHeader("URL Click Settings");
+
+        Label allowOpeningLabel = new Label("Allow opening:");
+        CheckBox secureLinksCheck = new CheckBox("Secure links (HTTPS)");
+        secureLinksCheck.setSelected(settings.isAllowOpenSecureLinks());
+        CheckBox standardLinksCheck = new CheckBox("Standard links (HTTP)");
+        standardLinksCheck.setSelected(settings.isAllowOpenStandardLinks());
+        CheckBox localFileLinksCheck = new CheckBox("Local file links");
+        localFileLinksCheck.setSelected(settings.isAllowOpenLocalFileLinks());
+        VBox linksBox = new VBox(6, secureLinksCheck, standardLinksCheck, localFileLinksCheck);
+        linksBox.setPadding(new Insets(0, 0, 0, 22));
+
+        CheckBox assumeHttpCheck = new CheckBox("If no protocol is specified, assume HTTP for URLs");
+        assumeHttpCheck.setSelected(settings.isAssumeHttpIfNoProtocol());
+
+        VBox urlBox = new VBox(8, allowOpeningLabel, linksBox, assumeHttpCheck);
+
+        // Store into input map for persistence on OK / Apply
+        inputs.put("dataEditor_limitPageSizeCheck", limitPageSizeCheck);
+        inputs.put("dataEditor_pageSizeField", pageSizeField);
+        inputs.put("dataEditor_prefetchField", prefetchField);
+        inputs.put("dataEditor_filterHistField", filterHistField);
+        inputs.put("dataEditor_maxBytesField", maxBytesField);
+        inputs.put("dataEditor_showFirstRowsCheck", showFirstRowsCheck);
+        inputs.put("dataEditor_previewDataRowsField", previewDataRowsField);
+        inputs.put("dataEditor_enablePagingCheck", enablePagingCheck);
+        inputs.put("dataEditor_paginationPosCombo", paginationPosCombo);
+        inputs.put("dataEditor_showQuickActionsCheck", showQuickActionsCheck);
+        inputs.put("dataEditor_enableQuickActionsCustomizationCheck", enableQuickActionsCustomizationCheck);
+        inputs.put("dataEditor_useCustomFontCheck", useCustomFontCheck);
+        inputs.put("dataEditor_fontCombo", fontCombo);
+        inputs.put("dataEditor_sizeField", sizeField);
+        inputs.put("dataEditor_lineHeightField", lineHeightField);
+        inputs.put("dataEditor_alternateRowColorsCheck", alternateRowColorsCheck);
+        inputs.put("dataEditor_booleanCombo", booleanCombo);
+        inputs.put("dataEditor_transposeCombo", transposeCombo);
+        inputs.put("dataEditor_binaryTextCheck", binaryTextCheck);
+        inputs.put("dataEditor_binaryUuidCheck", binaryUuidCheck);
+        inputs.put("dataEditor_localFilterCheck", localFilterCheck);
+        inputs.put("dataEditor_immediateCompletionCheck", immediateCompletionCheck);
+        inputs.put("dataEditor_temporalTzField", temporalTzField);
+        inputs.put("dataEditor_decSepField", decSepField);
+        inputs.put("dataEditor_groupingSepCheck", groupingSepCheck);
+        inputs.put("dataEditor_groupingSepField", groupingSepField);
+        inputs.put("dataEditor_infField", infField);
+        inputs.put("dataEditor_nanField", nanField);
+        inputs.put("dataEditor_numPatternCheck", numPatternCheck);
+        inputs.put("dataEditor_numPatternField", numPatternField);
+        inputs.put("dataEditor_dtTsCheck", dtTsCheck);
+        inputs.put("dataEditor_dtTsField", dtTsField);
+        inputs.put("dataEditor_dtTzCheck", dtTzCheck);
+        inputs.put("dataEditor_dtTzField", dtTzField);
+        inputs.put("dataEditor_timeCheck", timeCheck);
+        inputs.put("dataEditor_timeField", timeField);
+        inputs.put("dataEditor_timeTzCheck", timeTzCheck);
+        inputs.put("dataEditor_timeTzField", timeTzField);
+        inputs.put("dataEditor_dateCheck", dateCheck);
+        inputs.put("dataEditor_dateField", dateField);
+        inputs.put("dataEditor_sortViaOrderByCheck", sortViaOrderByCheck);
+        inputs.put("dataEditor_sortNumericPkCheck", sortNumericPkCheck);
+        inputs.put("dataEditor_pkDirGroup", pkDirGroup);
+        inputs.put("dataEditor_addColsGroup", addColsGroup);
+        inputs.put("dataEditor_submitImmediatelyCheck", submitImmediatelyCheck);
+        inputs.put("dataEditor_enableEditingJoinCheck", enableEditingJoinCheck);
+        inputs.put("dataEditor_showDmlPreviewJoinCheck", showDmlPreviewJoinCheck);
+        inputs.put("dataEditor_secureLinksCheck", secureLinksCheck);
+        inputs.put("dataEditor_standardLinksCheck", standardLinksCheck);
+        inputs.put("dataEditor_localFileLinksCheck", localFileLinksCheck);
+        inputs.put("dataEditor_assumeHttpCheck", assumeHttpCheck);
+
+        VBox panel = new VBox(12,
+                limitsGrid,
+                controlsSection, controlsBox,
+                dataPresSection, dataPresBox,
+                numFormatSection, numFormatsBox,
+                dateTimeSection, dateTimeFormatsBox,
+                dataSortingSection, sortingBox,
+                modificationSection, modificationBox,
+                urlSection, urlBox
+        );
+        panel.setPadding(new Insets(6, 12, 28, 12));
         return panel;
     }
 
@@ -2890,6 +3346,242 @@ public final class SettingsDialog {
         if (inputs.containsKey("userParameterPatternsList")) {
             List<AppSettingsStore.UserParameterPattern> list = (List<AppSettingsStore.UserParameterPattern>) inputs.get("userParameterPatternsList");
             settings.setUserParameterPatterns(new ArrayList<>(list));
+        }
+
+        // Data Editor and Viewer settings
+        if (inputs.containsKey("dataEditor_limitPageSizeCheck")) {
+            CheckBox cb = (CheckBox) inputs.get("dataEditor_limitPageSizeCheck");
+            settings.setLimitPageSize(cb.isSelected());
+        }
+        if (inputs.containsKey("dataEditor_pageSizeField")) {
+            TextField tf = (TextField) inputs.get("dataEditor_pageSizeField");
+            try {
+                settings.setPageSize(Integer.parseInt(tf.getText().trim()));
+            } catch (Exception ignored) {}
+        }
+        if (inputs.containsKey("dataEditor_prefetchField")) {
+            TextField tf = (TextField) inputs.get("dataEditor_prefetchField");
+            try {
+                settings.setResultSetPrefetchSize(Integer.parseInt(tf.getText().trim()));
+            } catch (Exception ignored) {}
+        }
+        if (inputs.containsKey("dataEditor_filterHistField")) {
+            TextField tf = (TextField) inputs.get("dataEditor_filterHistField");
+            try {
+                settings.setFilterHistorySize(Integer.parseInt(tf.getText().trim()));
+            } catch (Exception ignored) {}
+        }
+        if (inputs.containsKey("dataEditor_maxBytesField")) {
+            TextField tf = (TextField) inputs.get("dataEditor_maxBytesField");
+            try {
+                settings.setMaxBytesLoadedPerValue(Integer.parseInt(tf.getText().trim()));
+            } catch (Exception ignored) {}
+        }
+        if (inputs.containsKey("dataEditor_showFirstRowsCheck")) {
+            CheckBox cb = (CheckBox) inputs.get("dataEditor_showFirstRowsCheck");
+            settings.setShowFirstDataRowsInPreview(cb.isSelected());
+        }
+        if (inputs.containsKey("dataEditor_previewDataRowsField")) {
+            TextField tf = (TextField) inputs.get("dataEditor_previewDataRowsField");
+            try {
+                settings.setPreviewDataRows(Integer.parseInt(tf.getText().trim()));
+            } catch (Exception ignored) {}
+        }
+
+        // Controls Customization
+        if (inputs.containsKey("dataEditor_enablePagingCheck")) {
+            CheckBox cb = (CheckBox) inputs.get("dataEditor_enablePagingCheck");
+            settings.setEnablePagingInEditorResults(cb.isSelected());
+        }
+        if (inputs.containsKey("dataEditor_paginationPosCombo")) {
+            ComboBox<String> combo = (ComboBox<String>) inputs.get("dataEditor_paginationPosCombo");
+            if (combo.getValue() != null) settings.setGridPaginationPosition(combo.getValue());
+        }
+        if (inputs.containsKey("dataEditor_showQuickActionsCheck")) {
+            CheckBox cb = (CheckBox) inputs.get("dataEditor_showQuickActionsCheck");
+            settings.setShowQuickActionsToolbar(cb.isSelected());
+        }
+        if (inputs.containsKey("dataEditor_enableQuickActionsCustomizationCheck")) {
+            CheckBox cb = (CheckBox) inputs.get("dataEditor_enableQuickActionsCustomizationCheck");
+            settings.setEnableQuickActionsCustomization(cb.isSelected());
+        }
+
+        // Data Presentation
+        if (inputs.containsKey("dataEditor_useCustomFontCheck")) {
+            CheckBox cb = (CheckBox) inputs.get("dataEditor_useCustomFontCheck");
+            settings.setUseCustomFont(cb.isSelected());
+        }
+        if (inputs.containsKey("dataEditor_fontCombo")) {
+            ComboBox<String> combo = (ComboBox<String>) inputs.get("dataEditor_fontCombo");
+            if (combo.getValue() != null) settings.setCustomFontFamily(combo.getValue());
+        }
+        if (inputs.containsKey("dataEditor_sizeField")) {
+            TextField tf = (TextField) inputs.get("dataEditor_sizeField");
+            try {
+                settings.setCustomFontSize(Double.parseDouble(tf.getText().trim()));
+            } catch (Exception ignored) {}
+        }
+        if (inputs.containsKey("dataEditor_lineHeightField")) {
+            TextField tf = (TextField) inputs.get("dataEditor_lineHeightField");
+            try {
+                settings.setCustomLineHeight(Double.parseDouble(tf.getText().trim()));
+            } catch (Exception ignored) {}
+        }
+        if (inputs.containsKey("dataEditor_alternateRowColorsCheck")) {
+            CheckBox cb = (CheckBox) inputs.get("dataEditor_alternateRowColorsCheck");
+            settings.setAlternateRowColors(cb.isSelected());
+        }
+        if (inputs.containsKey("dataEditor_booleanCombo")) {
+            ComboBox<String> combo = (ComboBox<String>) inputs.get("dataEditor_booleanCombo");
+            if (combo.getValue() != null) settings.setShowBooleanValuesAs(combo.getValue());
+        }
+        if (inputs.containsKey("dataEditor_transposeCombo")) {
+            ComboBox<String> combo = (ComboBox<String>) inputs.get("dataEditor_transposeCombo");
+            if (combo.getValue() != null) settings.setAutomaticallyTransposeTables(combo.getValue());
+        }
+        if (inputs.containsKey("dataEditor_binaryTextCheck")) {
+            CheckBox cb = (CheckBox) inputs.get("dataEditor_binaryTextCheck");
+            settings.setDetectBinaryAsText(cb.isSelected());
+        }
+        if (inputs.containsKey("dataEditor_binaryUuidCheck")) {
+            CheckBox cb = (CheckBox) inputs.get("dataEditor_binaryUuidCheck");
+            settings.setDetectBinaryAsUuid(cb.isSelected());
+        }
+        if (inputs.containsKey("dataEditor_localFilterCheck")) {
+            CheckBox cb = (CheckBox) inputs.get("dataEditor_localFilterCheck");
+            settings.setEnableLocalFilterByDefault(cb.isSelected());
+        }
+        if (inputs.containsKey("dataEditor_immediateCompletionCheck")) {
+            CheckBox cb = (CheckBox) inputs.get("dataEditor_immediateCompletionCheck");
+            settings.setEnableImmediateCompletionInGridTextCells(cb.isSelected());
+        }
+        if (inputs.containsKey("dataEditor_temporalTzField")) {
+            TextField tf = (TextField) inputs.get("dataEditor_temporalTzField");
+            settings.setDisplayTemporalDataInTimeZone(tf.getText() != null ? tf.getText().trim() : "");
+        }
+
+        // Custom Number Formats
+        if (inputs.containsKey("dataEditor_decSepField")) {
+            TextField tf = (TextField) inputs.get("dataEditor_decSepField");
+            settings.setDecimalSeparator(tf.getText() != null && !tf.getText().isBlank() ? tf.getText().trim() : ".");
+        }
+        if (inputs.containsKey("dataEditor_groupingSepCheck")) {
+            CheckBox cb = (CheckBox) inputs.get("dataEditor_groupingSepCheck");
+            settings.setEnableGroupingSeparator(cb.isSelected());
+        }
+        if (inputs.containsKey("dataEditor_groupingSepField")) {
+            TextField tf = (TextField) inputs.get("dataEditor_groupingSepField");
+            settings.setGroupingSeparator(tf.getText() != null ? tf.getText() : "");
+        }
+        if (inputs.containsKey("dataEditor_infField")) {
+            TextField tf = (TextField) inputs.get("dataEditor_infField");
+            settings.setInfinityText(tf.getText() != null && !tf.getText().isBlank() ? tf.getText().trim() : "Infinity");
+        }
+        if (inputs.containsKey("dataEditor_nanField")) {
+            TextField tf = (TextField) inputs.get("dataEditor_nanField");
+            settings.setNanText(tf.getText() != null && !tf.getText().isBlank() ? tf.getText().trim() : "NaN");
+        }
+        if (inputs.containsKey("dataEditor_numPatternCheck")) {
+            CheckBox cb = (CheckBox) inputs.get("dataEditor_numPatternCheck");
+            settings.setEnableNumberPattern(cb.isSelected());
+        }
+        if (inputs.containsKey("dataEditor_numPatternField")) {
+            TextField tf = (TextField) inputs.get("dataEditor_numPatternField");
+            settings.setNumberPattern(tf.getText() != null ? tf.getText().trim() : "");
+        }
+
+        // Custom Date/Time Formats
+        if (inputs.containsKey("dataEditor_dtTsCheck")) {
+            CheckBox cb = (CheckBox) inputs.get("dataEditor_dtTsCheck");
+            settings.setEnableDatetimeTimestamp(cb.isSelected());
+        }
+        if (inputs.containsKey("dataEditor_dtTsField")) {
+            TextField tf = (TextField) inputs.get("dataEditor_dtTsField");
+            if (tf.getText() != null && !tf.getText().isBlank()) settings.setDatetimeTimestampPattern(tf.getText().trim());
+        }
+        if (inputs.containsKey("dataEditor_dtTzCheck")) {
+            CheckBox cb = (CheckBox) inputs.get("dataEditor_dtTzCheck");
+            settings.setEnableDatetimeTimestampWithZone(cb.isSelected());
+        }
+        if (inputs.containsKey("dataEditor_dtTzField")) {
+            TextField tf = (TextField) inputs.get("dataEditor_dtTzField");
+            if (tf.getText() != null && !tf.getText().isBlank()) settings.setDatetimeTimestampWithZonePattern(tf.getText().trim());
+        }
+        if (inputs.containsKey("dataEditor_timeCheck")) {
+            CheckBox cb = (CheckBox) inputs.get("dataEditor_timeCheck");
+            settings.setEnableTime(cb.isSelected());
+        }
+        if (inputs.containsKey("dataEditor_timeField")) {
+            TextField tf = (TextField) inputs.get("dataEditor_timeField");
+            if (tf.getText() != null && !tf.getText().isBlank()) settings.setTimePattern(tf.getText().trim());
+        }
+        if (inputs.containsKey("dataEditor_timeTzCheck")) {
+            CheckBox cb = (CheckBox) inputs.get("dataEditor_timeTzCheck");
+            settings.setEnableTimeWithZone(cb.isSelected());
+        }
+        if (inputs.containsKey("dataEditor_timeTzField")) {
+            TextField tf = (TextField) inputs.get("dataEditor_timeTzField");
+            if (tf.getText() != null && !tf.getText().isBlank()) settings.setTimeWithZonePattern(tf.getText().trim());
+        }
+        if (inputs.containsKey("dataEditor_dateCheck")) {
+            CheckBox cb = (CheckBox) inputs.get("dataEditor_dateCheck");
+            settings.setEnableDate(cb.isSelected());
+        }
+        if (inputs.containsKey("dataEditor_dateField")) {
+            TextField tf = (TextField) inputs.get("dataEditor_dateField");
+            if (tf.getText() != null && !tf.getText().isBlank()) settings.setDatePattern(tf.getText().trim());
+        }
+
+        // Data Sorting
+        if (inputs.containsKey("dataEditor_sortViaOrderByCheck")) {
+            CheckBox cb = (CheckBox) inputs.get("dataEditor_sortViaOrderByCheck");
+            settings.setSortViaOrderBy(cb.isSelected());
+        }
+        if (inputs.containsKey("dataEditor_sortNumericPkCheck")) {
+            CheckBox cb = (CheckBox) inputs.get("dataEditor_sortNumericPkCheck");
+            settings.setSortTablesByNumericPk(cb.isSelected());
+        }
+        if (inputs.containsKey("dataEditor_pkDirGroup")) {
+            ToggleGroup tg = (ToggleGroup) inputs.get("dataEditor_pkDirGroup");
+            RadioButton sel = (RadioButton) tg.getSelectedToggle();
+            if (sel != null) settings.setSortTablesByNumericPkDirection(sel.getText());
+        }
+        if (inputs.containsKey("dataEditor_addColsGroup")) {
+            ToggleGroup tg = (ToggleGroup) inputs.get("dataEditor_addColsGroup");
+            RadioButton sel = (RadioButton) tg.getSelectedToggle();
+            if (sel != null) settings.setAddColumnsToSorting(sel.getText());
+        }
+
+        // Data Modification
+        if (inputs.containsKey("dataEditor_submitImmediatelyCheck")) {
+            CheckBox cb = (CheckBox) inputs.get("dataEditor_submitImmediatelyCheck");
+            settings.setSubmitChangesImmediately(cb.isSelected());
+        }
+        if (inputs.containsKey("dataEditor_enableEditingJoinCheck")) {
+            CheckBox cb = (CheckBox) inputs.get("dataEditor_enableEditingJoinCheck");
+            settings.setEnableEditingForQueriesWithJoin(cb.isSelected());
+        }
+        if (inputs.containsKey("dataEditor_showDmlPreviewJoinCheck")) {
+            CheckBox cb = (CheckBox) inputs.get("dataEditor_showDmlPreviewJoinCheck");
+            settings.setShowDmlPreviewForQueriesWithJoin(cb.isSelected());
+        }
+
+        // URL Click Settings
+        if (inputs.containsKey("dataEditor_secureLinksCheck")) {
+            CheckBox cb = (CheckBox) inputs.get("dataEditor_secureLinksCheck");
+            settings.setAllowOpenSecureLinks(cb.isSelected());
+        }
+        if (inputs.containsKey("dataEditor_standardLinksCheck")) {
+            CheckBox cb = (CheckBox) inputs.get("dataEditor_standardLinksCheck");
+            settings.setAllowOpenStandardLinks(cb.isSelected());
+        }
+        if (inputs.containsKey("dataEditor_localFileLinksCheck")) {
+            CheckBox cb = (CheckBox) inputs.get("dataEditor_localFileLinksCheck");
+            settings.setAllowOpenLocalFileLinks(cb.isSelected());
+        }
+        if (inputs.containsKey("dataEditor_assumeHttpCheck")) {
+            CheckBox cb = (CheckBox) inputs.get("dataEditor_assumeHttpCheck");
+            settings.setAssumeHttpIfNoProtocol(cb.isSelected());
         }
 
         // Persist

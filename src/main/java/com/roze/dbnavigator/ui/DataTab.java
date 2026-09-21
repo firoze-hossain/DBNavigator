@@ -1,5 +1,6 @@
 package com.roze.dbnavigator.ui;
 
+import com.roze.dbnavigator.db.AppSettingsStore;
 import com.roze.dbnavigator.db.ClientRegistry;
 import com.roze.dbnavigator.db.MetadataService;
 import com.roze.dbnavigator.model.ConnectionProfile;
@@ -149,6 +150,10 @@ public class DataTab extends Tab {
             reloadFromStart();
         });
 
+        if (AppSettingsStore.load().isEnableLocalFilterByDefault()) {
+            Platform.runLater(filterField::requestFocus);
+        }
+
         detectPrimaryKeyThenLoad();
     }
 
@@ -274,8 +279,27 @@ public class DataTab extends Tab {
                 pkColumns.add("tableoid");
                 pkColumns.add("ctid");
             }
+            AppSettingsStore.Settings s = AppSettingsStore.load();
+            if (s.isSortTablesByNumericPk() && !pkColumns.isEmpty() && orderField.getText().isBlank()) {
+                String firstPk = pkColumns.get(0);
+                Integer type = columnTypes.get(firstPk);
+                if (type != null && (type == java.sql.Types.INTEGER || type == java.sql.Types.BIGINT
+                        || type == java.sql.Types.SMALLINT || type == java.sql.Types.TINYINT
+                        || type == java.sql.Types.NUMERIC || type == java.sql.Types.DECIMAL)) {
+                    String dir = "Descending".equalsIgnoreCase(s.getSortTablesByNumericPkDirection()) ? "DESC" : "ASC";
+                    Platform.runLater(() -> orderField.setText(DbObject.quote(firstPk) + " " + dir));
+                }
+            }
             Platform.runLater(this::loadPage);
         });
+    }
+
+    private int getEffectivePageSize() {
+        AppSettingsStore.Settings s = AppSettingsStore.load();
+        if (!s.isLimitPageSize()) {
+            return 50000;
+        }
+        return s.getPageSize() > 0 ? s.getPageSize() : 500;
     }
 
     private void reloadFromStart() {
@@ -307,8 +331,9 @@ public class DataTab extends Tab {
 
     /** Jumps straight to the last page if the exact total is known, otherwise counts first. */
     private void jumpToLastPage() {
+        int pageSize = getEffectivePageSize();
         if (totalRowsExact) {
-            page = totalRows == 0 ? 0 : (int) ((totalRows - 1) / PAGE_SIZE);
+            page = totalRows == 0 ? 0 : (int) ((totalRows - 1) / pageSize);
             loadPage();
         } else {
             String where = filterField.getText().trim();
@@ -320,7 +345,7 @@ public class DataTab extends Tab {
                     Platform.runLater(() -> {
                         totalRows = exact;
                         totalRowsExact = true;
-                        page = exact == 0 ? 0 : (int) ((exact - 1) / PAGE_SIZE);
+                        page = exact == 0 ? 0 : (int) ((exact - 1) / pageSize);
                         loadPage();
                     });
                 } catch (Exception ex) {
@@ -331,8 +356,9 @@ public class DataTab extends Tab {
     }
 
     private void refreshPager() {
+        int pageSize = getEffectivePageSize();
         long shown = grid.getItems().size();
-        long from = shown == 0 ? 0 : (long) page * PAGE_SIZE + 1;
+        long from = shown == 0 ? 0 : (long) page * pageSize + 1;
         long to = shown == 0 ? 0 : from + shown - 1;
         pager.update(from, to, totalRows, totalRowsExact);
     }
@@ -342,12 +368,13 @@ public class DataTab extends Tab {
         String where = filterField.getText().trim();
         String order = orderField.getText().trim();
         int currentPage = page;
+        int pageSize = getEffectivePageSize();
 
         AppExecutor.run(() -> {
             try {
                 var client = ClientRegistry.jdbc(profile, table.getCatalog());
                 QueryResult result = client.fetchTablePage(
-                        table.qualifiedName(), currentPage * PAGE_SIZE, PAGE_SIZE,
+                        table.qualifiedName(), currentPage * pageSize, pageSize,
                         where, order, useCtid);
                 if (totalRows < 0) {
                     if (where.isBlank() && profile.getType() == ConnectionProfile.DatabaseType.POSTGRESQL) {

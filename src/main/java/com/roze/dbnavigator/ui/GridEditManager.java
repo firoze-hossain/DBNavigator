@@ -1,5 +1,6 @@
 package com.roze.dbnavigator.ui;
 
+import com.roze.dbnavigator.db.AppSettingsStore;
 import com.roze.dbnavigator.db.ClientRegistry;
 import com.roze.dbnavigator.db.SqlValueBinder;
 import com.roze.dbnavigator.model.ConnectionProfile;
@@ -118,6 +119,9 @@ public class GridEditManager {
         if (pkValues == null) return;
         updates.add(new Update(pkValues, currentResult.getColumns().get(columnIndex), newValue));
         updateButtons();
+        if (AppSettingsStore.load().isSubmitChangesImmediately()) {
+            submit();
+        }
     }
 
     /** Marks every row touched by the current selection as deleted (pending). */
