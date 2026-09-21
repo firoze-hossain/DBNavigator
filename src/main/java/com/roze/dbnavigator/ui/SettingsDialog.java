@@ -1,6 +1,7 @@
 package com.roze.dbnavigator.ui;
 
 import com.roze.dbnavigator.db.AppSettingsStore;
+import com.roze.dbnavigator.util.CsvFormatEngine;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -2326,38 +2327,406 @@ public final class SettingsDialog {
     }
 
     private static VBox buildCsvFormatsPanel(AppSettingsStore.Settings settings, Map<String, Object> inputs) {
-        Label title = new Label("CSV Formats");
-        title.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: -text;");
+        Label breadcrumb = new Label("Database \u203A CSV Formats");
+        breadcrumb.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 13px;");
 
-        Label delimLabel = new Label("Default delimiter:");
-        ComboBox<String> delimCombo = new ComboBox<>();
-        delimCombo.getItems().addAll(",", ";", "\\t (Tab)", "|");
-        delimCombo.getSelectionModel().select(settings.getCsvDelimiter());
-        delimCombo.setPrefWidth(140);
+        ObservableList<AppSettingsStore.CsvFormatConfig> formatList = FXCollections.observableArrayList();
+        for (AppSettingsStore.CsvFormatConfig cfg : settings.getCsvFormats()) {
+            formatList.add(cfg.copy());
+        }
+        if (formatList.isEmpty()) {
+            for (AppSettingsStore.CsvFormatConfig cfg : AppSettingsStore.Settings.defaultCsvFormats()) {
+                formatList.add(cfg.copy());
+            }
+        }
 
-        Label quoteLabel = new Label("Quote character:");
-        TextField quoteField = new TextField(settings.getCsvQuoteChar());
-        quoteField.setPrefWidth(60);
+        // Formats header & toolbar
+        Label formatsLabel = new Label("Formats:");
+        formatsLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: -text;");
 
-        CheckBox firstRowHeader = new CheckBox("First row contains column headers");
-        firstRowHeader.setSelected(true);
+        Button addFormatBtn = new Button("+");
+        addFormatBtn.setPrefWidth(26);
+        Button removeFormatBtn = new Button("—");
+        removeFormatBtn.setPrefWidth(26);
+        Button duplicateFormatBtn = new Button("\uD83D\uDDD0");
+        duplicateFormatBtn.setPrefWidth(26);
+        duplicateFormatBtn.setTooltip(new Tooltip("Duplicate format"));
+        Button upFormatBtn = new Button("↑");
+        upFormatBtn.setPrefWidth(26);
+        Button downFormatBtn = new Button("↓");
+        downFormatBtn.setPrefWidth(26);
 
-        CheckBox trimSpaces = new CheckBox("Trim leading and trailing whitespace");
-        trimSpaces.setSelected(true);
+        HBox formatsToolbar = new HBox(3, addFormatBtn, removeFormatBtn, duplicateFormatBtn, upFormatBtn, downFormatBtn);
+        formatsToolbar.setAlignment(Pos.CENTER_RIGHT);
 
-        GridPane grid = new GridPane();
-        grid.setHgap(14);
-        grid.setVgap(10);
-        grid.add(delimLabel, 0, 0);
-        grid.add(delimCombo, 1, 0);
-        grid.add(quoteLabel, 0, 1);
-        grid.add(quoteField, 1, 1);
+        BorderPane formatsHeader = new BorderPane();
+        formatsHeader.setLeft(formatsLabel);
+        formatsHeader.setRight(formatsToolbar);
 
-        inputs.put("delimCombo", delimCombo);
-        inputs.put("quoteField", quoteField);
+        ListView<AppSettingsStore.CsvFormatConfig> formatsListView = new ListView<>(formatList);
+        formatsListView.setPrefHeight(105);
+        formatsListView.setCellFactory(lv -> new ListCell<>() {
+            @Override
+            protected void updateItem(AppSettingsStore.CsvFormatConfig item, boolean empty) {
+                super.updateItem(item, empty);
+                setText((empty || item == null) ? null : item.getName());
+            }
+        });
 
-        VBox panel = new VBox(14, title, grid, firstRowHeader, trimSpaces);
-        panel.setPadding(new Insets(4, 8, 16, 8));
+        // Config controls
+        Label valSepLabel = new Label("Value separator:");
+        ComboBox<String> valSepCombo = new ComboBox<>();
+        valSepCombo.setEditable(true);
+        valSepCombo.getItems().addAll("Newline", "Space", "Tab", "Comma", "Semicolon", "Pipe");
+        valSepCombo.setPrefWidth(150);
+
+        Label rowSepLabel = new Label("Row separator:");
+        ComboBox<String> rowSepCombo = new ComboBox<>();
+        rowSepCombo.setEditable(true);
+        rowSepCombo.getItems().addAll("Newline", "Space", "Tab", "Comma", "Semicolon", "Pipe");
+        rowSepCombo.setPrefWidth(150);
+
+        Label nullValLabel = new Label("Null value text:");
+        ComboBox<String> nullValCombo = new ComboBox<>();
+        nullValCombo.setEditable(true);
+        nullValCombo.getItems().addAll("Undefined", "Empty string", "\\N");
+        nullValCombo.setPrefWidth(150);
+
+        Hyperlink addPrefixSuffixLink = new Hyperlink("Add row prefix/suffix");
+        addPrefixSuffixLink.setStyle("-fx-font-size: 11px; -fx-padding: 1 0 1 0;");
+
+        Label prefixLabel = new Label("Row prefix:");
+        TextField prefixField = new TextField();
+        prefixField.setPrefWidth(150);
+
+        Label suffixLabel = new Label("Row suffix:");
+        TextField suffixField = new TextField();
+        suffixField.setPrefWidth(150);
+
+        GridPane prefixSuffixGrid = new GridPane();
+        prefixSuffixGrid.setHgap(8);
+        prefixSuffixGrid.setVgap(4);
+        prefixSuffixGrid.add(prefixLabel, 0, 0);
+        prefixSuffixGrid.add(prefixField, 1, 0);
+        prefixSuffixGrid.add(suffixLabel, 0, 1);
+        prefixSuffixGrid.add(suffixField, 1, 1);
+        prefixSuffixGrid.setVisible(false);
+        prefixSuffixGrid.setManaged(false);
+
+        addPrefixSuffixLink.setOnAction(e -> {
+            boolean show = !prefixSuffixGrid.isVisible();
+            prefixSuffixGrid.setVisible(show);
+            prefixSuffixGrid.setManaged(show);
+        });
+
+        // Quotation
+        Label quotationLabel = new Label("Quotation:");
+        quotationLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: -text;");
+
+        Button addQuoteBtn = new Button("+");
+        addQuoteBtn.setPrefWidth(26);
+        Button removeQuoteBtn = new Button("—");
+        removeQuoteBtn.setPrefWidth(26);
+        Button upQuoteBtn = new Button("↑");
+        upQuoteBtn.setPrefWidth(26);
+        Button downQuoteBtn = new Button("↓");
+        downQuoteBtn.setPrefWidth(26);
+
+        HBox quoteToolbar = new HBox(3, addQuoteBtn, removeQuoteBtn, upQuoteBtn, downQuoteBtn);
+        quoteToolbar.setAlignment(Pos.CENTER_RIGHT);
+
+        BorderPane quoteHeader = new BorderPane();
+        quoteHeader.setLeft(quotationLabel);
+        quoteHeader.setRight(quoteToolbar);
+
+        ObservableList<AppSettingsStore.QuotationRule> quoteRulesList = FXCollections.observableArrayList();
+        ListView<AppSettingsStore.QuotationRule> quoteListView = new ListView<>(quoteRulesList);
+        quoteListView.setPrefHeight(60);
+
+        Label quoteValuesLabel = new Label("Quote values:");
+        ComboBox<String> quoteValuesCombo = new ComboBox<>();
+        quoteValuesCombo.getItems().addAll("Never", "When needed", "Always");
+        quoteValuesCombo.setPrefWidth(150);
+
+        CheckBox trimWhitespaces = new CheckBox("Trim whitespaces");
+        CheckBox firstRowHeader = new CheckBox("First row is header");
+        CheckBox firstColHeader = new CheckBox("First column is header");
+
+        GridPane fieldsGrid = new GridPane();
+        fieldsGrid.setHgap(8);
+        fieldsGrid.setVgap(6);
+        fieldsGrid.add(valSepLabel, 0, 0);
+        fieldsGrid.add(valSepCombo, 1, 0);
+        fieldsGrid.add(rowSepLabel, 0, 1);
+        fieldsGrid.add(rowSepCombo, 1, 1);
+        fieldsGrid.add(nullValLabel, 0, 2);
+        fieldsGrid.add(nullValCombo, 1, 2);
+
+        GridPane quoteValuesGrid = new GridPane();
+        quoteValuesGrid.setHgap(8);
+        quoteValuesGrid.add(quoteValuesLabel, 0, 0);
+        quoteValuesGrid.add(quoteValuesCombo, 1, 0);
+
+        VBox leftColumn = new VBox(6,
+                formatsHeader,
+                formatsListView,
+                fieldsGrid,
+                addPrefixSuffixLink,
+                prefixSuffixGrid,
+                quoteHeader,
+                quoteListView,
+                quoteValuesGrid,
+                trimWhitespaces,
+                firstRowHeader,
+                firstColHeader
+        );
+        leftColumn.setPrefWidth(315);
+        leftColumn.setMinWidth(300);
+
+        // Preview components
+        TextArea rawTextArea = new TextArea();
+        rawTextArea.setEditable(false);
+        rawTextArea.setStyle("-fx-font-family: 'JetBrains Mono', 'Consolas', monospace; -fx-font-size: 11px; -fx-control-inner-background: #1e1f22; -fx-text-fill: #bcbec4;");
+        rawTextArea.setPrefHeight(170);
+
+        TextArea lineNumArea = new TextArea();
+        lineNumArea.setEditable(false);
+        lineNumArea.setPrefWidth(34);
+        lineNumArea.setMinWidth(34);
+        lineNumArea.setMaxWidth(34);
+        lineNumArea.setStyle("-fx-font-family: 'JetBrains Mono', 'Consolas', monospace; -fx-font-size: 11px; -fx-control-inner-background: #1e1f22; -fx-text-fill: #565861; -fx-text-alignment: right;");
+
+        HBox textPreviewBox = new HBox(0, lineNumArea, rawTextArea);
+        HBox.setHgrow(rawTextArea, Priority.ALWAYS);
+        textPreviewBox.setStyle("-fx-border-color: -border; -fx-border-width: 1px; -fx-border-radius: 4px;");
+
+        TableView<List<String>> previewTable = new TableView<>();
+        previewTable.setPrefHeight(190);
+        previewTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+
+        VBox rightColumn = new VBox(8, textPreviewBox, previewTable);
+        HBox.setHgrow(rightColumn, Priority.ALWAYS);
+        VBox.setVgrow(previewTable, Priority.ALWAYS);
+
+        HBox mainContent = new HBox(14, leftColumn, rightColumn);
+        VBox.setVgrow(mainContent, Priority.ALWAYS);
+
+        final boolean[] updating = {false};
+
+        Runnable updatePreview = () -> {
+            AppSettingsStore.CsvFormatConfig selected = formatsListView.getSelectionModel().getSelectedItem();
+            if (selected == null) return;
+
+            if (!updating[0]) {
+                selected.setValueSeparator(valSepCombo.getValue() != null ? valSepCombo.getValue() : "Comma");
+                selected.setRowSeparator(rowSepCombo.getValue() != null ? rowSepCombo.getValue() : "Newline");
+                selected.setNullValueText(nullValCombo.getValue() != null ? nullValCombo.getValue() : "Empty string");
+                selected.setRowPrefix(prefixField.getText() != null ? prefixField.getText() : "");
+                selected.setRowSuffix(suffixField.getText() != null ? suffixField.getText() : "");
+                selected.setQuoteValues(quoteValuesCombo.getValue() != null ? quoteValuesCombo.getValue() : "When needed");
+                selected.setTrimWhitespaces(trimWhitespaces.isSelected());
+                selected.setFirstRowIsHeader(firstRowHeader.isSelected());
+                selected.setFirstColumnIsHeader(firstColHeader.isSelected());
+                selected.setQuotationRules(new ArrayList<>(quoteRulesList));
+            }
+
+            String raw = CsvFormatEngine.formatData(
+                    CsvFormatEngine.SAMPLE_HEADERS,
+                    CsvFormatEngine.SAMPLE_ROWS,
+                    selected,
+                    true
+            );
+            rawTextArea.setText(raw);
+
+            int lineCount = raw.isEmpty() ? 0 : raw.split("\n", -1).length;
+            StringBuilder linesSb = new StringBuilder();
+            for (int i = 1; i <= Math.max(1, lineCount); i++) {
+                linesSb.append(i).append("\n");
+            }
+            lineNumArea.setText(linesSb.toString());
+
+            CsvFormatEngine.ParsedTable parsed = CsvFormatEngine.parseData(raw, selected);
+            previewTable.getColumns().clear();
+            previewTable.getItems().clear();
+
+            TableColumn<List<String>, String> idxCol = new TableColumn<>("#");
+            idxCol.setPrefWidth(32);
+            idxCol.setSortable(false);
+            idxCol.setCellValueFactory(data -> {
+                int rowIdx = previewTable.getItems().indexOf(data.getValue()) + 1;
+                return new SimpleStringProperty(String.valueOf(rowIdx));
+            });
+            previewTable.getColumns().add(idxCol);
+
+            for (int colIdx = 0; colIdx < parsed.headers().size(); colIdx++) {
+                final int ci = colIdx;
+                String headerName = parsed.headers().get(colIdx);
+                TableColumn<List<String>, String> col = new TableColumn<>(headerName);
+                col.setCellValueFactory(data -> {
+                    List<String> row = data.getValue();
+                    String val = (ci < row.size()) ? row.get(ci) : "";
+                    return new SimpleStringProperty(val != null ? val : "");
+                });
+                previewTable.getColumns().add(col);
+            }
+
+            for (List<String> row : parsed.rows()) {
+                previewTable.getItems().add(row);
+            }
+        };
+
+        Runnable loadSelectedFormat = () -> {
+            AppSettingsStore.CsvFormatConfig selected = formatsListView.getSelectionModel().getSelectedItem();
+            if (selected == null) return;
+            updating[0] = true;
+            try {
+                valSepCombo.setValue(selected.getValueSeparator());
+                rowSepCombo.setValue(selected.getRowSeparator());
+                nullValCombo.setValue(selected.getNullValueText());
+                prefixField.setText(selected.getRowPrefix());
+                suffixField.setText(selected.getRowSuffix());
+                boolean hasPrefixSuffix = (selected.getRowPrefix() != null && !selected.getRowPrefix().isEmpty())
+                        || (selected.getRowSuffix() != null && !selected.getRowSuffix().isEmpty());
+                prefixSuffixGrid.setVisible(hasPrefixSuffix);
+                prefixSuffixGrid.setManaged(hasPrefixSuffix);
+
+                quoteRulesList.clear();
+                for (AppSettingsStore.QuotationRule r : selected.getQuotationRules()) {
+                    quoteRulesList.add(r.copy());
+                }
+                quoteValuesCombo.setValue(selected.getQuoteValues());
+                trimWhitespaces.setSelected(selected.isTrimWhitespaces());
+                firstRowHeader.setSelected(selected.isFirstRowIsHeader());
+                firstColHeader.setSelected(selected.isFirstColumnIsHeader());
+            } finally {
+                updating[0] = false;
+            }
+            updatePreview.run();
+        };
+
+        formatsListView.getSelectionModel().selectedItemProperty().addListener((obs, o, n) -> {
+            if (n != null) loadSelectedFormat.run();
+        });
+
+        // Wire change listeners
+        valSepCombo.valueProperty().addListener((o, ov, nv) -> { if (!updating[0]) updatePreview.run(); });
+        rowSepCombo.valueProperty().addListener((o, ov, nv) -> { if (!updating[0]) updatePreview.run(); });
+        nullValCombo.valueProperty().addListener((o, ov, nv) -> { if (!updating[0]) updatePreview.run(); });
+        prefixField.textProperty().addListener((o, ov, nv) -> { if (!updating[0]) updatePreview.run(); });
+        suffixField.textProperty().addListener((o, ov, nv) -> { if (!updating[0]) updatePreview.run(); });
+        quoteValuesCombo.valueProperty().addListener((o, ov, nv) -> { if (!updating[0]) updatePreview.run(); });
+        trimWhitespaces.selectedProperty().addListener((o, ov, nv) -> { if (!updating[0]) updatePreview.run(); });
+        firstRowHeader.selectedProperty().addListener((o, ov, nv) -> { if (!updating[0]) updatePreview.run(); });
+        firstColHeader.selectedProperty().addListener((o, ov, nv) -> { if (!updating[0]) updatePreview.run(); });
+
+        // Formats toolbar buttons
+        addFormatBtn.setOnAction(e -> {
+            TextInputDialog dlg = new TextInputDialog("Custom Format");
+            dlg.setTitle("New CSV Format");
+            dlg.setHeaderText("Enter name for new format:");
+            dlg.showAndWait().ifPresent(name -> {
+                if (!name.isBlank()) {
+                    AppSettingsStore.CsvFormatConfig newFmt = new AppSettingsStore.CsvFormatConfig(
+                            name.trim(), "Comma", "Newline", "Empty string",
+                            AppSettingsStore.CsvFormatConfig.defaultQuotationRules(), "When needed", false, false, false);
+                    formatList.add(newFmt);
+                    formatsListView.getSelectionModel().select(newFmt);
+                }
+            });
+        });
+
+        removeFormatBtn.setOnAction(e -> {
+            int sel = formatsListView.getSelectionModel().getSelectedIndex();
+            if (sel >= 0 && formatList.size() > 1) {
+                formatList.remove(sel);
+                formatsListView.getSelectionModel().select(Math.max(0, sel - 1));
+            }
+        });
+
+        duplicateFormatBtn.setOnAction(e -> {
+            AppSettingsStore.CsvFormatConfig cur = formatsListView.getSelectionModel().getSelectedItem();
+            if (cur != null) {
+                AppSettingsStore.CsvFormatConfig copy = cur.copy();
+                copy.setName(cur.getName() + " (copy)");
+                formatList.add(copy);
+                formatsListView.getSelectionModel().select(copy);
+            }
+        });
+
+        upFormatBtn.setOnAction(e -> {
+            int sel = formatsListView.getSelectionModel().getSelectedIndex();
+            if (sel > 0) {
+                AppSettingsStore.CsvFormatConfig item = formatList.remove(sel);
+                formatList.add(sel - 1, item);
+                formatsListView.getSelectionModel().select(sel - 1);
+            }
+        });
+
+        downFormatBtn.setOnAction(e -> {
+            int sel = formatsListView.getSelectionModel().getSelectedIndex();
+            if (sel >= 0 && sel < formatList.size() - 1) {
+                AppSettingsStore.CsvFormatConfig item = formatList.remove(sel);
+                formatList.add(sel + 1, item);
+                formatsListView.getSelectionModel().select(sel + 1);
+            }
+        });
+
+        // Quotation toolbar buttons
+        addQuoteBtn.setOnAction(e -> {
+            quoteRulesList.add(new AppSettingsStore.QuotationRule("`", "`", "duplicate"));
+            updatePreview.run();
+        });
+
+        removeQuoteBtn.setOnAction(e -> {
+            int sel = quoteListView.getSelectionModel().getSelectedIndex();
+            if (sel >= 0 && quoteRulesList.size() > 1) {
+                quoteRulesList.remove(sel);
+                updatePreview.run();
+            }
+        });
+
+        upQuoteBtn.setOnAction(e -> {
+            int sel = quoteListView.getSelectionModel().getSelectedIndex();
+            if (sel > 0) {
+                AppSettingsStore.QuotationRule item = quoteRulesList.remove(sel);
+                quoteRulesList.add(sel - 1, item);
+                quoteListView.getSelectionModel().select(sel - 1);
+                updatePreview.run();
+            }
+        });
+
+        downQuoteBtn.setOnAction(e -> {
+            int sel = quoteListView.getSelectionModel().getSelectedIndex();
+            if (sel >= 0 && sel < quoteRulesList.size() - 1) {
+                AppSettingsStore.QuotationRule item = quoteRulesList.remove(sel);
+                quoteRulesList.add(sel + 1, item);
+                quoteListView.getSelectionModel().select(sel + 1);
+                updatePreview.run();
+            }
+        });
+
+        // Initial selection
+        String targetFmtName = settings.getDefaultCsvFormat();
+        AppSettingsStore.CsvFormatConfig initSelected = null;
+        for (AppSettingsStore.CsvFormatConfig cfg : formatList) {
+            if (cfg.getName().equalsIgnoreCase(targetFmtName)) {
+                initSelected = cfg;
+                break;
+            }
+        }
+        if (initSelected == null && !formatList.isEmpty()) {
+            initSelected = formatList.get(0);
+        }
+        if (initSelected != null) {
+            formatsListView.getSelectionModel().select(initSelected);
+            loadSelectedFormat.run();
+        }
+
+        inputs.put("csvFormatsList", formatList);
+        inputs.put("formatsListView", formatsListView);
+
+        VBox panel = new VBox(10, breadcrumb, mainContent);
+        panel.setPadding(new Insets(4, 8, 8, 8));
         return panel;
     }
 
@@ -3281,6 +3650,25 @@ public final class SettingsDialog {
         if (inputs.containsKey("quoteField")) {
             TextField tf = (TextField) inputs.get("quoteField");
             if (tf.getText() != null && !tf.getText().isEmpty()) settings.setCsvQuoteChar(tf.getText());
+        }
+        if (inputs.containsKey("csvFormatsList")) {
+            @SuppressWarnings("unchecked")
+            List<AppSettingsStore.CsvFormatConfig> list = (List<AppSettingsStore.CsvFormatConfig>) inputs.get("csvFormatsList");
+            if (list != null && !list.isEmpty()) {
+                settings.setCsvFormats(new ArrayList<>(list));
+            }
+        }
+        if (inputs.containsKey("formatsListView")) {
+            @SuppressWarnings("unchecked")
+            ListView<AppSettingsStore.CsvFormatConfig> lv = (ListView<AppSettingsStore.CsvFormatConfig>) inputs.get("formatsListView");
+            if (lv != null && lv.getSelectionModel().getSelectedItem() != null) {
+                AppSettingsStore.CsvFormatConfig def = lv.getSelectionModel().getSelectedItem();
+                settings.setDefaultCsvFormat(def.getName());
+                settings.setCsvDelimiter(CsvFormatEngine.resolveSeparator(def.getValueSeparator()));
+                if (!def.getQuotationRules().isEmpty()) {
+                    settings.setCsvQuoteChar(def.getQuotationRules().get(0).getLeftQuote());
+                }
+            }
         }
         if (inputs.containsKey("keymapCombo")) {
             ComboBox<String> combo = (ComboBox<String>) inputs.get("keymapCombo");

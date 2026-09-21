@@ -57,6 +57,10 @@ public final class AppSettingsStore {
         public boolean substituteInsideSqlStrings = false;
         public List<UserParameterPattern> userParameterPatterns = defaultUserParameterPatterns();
 
+        // CSV Formats (DataGrip Alignment)
+        public List<CsvFormatConfig> csvFormats = defaultCsvFormats();
+        public String defaultCsvFormat = "CSV";
+
         // Data Editor and Viewer (DataGrip Alignment)
         // 1. General / Fetch Limits
         public boolean limitPageSize = true;
@@ -143,6 +147,19 @@ public final class AppSettingsStore {
             list.add(new ExecuteActionConfig("Execute", "Ctrl+Enter", "Ask what to execute", "Nothing", "Exactly as separate statements", false));
             list.add(new ExecuteActionConfig("Execute (2)", "Ctrl+Shift+Enter", "Smallest statement", "Nothing", "Exactly as separate statements", false));
             list.add(new ExecuteActionConfig("Execute (3)", "Ctrl+Alt+Enter", "Whole script", "Nothing", "Exactly as separate statements", false));
+            return list;
+        }
+
+        public static List<CsvFormatConfig> defaultCsvFormats() {
+            List<CsvFormatConfig> list = new ArrayList<>();
+            list.add(new CsvFormatConfig("CSV", "Comma", "Newline", "Empty string",
+                    CsvFormatConfig.defaultQuotationRules(), "When needed", false, false, false));
+            list.add(new CsvFormatConfig("TSV", "Tab", "Newline", "Empty string",
+                    CsvFormatConfig.defaultQuotationRules(), "When needed", false, false, false));
+            list.add(new CsvFormatConfig("Pipe-separated", "Pipe", "Newline", "Empty string",
+                    CsvFormatConfig.defaultQuotationRules(), "When needed", false, false, false));
+            list.add(new CsvFormatConfig("Semicolon-separated", "Semicolon", "Newline", "Empty string",
+                    CsvFormatConfig.defaultQuotationRules(), "When needed", false, false, false));
             return list;
         }
 
@@ -248,6 +265,30 @@ public final class AppSettingsStore {
         }
         public void setUserParameterPatterns(List<UserParameterPattern> patterns) {
             this.userParameterPatterns = (patterns == null || patterns.isEmpty()) ? defaultUserParameterPatterns() : patterns;
+        }
+
+        public List<CsvFormatConfig> getCsvFormats() {
+            if (csvFormats == null || csvFormats.isEmpty()) {
+                csvFormats = defaultCsvFormats();
+            }
+            return csvFormats;
+        }
+        public void setCsvFormats(List<CsvFormatConfig> csvFormats) {
+            this.csvFormats = (csvFormats == null || csvFormats.isEmpty()) ? defaultCsvFormats() : csvFormats;
+        }
+
+        public String getDefaultCsvFormat() { return defaultCsvFormat; }
+        public void setDefaultCsvFormat(String defaultCsvFormat) {
+            this.defaultCsvFormat = (defaultCsvFormat != null && !defaultCsvFormat.isBlank()) ? defaultCsvFormat : "CSV";
+        }
+
+        public CsvFormatConfig getCsvFormatByName(String name) {
+            if (name != null) {
+                for (CsvFormatConfig cfg : getCsvFormats()) {
+                    if (name.equalsIgnoreCase(cfg.getName())) return cfg;
+                }
+            }
+            return getCsvFormats().get(0);
         }
 
         // Data Editor and Viewer Getters and Setters
@@ -515,6 +556,128 @@ public final class AppSettingsStore {
         public void setForSelection(String forSelection) { this.forSelection = forSelection; }
         public boolean isOpenResultsInNewTab() { return openResultsInNewTab; }
         public void setOpenResultsInNewTab(boolean openResultsInNewTab) { this.openResultsInNewTab = openResultsInNewTab; }
+    }
+
+    public static class QuotationRule {
+        private String leftQuote = "\"";
+        private String rightQuote = "\"";
+        private String escapeMode = "duplicate";
+
+        public QuotationRule() {}
+
+        public QuotationRule(String leftQuote, String rightQuote, String escapeMode) {
+            this.leftQuote = leftQuote;
+            this.rightQuote = rightQuote;
+            this.escapeMode = escapeMode;
+        }
+
+        public QuotationRule copy() {
+            return new QuotationRule(leftQuote, rightQuote, escapeMode);
+        }
+
+        public String getLeftQuote() { return leftQuote; }
+        public void setLeftQuote(String leftQuote) { this.leftQuote = leftQuote; }
+        public String getRightQuote() { return rightQuote; }
+        public void setRightQuote(String rightQuote) { this.rightQuote = rightQuote; }
+        public String getEscapeMode() { return escapeMode; }
+        public void setEscapeMode(String escapeMode) { this.escapeMode = escapeMode; }
+
+        @Override
+        public String toString() {
+            return (leftQuote != null ? leftQuote : "") + "   " + (rightQuote != null ? rightQuote : "")
+                    + "   Escape: " + (escapeMode != null ? escapeMode : "duplicate");
+        }
+    }
+
+    public static class CsvFormatConfig {
+        private String name = "CSV";
+        private String valueSeparator = "Comma";
+        private String rowSeparator = "Newline";
+        private String nullValueText = "Empty string";
+        private String rowPrefix = "";
+        private String rowSuffix = "";
+        private List<QuotationRule> quotationRules = defaultQuotationRules();
+        private String quoteValues = "When needed";
+        private boolean trimWhitespaces = false;
+        private boolean firstRowIsHeader = false;
+        private boolean firstColumnIsHeader = false;
+
+        public CsvFormatConfig() {}
+
+        public CsvFormatConfig(String name, String valueSeparator, String rowSeparator, String nullValueText,
+                               List<QuotationRule> quotationRules, String quoteValues,
+                               boolean trimWhitespaces, boolean firstRowIsHeader, boolean firstColumnIsHeader) {
+            this.name = name;
+            this.valueSeparator = valueSeparator;
+            this.rowSeparator = rowSeparator;
+            this.nullValueText = nullValueText;
+            this.quotationRules = quotationRules != null ? new ArrayList<>(quotationRules) : defaultQuotationRules();
+            this.quoteValues = quoteValues;
+            this.trimWhitespaces = trimWhitespaces;
+            this.firstRowIsHeader = firstRowIsHeader;
+            this.firstColumnIsHeader = firstColumnIsHeader;
+        }
+
+        public static List<QuotationRule> defaultQuotationRules() {
+            List<QuotationRule> list = new ArrayList<>();
+            list.add(new QuotationRule("\"", "\"", "duplicate"));
+            list.add(new QuotationRule("'", "'", "duplicate"));
+            return list;
+        }
+
+        public CsvFormatConfig copy() {
+            CsvFormatConfig copy = new CsvFormatConfig();
+            copy.name = this.name;
+            copy.valueSeparator = this.valueSeparator;
+            copy.rowSeparator = this.rowSeparator;
+            copy.nullValueText = this.nullValueText;
+            copy.rowPrefix = this.rowPrefix;
+            copy.rowSuffix = this.rowSuffix;
+            copy.quoteValues = this.quoteValues;
+            copy.trimWhitespaces = this.trimWhitespaces;
+            copy.firstRowIsHeader = this.firstRowIsHeader;
+            copy.firstColumnIsHeader = this.firstColumnIsHeader;
+            if (this.quotationRules != null) {
+                copy.quotationRules = new ArrayList<>();
+                for (QuotationRule r : this.quotationRules) {
+                    copy.quotationRules.add(r.copy());
+                }
+            }
+            return copy;
+        }
+
+        public String getName() { return name; }
+        public void setName(String name) { this.name = name; }
+        public String getValueSeparator() { return valueSeparator; }
+        public void setValueSeparator(String valueSeparator) { this.valueSeparator = valueSeparator; }
+        public String getRowSeparator() { return rowSeparator; }
+        public void setRowSeparator(String rowSeparator) { this.rowSeparator = rowSeparator; }
+        public String getNullValueText() { return nullValueText; }
+        public void setNullValueText(String nullValueText) { this.nullValueText = nullValueText; }
+        public String getRowPrefix() { return rowPrefix; }
+        public void setRowPrefix(String rowPrefix) { this.rowPrefix = rowPrefix; }
+        public String getRowSuffix() { return rowSuffix; }
+        public void setRowSuffix(String rowSuffix) { this.rowSuffix = rowSuffix; }
+        public List<QuotationRule> getQuotationRules() {
+            if (quotationRules == null) quotationRules = defaultQuotationRules();
+            return quotationRules;
+        }
+        public void setQuotationRules(List<QuotationRule> quotationRules) {
+            this.quotationRules = quotationRules != null ? quotationRules : defaultQuotationRules();
+        }
+        public String getQuoteValues() { return quoteValues; }
+        public void setQuoteValues(String quoteValues) { this.quoteValues = quoteValues; }
+        public boolean isTrimWhitespaces() { return trimWhitespaces; }
+        public void setTrimWhitespaces(boolean trimWhitespaces) { this.trimWhitespaces = trimWhitespaces; }
+        public boolean isFirstRowIsHeader() { return firstRowIsHeader; }
+        public void setFirstRowIsHeader(boolean firstRowIsHeader) { this.firstRowIsHeader = firstRowIsHeader; }
+        public boolean isFirstColumnIsHeader() { return firstColumnIsHeader; }
+        public void setFirstColumnIsHeader(boolean firstColumnIsHeader) { this.firstColumnIsHeader = firstColumnIsHeader; }
+
+        @Override
+        public String toString() {
+            return name != null ? name : "";
+        }
     }
 
     private static final Path FILE =

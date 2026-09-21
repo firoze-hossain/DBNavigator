@@ -17,6 +17,7 @@ import org.kordamp.ikonli.fontawesome5.FontAwesomeSolid;
 import org.kordamp.ikonli.javafx.FontIcon;
 
 import com.roze.dbnavigator.db.AppSettingsStore;
+import com.roze.dbnavigator.util.CsvFormatEngine;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -561,15 +562,12 @@ public class ResultGrid extends TableView<List<String>> {
         File file = chooser.showSaveDialog(getScene().getWindow());
         if (file == null) return;
 
+        AppSettingsStore.Settings settings = AppSettingsStore.load();
+        AppSettingsStore.CsvFormatConfig config = settings.getCsvFormatByName(settings.getDefaultCsvFormat());
+
         try (PrintWriter out = new PrintWriter(file, StandardCharsets.UTF_8)) {
-            out.println(columnNames.stream()
-                    .map(ResultGrid::csvEscape)
-                    .reduce((a, b) -> a + "," + b).orElse(""));
-            for (List<String> row : getItems()) {
-                out.println(row.stream()
-                        .map(v -> csvEscape(v == null ? "" : v))
-                        .reduce((a, b) -> a + "," + b).orElse(""));
-            }
+            String csvText = CsvFormatEngine.formatData(columnNames, getItems(), config, true);
+            out.print(csvText);
         } catch (IOException e) {
             DialogTheme.apply(new Alert(Alert.AlertType.ERROR, "Export failed: " + e.getMessage())).showAndWait();
         }
