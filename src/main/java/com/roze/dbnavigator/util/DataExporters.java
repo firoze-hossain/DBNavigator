@@ -1,5 +1,6 @@
 package com.roze.dbnavigator.util;
 
+import com.roze.dbnavigator.db.AppSettingsStore;
 import com.roze.dbnavigator.model.DbObject;
 import com.roze.dbnavigator.model.QueryResult;
 
@@ -35,12 +36,15 @@ public final class DataExporters {
         List<String> columns = result.getColumns();
         List<List<String>> rows = result.getRows();
         int limit = rowLimit <= 0 ? rows.size() : Math.min(rowLimit, rows.size());
+        List<List<String>> limitedRows = rows.subList(0, limit);
+
+        AppSettingsStore.Settings settings = AppSettingsStore.load();
 
         return switch (format) {
-            case CSV -> delimited(columns, rows, limit, ',');
-            case TSV -> delimited(columns, rows, limit, '\t');
-            case PIPE -> delimited(columns, rows, limit, '|');
-            case SEMICOLON -> delimited(columns, rows, limit, ';');
+            case CSV -> CsvFormatEngine.formatData(columns, limitedRows, settings.getCsvFormatByName("CSV"), true);
+            case TSV -> CsvFormatEngine.formatData(columns, limitedRows, settings.getCsvFormatByName("TSV"), true);
+            case PIPE -> CsvFormatEngine.formatData(columns, limitedRows, settings.getCsvFormatByName("Pipe-separated"), true);
+            case SEMICOLON -> CsvFormatEngine.formatData(columns, limitedRows, settings.getCsvFormatByName("Semicolon-separated"), true);
             case SQL_INSERTS -> sqlInserts(columns, rows, limit, qualifiedTable);
             case SQL_UPDATES -> sqlUpdates(columns, rows, limit, qualifiedTable);
             case WHERE_CLAUSE -> whereClauses(columns, rows, limit);
