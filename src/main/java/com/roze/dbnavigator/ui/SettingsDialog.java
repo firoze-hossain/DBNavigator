@@ -59,6 +59,31 @@ public final class SettingsDialog {
 
     private static final List<CategoryDef> CATEGORIES = buildCategoryDefinitions();
 
+    public static final Set<String> PROJECT_LEVEL_CATEGORIES = Set.of(
+            "Database Explorer",
+            "SQL Dialects",
+            "SQL Resolution Scopes",
+            "Version Control",
+            "Build Tools",
+            "Actions on Save",
+            "Coverage",
+            "SSH Configurations",
+            "Terminal"
+    );
+
+    public static HBox buildTitledSectionLine(String title) {
+        Label label = new Label(title);
+        label.setStyle("-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #dfe1e5;");
+        Separator sep = new Separator();
+        HBox.setHgrow(sep, Priority.ALWAYS);
+        sep.setMaxWidth(Double.MAX_VALUE);
+        sep.setStyle("-fx-opacity: 0.35;");
+        HBox line = new HBox(8, label, sep);
+        line.setAlignment(Pos.CENTER_LEFT);
+        line.setPadding(new Insets(8, 0, 4, 0));
+        return line;
+    }
+
     public static List<CategoryDef> getCategoryDefinitions() {
         return Collections.unmodifiableList(CATEGORIES);
     }
@@ -510,7 +535,9 @@ public final class SettingsDialog {
         Window owner = mainWindow.getOwnerWindow();
         stage.initOwner(owner);
         stage.initModality(Modality.APPLICATION_MODAL);
-        stage.setTitle("Settings");
+        String projectName = (mainWindow != null && mainWindow.getProject() != null && mainWindow.getProject().getName() != null && !mainWindow.getProject().getName().isBlank())
+                ? mainWindow.getProject().getName() : "default";
+        stage.setTitle("Settings \u2013 " + projectName);
         stage.setMinWidth(860);
         stage.setMinHeight(600);
 
@@ -526,6 +553,43 @@ public final class SettingsDialog {
         tree.setShowRoot(false);
         tree.setPrefWidth(240);
         VBox.setVgrow(tree, Priority.ALWAYS);
+
+        tree.setCellFactory(tv -> new TreeCell<>() {
+            private final Label nameLabel = new Label();
+            private final Region spacer = new Region();
+            private final Label badge = new Label();
+            private final HBox container = new HBox(4, nameLabel, spacer, badge);
+            {
+                HBox.setHgrow(spacer, Priority.ALWAYS);
+                container.setAlignment(Pos.CENTER_LEFT);
+            }
+
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                    setGraphic(null);
+                } else {
+                    nameLabel.setText(item);
+                    nameLabel.setStyle("-fx-text-fill: inherit;");
+                    if ("Plugins".equals(item)) {
+                        badge.setText("1");
+                        badge.setStyle("-fx-background-color: #3574F0; -fx-text-fill: white; -fx-font-size: 10px; -fx-font-weight: bold; -fx-padding: 0 5; -fx-background-radius: 8;");
+                        badge.setVisible(true);
+                    } else if (PROJECT_LEVEL_CATEGORIES.contains(item)) {
+                        badge.setText("\uD83D\uDCC1");
+                        badge.setStyle("-fx-font-size: 11px; -fx-opacity: 0.65;");
+                        badge.setVisible(true);
+                    } else {
+                        badge.setVisible(false);
+                        badge.setText("");
+                    }
+                    setText(null);
+                    setGraphic(container);
+                }
+            }
+        });
 
         VBox leftPane = new VBox(8, searchField, tree);
         leftPane.setPadding(new Insets(10, 8, 10, 10));
@@ -607,7 +671,11 @@ public final class SettingsDialog {
                     p = p.getParent();
                 }
                 String targetPath = getFullPath(target);
-                breadcrumb.setText(targetPath.replace(" / ", "  \u203a  "));
+                String formattedBreadcrumb = targetPath.replace(" / ", "  \u203a  ");
+                if (PROJECT_LEVEL_CATEGORIES.contains(target.getValue())) {
+                    formattedBreadcrumb += "  \uD83D\uDCC1";
+                }
+                breadcrumb.setText(formattedBreadcrumb);
                 tree.getSelectionModel().select(target);
                 tree.scrollTo(tree.getRow(target));
             }
@@ -617,7 +685,11 @@ public final class SettingsDialog {
         tree.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
             if (newVal == null) return;
             String fullPath = getFullPath(newVal);
-            breadcrumb.setText(fullPath.replace(" / ", "  \u203a  "));
+            String formattedBreadcrumb = fullPath.replace(" / ", "  \u203a  ");
+            if (PROJECT_LEVEL_CATEGORIES.contains(newVal.getValue())) {
+                formattedBreadcrumb += "  \uD83D\uDCC1";
+            }
+            breadcrumb.setText(formattedBreadcrumb);
 
             if (!navigatingHistory[0]) {
                 if (historyCursor[0] < history.size() - 1) {
@@ -786,10 +858,14 @@ public final class SettingsDialog {
             return buildUserParametersPanel(settings, inputs);
         } else if ("Database / Data Editor and Viewer".equals(fullPath) || "Appearance & Behavior / Data Editor and Viewer".equals(fullPath) || "Data Editor and Viewer".equals(fullPath)) {
             return buildDataEditorPanel(settings, inputs);
-        } else if ("Database / Database Explorer".equals(fullPath)) {
+        } else if ("Database / Database Explorer".equals(fullPath) || "Database Explorer".equals(fullPath)) {
             return buildDatabaseExplorerPanel(settings, inputs);
-        } else if ("Database / CSV Formats".equals(fullPath)) {
+        } else if ("Database / CSV Formats".equals(fullPath) || "CSV Formats".equals(fullPath)) {
             return buildCsvFormatsPanel(settings, inputs);
+        } else if ("Database / AI Tools".equals(fullPath) || "AI Tools".equals(fullPath)) {
+            return buildAiToolsPanel(settings, inputs);
+        } else if ("Database / Query Files and Consoles".equals(fullPath) || "Query Files and Consoles".equals(fullPath)) {
+            return buildQueryFilesAndConsolesPanel(settings, inputs);
         } else if ("Keymap".equals(fullPath)) {
             return buildKeymapPanel(settings, inputs);
         } else if ("Plugins".equals(fullPath)) {
@@ -2303,27 +2379,247 @@ public final class SettingsDialog {
         return panel;
     }
 
-    private static VBox buildDatabaseExplorerPanel(AppSettingsStore.Settings settings, Map<String, Object> inputs) {
-        Label title = new Label("Database Explorer");
-        title.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: -text;");
+    public static VBox buildDatabaseExplorerPanel(AppSettingsStore.Settings settings, Map<String, Object> inputs) {
+        // Section: Filter
+        HBox filterSection = buildTitledSectionLine("Filter");
 
-        CheckBox groupDataSources = new CheckBox("Group data sources by environment / project");
-        groupDataSources.setSelected(true);
+        CheckBox rememberFilter = new CheckBox("Remember whether the filter is ON");
+        rememberFilter.setSelected(settings.isRememberFilterState());
+        inputs.put("dbExplorer_rememberFilterState", rememberFilter);
 
+        // Keep showEmpty registered for compatibility
         CheckBox showEmpty = new CheckBox("Show empty schemas");
         showEmpty.setSelected(settings.isShowEmptySchemas());
-
-        CheckBox autoSync = new CheckBox("Auto-sync introspected schemas on connection");
-        autoSync.setSelected(true);
-
-        CheckBox loadSources = new CheckBox("Load table source definitions in background");
-        loadSources.setSelected(true);
-
         inputs.put("showEmpty", showEmpty);
 
-        VBox panel = new VBox(14, title, groupDataSources, showEmpty, autoSync, loadSources);
-        panel.setPadding(new Insets(4, 8, 16, 8));
+        // Section: Colors
+        HBox colorsSection = buildTitledSectionLine("Colors");
+
+        CheckBox showColors = new CheckBox("Show database colors");
+        showColors.setSelected(settings.isShowDatabaseColors());
+        inputs.put("dbExplorer_showDatabaseColors", showColors);
+
+        Label colorsSubtext = new Label("Select where to show colors assigned to data sources and database objects");
+        colorsSubtext.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 12px;");
+
+        CheckBox dbExplorerColor = new CheckBox("Database Explorer");
+        dbExplorerColor.setSelected(settings.isColorDatabaseExplorer());
+        inputs.put("dbExplorer_colorDatabaseExplorer", dbExplorerColor);
+
+        CheckBox editorTabsColor = new CheckBox("Editor tab headers");
+        editorTabsColor.setSelected(settings.isColorEditorTabHeaders());
+        inputs.put("dbExplorer_colorEditorTabHeaders", editorTabsColor);
+
+        CheckBox editorBgColor = new CheckBox("Editor backgrounds");
+        editorBgColor.setSelected(settings.isColorEditorBackgrounds());
+        inputs.put("dbExplorer_colorEditorBackgrounds", editorBgColor);
+
+        CheckBox editorToolbarsColor = new CheckBox("Editor toolbars");
+        editorToolbarsColor.setSelected(settings.isColorEditorToolbars());
+        inputs.put("dbExplorer_colorEditorToolbars", editorToolbarsColor);
+
+        VBox subColors = new VBox(8, dbExplorerColor, editorTabsColor, editorBgColor, editorToolbarsColor);
+        subColors.setPadding(new Insets(2, 0, 0, 24));
+        subColors.disableProperty().bind(showColors.selectedProperty().not());
+
+        VBox colorsBox = new VBox(6, showColors, colorsSubtext, subColors);
+
+        VBox panel = new VBox(10, filterSection, rememberFilter, colorsSection, colorsBox);
+        panel.setPadding(new Insets(6, 12, 28, 12));
         return panel;
+    }
+
+    public static VBox buildAiToolsPanel(AppSettingsStore.Settings settings, Map<String, Object> inputs) {
+        // Section: Permissions
+        HBox permSection = buildTitledSectionLine("Permissions");
+
+        Label overview = new Label("Controls whether AI tools can read or modify data and schema in all databases without confirmation");
+        overview.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 12px;");
+        overview.setWrapText(true);
+
+        // 1. Read database schemas
+        CheckBox readSchemas = new CheckBox("Read database schemas");
+        readSchemas.setSelected(settings.isAiReadDatabaseSchemas());
+        inputs.put("ai_readDatabaseSchemas", readSchemas);
+        Label readSchemasDesc = new Label("Improves query generation quality. Note: this also results in higher quota consumption.");
+        readSchemasDesc.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 11px;");
+        readSchemasDesc.setPadding(new Insets(0, 0, 0, 22));
+        VBox readSchemasBox = new VBox(3, readSchemas, readSchemasDesc);
+
+        // 2. Modify database schemas
+        CheckBox modifySchemas = new CheckBox("Modify database schemas");
+        modifySchemas.setSelected(settings.isAiModifyDatabaseSchemas());
+        inputs.put("ai_modifyDatabaseSchemas", modifySchemas);
+        Label modifySchemasDesc = new Label("For example, by running CREATE, ALTER, or DROP statements");
+        modifySchemasDesc.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 11px;");
+        modifySchemasDesc.setPadding(new Insets(0, 0, 0, 22));
+        VBox modifySchemasBox = new VBox(3, modifySchemas, modifySchemasDesc);
+
+        // 3. Read database data
+        CheckBox readData = new CheckBox("Read database data");
+        readData.setSelected(settings.isAiReadDatabaseData());
+        inputs.put("ai_readDatabaseData", readData);
+        Label readDataDesc = new Label("For example, by running SELECT queries");
+        readDataDesc.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 11px;");
+        readDataDesc.setPadding(new Insets(0, 0, 0, 22));
+        VBox readDataBox = new VBox(3, readData, readDataDesc);
+
+        // 4. Modify database data
+        CheckBox modifyData = new CheckBox("Modify database data");
+        modifyData.setSelected(settings.isAiModifyDatabaseData());
+        inputs.put("ai_modifyDatabaseData", modifyData);
+        Label modifyDataDesc = new Label("For example, by running INSERT, UPDATE, or DELETE statements or calling routines");
+        modifyDataDesc.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 11px;");
+        modifyDataDesc.setPadding(new Insets(0, 0, 0, 22));
+        VBox modifyDataBox = new VBox(3, modifyData, modifyDataDesc);
+
+        VBox permissionsBox = new VBox(14, readSchemasBox, modifySchemasBox, readDataBox, modifyDataBox);
+        permissionsBox.setPadding(new Insets(6, 0, 0, 0));
+
+        VBox panel = new VBox(10, permSection, overview, permissionsBox);
+        panel.setPadding(new Insets(6, 12, 28, 12));
+        return panel;
+    }
+
+    public static VBox buildQueryFilesAndConsolesPanel(AppSettingsStore.Settings settings, Map<String, Object> inputs) {
+        // Section 1: Query Files Presentation
+        HBox presSection = buildTitledSectionLine("Query Files Presentation");
+
+        CheckBox showDsName = new CheckBox("Show data source name in file tree");
+        showDsName.setSelected(settings.isShowDataSourceNameInFileTree());
+        inputs.put("queryFiles_showDataSourceName", showDsName);
+
+        CheckBox useColor = new CheckBox("Use attached search path color in file tree");
+        useColor.setSelected(settings.isUseAttachedSearchPathColorInFileTree());
+        inputs.put("queryFiles_useAttachedSearchPathColor", useColor);
+
+        CheckBox useIcon = new CheckBox("Use attached data source icon for query files");
+        useIcon.setSelected(settings.isUseAttachedDataSourceIconForQueryFiles());
+        inputs.put("queryFiles_useAttachedDataSourceIcon", useIcon);
+
+        VBox presBox = new VBox(8, showDsName, useColor, useIcon);
+
+        // Section 2: Query Consoles
+        HBox consolesSection = buildTitledSectionLine("Query Consoles");
+
+        Label defFileNameLabel = new Label("Default file name:");
+        defFileNameLabel.setMinWidth(120);
+        defFileNameLabel.setStyle("-fx-text-fill: -text;");
+
+        TextField defFileNameField = new TextField(settings.getDefaultConsoleFileName());
+        HBox.setHgrow(defFileNameField, Priority.ALWAYS);
+        defFileNameField.setMaxWidth(Double.MAX_VALUE);
+        inputs.put("queryFiles_defaultConsoleFileName", defFileNameField);
+
+        Hyperlink resetDefNameLink = new Hyperlink("Reset");
+        resetDefNameLink.setStyle("-fx-text-fill: #3574F0; -fx-font-size: 12px; -fx-padding: 0 4; -fx-border-width: 0;");
+        resetDefNameLink.setOnAction(e -> defFileNameField.setText("console"));
+
+        HBox consoleRow = new HBox(8, defFileNameLabel, defFileNameField, resetDefNameLink);
+        consoleRow.setAlignment(Pos.CENTER_LEFT);
+
+        // Section 3: Editor Tab Display Names
+        HBox editorTabsSection = buildTitledSectionLine("Editor Tab Display Names");
+
+        Label editorTabDesc = new Label("Customize how query console names are displayed in editor tab headers");
+        editorTabDesc.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 12px;");
+
+        Label tplLabel = new Label("Template:");
+        tplLabel.setMinWidth(120);
+        tplLabel.setStyle("-fx-text-fill: -text;");
+
+        TextField tplField = new TextField(settings.getEditorTabTitleTemplate());
+        HBox.setHgrow(tplField, Priority.ALWAYS);
+        tplField.setMaxWidth(Double.MAX_VALUE);
+        inputs.put("queryFiles_editorTabTitleTemplate", tplField);
+
+        Hyperlink resetTplLink = new Hyperlink("Reset");
+        resetTplLink.setStyle("-fx-text-fill: #3574F0; -fx-font-size: 12px; -fx-padding: 0 4; -fx-border-width: 0;");
+        resetTplLink.setOnAction(e -> tplField.setText("$NAME$ [$DATASOURCE$]"));
+
+        HBox tplRow = new HBox(8, tplLabel, tplField, resetTplLink);
+        tplRow.setAlignment(Pos.CENTER_LEFT);
+
+        // Token Pills
+        String[] tokens = {"$NAME$", "$DATASOURCE$", "$SEARCH_PATH$", "$DATABASE$", "$SCHEMA$"};
+        HBox tokensRow = new HBox(6);
+        tokensRow.setAlignment(Pos.CENTER_LEFT);
+        tokensRow.setPadding(new Insets(2, 0, 4, 128));
+
+        for (String tok : tokens) {
+            Button pill = new Button(tok);
+            pill.setStyle("-fx-background-color: #2b2d30; -fx-text-fill: #dfe1e5; -fx-font-family: monospace; "
+                    + "-fx-font-size: 11px; -fx-border-color: #4e5157; -fx-border-radius: 10; "
+                    + "-fx-background-radius: 10; -fx-padding: 2 8; -fx-cursor: hand;");
+            pill.setOnAction(e -> {
+                int caret = tplField.getCaretPosition();
+                String cur = tplField.getText() != null ? tplField.getText() : "";
+                if (caret >= 0 && caret <= cur.length()) {
+                    tplField.setText(cur.substring(0, caret) + tok + cur.substring(caret));
+                    tplField.positionCaret(caret + tok.length());
+                } else {
+                    tplField.setText(cur + tok);
+                    tplField.positionCaret(tplField.getText().length());
+                }
+                tplField.requestFocus();
+            });
+            tokensRow.getChildren().add(pill);
+        }
+
+        Label helpIcon = new Label("(?)");
+        helpIcon.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 12px; -fx-cursor: hand;");
+        helpIcon.setTooltip(new Tooltip("Tokens:\n$NAME$ - Console or file name\n$DATASOURCE$ - Data source name\n$SEARCH_PATH$ - Active search path\n$DATABASE$ - Database name\n$SCHEMA$ - Schema name"));
+        tokensRow.getChildren().add(helpIcon);
+
+        // Preview Row
+        Label prevLabel = new Label("Preview:");
+        prevLabel.setMinWidth(120);
+        prevLabel.setStyle("-fx-text-fill: -text;");
+
+        Label prevIcon = new Label("\uD83D\uDDA5");
+        prevIcon.setStyle("-fx-font-size: 12px;");
+        Label prevText = new Label();
+        prevText.setStyle("-fx-font-family: monospace; -fx-font-size: 12px; -fx-text-fill: #dfe1e5;");
+
+        HBox prevBadge = new HBox(6, prevIcon, prevText);
+        prevBadge.setAlignment(Pos.CENTER_LEFT);
+        prevBadge.setStyle("-fx-background-color: #212327; -fx-border-color: #3e4146; -fx-border-radius: 12; -fx-background-radius: 12; -fx-padding: 3 10;");
+
+        Runnable updatePreview = () -> {
+            prevText.setText(resolveEditorTabTitle(tplField.getText(), "query.sql", "PostgreSQL", "public", "postgres", "public"));
+        };
+        tplField.textProperty().addListener((obs, o, n) -> updatePreview.run());
+        updatePreview.run();
+
+        HBox previewRow = new HBox(8, prevLabel, prevBadge);
+        previewRow.setAlignment(Pos.CENTER_LEFT);
+
+        // Checkbox: Use this template for query files
+        CheckBox useTplForFiles = new CheckBox("Use this template for query files");
+        useTplForFiles.setSelected(settings.isUseTemplateForQueryFiles());
+        inputs.put("queryFiles_useTemplateForQueryFiles", useTplForFiles);
+
+        VBox panel = new VBox(10,
+                presSection, presBox,
+                consolesSection, consoleRow,
+                editorTabsSection, editorTabDesc, tplRow, tokensRow, previewRow,
+                useTplForFiles
+        );
+        panel.setPadding(new Insets(6, 12, 28, 12));
+        return panel;
+    }
+
+    public static String resolveEditorTabTitle(String template, String name, String dataSource, String searchPath, String database, String schema) {
+        if (template == null || template.isBlank()) {
+            return (name != null && !name.isBlank()) ? name : "console";
+        }
+        String res = template;
+        res = res.replace("$NAME$", (name != null && !name.isBlank()) ? name : "query.sql");
+        res = res.replace("$DATASOURCE$", (dataSource != null && !dataSource.isBlank()) ? dataSource : "PostgreSQL");
+        res = res.replace("$SEARCH_PATH$", (searchPath != null && !searchPath.isBlank()) ? searchPath : "public");
+        res = res.replace("$DATABASE$", (database != null && !database.isBlank()) ? database : "postgres");
+        res = res.replace("$SCHEMA$", (schema != null && !schema.isBlank()) ? schema : "public");
+        return res;
     }
 
     private static VBox buildCsvFormatsPanel(AppSettingsStore.Settings settings, Map<String, Object> inputs) {
@@ -3970,6 +4266,80 @@ public final class SettingsDialog {
         if (inputs.containsKey("dataEditor_assumeHttpCheck")) {
             CheckBox cb = (CheckBox) inputs.get("dataEditor_assumeHttpCheck");
             settings.setAssumeHttpIfNoProtocol(cb.isSelected());
+        }
+
+        // Database Explorer Settings
+        if (inputs.containsKey("dbExplorer_rememberFilterState")) {
+            CheckBox cb = (CheckBox) inputs.get("dbExplorer_rememberFilterState");
+            settings.setRememberFilterState(cb.isSelected());
+        }
+        if (inputs.containsKey("dbExplorer_showDatabaseColors")) {
+            CheckBox cb = (CheckBox) inputs.get("dbExplorer_showDatabaseColors");
+            settings.setShowDatabaseColors(cb.isSelected());
+        }
+        if (inputs.containsKey("dbExplorer_colorDatabaseExplorer")) {
+            CheckBox cb = (CheckBox) inputs.get("dbExplorer_colorDatabaseExplorer");
+            settings.setColorDatabaseExplorer(cb.isSelected());
+        }
+        if (inputs.containsKey("dbExplorer_colorEditorTabHeaders")) {
+            CheckBox cb = (CheckBox) inputs.get("dbExplorer_colorEditorTabHeaders");
+            settings.setColorEditorTabHeaders(cb.isSelected());
+        }
+        if (inputs.containsKey("dbExplorer_colorEditorBackgrounds")) {
+            CheckBox cb = (CheckBox) inputs.get("dbExplorer_colorEditorBackgrounds");
+            settings.setColorEditorBackgrounds(cb.isSelected());
+        }
+        if (inputs.containsKey("dbExplorer_colorEditorToolbars")) {
+            CheckBox cb = (CheckBox) inputs.get("dbExplorer_colorEditorToolbars");
+            settings.setColorEditorToolbars(cb.isSelected());
+        }
+
+        // AI Tools Settings
+        if (inputs.containsKey("ai_readDatabaseSchemas")) {
+            CheckBox cb = (CheckBox) inputs.get("ai_readDatabaseSchemas");
+            settings.setAiReadDatabaseSchemas(cb.isSelected());
+        }
+        if (inputs.containsKey("ai_modifyDatabaseSchemas")) {
+            CheckBox cb = (CheckBox) inputs.get("ai_modifyDatabaseSchemas");
+            settings.setAiModifyDatabaseSchemas(cb.isSelected());
+        }
+        if (inputs.containsKey("ai_readDatabaseData")) {
+            CheckBox cb = (CheckBox) inputs.get("ai_readDatabaseData");
+            settings.setAiReadDatabaseData(cb.isSelected());
+        }
+        if (inputs.containsKey("ai_modifyDatabaseData")) {
+            CheckBox cb = (CheckBox) inputs.get("ai_modifyDatabaseData");
+            settings.setAiModifyDatabaseData(cb.isSelected());
+        }
+
+        // Query Files and Consoles Settings
+        if (inputs.containsKey("queryFiles_showDataSourceName")) {
+            CheckBox cb = (CheckBox) inputs.get("queryFiles_showDataSourceName");
+            settings.setShowDataSourceNameInFileTree(cb.isSelected());
+        }
+        if (inputs.containsKey("queryFiles_useAttachedSearchPathColor")) {
+            CheckBox cb = (CheckBox) inputs.get("queryFiles_useAttachedSearchPathColor");
+            settings.setUseAttachedSearchPathColorInFileTree(cb.isSelected());
+        }
+        if (inputs.containsKey("queryFiles_useAttachedDataSourceIcon")) {
+            CheckBox cb = (CheckBox) inputs.get("queryFiles_useAttachedDataSourceIcon");
+            settings.setUseAttachedDataSourceIconForQueryFiles(cb.isSelected());
+        }
+        if (inputs.containsKey("queryFiles_defaultConsoleFileName")) {
+            TextField tf = (TextField) inputs.get("queryFiles_defaultConsoleFileName");
+            if (tf.getText() != null && !tf.getText().isBlank()) {
+                settings.setDefaultConsoleFileName(tf.getText().trim());
+            }
+        }
+        if (inputs.containsKey("queryFiles_editorTabTitleTemplate")) {
+            TextField tf = (TextField) inputs.get("queryFiles_editorTabTitleTemplate");
+            if (tf.getText() != null && !tf.getText().isBlank()) {
+                settings.setEditorTabTitleTemplate(tf.getText().trim());
+            }
+        }
+        if (inputs.containsKey("queryFiles_useTemplateForQueryFiles")) {
+            CheckBox cb = (CheckBox) inputs.get("queryFiles_useTemplateForQueryFiles");
+            settings.setUseTemplateForQueryFiles(cb.isSelected());
         }
 
         // Persist
