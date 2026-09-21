@@ -245,8 +245,9 @@ public class RunPanel extends BorderPane {
         @Override
         public void appendLine(String line) {
             Platform.runLater(() -> {
-                output.appendText("[" + LocalDateTime.now().format(TIME_FORMAT) + "] " + line
-                        + System.lineSeparator());
+                boolean showTimestamp = com.roze.dbnavigator.db.AppSettingsStore.load().isShowTimestampForQueryOutput();
+                String prefix = showTimestamp ? "[" + LocalDateTime.now().format(TIME_FORMAT) + "] " : "";
+                output.appendText(prefix + line + System.lineSeparator());
                 if (autoScroll) output.positionCaret(output.getText().length());
             });
         }

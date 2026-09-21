@@ -137,7 +137,30 @@ public class JdbcClient implements AutoCloseable {
                 }
                 if (statementHolder != null) statementHolder.set(stmt);
                 stmt.setMaxRows(maxRows);
+
+                boolean isOracleDbms = profile.getType() == ConnectionProfile.DatabaseType.ORACLE
+                        && com.roze.dbnavigator.db.AppSettingsStore.load().isEnableDbmsOutput();
+                if (isOracleDbms) {
+                    try (Statement enableStmt = conn.createStatement()) {
+                        enableStmt.execute("BEGIN DBMS_OUTPUT.ENABLE(1000000); END;");
+                    } catch (Exception ignored) {}
+                }
+
                 boolean hasResultSet = stmt.execute(sql);
+
+                if (isOracleDbms) {
+                    try (CallableStatement cs = conn.prepareCall("BEGIN DBMS_OUTPUT.GET_LINE(?, ?); END;")) {
+                        cs.registerOutParameter(1, java.sql.Types.VARCHAR);
+                        cs.registerOutParameter(2, java.sql.Types.INTEGER);
+                        while (true) {
+                            cs.execute();
+                            int status = cs.getInt(2);
+                            if (status != 0) break;
+                            String line = cs.getString(1);
+                            if (line != null) result.getDbmsOutput().add(line);
+                        }
+                    } catch (Exception ignored) {}
+                }
 
                 if (hasResultSet) {
                     try (ResultSet rs = stmt.getResultSet()) {

@@ -1,6 +1,7 @@
 package com.roze.dbnavigator.ui;
 
 import com.roze.dbnavigator.db.AppSettingsStore;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
@@ -776,6 +777,8 @@ public final class SettingsDialog {
             return buildQueryExecutionPanel(settings, inputs, navigateTo);
         } else if ("Database / Query Execution / Output and Results".equals(fullPath) || "Output and Results".equals(fullPath)) {
             return buildOutputAndResultsPanel(settings, inputs);
+        } else if ("Database / Query Execution / User Parameters".equals(fullPath) || "User Parameters".equals(fullPath)) {
+            return buildUserParametersPanel(settings, inputs);
         } else if ("Database / Data Editor and Viewer".equals(fullPath) || "Appearance & Behavior / Data Editor and Viewer".equals(fullPath)) {
             return buildDataEditorPanel(settings, inputs);
         } else if ("Database / Database Explorer".equals(fullPath)) {
@@ -1504,9 +1507,77 @@ public final class SettingsDialog {
     }
 
     private static VBox buildOutputAndResultsPanel(AppSettingsStore.Settings settings, Map<String, Object> inputs) {
-        Label title = new Label("Output and Results");
-        title.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: -text;");
+        Label breadcrumb = new Label("Database \u203A Query Execution \u203A Output and Results");
+        breadcrumb.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 13px; -fx-padding: 0 0 6 0;");
 
+        // 1. Output
+        Label outputHeader = new Label("Output");
+        outputHeader.setStyle("-fx-font-weight: bold; -fx-text-fill: -text;");
+
+        CheckBox showTimestamp = new CheckBox("Show timestamp for query output");
+        showTimestamp.setSelected(settings.isShowTimestampForQueryOutput());
+
+        CheckBox enableDbms = new CheckBox("Enable DBMS_OUTPUT");
+        enableDbms.setSelected(settings.isEnableDbmsOutput());
+        Label dbmsHint = new Label("Applicable for Oracle and IBM Db2 LUW only");
+        dbmsHint.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 11px;");
+        HBox dbmsRow = new HBox(8, enableDbms, dbmsHint);
+        dbmsRow.setAlignment(Pos.CENTER_LEFT);
+
+        VBox outputBox = new VBox(8, outputHeader, showTimestamp, dbmsRow);
+
+        // 2. Results
+        Label resultsHeader = new Label("Results");
+        resultsHeader.setStyle("-fx-font-weight: bold; -fx-text-fill: -text;");
+
+        CheckBox showResultsInEditor = new CheckBox("Show results in editor");
+        showResultsInEditor.setSelected(settings.isShowResultsInEditor());
+
+        CheckBox createTitle = new CheckBox("Create title for results from comment before query");
+        createTitle.setSelected(settings.isCreateTitleFromComment());
+
+        Label treatTitleLabel = new Label("Treat text as title after");
+        treatTitleLabel.setStyle("-fx-text-fill: -text;");
+        TextField treatTitleField = new TextField(settings.getTitleAfterCommentText().isEmpty()
+                ? "comment beginning" : settings.getTitleAfterCommentText());
+        treatTitleField.setPromptText("comment beginning");
+        treatTitleField.setPrefWidth(160);
+        HBox treatRow = new HBox(8, treatTitleLabel, treatTitleField);
+        treatRow.setAlignment(Pos.CENTER_LEFT);
+        treatRow.setPadding(new Insets(0, 0, 0, 22));
+        treatRow.disableProperty().bind(createTitle.selectedProperty().not());
+
+        VBox resultsBox = new VBox(8, resultsHeader, showResultsInEditor, createTitle, treatRow);
+
+        // 3. Services Tool Window
+        Label servicesHeader = new Label("Services Tool Window");
+        servicesHeader.setStyle("-fx-font-weight: bold; -fx-text-fill: -text;");
+
+        Label showServicesLabel = new Label("Show Services tool window for query execution output:");
+        ComboBox<String> showServicesCombo = new ComboBox<>();
+        showServicesCombo.getItems().addAll(
+                "For all output",
+                "For query output, errors, and result sets",
+                "For errors and result sets",
+                "For result sets",
+                "Never"
+        );
+        showServicesCombo.setValue(settings.getShowServicesOutput());
+        showServicesCombo.setPrefWidth(320);
+
+        CheckBox focusServices = new CheckBox("Focus on Services tool window in window mode");
+        focusServices.setSelected(settings.isFocusServicesInWindowMode());
+
+        CheckBox openNewServicesTab = new CheckBox("Open new Services tab for sessions");
+        openNewServicesTab.setSelected(settings.isOpenNewServicesTabForSessions());
+
+        CheckBox activateServicesSelectedFile = new CheckBox("Activate Services output pane for selected file only");
+        activateServicesSelectedFile.setSelected(settings.isActivateServicesForSelectedFileOnly());
+
+        VBox servicesBox = new VBox(8, servicesHeader, showServicesLabel, showServicesCombo,
+                focusServices, openNewServicesTab, activateServicesSelectedFile);
+
+        // Query limits
         Label timeoutLabel = new Label("Query timeout (seconds):");
         Spinner<Integer> timeoutSpinner = new Spinner<>(5, 600, settings.getQueryTimeoutSeconds(), 5);
         timeoutSpinner.setEditable(true);
@@ -1520,26 +1591,218 @@ public final class SettingsDialog {
         CheckBox autoCommit = new CheckBox("Auto-commit transactions by default");
         autoCommit.setSelected(settings.isAutoCommit());
 
-        CheckBox singleTxScript = new CheckBox("Treat multi-statement scripts as single transaction");
-        singleTxScript.setSelected(true);
+        GridPane limitsGrid = new GridPane();
+        limitsGrid.setHgap(14);
+        limitsGrid.setVgap(8);
+        limitsGrid.add(timeoutLabel, 0, 0);
+        limitsGrid.add(timeoutSpinner, 1, 0);
+        limitsGrid.add(maxRowsLabel, 0, 1);
+        limitsGrid.add(maxRowsSpinner, 1, 1);
+        limitsGrid.add(autoCommit, 0, 2, 2, 1);
 
-        CheckBox highlightExec = new CheckBox("Highlight execution point in SQL console");
-        highlightExec.setSelected(true);
-
-        GridPane grid = new GridPane();
-        grid.setHgap(14);
-        grid.setVgap(10);
-        grid.add(timeoutLabel, 0, 0);
-        grid.add(timeoutSpinner, 1, 0);
-        grid.add(maxRowsLabel, 0, 1);
-        grid.add(maxRowsSpinner, 1, 1);
-
+        inputs.put("showTimestampForQueryOutput", showTimestamp);
+        inputs.put("enableDbmsOutput", enableDbms);
+        inputs.put("showResultsInEditor", showResultsInEditor);
+        inputs.put("createTitleFromComment", createTitle);
+        inputs.put("titleAfterCommentText", treatTitleField);
+        inputs.put("showServicesOutput", showServicesCombo);
+        inputs.put("focusServicesInWindowMode", focusServices);
+        inputs.put("openNewServicesTabForSessions", openNewServicesTab);
+        inputs.put("activateServicesForSelectedFileOnly", activateServicesSelectedFile);
         inputs.put("timeoutSpinner", timeoutSpinner);
         inputs.put("maxRowsSpinner", maxRowsSpinner);
         inputs.put("autoCommit", autoCommit);
 
-        VBox panel = new VBox(14, title, grid, autoCommit, singleTxScript, highlightExec);
-        panel.setPadding(new Insets(4, 8, 16, 8));
+        VBox panel = new VBox(14, breadcrumb, outputBox, new Separator(), resultsBox, new Separator(), servicesBox, new Separator(), limitsGrid);
+        panel.setPadding(new Insets(6, 12, 16, 12));
+        return panel;
+    }
+
+    private static VBox buildUserParametersPanel(AppSettingsStore.Settings settings, Map<String, Object> inputs) {
+        Label breadcrumb = new Label("Database \u203A Query Execution \u203A User Parameters");
+        breadcrumb.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 13px;");
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        Hyperlink revertLink = new Hyperlink("Revert changes");
+        revertLink.setStyle("-fx-font-size: 11px;");
+
+        HBox topBar = new HBox(8, breadcrumb, spacer, revertLink);
+        topBar.setAlignment(Pos.CENTER_LEFT);
+
+        CheckBox enableInConsoles = new CheckBox("Enable in query consoles and SQL files");
+        enableInConsoles.setSelected(settings.isEnableUserParameters());
+
+        CheckBox enableInLiterals = new CheckBox("Enable in string literals with SQL injection");
+        enableInLiterals.setSelected(settings.isEnableUserParametersInLiteralsWithInjection());
+
+        CheckBox substituteInsideStrings = new CheckBox("Substitute inside SQL strings");
+        substituteInsideStrings.setSelected(settings.isSubstituteInsideSqlStrings());
+
+        Label patternsLabel = new Label("Parameter patterns:");
+        patternsLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: -text;");
+
+        // Action buttons
+        Button addBtn = new Button("+");
+        addBtn.setPrefWidth(28);
+        Button removeBtn = new Button("—");
+        removeBtn.setPrefWidth(28);
+        Button upBtn = new Button("↑");
+        upBtn.setPrefWidth(28);
+        Button downBtn = new Button("↓");
+        downBtn.setPrefWidth(28);
+        HBox listToolbar = new HBox(4, addBtn, removeBtn, upBtn, downBtn);
+        listToolbar.setAlignment(Pos.CENTER_LEFT);
+
+        ObservableList<AppSettingsStore.UserParameterPattern> items = FXCollections.observableArrayList();
+        for (AppSettingsStore.UserParameterPattern p : settings.getUserParameterPatterns()) {
+            items.add(p.copy());
+        }
+
+        TableView<AppSettingsStore.UserParameterPattern> table = new TableView<>(items);
+        table.setPrefHeight(200);
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+
+        TableColumn<AppSettingsStore.UserParameterPattern, String> patCol = new TableColumn<>("Pattern");
+        patCol.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getPattern()));
+        patCol.setPrefWidth(180);
+
+        TableColumn<AppSettingsStore.UserParameterPattern, String> scopeCol = new TableColumn<>("Scope");
+        scopeCol.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getScope()));
+        scopeCol.setPrefWidth(100);
+
+        TableColumn<AppSettingsStore.UserParameterPattern, String> langCol = new TableColumn<>("Languages");
+        langCol.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getLanguages()));
+        langCol.setPrefWidth(160);
+
+        table.getColumns().addAll(patCol, scopeCol, langCol);
+
+        // Bottom Detail Editor (Image 4)
+        VBox detailBox = new VBox(8);
+        detailBox.setPadding(new Insets(8, 8, 8, 8));
+        detailBox.setStyle("-fx-background-color: -surface; -fx-border-color: -border; -fx-border-width: 1px; -fx-border-radius: 4px;");
+
+        Label patternLabel = new Label("Pattern:");
+        TextField patternField = new TextField();
+        patternField.setPrefWidth(350);
+        HBox patternRow = new HBox(8, patternLabel, patternField);
+        patternRow.setAlignment(Pos.CENTER_LEFT);
+
+        CheckBox inScriptsCheck = new CheckBox("In scripts");
+        CheckBox inLiteralsCheck = new CheckBox("In literals");
+        ComboBox<String> langCombo = new ComboBox<>();
+        langCombo.getItems().addAll("All languages", "All excl. SQL", "XML", "Python", "JAVA, PHP, Python", "PostgreSQL");
+        langCombo.setPrefWidth(160);
+
+        HBox detailOptions = new HBox(16, inScriptsCheck, inLiteralsCheck, langCombo);
+        detailOptions.setAlignment(Pos.CENTER_LEFT);
+
+        detailBox.getChildren().addAll(patternRow, detailOptions);
+        detailBox.setDisable(true);
+
+        table.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, selected) -> {
+            if (selected != null) {
+                detailBox.setDisable(false);
+                patternField.setText(selected.getPattern());
+                inScriptsCheck.setSelected(selected.isInScripts());
+                inLiteralsCheck.setSelected(selected.isInLiterals());
+                langCombo.setValue(selected.getLanguages());
+            } else {
+                detailBox.setDisable(true);
+            }
+        });
+
+        patternField.textProperty().addListener((obs, oldVal, newVal) -> {
+            AppSettingsStore.UserParameterPattern sel = table.getSelectionModel().getSelectedItem();
+            if (sel != null && newVal != null) {
+                sel.setPattern(newVal);
+                table.refresh();
+            }
+        });
+
+        inScriptsCheck.selectedProperty().addListener((obs, oldVal, newVal) -> {
+            AppSettingsStore.UserParameterPattern sel = table.getSelectionModel().getSelectedItem();
+            if (sel != null) {
+                sel.setInScripts(newVal);
+                table.refresh();
+            }
+        });
+
+        inLiteralsCheck.selectedProperty().addListener((obs, oldVal, newVal) -> {
+            AppSettingsStore.UserParameterPattern sel = table.getSelectionModel().getSelectedItem();
+            if (sel != null) {
+                sel.setInLiterals(newVal);
+                table.refresh();
+            }
+        });
+
+        langCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
+            AppSettingsStore.UserParameterPattern sel = table.getSelectionModel().getSelectedItem();
+            if (sel != null && newVal != null) {
+                sel.setLanguages(newVal);
+                table.refresh();
+            }
+        });
+
+        addBtn.setOnAction(e -> {
+            AppSettingsStore.UserParameterPattern newP = new AppSettingsStore.UserParameterPattern("\":name\"", "everywhere", "All languages", true, false);
+            items.add(newP);
+            table.getSelectionModel().select(newP);
+            patternField.requestFocus();
+        });
+
+        removeBtn.setOnAction(e -> {
+            AppSettingsStore.UserParameterPattern sel = table.getSelectionModel().getSelectedItem();
+            if (sel != null) {
+                int idx = items.indexOf(sel);
+                items.remove(sel);
+                if (!items.isEmpty()) {
+                    table.getSelectionModel().select(Math.min(idx, items.size() - 1));
+                }
+            }
+        });
+
+        upBtn.setOnAction(e -> {
+            int idx = table.getSelectionModel().getSelectedIndex();
+            if (idx > 0) {
+                AppSettingsStore.UserParameterPattern p = items.remove(idx);
+                items.add(idx - 1, p);
+                table.getSelectionModel().select(idx - 1);
+            }
+        });
+
+        downBtn.setOnAction(e -> {
+            int idx = table.getSelectionModel().getSelectedIndex();
+            if (idx >= 0 && idx < items.size() - 1) {
+                AppSettingsStore.UserParameterPattern p = items.remove(idx);
+                items.add(idx + 1, p);
+                table.getSelectionModel().select(idx + 1);
+            }
+        });
+
+        revertLink.setOnAction(e -> {
+            enableInConsoles.setSelected(true);
+            enableInLiterals.setSelected(true);
+            substituteInsideStrings.setSelected(false);
+            items.clear();
+            for (AppSettingsStore.UserParameterPattern p : AppSettingsStore.Settings.defaultUserParameterPatterns()) {
+                items.add(p.copy());
+            }
+            if (!items.isEmpty()) table.getSelectionModel().selectFirst();
+        });
+
+        if (!items.isEmpty()) {
+            table.getSelectionModel().selectFirst();
+        }
+
+        inputs.put("enableUserParameters", enableInConsoles);
+        inputs.put("enableUserParametersInLiteralsWithInjection", enableInLiterals);
+        inputs.put("substituteInsideSqlStrings", substituteInsideStrings);
+        inputs.put("userParameterPatternsList", items);
+
+        VBox panel = new VBox(10, topBar, enableInConsoles, enableInLiterals, substituteInsideStrings,
+                patternsLabel, listToolbar, table, detailBox);
+        panel.setPadding(new Insets(6, 12, 16, 12));
         return panel;
     }
 
@@ -2566,6 +2829,67 @@ public final class SettingsDialog {
         if (inputs.containsKey("keymapCombo")) {
             ComboBox<String> combo = (ComboBox<String>) inputs.get("keymapCombo");
             if (combo.getValue() != null) settings.setKeymapPreset(combo.getValue());
+        }
+
+        // Output and Results settings
+        if (inputs.containsKey("showTimestampForQueryOutput")) {
+            CheckBox cb = (CheckBox) inputs.get("showTimestampForQueryOutput");
+            settings.setShowTimestampForQueryOutput(cb.isSelected());
+        }
+        if (inputs.containsKey("enableDbmsOutput")) {
+            CheckBox cb = (CheckBox) inputs.get("enableDbmsOutput");
+            settings.setEnableDbmsOutput(cb.isSelected());
+        }
+        if (inputs.containsKey("showResultsInEditor")) {
+            CheckBox cb = (CheckBox) inputs.get("showResultsInEditor");
+            settings.setShowResultsInEditor(cb.isSelected());
+        }
+        if (inputs.containsKey("createTitleFromComment")) {
+            CheckBox cb = (CheckBox) inputs.get("createTitleFromComment");
+            settings.setCreateTitleFromComment(cb.isSelected());
+        }
+        if (inputs.containsKey("titleAfterCommentText")) {
+            TextField tf = (TextField) inputs.get("titleAfterCommentText");
+            String t = tf.getText();
+            if (t != null && !t.equalsIgnoreCase("comment beginning")) {
+                settings.setTitleAfterCommentText(t.trim());
+            } else {
+                settings.setTitleAfterCommentText("");
+            }
+        }
+        if (inputs.containsKey("showServicesOutput")) {
+            ComboBox<String> combo = (ComboBox<String>) inputs.get("showServicesOutput");
+            if (combo.getValue() != null) settings.setShowServicesOutput(combo.getValue());
+        }
+        if (inputs.containsKey("focusServicesInWindowMode")) {
+            CheckBox cb = (CheckBox) inputs.get("focusServicesInWindowMode");
+            settings.setFocusServicesInWindowMode(cb.isSelected());
+        }
+        if (inputs.containsKey("openNewServicesTabForSessions")) {
+            CheckBox cb = (CheckBox) inputs.get("openNewServicesTabForSessions");
+            settings.setOpenNewServicesTabForSessions(cb.isSelected());
+        }
+        if (inputs.containsKey("activateServicesForSelectedFileOnly")) {
+            CheckBox cb = (CheckBox) inputs.get("activateServicesForSelectedFileOnly");
+            settings.setActivateServicesForSelectedFileOnly(cb.isSelected());
+        }
+
+        // User Parameters settings
+        if (inputs.containsKey("enableUserParameters")) {
+            CheckBox cb = (CheckBox) inputs.get("enableUserParameters");
+            settings.setEnableUserParameters(cb.isSelected());
+        }
+        if (inputs.containsKey("enableUserParametersInLiteralsWithInjection")) {
+            CheckBox cb = (CheckBox) inputs.get("enableUserParametersInLiteralsWithInjection");
+            settings.setEnableUserParametersInLiteralsWithInjection(cb.isSelected());
+        }
+        if (inputs.containsKey("substituteInsideSqlStrings")) {
+            CheckBox cb = (CheckBox) inputs.get("substituteInsideSqlStrings");
+            settings.setSubstituteInsideSqlStrings(cb.isSelected());
+        }
+        if (inputs.containsKey("userParameterPatternsList")) {
+            List<AppSettingsStore.UserParameterPattern> list = (List<AppSettingsStore.UserParameterPattern>) inputs.get("userParameterPatternsList");
+            settings.setUserParameterPatterns(new ArrayList<>(list));
         }
 
         // Persist
