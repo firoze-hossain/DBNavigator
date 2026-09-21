@@ -1,8 +1,11 @@
 package com.roze.dbnavigator.ui;
 
 import com.roze.dbnavigator.db.AppSettingsStore;
+import com.roze.dbnavigator.db.ConnectionStore;
+import com.roze.dbnavigator.model.ConnectionProfile;
 import com.roze.dbnavigator.util.CsvFormatEngine;
 import javafx.beans.property.SimpleStringProperty;
+import javafx.stage.Popup;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
@@ -866,6 +869,12 @@ public final class SettingsDialog {
             return buildAiToolsPanel(settings, inputs);
         } else if ("Database / Query Files and Consoles".equals(fullPath) || "Query Files and Consoles".equals(fullPath)) {
             return buildQueryFilesAndConsolesPanel(settings, inputs);
+        } else if ("Database / SQL Dialects".equals(fullPath) || "SQL Dialects".equals(fullPath)) {
+            return buildSqlDialectsPanel(settings, inputs);
+        } else if ("Database / SQL Resolution Scopes".equals(fullPath) || "SQL Resolution Scopes".equals(fullPath)) {
+            return buildSqlResolutionScopesPanel(settings, inputs);
+        } else if ("Database / Other".equals(fullPath) || "Other".equals(fullPath)) {
+            return buildDatabaseOtherPanel(settings, inputs);
         } else if ("Keymap".equals(fullPath)) {
             return buildKeymapPanel(settings, inputs);
         } else if ("Plugins".equals(fullPath)) {
@@ -2622,6 +2631,568 @@ public final class SettingsDialog {
         return res;
     }
 
+    public static VBox buildSqlDialectsPanel(AppSettingsStore.Settings settings, Map<String, Object> inputs) {
+        // Global SQL Dialect
+        Label globalLabel = new Label("Global SQL Dialect:");
+        globalLabel.setMinWidth(150);
+        globalLabel.setStyle("-fx-text-fill: -text;");
+
+        ComboBox<String> globalCombo = new ComboBox<>(FXCollections.observableArrayList(AppSettingsStore.Settings.defaultDialectList()));
+        globalCombo.setValue(settings.getGlobalSqlDialect() != null ? settings.getGlobalSqlDialect() : "<None>");
+        globalCombo.setPrefWidth(240);
+        inputs.put("sqlDialects_globalSqlDialect", globalCombo);
+
+        HBox globalRow = new HBox(12, globalLabel, globalCombo);
+        globalRow.setAlignment(Pos.CENTER_LEFT);
+
+        // Project SQL Dialect
+        Label projectLabel = new Label("Project SQL Dialect:");
+        projectLabel.setMinWidth(150);
+        projectLabel.setStyle("-fx-text-fill: -text;");
+
+        ComboBox<String> projectCombo = new ComboBox<>(FXCollections.observableArrayList(AppSettingsStore.Settings.defaultDialectList()));
+        projectCombo.setValue(settings.getProjectSqlDialect() != null ? settings.getProjectSqlDialect() : "<None>");
+        projectCombo.setPrefWidth(240);
+        inputs.put("sqlDialects_projectSqlDialect", projectCombo);
+
+        HBox projectRow = new HBox(12, projectLabel, projectCombo);
+        projectRow.setAlignment(Pos.CENTER_LEFT);
+
+        // Table toolbar
+        Button addBtn = new Button("+");
+        addBtn.setPrefWidth(28);
+        Button removeBtn = new Button("—");
+        removeBtn.setPrefWidth(28);
+        Button editBtn = new Button("✎");
+        editBtn.setPrefWidth(28);
+
+        HBox toolbar = new HBox(4, addBtn, removeBtn, editBtn);
+        toolbar.setAlignment(Pos.CENTER_LEFT);
+        toolbar.setPadding(new Insets(6, 0, 2, 0));
+
+        // Mappings Table
+        ObservableList<AppSettingsStore.SqlDialectMappingConfig> mappingsList = FXCollections.observableArrayList();
+        if (settings.getSqlDialectMappings() != null) {
+            for (AppSettingsStore.SqlDialectMappingConfig m : settings.getSqlDialectMappings()) {
+                mappingsList.add(m.copy());
+            }
+        }
+        inputs.put("sqlDialects_mappings", mappingsList);
+
+        TableView<AppSettingsStore.SqlDialectMappingConfig> table = new TableView<>(mappingsList);
+        table.setPlaceholder(new Label("New Mapping Alt+Insert"));
+        table.setPrefHeight(280);
+        VBox.setVgrow(table, Priority.ALWAYS);
+
+        TableColumn<AppSettingsStore.SqlDialectMappingConfig, String> pathCol = new TableColumn<>("Path ^");
+        pathCol.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getPath()));
+        pathCol.setPrefWidth(340);
+
+        TableColumn<AppSettingsStore.SqlDialectMappingConfig, String> dialectCol = new TableColumn<>("SQL Dialect");
+        dialectCol.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getDialect()));
+        dialectCol.setPrefWidth(240);
+
+        table.getColumns().addAll(pathCol, dialectCol);
+
+        addBtn.setOnAction(e -> {
+            Dialog<AppSettingsStore.SqlDialectMappingConfig> dialog = new Dialog<>();
+            dialog.setTitle("New SQL Dialect Mapping");
+            dialog.setHeaderText("Specify file/directory path and SQL dialect");
+
+            ButtonType okType = new ButtonType("Add", ButtonBar.ButtonData.OK_DONE);
+            dialog.getDialogPane().getButtonTypes().addAll(okType, ButtonType.CANCEL);
+
+            TextField pathField = new TextField();
+            pathField.setPromptText("Project or file path (e.g. /src/sql)");
+            pathField.setPrefWidth(300);
+
+            ComboBox<String> dCombo = new ComboBox<>(FXCollections.observableArrayList(AppSettingsStore.Settings.defaultDialectList()));
+            dCombo.setValue("Generic SQL");
+            dCombo.setPrefWidth(300);
+
+            GridPane grid = new GridPane();
+            grid.setHgap(10);
+            grid.setVgap(10);
+            grid.setPadding(new Insets(10));
+            grid.add(new Label("Path:"), 0, 0);
+            grid.add(pathField, 1, 0);
+            grid.add(new Label("Dialect:"), 0, 1);
+            grid.add(dCombo, 1, 1);
+
+            dialog.getDialogPane().setContent(grid);
+            dialog.setResultConverter(b -> {
+                if (b == okType && pathField.getText() != null && !pathField.getText().isBlank()) {
+                    return new AppSettingsStore.SqlDialectMappingConfig(pathField.getText().trim(), dCombo.getValue());
+                }
+                return null;
+            });
+            dialog.showAndWait().ifPresent(mappingsList::add);
+        });
+
+        removeBtn.setOnAction(e -> {
+            AppSettingsStore.SqlDialectMappingConfig sel = table.getSelectionModel().getSelectedItem();
+            if (sel != null) mappingsList.remove(sel);
+        });
+
+        editBtn.setOnAction(e -> {
+            AppSettingsStore.SqlDialectMappingConfig sel = table.getSelectionModel().getSelectedItem();
+            if (sel != null) {
+                Dialog<AppSettingsStore.SqlDialectMappingConfig> dialog = new Dialog<>();
+                dialog.setTitle("Edit SQL Dialect Mapping");
+                ButtonType okType = new ButtonType("Save", ButtonBar.ButtonData.OK_DONE);
+                dialog.getDialogPane().getButtonTypes().addAll(okType, ButtonType.CANCEL);
+
+                TextField pathField = new TextField(sel.getPath());
+                ComboBox<String> dCombo = new ComboBox<>(FXCollections.observableArrayList(AppSettingsStore.Settings.defaultDialectList()));
+                dCombo.setValue(sel.getDialect());
+
+                GridPane grid = new GridPane();
+                grid.setHgap(10);
+                grid.setVgap(10);
+                grid.setPadding(new Insets(10));
+                grid.add(new Label("Path:"), 0, 0);
+                grid.add(pathField, 1, 0);
+                grid.add(new Label("Dialect:"), 0, 1);
+                grid.add(dCombo, 1, 1);
+
+                dialog.getDialogPane().setContent(grid);
+                dialog.setResultConverter(b -> {
+                    if (b == okType && pathField.getText() != null && !pathField.getText().isBlank()) {
+                        sel.setPath(pathField.getText().trim());
+                        sel.setDialect(dCombo.getValue());
+                        table.refresh();
+                        return sel;
+                    }
+                    return null;
+                });
+                dialog.showAndWait();
+            }
+        });
+
+        // Bottom Help Text
+        Label helpText = new Label("To change SQL dialect DataGrip uses for a file, a directory, or the entire project, add its path if necessary and then choose a dialect from the drop-down list. Advanced coding assistance may not be available for Generic SQL dialect.");
+        helpText.setWrapText(true);
+        helpText.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 11px; -fx-line-spacing: 2;");
+        helpText.setPadding(new Insets(6, 0, 0, 0));
+
+        VBox panel = new VBox(8, globalRow, projectRow, toolbar, table, helpText);
+        panel.setPadding(new Insets(6, 12, 28, 12));
+        return panel;
+    }
+
+    public static VBox buildSqlResolutionScopesPanel(AppSettingsStore.Settings settings, Map<String, Object> inputs) {
+        // Top row with Project mapping and Revert changes link
+        Label projectMapLabel = new Label("Project mapping:");
+        projectMapLabel.setMinWidth(120);
+        projectMapLabel.setStyle("-fx-text-fill: -text;");
+
+        Button scopeDropdownBtn = new Button(settings.getProjectResolutionScope());
+        scopeDropdownBtn.setStyle("-fx-background-color: #2b2d30; -fx-text-fill: #dfe1e5; -fx-border-color: #4e5157; "
+                + "-fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 4 10; -fx-cursor: hand;");
+        scopeDropdownBtn.setMinWidth(220);
+        inputs.put("sqlResolution_projectScope", scopeDropdownBtn);
+
+        Hyperlink revertLink = new Hyperlink("Revert changes");
+        revertLink.setStyle("-fx-text-fill: #3574F0; -fx-font-size: 12px; -fx-border-width: 0;");
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        HBox topRow = new HBox(8, projectMapLabel, scopeDropdownBtn, spacer, revertLink);
+        topRow.setAlignment(Pos.CENTER_LEFT);
+
+        // Mappings Table
+        ObservableList<AppSettingsStore.SqlResolutionScopeMappingConfig> mappingsList = FXCollections.observableArrayList();
+        if (settings.getSqlResolutionScopeMappings() != null) {
+            for (AppSettingsStore.SqlResolutionScopeMappingConfig m : settings.getSqlResolutionScopeMappings()) {
+                mappingsList.add(m.copy());
+            }
+        }
+        inputs.put("sqlResolution_mappings", mappingsList);
+
+        revertLink.setOnAction(e -> {
+            scopeDropdownBtn.setText("<Default> (<Everything>)");
+            mappingsList.clear();
+        });
+
+        // Interactive Tree Popup for Project Mapping
+        Popup treePopup = new Popup();
+        treePopup.setAutoHide(true);
+
+        VBox popupContent = new VBox(6);
+        popupContent.setStyle("-fx-background-color: #1e1f22; -fx-border-color: #393b40; -fx-border-radius: 4; "
+                + "-fx-background-radius: 4; -fx-padding: 8; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.4), 10, 0, 0, 2);");
+        popupContent.setPrefWidth(320);
+        popupContent.setPrefHeight(280);
+
+        Button refreshBtn = new Button("🔄");
+        refreshBtn.setStyle("-fx-font-size: 11px; -fx-padding: 2 6;");
+        Button expandBtn = new Button("↕");
+        expandBtn.setStyle("-fx-font-size: 11px; -fx-padding: 2 6;");
+        Button closeBtn = new Button("✕");
+        closeBtn.setStyle("-fx-font-size: 11px; -fx-padding: 2 6;");
+        closeBtn.setOnAction(ev -> treePopup.hide());
+
+        Region popSpacer = new Region();
+        HBox.setHgrow(popSpacer, Priority.ALWAYS);
+        HBox popHeader = new HBox(4, popSpacer, refreshBtn, expandBtn, closeBtn);
+        popHeader.setAlignment(Pos.CENTER_RIGHT);
+
+        CheckBoxTreeItem<String> rootItem = new CheckBoxTreeItem<>("All Data Sources");
+        rootItem.setExpanded(true);
+        rootItem.setSelected(settings.getProjectResolutionScope().contains("All Data Sources")
+                || settings.getProjectResolutionScope().contains("<Default>"));
+
+        List<ConnectionProfile> profiles = ConnectionStore.load();
+        if (profiles.isEmpty()) {
+            // Default sample matching DataGrip screenshot
+            CheckBoxTreeItem<String> dsItem = new CheckBoxTreeItem<>("\uD83D\uDC18 postgres@localhost");
+            dsItem.setExpanded(true);
+            dsItem.getChildren().add(new CheckBoxTreeItem<>("All Databases"));
+            dsItem.getChildren().add(new CheckBoxTreeItem<>("erpdb"));
+            dsItem.getChildren().add(new CheckBoxTreeItem<>("nexadb"));
+            dsItem.getChildren().add(new CheckBoxTreeItem<>("postgres"));
+            rootItem.getChildren().add(dsItem);
+        } else {
+            for (ConnectionProfile cp : profiles) {
+                String icon = cp.getType() != null && cp.getType().isRelational() ? "\uD83D\uDDA5 " : "\uD83D\uDCC1 ";
+                CheckBoxTreeItem<String> dsItem = new CheckBoxTreeItem<>(icon + cp.getName());
+                dsItem.setExpanded(true);
+                dsItem.getChildren().add(new CheckBoxTreeItem<>("All Databases"));
+                if (cp.getDatabase() != null && !cp.getDatabase().isBlank()) {
+                    dsItem.getChildren().add(new CheckBoxTreeItem<>(cp.getDatabase()));
+                }
+                rootItem.getChildren().add(dsItem);
+            }
+        }
+
+        TreeView<String> scopeTree = new TreeView<>(rootItem);
+        scopeTree.setCellFactory(javafx.scene.control.cell.CheckBoxTreeCell.forTreeView());
+        scopeTree.setShowRoot(true);
+        VBox.setVgrow(scopeTree, Priority.ALWAYS);
+
+        expandBtn.setOnAction(ev -> {
+            boolean exp = !rootItem.isExpanded();
+            rootItem.setExpanded(exp);
+            for (TreeItem<String> c : rootItem.getChildren()) c.setExpanded(exp);
+        });
+
+        refreshBtn.setOnAction(ev -> {
+            rootItem.getChildren().clear();
+            List<ConnectionProfile> reloaded = ConnectionStore.load();
+            if (reloaded.isEmpty()) {
+                CheckBoxTreeItem<String> dsItem = new CheckBoxTreeItem<>("\uD83D\uDC18 postgres@localhost");
+                dsItem.setExpanded(true);
+                dsItem.getChildren().add(new CheckBoxTreeItem<>("All Databases"));
+                dsItem.getChildren().add(new CheckBoxTreeItem<>("erpdb"));
+                dsItem.getChildren().add(new CheckBoxTreeItem<>("nexadb"));
+                dsItem.getChildren().add(new CheckBoxTreeItem<>("postgres"));
+                rootItem.getChildren().add(dsItem);
+            } else {
+                for (ConnectionProfile cp : reloaded) {
+                    CheckBoxTreeItem<String> dsItem = new CheckBoxTreeItem<>("\uD83D\uDDA5 " + cp.getName());
+                    dsItem.setExpanded(true);
+                    dsItem.getChildren().add(new CheckBoxTreeItem<>("All Databases"));
+                    if (cp.getDatabase() != null && !cp.getDatabase().isBlank()) {
+                        dsItem.getChildren().add(new CheckBoxTreeItem<>(cp.getDatabase()));
+                    }
+                    rootItem.getChildren().add(dsItem);
+                }
+            }
+        });
+
+        scopeTree.getSelectionModel().selectedItemProperty().addListener((obs, oldV, newV) -> {
+            if (newV != null) {
+                if (newV == rootItem) {
+                    scopeDropdownBtn.setText("<Default> (<Everything>)");
+                } else {
+                    scopeDropdownBtn.setText(newV.getValue().replaceAll("^[\\p{So}\\p{Sk}\\s]+", ""));
+                }
+            }
+        });
+
+        popupContent.getChildren().addAll(popHeader, scopeTree);
+        treePopup.getContent().add(popupContent);
+
+        scopeDropdownBtn.setOnAction(e -> {
+            if (!treePopup.isShowing()) {
+                javafx.geometry.Point2D pt = scopeDropdownBtn.localToScreen(0, scopeDropdownBtn.getHeight());
+                if (pt != null) {
+                    treePopup.show(scopeDropdownBtn, pt.getX(), pt.getY());
+                }
+            } else {
+                treePopup.hide();
+            }
+        });
+
+        // Toolbar
+        Button addBtn = new Button("+");
+        addBtn.setPrefWidth(28);
+        Button removeBtn = new Button("—");
+        removeBtn.setPrefWidth(28);
+        Button editBtn = new Button("✎");
+        editBtn.setPrefWidth(28);
+
+        HBox toolbar = new HBox(4, addBtn, removeBtn, editBtn);
+        toolbar.setAlignment(Pos.CENTER_LEFT);
+        toolbar.setPadding(new Insets(6, 0, 2, 0));
+
+        TableView<AppSettingsStore.SqlResolutionScopeMappingConfig> table = new TableView<>(mappingsList);
+        table.setPlaceholder(new Label("New Mapping Alt+Insert"));
+        table.setPrefHeight(280);
+        VBox.setVgrow(table, Priority.ALWAYS);
+
+        TableColumn<AppSettingsStore.SqlResolutionScopeMappingConfig, String> pathCol = new TableColumn<>("Path ^");
+        pathCol.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getPath()));
+        pathCol.setPrefWidth(340);
+
+        TableColumn<AppSettingsStore.SqlResolutionScopeMappingConfig, String> scopeCol = new TableColumn<>("Resolution Scope");
+        scopeCol.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getScope()));
+        scopeCol.setPrefWidth(240);
+
+        table.getColumns().addAll(pathCol, scopeCol);
+
+        addBtn.setOnAction(e -> {
+            Dialog<AppSettingsStore.SqlResolutionScopeMappingConfig> dialog = new Dialog<>();
+            dialog.setTitle("New Resolution Scope Mapping");
+            ButtonType okType = new ButtonType("Add", ButtonBar.ButtonData.OK_DONE);
+            dialog.getDialogPane().getButtonTypes().addAll(okType, ButtonType.CANCEL);
+
+            TextField pathField = new TextField();
+            pathField.setPromptText("Project or file path (e.g. /src/queries)");
+            pathField.setPrefWidth(300);
+
+            TextField scField = new TextField("<Default> (<Everything>)");
+            scField.setPrefWidth(300);
+
+            GridPane grid = new GridPane();
+            grid.setHgap(10);
+            grid.setVgap(10);
+            grid.setPadding(new Insets(10));
+            grid.add(new Label("Path:"), 0, 0);
+            grid.add(pathField, 1, 0);
+            grid.add(new Label("Scope:"), 0, 1);
+            grid.add(scField, 1, 1);
+
+            dialog.getDialogPane().setContent(grid);
+            dialog.setResultConverter(b -> {
+                if (b == okType && pathField.getText() != null && !pathField.getText().isBlank()) {
+                    return new AppSettingsStore.SqlResolutionScopeMappingConfig(pathField.getText().trim(), scField.getText().trim());
+                }
+                return null;
+            });
+            dialog.showAndWait().ifPresent(mappingsList::add);
+        });
+
+        removeBtn.setOnAction(e -> {
+            AppSettingsStore.SqlResolutionScopeMappingConfig sel = table.getSelectionModel().getSelectedItem();
+            if (sel != null) mappingsList.remove(sel);
+        });
+
+        editBtn.setOnAction(e -> {
+            AppSettingsStore.SqlResolutionScopeMappingConfig sel = table.getSelectionModel().getSelectedItem();
+            if (sel != null) {
+                Dialog<AppSettingsStore.SqlResolutionScopeMappingConfig> dialog = new Dialog<>();
+                dialog.setTitle("Edit Resolution Scope Mapping");
+                ButtonType okType = new ButtonType("Save", ButtonBar.ButtonData.OK_DONE);
+                dialog.getDialogPane().getButtonTypes().addAll(okType, ButtonType.CANCEL);
+
+                TextField pathField = new TextField(sel.getPath());
+                TextField scField = new TextField(sel.getScope());
+
+                GridPane grid = new GridPane();
+                grid.setHgap(10);
+                grid.setVgap(10);
+                grid.setPadding(new Insets(10));
+                grid.add(new Label("Path:"), 0, 0);
+                grid.add(pathField, 1, 0);
+                grid.add(new Label("Scope:"), 0, 1);
+                grid.add(scField, 1, 1);
+
+                dialog.getDialogPane().setContent(grid);
+                dialog.setResultConverter(b -> {
+                    if (b == okType && pathField.getText() != null && !pathField.getText().isBlank()) {
+                        sel.setPath(pathField.getText().trim());
+                        sel.setScope(scField.getText().trim());
+                        table.refresh();
+                        return sel;
+                    }
+                    return null;
+                });
+                dialog.showAndWait();
+            }
+        });
+
+        // Bottom Help Text
+        Label helpText = new Label("To configure the unqualified SQL names resolution for a file, a directory, or the entire project, add its path if necessary and then choose the desired data sources, databases and schemas in the drop-down.");
+        helpText.setWrapText(true);
+        helpText.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 11px; -fx-line-spacing: 2;");
+        helpText.setPadding(new Insets(6, 0, 0, 0));
+
+        VBox panel = new VBox(8, topRow, toolbar, table, helpText);
+        panel.setPadding(new Insets(6, 12, 28, 12));
+        return panel;
+    }
+
+    public static VBox buildDatabaseOtherPanel(AppSettingsStore.Settings settings, Map<String, Object> inputs) {
+        // Section: Modify Object
+        HBox modObjSection = buildTitledSectionLine("Modify Object");
+        CheckBox confirmCancelCheck = new CheckBox("Confirm cancellation for dialogs that modify schema");
+        confirmCancelCheck.setSelected(settings.isConfirmCancellationForModifySchemaDialogs());
+        inputs.put("other_confirmCancellation", confirmCancelCheck);
+
+        // Section: Refactoring
+        HBox refactorSection = buildTitledSectionLine("Refactoring");
+        CheckBox previewScriptCheck = new CheckBox("Show preview of valid script when updating source text");
+        previewScriptCheck.setSelected(settings.isShowPreviewOfValidScriptWhenUpdatingSource());
+        inputs.put("other_showPreviewOfValidScript", previewScriptCheck);
+
+        // Section: DDL Mappings
+        HBox ddlSection = buildTitledSectionLine("DDL Mappings");
+        CheckBox suggestDdlCheck = new CheckBox("Suggest dumping DDL for new mappings");
+        suggestDdlCheck.setSelected(settings.isSuggestDumpingDdlForNewMappings());
+        inputs.put("other_suggestDumpingDdl", suggestDdlCheck);
+
+        // Section: Code Generation
+        HBox codeGenSection = buildTitledSectionLine("Code Generation");
+        Label codeGenLabel = new Label("Generate context templates:");
+        codeGenLabel.setMinWidth(180);
+        codeGenLabel.setStyle("-fx-text-fill: -text;");
+
+        ComboBox<String> codeGenCombo = new ComboBox<>(FXCollections.observableArrayList(
+                "Append to existing console",
+                "Open in new console",
+                "Ask"
+        ));
+        codeGenCombo.setValue(settings.getGenerateContextTemplates() != null ? settings.getGenerateContextTemplates() : "Append to existing console");
+        codeGenCombo.setPrefWidth(220);
+        inputs.put("other_generateContextTemplates", codeGenCombo);
+
+        HBox codeGenRow = new HBox(8, codeGenLabel, codeGenCombo);
+        codeGenRow.setAlignment(Pos.CENTER_LEFT);
+
+        // Section: Virtual Foreign Keys
+        HBox vfkSection = buildTitledSectionLine("Virtual Foreign Keys");
+
+        Button addVfkBtn = new Button("+");
+        addVfkBtn.setPrefWidth(28);
+        Button removeVfkBtn = new Button("—");
+        removeVfkBtn.setPrefWidth(28);
+        Button testVfkBtn = new Button("▶");
+        testVfkBtn.setPrefWidth(28);
+
+        HBox vfkToolbar = new HBox(4, addVfkBtn, removeVfkBtn, testVfkBtn);
+        vfkToolbar.setAlignment(Pos.CENTER_LEFT);
+
+        ObservableList<AppSettingsStore.VirtualForeignKeyRule> vfkList = FXCollections.observableArrayList();
+        if (settings.getVirtualForeignKeys() != null) {
+            for (AppSettingsStore.VirtualForeignKeyRule r : settings.getVirtualForeignKeys()) {
+                vfkList.add(r.copy());
+            }
+        }
+        if (vfkList.isEmpty()) {
+            vfkList.add(new AppSettingsStore.VirtualForeignKeyRule("(.*)_(?i)id", "$1\\.(?i)id"));
+        }
+        inputs.put("other_virtualForeignKeys", vfkList);
+
+        TableView<AppSettingsStore.VirtualForeignKeyRule> vfkTable = new TableView<>(vfkList);
+        vfkTable.setPrefHeight(120);
+
+        TableColumn<AppSettingsStore.VirtualForeignKeyRule, String> colPatternCol = new TableColumn<>("Column pattern");
+        colPatternCol.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getColumnPattern()));
+        colPatternCol.setPrefWidth(280);
+
+        TableColumn<AppSettingsStore.VirtualForeignKeyRule, String> targetPatternCol = new TableColumn<>("Target column pattern");
+        targetPatternCol.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getTargetColumnPattern()));
+        targetPatternCol.setPrefWidth(280);
+
+        vfkTable.getColumns().addAll(colPatternCol, targetPatternCol);
+
+        addVfkBtn.setOnAction(e -> {
+            Dialog<AppSettingsStore.VirtualForeignKeyRule> dialog = new Dialog<>();
+            dialog.setTitle("New Virtual Foreign Key Pattern");
+            ButtonType okType = new ButtonType("Add", ButtonBar.ButtonData.OK_DONE);
+            dialog.getDialogPane().getButtonTypes().addAll(okType, ButtonType.CANCEL);
+
+            TextField colField = new TextField("(.*)_(?i)id");
+            TextField targetField = new TextField("$1\\.(?i)id");
+
+            GridPane grid = new GridPane();
+            grid.setHgap(10);
+            grid.setVgap(10);
+            grid.setPadding(new Insets(10));
+            grid.add(new Label("Column pattern:"), 0, 0);
+            grid.add(colField, 1, 0);
+            grid.add(new Label("Target pattern:"), 0, 1);
+            grid.add(targetField, 1, 1);
+
+            dialog.getDialogPane().setContent(grid);
+            dialog.setResultConverter(b -> {
+                if (b == okType && colField.getText() != null && !colField.getText().isBlank()) {
+                    return new AppSettingsStore.VirtualForeignKeyRule(colField.getText().trim(), targetField.getText().trim());
+                }
+                return null;
+            });
+            dialog.showAndWait().ifPresent(vfkList::add);
+        });
+
+        removeVfkBtn.setOnAction(e -> {
+            AppSettingsStore.VirtualForeignKeyRule sel = vfkTable.getSelectionModel().getSelectedItem();
+            if (sel != null) vfkList.remove(sel);
+        });
+
+        testVfkBtn.setOnAction(e -> {
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle("Virtual Foreign Keys Pattern Tester");
+            alert.setHeaderText("Pattern Validation");
+            alert.setContentText("Configured rules: " + vfkList.size() + " regex pattern(s) active.");
+            alert.showAndWait();
+        });
+
+        // Section: SQL Resolution
+        HBox sqlResSection = buildTitledSectionLine("SQL Resolution");
+        Label sqlResLabel = new Label("Default resolve mode for consoles:");
+        sqlResLabel.setMinWidth(220);
+        sqlResLabel.setStyle("-fx-text-fill: -text;");
+
+        ComboBox<String> sqlResCombo = new ComboBox<>(FXCollections.observableArrayList(
+                "Playground",
+                "Single data source",
+                "Exact match"
+        ));
+        sqlResCombo.setValue(settings.getDefaultResolveModeForConsoles() != null ? settings.getDefaultResolveModeForConsoles() : "Playground");
+        sqlResCombo.setPrefWidth(160);
+        inputs.put("other_defaultResolveModeForConsoles", sqlResCombo);
+
+        HBox sqlResRow = new HBox(8, sqlResLabel, sqlResCombo);
+        sqlResRow.setAlignment(Pos.CENTER_LEFT);
+
+        // Section: Editor
+        HBox editorSection = buildTitledSectionLine("Editor");
+        Label stmtDelimLabel = new Label("Statement delimiter:");
+        stmtDelimLabel.setMinWidth(160);
+        stmtDelimLabel.setStyle("-fx-text-fill: -text;");
+
+        TextField stmtDelimField = new TextField(settings.getStatementDelimiter() != null ? settings.getStatementDelimiter() : "");
+        stmtDelimField.setPrefWidth(160);
+        inputs.put("other_statementDelimiter", stmtDelimField);
+
+        HBox stmtDelimRow = new HBox(8, stmtDelimLabel, stmtDelimField);
+        stmtDelimRow.setAlignment(Pos.CENTER_LEFT);
+
+        VBox panel = new VBox(8,
+                modObjSection, confirmCancelCheck,
+                refactorSection, previewScriptCheck,
+                ddlSection, suggestDdlCheck,
+                codeGenSection, codeGenRow,
+                vfkSection, vfkToolbar, vfkTable,
+                sqlResSection, sqlResRow,
+                editorSection, stmtDelimRow
+        );
+        panel.setPadding(new Insets(6, 12, 28, 12));
+        return panel;
+    }
+
     private static VBox buildCsvFormatsPanel(AppSettingsStore.Settings settings, Map<String, Object> inputs) {
         Label breadcrumb = new Label("Database \u203A CSV Formats");
         breadcrumb.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 13px;");
@@ -4340,6 +4911,67 @@ public final class SettingsDialog {
         if (inputs.containsKey("queryFiles_useTemplateForQueryFiles")) {
             CheckBox cb = (CheckBox) inputs.get("queryFiles_useTemplateForQueryFiles");
             settings.setUseTemplateForQueryFiles(cb.isSelected());
+        }
+
+        // SQL Dialects Settings
+        if (inputs.containsKey("sqlDialects_globalSqlDialect")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("sqlDialects_globalSqlDialect");
+            if (cb.getValue() != null) settings.setGlobalSqlDialect(cb.getValue());
+        }
+        if (inputs.containsKey("sqlDialects_projectSqlDialect")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("sqlDialects_projectSqlDialect");
+            if (cb.getValue() != null) settings.setProjectSqlDialect(cb.getValue());
+        }
+        if (inputs.containsKey("sqlDialects_mappings")) {
+            ObservableList<AppSettingsStore.SqlDialectMappingConfig> list =
+                    (ObservableList<AppSettingsStore.SqlDialectMappingConfig>) inputs.get("sqlDialects_mappings");
+            settings.setSqlDialectMappings(new ArrayList<>(list));
+        }
+
+        // SQL Resolution Scopes Settings
+        if (inputs.containsKey("sqlResolution_projectScope")) {
+            Object val = inputs.get("sqlResolution_projectScope");
+            if (val instanceof Button b) {
+                settings.setProjectResolutionScope(b.getText());
+            } else if (val instanceof String s) {
+                settings.setProjectResolutionScope(s);
+            }
+        }
+        if (inputs.containsKey("sqlResolution_mappings")) {
+            ObservableList<AppSettingsStore.SqlResolutionScopeMappingConfig> list =
+                    (ObservableList<AppSettingsStore.SqlResolutionScopeMappingConfig>) inputs.get("sqlResolution_mappings");
+            settings.setSqlResolutionScopeMappings(new ArrayList<>(list));
+        }
+
+        // Other Settings
+        if (inputs.containsKey("other_confirmCancellation")) {
+            CheckBox cb = (CheckBox) inputs.get("other_confirmCancellation");
+            settings.setConfirmCancellationForModifySchemaDialogs(cb.isSelected());
+        }
+        if (inputs.containsKey("other_showPreviewOfValidScript")) {
+            CheckBox cb = (CheckBox) inputs.get("other_showPreviewOfValidScript");
+            settings.setShowPreviewOfValidScriptWhenUpdatingSource(cb.isSelected());
+        }
+        if (inputs.containsKey("other_suggestDumpingDdl")) {
+            CheckBox cb = (CheckBox) inputs.get("other_suggestDumpingDdl");
+            settings.setSuggestDumpingDdlForNewMappings(cb.isSelected());
+        }
+        if (inputs.containsKey("other_generateContextTemplates")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("other_generateContextTemplates");
+            if (cb.getValue() != null) settings.setGenerateContextTemplates(cb.getValue());
+        }
+        if (inputs.containsKey("other_virtualForeignKeys")) {
+            ObservableList<AppSettingsStore.VirtualForeignKeyRule> list =
+                    (ObservableList<AppSettingsStore.VirtualForeignKeyRule>) inputs.get("other_virtualForeignKeys");
+            settings.setVirtualForeignKeys(new ArrayList<>(list));
+        }
+        if (inputs.containsKey("other_defaultResolveModeForConsoles")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("other_defaultResolveModeForConsoles");
+            if (cb.getValue() != null) settings.setDefaultResolveModeForConsoles(cb.getValue());
+        }
+        if (inputs.containsKey("other_statementDelimiter")) {
+            TextField tf = (TextField) inputs.get("other_statementDelimiter");
+            if (tf.getText() != null) settings.setStatementDelimiter(tf.getText().trim());
         }
 
         // Persist

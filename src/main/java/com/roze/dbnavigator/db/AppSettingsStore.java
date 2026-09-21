@@ -150,6 +150,24 @@ public final class AppSettingsStore {
         public String editorTabTitleTemplate = "$NAME$ [$DATASOURCE$]";
         public boolean useTemplateForQueryFiles = true;
 
+        // SQL Dialects Settings (DataGrip Alignment)
+        public String globalSqlDialect = "<None>";
+        public String projectSqlDialect = "<None>";
+        public List<SqlDialectMappingConfig> sqlDialectMappings = new ArrayList<>();
+
+        // SQL Resolution Scopes Settings (DataGrip Alignment)
+        public String projectResolutionScope = "<Default> (<Everything>)";
+        public List<SqlResolutionScopeMappingConfig> sqlResolutionScopeMappings = new ArrayList<>();
+
+        // Other Settings (DataGrip Alignment)
+        public boolean confirmCancellationForModifySchemaDialogs = true;
+        public boolean showPreviewOfValidScriptWhenUpdatingSource = true;
+        public boolean suggestDumpingDdlForNewMappings = true;
+        public String generateContextTemplates = "Append to existing console";
+        public List<VirtualForeignKeyRule> virtualForeignKeys = defaultVirtualForeignKeys();
+        public String defaultResolveModeForConsoles = "Playground";
+        public String statementDelimiter = "";
+
         public static List<UserParameterPattern> defaultUserParameterPatterns() {
             List<UserParameterPattern> list = new ArrayList<>();
             list.add(new UserParameterPattern("\"#name#\"", "everywhere", "XML", true, false));
@@ -183,6 +201,48 @@ public final class AppSettingsStore {
             list.add(new CsvFormatConfig("Semicolon-separated", "Semicolon", "Newline", "Empty string",
                     CsvFormatConfig.defaultQuotationRules(), "When needed", false, false, false));
             return list;
+        }
+
+        public static List<VirtualForeignKeyRule> defaultVirtualForeignKeys() {
+            List<VirtualForeignKeyRule> list = new ArrayList<>();
+            list.add(new VirtualForeignKeyRule("(.*)_(?i)id", "$1\\.(?i)id"));
+            return list;
+        }
+
+        public static List<String> defaultDialectList() {
+            return List.of(
+                    "<None>",
+                    "Amazon DynamoDB",
+                    "Amazon Redshift",
+                    "Apache Cassandra",
+                    "Apache Derby",
+                    "Apache Hive",
+                    "Apache Spark",
+                    "Azure SQL Database",
+                    "ClickHouse",
+                    "CockroachDB",
+                    "Couchbase Server",
+                    "Databricks",
+                    "Exasol",
+                    "Generic SQL",
+                    "Google BigQuery",
+                    "Greenplum",
+                    "H2",
+                    "HSQLDB",
+                    "IBM Db2 iSeries",
+                    "IBM Db2 LUW",
+                    "IBM Db2 z/OS",
+                    "MariaDB",
+                    "Microsoft SQL Server",
+                    "MongoDB",
+                    "MySQL",
+                    "Oracle",
+                    "Oracle NetSuite",
+                    "Oracle SQL*Plus",
+                    "PostgreSQL",
+                    "Redis",
+                    "Snowflake"
+            );
         }
 
         public Theme getTheme() { return theme; }
@@ -556,6 +616,74 @@ public final class AppSettingsStore {
 
         public boolean isUseTemplateForQueryFiles() { return useTemplateForQueryFiles; }
         public void setUseTemplateForQueryFiles(boolean useTemplateForQueryFiles) { this.useTemplateForQueryFiles = useTemplateForQueryFiles; }
+
+        // SQL Dialects Getters and Setters
+        public String getGlobalSqlDialect() { return globalSqlDialect; }
+        public void setGlobalSqlDialect(String globalSqlDialect) {
+            this.globalSqlDialect = (globalSqlDialect != null && !globalSqlDialect.isBlank()) ? globalSqlDialect : "<None>";
+        }
+
+        public String getProjectSqlDialect() { return projectSqlDialect; }
+        public void setProjectSqlDialect(String projectSqlDialect) {
+            this.projectSqlDialect = (projectSqlDialect != null && !projectSqlDialect.isBlank()) ? projectSqlDialect : "<None>";
+        }
+
+        public List<SqlDialectMappingConfig> getSqlDialectMappings() {
+            if (sqlDialectMappings == null) sqlDialectMappings = new ArrayList<>();
+            return sqlDialectMappings;
+        }
+        public void setSqlDialectMappings(List<SqlDialectMappingConfig> sqlDialectMappings) {
+            this.sqlDialectMappings = (sqlDialectMappings != null) ? sqlDialectMappings : new ArrayList<>();
+        }
+
+        // SQL Resolution Scopes Getters and Setters
+        public String getProjectResolutionScope() { return projectResolutionScope; }
+        public void setProjectResolutionScope(String projectResolutionScope) {
+            this.projectResolutionScope = (projectResolutionScope != null && !projectResolutionScope.isBlank()) ? projectResolutionScope : "<Default> (<Everything>)";
+        }
+
+        public List<SqlResolutionScopeMappingConfig> getSqlResolutionScopeMappings() {
+            if (sqlResolutionScopeMappings == null) sqlResolutionScopeMappings = new ArrayList<>();
+            return sqlResolutionScopeMappings;
+        }
+        public void setSqlResolutionScopeMappings(List<SqlResolutionScopeMappingConfig> sqlResolutionScopeMappings) {
+            this.sqlResolutionScopeMappings = (sqlResolutionScopeMappings != null) ? sqlResolutionScopeMappings : new ArrayList<>();
+        }
+
+        // Other Settings Getters and Setters
+        public boolean isConfirmCancellationForModifySchemaDialogs() { return confirmCancellationForModifySchemaDialogs; }
+        public void setConfirmCancellationForModifySchemaDialogs(boolean val) { this.confirmCancellationForModifySchemaDialogs = val; }
+
+        public boolean isShowPreviewOfValidScriptWhenUpdatingSource() { return showPreviewOfValidScriptWhenUpdatingSource; }
+        public void setShowPreviewOfValidScriptWhenUpdatingSource(boolean val) { this.showPreviewOfValidScriptWhenUpdatingSource = val; }
+
+        public boolean isSuggestDumpingDdlForNewMappings() { return suggestDumpingDdlForNewMappings; }
+        public void setSuggestDumpingDdlForNewMappings(boolean val) { this.suggestDumpingDdlForNewMappings = val; }
+
+        public String getGenerateContextTemplates() { return generateContextTemplates; }
+        public void setGenerateContextTemplates(String val) {
+            this.generateContextTemplates = (val != null && !val.isBlank()) ? val : "Append to existing console";
+        }
+
+        public List<VirtualForeignKeyRule> getVirtualForeignKeys() {
+            if (virtualForeignKeys == null || virtualForeignKeys.isEmpty()) {
+                virtualForeignKeys = defaultVirtualForeignKeys();
+            }
+            return virtualForeignKeys;
+        }
+        public void setVirtualForeignKeys(List<VirtualForeignKeyRule> virtualForeignKeys) {
+            this.virtualForeignKeys = (virtualForeignKeys != null && !virtualForeignKeys.isEmpty()) ? virtualForeignKeys : defaultVirtualForeignKeys();
+        }
+
+        public String getDefaultResolveModeForConsoles() { return defaultResolveModeForConsoles; }
+        public void setDefaultResolveModeForConsoles(String val) {
+            this.defaultResolveModeForConsoles = (val != null && !val.isBlank()) ? val : "Playground";
+        }
+
+        public String getStatementDelimiter() { return statementDelimiter; }
+        public void setStatementDelimiter(String statementDelimiter) {
+            this.statementDelimiter = statementDelimiter != null ? statementDelimiter : "";
+        }
     }
 
     public static class UserParameterPattern {
@@ -754,6 +882,84 @@ public final class AppSettingsStore {
         @Override
         public String toString() {
             return name != null ? name : "";
+        }
+    }
+
+    public static class SqlDialectMappingConfig {
+        private String path = "";
+        private String dialect = "Generic SQL";
+
+        public SqlDialectMappingConfig() {}
+
+        public SqlDialectMappingConfig(String path, String dialect) {
+            this.path = path != null ? path : "";
+            this.dialect = dialect != null ? dialect : "Generic SQL";
+        }
+
+        public SqlDialectMappingConfig copy() {
+            return new SqlDialectMappingConfig(path, dialect);
+        }
+
+        public String getPath() { return path; }
+        public void setPath(String path) { this.path = path != null ? path : ""; }
+        public String getDialect() { return dialect; }
+        public void setDialect(String dialect) { this.dialect = dialect != null ? dialect : "Generic SQL"; }
+
+        @Override
+        public String toString() {
+            return path + " -> " + dialect;
+        }
+    }
+
+    public static class SqlResolutionScopeMappingConfig {
+        private String path = "";
+        private String scope = "<Default> (<Everything>)";
+
+        public SqlResolutionScopeMappingConfig() {}
+
+        public SqlResolutionScopeMappingConfig(String path, String scope) {
+            this.path = path != null ? path : "";
+            this.scope = scope != null ? scope : "<Default> (<Everything>)";
+        }
+
+        public SqlResolutionScopeMappingConfig copy() {
+            return new SqlResolutionScopeMappingConfig(path, scope);
+        }
+
+        public String getPath() { return path; }
+        public void setPath(String path) { this.path = path != null ? path : ""; }
+        public String getScope() { return scope; }
+        public void setScope(String scope) { this.scope = scope != null ? scope : "<Default> (<Everything>)"; }
+
+        @Override
+        public String toString() {
+            return path + " -> " + scope;
+        }
+    }
+
+    public static class VirtualForeignKeyRule {
+        private String columnPattern = "(.*)_(?i)id";
+        private String targetColumnPattern = "$1\\.(?i)id";
+
+        public VirtualForeignKeyRule() {}
+
+        public VirtualForeignKeyRule(String columnPattern, String targetColumnPattern) {
+            this.columnPattern = columnPattern != null ? columnPattern : "(.*)_(?i)id";
+            this.targetColumnPattern = targetColumnPattern != null ? targetColumnPattern : "$1\\.(?i)id";
+        }
+
+        public VirtualForeignKeyRule copy() {
+            return new VirtualForeignKeyRule(columnPattern, targetColumnPattern);
+        }
+
+        public String getColumnPattern() { return columnPattern; }
+        public void setColumnPattern(String columnPattern) { this.columnPattern = columnPattern; }
+        public String getTargetColumnPattern() { return targetColumnPattern; }
+        public void setTargetColumnPattern(String targetColumnPattern) { this.targetColumnPattern = targetColumnPattern; }
+
+        @Override
+        public String toString() {
+            return columnPattern + " -> " + targetColumnPattern;
         }
     }
 
