@@ -11,6 +11,7 @@ import com.roze.dbnavigator.model.DbObject;
 import com.roze.dbnavigator.model.QueryResult;
 import com.roze.dbnavigator.util.AppExecutor;
 import com.roze.dbnavigator.util.QueryExecutionResolver;
+import com.roze.dbnavigator.util.SqlParameters;
 import com.roze.dbnavigator.util.SqlReformatter;
 import com.roze.dbnavigator.util.SqlStatementSplitter;
 import com.roze.dbnavigator.util.UnsafeQueryDetector;
@@ -1284,16 +1285,32 @@ public class QueryTab extends Tab {
             executeStatementsSequentially(statements);
         } else {
             String singleSql = statements.get(0);
+            AppSettingsStore.Settings settings = AppSettingsStore.load();
+            String commentTitle = null;
+            if (settings.isCreateTitleFromComment()) {
+                commentTitle = SqlParameters.extractPrecedingCommentTitle(singleSql, settings.getTitleAfterCommentText());
+            }
+
             if (actionConfig.isOpenResultsInNewTab()) {
-                prepareNewResultTab(singleSql);
+                prepareNewResultTab(singleSql, commentTitle);
+            } else if (commentTitle != null) {
+                Tab selected = resultsTabPane.getSelectionModel().getSelectedItem();
+                if (selected != null) {
+                    selected.setText(commentTitle);
+                }
             }
             executeSql(singleSql);
         }
     }
 
     private void prepareNewResultTab(String sql) {
+        prepareNewResultTab(sql, null);
+    }
+
+    private void prepareNewResultTab(String sql, String customTitle) {
         resultTabCounter++;
-        String title = "Result " + resultTabCounter;
+        String title = (customTitle != null && !customTitle.isBlank())
+                ? customTitle : ("Result " + resultTabCounter);
         ResultGrid newGrid = new ResultGrid();
         newGrid.setSortRequestListener(this::sortByColumn);
         Tab tab = new Tab(title, newGrid);
@@ -1316,7 +1333,11 @@ public class QueryTab extends Tab {
         setRunningState(true);
         showDataPanel(false);
         RunPanel.RunHandle output = mainWindow.getRunPanel().openConsoleOutput(fileId, getText());
-        mainWindow.showRunPanel();
+        AppSettingsStore.Settings settings = AppSettingsStore.load();
+        String showServices = settings.getShowServicesOutput();
+        if (!"Never".equals(showServices)) {
+            mainWindow.showRunPanel();
+        }
         statusLabel.setText("Executing " + statements.size() + " statements\u2026");
 
         AppExecutor.run(() -> {
@@ -1327,6 +1348,11 @@ public class QueryTab extends Tab {
                     output.appendLine(connectionLabel() + "> " + compactSql(stmt));
                     QueryHistoryStore.record(profile.getId(), stmt);
                     QueryResult result = ClientRegistry.jdbc(profile, catalog).execute(stmt, 0);
+                    if (!result.getDbmsOutput().isEmpty()) {
+                        for (String dbms : result.getDbmsOutput()) {
+                            output.appendLine("[DBMS_OUTPUT] " + dbms);
+                        }
+                    }
                     completed++;
                     String line = result.isResultSet()
                             ? "Completed successfully: " + result.getRows().size()
@@ -1543,7 +1569,11 @@ public class QueryTab extends Tab {
 
     private RunPanel.RunHandle openRunOutput(String sql) {
         RunPanel.RunHandle output = mainWindow.getRunPanel().openConsoleOutput(fileId, getText());
-        mainWindow.showRunPanel();
+        AppSettingsStore.Settings settings = AppSettingsStore.load();
+        String showServices = settings.getShowServicesOutput();
+        if (!"Never".equals(showServices)) {
+            mainWindow.showRunPanel();
+        }
         output.appendLine(connectionLabel() + "> " + compactSql(sql));
         return output;
     }

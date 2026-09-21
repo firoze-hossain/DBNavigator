@@ -40,6 +40,37 @@ public final class AppSettingsStore {
         public boolean reviewParametersBeforeExecution = true;
         public boolean warnUnsafeQueries = true;
 
+        // Output and Results (Images 1 & 2)
+        public boolean showTimestampForQueryOutput = false;
+        public boolean enableDbmsOutput = false;
+        public boolean showResultsInEditor = false;
+        public boolean createTitleFromComment = true;
+        public String titleAfterCommentText = "";
+        public String showServicesOutput = "For all output";
+        public boolean focusServicesInWindowMode = false;
+        public boolean openNewServicesTabForSessions = false;
+        public boolean activateServicesForSelectedFileOnly = false;
+
+        // User Parameters (Images 3 & 4)
+        public boolean enableUserParameters = true;
+        public boolean enableUserParametersInLiteralsWithInjection = true;
+        public boolean substituteInsideSqlStrings = false;
+        public List<UserParameterPattern> userParameterPatterns = defaultUserParameterPatterns();
+
+        public static List<UserParameterPattern> defaultUserParameterPatterns() {
+            List<UserParameterPattern> list = new ArrayList<>();
+            list.add(new UserParameterPattern("\"#name#\"", "everywhere", "XML", true, false));
+            list.add(new UserParameterPattern("\"$a.b.c$?\"", "everywhere", "All excl. SQL", true, false));
+            list.add(new UserParameterPattern("\"#a.b.c#?\"", "everywhere", "All excl. SQL", true, false));
+            list.add(new UserParameterPattern("\"%(name)s\"", "everywhere", "Python", true, false));
+            list.add(new UserParameterPattern("\"%name\"", "everywhere", "JAVA, PHP, Python", true, false));
+            list.add(new UserParameterPattern("\":'name'\"", "everywhere", "PostgreSQL", true, false));
+            list.add(new UserParameterPattern("\"${name}\"", "everywhere", "All languages", true, false));
+            list.add(new UserParameterPattern("\"$name\"", "everywhere", "All languages", true, false));
+            list.add(new UserParameterPattern("\":name\"", "everywhere", "All languages", true, false));
+            return list;
+        }
+
         private static List<ExecuteActionConfig> defaultExecuteActions() {
             List<ExecuteActionConfig> list = new ArrayList<>();
             list.add(new ExecuteActionConfig("Execute", "Ctrl+Enter", "Ask what to execute", "Nothing", "Exactly as separate statements", false));
@@ -105,6 +136,91 @@ public final class AppSettingsStore {
         }
         public boolean isWarnUnsafeQueries() { return warnUnsafeQueries; }
         public void setWarnUnsafeQueries(boolean warnUnsafeQueries) { this.warnUnsafeQueries = warnUnsafeQueries; }
+
+        public boolean isShowTimestampForQueryOutput() { return showTimestampForQueryOutput; }
+        public void setShowTimestampForQueryOutput(boolean showTimestampForQueryOutput) { this.showTimestampForQueryOutput = showTimestampForQueryOutput; }
+
+        public boolean isEnableDbmsOutput() { return enableDbmsOutput; }
+        public void setEnableDbmsOutput(boolean enableDbmsOutput) { this.enableDbmsOutput = enableDbmsOutput; }
+
+        public boolean isShowResultsInEditor() { return showResultsInEditor; }
+        public void setShowResultsInEditor(boolean showResultsInEditor) { this.showResultsInEditor = showResultsInEditor; }
+
+        public boolean isCreateTitleFromComment() { return createTitleFromComment; }
+        public void setCreateTitleFromComment(boolean createTitleFromComment) { this.createTitleFromComment = createTitleFromComment; }
+
+        public String getTitleAfterCommentText() { return titleAfterCommentText; }
+        public void setTitleAfterCommentText(String titleAfterCommentText) { this.titleAfterCommentText = titleAfterCommentText != null ? titleAfterCommentText : ""; }
+
+        public String getShowServicesOutput() { return showServicesOutput; }
+        public void setShowServicesOutput(String showServicesOutput) { this.showServicesOutput = showServicesOutput != null ? showServicesOutput : "For all output"; }
+
+        public boolean isFocusServicesInWindowMode() { return focusServicesInWindowMode; }
+        public void setFocusServicesInWindowMode(boolean focusServicesInWindowMode) { this.focusServicesInWindowMode = focusServicesInWindowMode; }
+
+        public boolean isOpenNewServicesTabForSessions() { return openNewServicesTabForSessions; }
+        public void setOpenNewServicesTabForSessions(boolean openNewServicesTabForSessions) { this.openNewServicesTabForSessions = openNewServicesTabForSessions; }
+
+        public boolean isActivateServicesForSelectedFileOnly() { return activateServicesForSelectedFileOnly; }
+        public void setActivateServicesForSelectedFileOnly(boolean activateServicesForSelectedFileOnly) { this.activateServicesForSelectedFileOnly = activateServicesForSelectedFileOnly; }
+
+        public boolean isEnableUserParameters() { return enableUserParameters; }
+        public void setEnableUserParameters(boolean enableUserParameters) { this.enableUserParameters = enableUserParameters; }
+
+        public boolean isEnableUserParametersInLiteralsWithInjection() { return enableUserParametersInLiteralsWithInjection; }
+        public void setEnableUserParametersInLiteralsWithInjection(boolean val) { this.enableUserParametersInLiteralsWithInjection = val; }
+
+        public boolean isSubstituteInsideSqlStrings() { return substituteInsideSqlStrings; }
+        public void setSubstituteInsideSqlStrings(boolean substituteInsideSqlStrings) { this.substituteInsideSqlStrings = substituteInsideSqlStrings; }
+
+        public List<UserParameterPattern> getUserParameterPatterns() {
+            if (userParameterPatterns == null || userParameterPatterns.isEmpty()) {
+                userParameterPatterns = defaultUserParameterPatterns();
+            }
+            return userParameterPatterns;
+        }
+        public void setUserParameterPatterns(List<UserParameterPattern> patterns) {
+            this.userParameterPatterns = (patterns == null || patterns.isEmpty()) ? defaultUserParameterPatterns() : patterns;
+        }
+    }
+
+    public static class UserParameterPattern {
+        private String pattern = ":name";
+        private String scope = "everywhere";
+        private String languages = "All languages";
+        private boolean inScripts = true;
+        private boolean inLiterals = false;
+        private boolean enabled = true;
+
+        public UserParameterPattern() {}
+
+        public UserParameterPattern(String pattern, String scope, String languages, boolean inScripts, boolean inLiterals) {
+            this.pattern = pattern;
+            this.scope = scope;
+            this.languages = languages;
+            this.inScripts = inScripts;
+            this.inLiterals = inLiterals;
+            this.enabled = true;
+        }
+
+        public UserParameterPattern copy() {
+            UserParameterPattern p = new UserParameterPattern(pattern, scope, languages, inScripts, inLiterals);
+            p.enabled = this.enabled;
+            return p;
+        }
+
+        public String getPattern() { return pattern; }
+        public void setPattern(String pattern) { this.pattern = pattern; }
+        public String getScope() { return scope; }
+        public void setScope(String scope) { this.scope = scope; }
+        public String getLanguages() { return languages; }
+        public void setLanguages(String languages) { this.languages = languages; }
+        public boolean isInScripts() { return inScripts; }
+        public void setInScripts(boolean inScripts) { this.inScripts = inScripts; }
+        public boolean isInLiterals() { return inLiterals; }
+        public void setInLiterals(boolean inLiterals) { this.inLiterals = inLiterals; }
+        public boolean isEnabled() { return enabled; }
+        public void setEnabled(boolean enabled) { this.enabled = enabled; }
     }
 
     public static class ExecuteActionConfig {
