@@ -844,4 +844,164 @@ public class SettingsDialogTest {
         assertEquals("Auto-detect", loaded.getDefaultResolveModeForConsoles());
         assertEquals(";;", loaded.getStatementDelimiter());
     }
+
+    @Test
+    public void testAppearanceSettingsDefaultsAndSerialization() throws Exception {
+        AppSettingsStore.Settings settings = new AppSettingsStore.Settings();
+
+        // Check defaults matching DataGrip screenshots
+        assertEquals("Islands Dark", settings.getUiTheme());
+        assertFalse(settings.isSyncThemeWithOs());
+        assertEquals("Islands Dark Theme default", settings.getEditorColorScheme());
+        assertFalse(settings.isDifferentToolWindowBackground());
+
+        assertEquals("100%", settings.getIdeZoom());
+        assertFalse(settings.isUseCustomIdeFont());
+        assertEquals("Inter", settings.getCustomIdeFontFamily());
+        assertEquals(13, settings.getCustomIdeFontSize());
+        assertFalse(settings.isSupportScreenReaders());
+        assertFalse(settings.isUseContrastScrollbars());
+        assertFalse(settings.isAdjustColorsForVisionDeficiency());
+
+        assertFalse(settings.isCompactMode());
+        assertFalse(settings.isAlwaysShowFullPathInWindowHeader());
+        assertTrue(settings.isUseProjectColorsInMainToolbar());
+        assertTrue(settings.isKeepPopupsOpenForToggleItems());
+        assertFalse(settings.isDragAndDropWithAltPressedOnly());
+        assertTrue(settings.isSmoothScrolling());
+        assertTrue(settings.isEnableMnemonicsInControls());
+        assertTrue(settings.isEnableMnemonicsInMenu());
+        assertTrue(settings.isDisplayIconsInMenuItems());
+        assertEquals("Hide under Hamburger Button", settings.getMainMenuPresentation());
+
+        assertEquals("", settings.getBackgroundImagePath());
+        assertEquals(15, settings.getBackgroundImageOpacity());
+        assertEquals("Fill", settings.getBackgroundImagePlacement());
+        assertFalse(settings.isBackgroundImageThisProjectOnly());
+        assertEquals("Editor and Tools", settings.getBackgroundImageTarget());
+
+        assertFalse(settings.isShowIndentGuides());
+        assertFalse(settings.isUseSmallerIndents());
+
+        assertFalse(settings.isShowToolWindowBars());
+        assertFalse(settings.isShowToolWindowNames());
+        assertFalse(settings.isSideBySideLayoutOnLeft());
+        assertFalse(settings.isSideBySideLayoutOnRight());
+        assertFalse(settings.isWidescreenToolWindowLayout());
+        assertFalse(settings.isRememberSizeForEachToolWindow());
+
+        assertEquals("175%", settings.getPresentationModeZoom());
+        assertEquals("Subpixel", settings.getIdeAntialiasing());
+        assertEquals("Subpixel", settings.getEditorAntialiasing());
+
+        // Validate helper lists
+        List<String> themes = AppSettingsStore.Settings.defaultUiThemes();
+        assertTrue(themes.contains("Islands Dark"));
+        assertTrue(themes.contains("Islands Light"));
+        assertTrue(themes.contains("High Contrast"));
+        assertTrue(themes.contains("Darcula"));
+
+        List<String> schemes = AppSettingsStore.Settings.defaultEditorColorSchemes();
+        assertTrue(schemes.contains("Islands Dark Theme default"));
+        assertTrue(schemes.contains("Classic Light"));
+
+        List<String> menus = AppSettingsStore.Settings.defaultMainMenuOptions();
+        assertTrue(menus.contains("Hide under Hamburger Button"));
+        assertTrue(menus.contains("Merge with Main Toolbar"));
+        assertTrue(menus.contains("Show above Main Toolbar"));
+
+        // Mutate
+        settings.setUiTheme("Islands Light");
+        settings.setSyncThemeWithOs(true);
+        settings.setEditorColorScheme("Light");
+        settings.setDifferentToolWindowBackground(true);
+
+        settings.setIdeZoom("125%");
+        settings.setUseCustomIdeFont(true);
+        settings.setCustomIdeFontFamily("JetBrains Sans");
+        settings.setCustomIdeFontSize(14);
+        settings.setSupportScreenReaders(true);
+        settings.setUseContrastScrollbars(true);
+        settings.setAdjustColorsForVisionDeficiency(true);
+
+        settings.setCompactMode(true);
+        settings.setAlwaysShowFullPathInWindowHeader(true);
+        settings.setUseProjectColorsInMainToolbar(false);
+        settings.setKeepPopupsOpenForToggleItems(false);
+        settings.setDragAndDropWithAltPressedOnly(true);
+        settings.setSmoothScrolling(false);
+        settings.setEnableMnemonicsInControls(false);
+        settings.setEnableMnemonicsInMenu(false);
+        settings.setDisplayIconsInMenuItems(false);
+        settings.setMainMenuPresentation("Merge with Main Toolbar");
+
+        settings.setBackgroundImagePath("/path/to/bg.png");
+        settings.setBackgroundImageOpacity(30);
+        settings.setBackgroundImagePlacement("Center");
+        settings.setBackgroundImageThisProjectOnly(true);
+        settings.setBackgroundImageTarget("Empty Frame");
+
+        settings.setShowIndentGuides(true);
+        settings.setUseSmallerIndents(true);
+
+        settings.setShowToolWindowBars(true);
+        settings.setShowToolWindowNames(true);
+        settings.setSideBySideLayoutOnLeft(true);
+        settings.setSideBySideLayoutOnRight(true);
+        settings.setWidescreenToolWindowLayout(true);
+        settings.setRememberSizeForEachToolWindow(true);
+
+        settings.setPresentationModeZoom("200%");
+        settings.setIdeAntialiasing("Greyscale");
+        settings.setEditorAntialiasing("No antialiasing");
+
+        // Jackson Round-trip
+        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        String json = mapper.writeValueAsString(settings);
+        AppSettingsStore.Settings loaded = mapper.readValue(json, AppSettingsStore.Settings.class);
+
+        assertEquals("Islands Light", loaded.getUiTheme());
+        assertTrue(loaded.isSyncThemeWithOs());
+        assertEquals("Light", loaded.getEditorColorScheme());
+        assertTrue(loaded.isDifferentToolWindowBackground());
+
+        assertEquals("125%", loaded.getIdeZoom());
+        assertTrue(loaded.isUseCustomIdeFont());
+        assertEquals("JetBrains Sans", loaded.getCustomIdeFontFamily());
+        assertEquals(14, loaded.getCustomIdeFontSize());
+        assertTrue(loaded.isSupportScreenReaders());
+        assertTrue(loaded.isUseContrastScrollbars());
+        assertTrue(loaded.isAdjustColorsForVisionDeficiency());
+
+        assertTrue(loaded.isCompactMode());
+        assertTrue(loaded.isAlwaysShowFullPathInWindowHeader());
+        assertFalse(loaded.isUseProjectColorsInMainToolbar());
+        assertFalse(loaded.isKeepPopupsOpenForToggleItems());
+        assertTrue(loaded.isDragAndDropWithAltPressedOnly());
+        assertFalse(loaded.isSmoothScrolling());
+        assertFalse(loaded.isEnableMnemonicsInControls());
+        assertFalse(loaded.isEnableMnemonicsInMenu());
+        assertFalse(loaded.isDisplayIconsInMenuItems());
+        assertEquals("Merge with Main Toolbar", loaded.getMainMenuPresentation());
+
+        assertEquals("/path/to/bg.png", loaded.getBackgroundImagePath());
+        assertEquals(30, loaded.getBackgroundImageOpacity());
+        assertEquals("Center", loaded.getBackgroundImagePlacement());
+        assertTrue(loaded.isBackgroundImageThisProjectOnly());
+        assertEquals("Empty Frame", loaded.getBackgroundImageTarget());
+
+        assertTrue(loaded.isShowIndentGuides());
+        assertTrue(loaded.isUseSmallerIndents());
+
+        assertTrue(loaded.isShowToolWindowBars());
+        assertTrue(loaded.isShowToolWindowNames());
+        assertTrue(loaded.isSideBySideLayoutOnLeft());
+        assertTrue(loaded.isSideBySideLayoutOnRight());
+        assertTrue(loaded.isWidescreenToolWindowLayout());
+        assertTrue(loaded.isRememberSizeForEachToolWindow());
+
+        assertEquals("200%", loaded.getPresentationModeZoom());
+        assertEquals("Greyscale", loaded.getIdeAntialiasing());
+        assertEquals("No antialiasing", loaded.getEditorAntialiasing());
+    }
 }

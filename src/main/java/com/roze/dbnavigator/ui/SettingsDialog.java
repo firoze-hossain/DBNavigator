@@ -15,6 +15,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.scene.text.Font;
+import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.Window;
@@ -85,6 +86,13 @@ public final class SettingsDialog {
         line.setAlignment(Pos.CENTER_LEFT);
         line.setPadding(new Insets(8, 0, 4, 0));
         return line;
+    }
+
+    public static Label createHelpTooltip(String text) {
+        Label helpIcon = new Label("(?)");
+        helpIcon.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 11px; -fx-cursor: hand;");
+        helpIcon.setTooltip(new Tooltip(text));
+        return helpIcon;
     }
 
     public static List<CategoryDef> getCategoryDefinitions() {
@@ -846,7 +854,7 @@ public final class SettingsDialog {
 
         // Functional leaf panels
         if ("Appearance & Behavior / Appearance".equals(fullPath) || "Appearance".equals(fullPath)) {
-            return buildAppearancePanel(settings, inputs);
+            return buildAppearancePanel(settings, inputs, navigateTo);
         } else if ("Appearance & Behavior / System Settings / Updates".equals(fullPath) || "Updates".equals(fullPath)) {
             return buildUpdatesPanel(settings, inputs);
         } else if ("Editor / General".equals(fullPath)) {
@@ -946,58 +954,621 @@ public final class SettingsDialog {
         return panel;
     }
 
-    private static VBox buildAppearancePanel(AppSettingsStore.Settings settings, Map<String, Object> inputs) {
-        Label title = new Label("Appearance");
-        title.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: -text;");
+    public static VBox buildAppearancePanel(AppSettingsStore.Settings settings, Map<String, Object> inputs) {
+        return buildAppearancePanel(settings, inputs, null);
+    }
 
-        Label uiThemeLabel = new Label("Theme:");
-        uiThemeLabel.getStyleClass().add("connection-field-label");
-        ComboBox<AppSettingsStore.Theme> themeCombo = new ComboBox<>();
-        themeCombo.getItems().addAll(AppSettingsStore.Theme.DARK, AppSettingsStore.Theme.LIGHT);
-        themeCombo.getSelectionModel().select(settings.getTheme());
+    public static VBox buildAppearancePanel(AppSettingsStore.Settings settings, Map<String, Object> inputs, java.util.function.Consumer<String> navigateTo) {
+        // Theme & Color Scheme Row
+        Label themeLabel = new Label("Theme:");
+        themeLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        themeLabel.setMinWidth(60);
+
+        ComboBox<String> themeCombo = new ComboBox<>();
+        themeCombo.getItems().addAll(AppSettingsStore.Settings.defaultUiThemes());
+        themeCombo.getSelectionModel().select(settings.getUiTheme());
         themeCombo.setPrefWidth(220);
-
-        Label uiFontLabel = new Label("UI font:");
-        uiFontLabel.getStyleClass().add("connection-field-label");
-        ComboBox<String> uiFontCombo = new ComboBox<>();
-        uiFontCombo.getItems().addAll("JetBrains Sans", "Segoe UI", "SF Pro Text", "Ubuntu", "Cantarell", "System Default");
-        uiFontCombo.getSelectionModel().select(0);
-        uiFontCombo.setPrefWidth(220);
-
-        Label zoomLabel = new Label("Zoom:");
-        zoomLabel.getStyleClass().add("connection-field-label");
-        ComboBox<String> zoomCombo = new ComboBox<>();
-        zoomCombo.getItems().addAll("100%", "110%", "125%", "150%");
-        zoomCombo.getSelectionModel().select(0);
-        zoomCombo.setPrefWidth(120);
-
-        CheckBox antialiasing = new CheckBox("Use LCD antialiasing for fonts");
-        antialiasing.setSelected(true);
-
-        CheckBox compactTree = new CheckBox("Use compact tree indentation");
-        compactTree.setSelected(false);
-
-        GridPane grid = new GridPane();
-        grid.setHgap(12);
-        grid.setVgap(10);
-        grid.add(uiThemeLabel, 0, 0);
-        grid.add(themeCombo, 1, 0);
-        grid.add(uiFontLabel, 0, 1);
-        grid.add(uiFontCombo, 1, 1);
-        grid.add(zoomLabel, 0, 2);
-        grid.add(zoomCombo, 1, 2);
-
-        Label hint = new Label("Theme changes apply immediately to the current window; open dialogs and consoles pick up the updated styling automatically.");
-        hint.getStyleClass().add("console-status");
-        hint.setWrapText(true);
-        hint.setMaxWidth(520);
-
+        inputs.put("appearance_uiTheme", themeCombo);
         inputs.put("themeCombo", themeCombo);
 
-        VBox panel = new VBox(14, title, grid, antialiasing, compactTree, hint);
-        panel.setPadding(new Insets(4, 8, 16, 8));
+        CheckBox syncWithOsCheck = new CheckBox("Sync with OS");
+        syncWithOsCheck.setSelected(settings.isSyncThemeWithOs());
+        inputs.put("appearance_syncWithOs", syncWithOsCheck);
+
+        Button osSyncGearBtn = new Button("⚙");
+        osSyncGearBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: -text-dim; -fx-font-size: 13px; -fx-cursor: hand; -fx-padding: 2 4 2 4;");
+        osSyncGearBtn.setTooltip(new Tooltip("Configure OS theme synchronization"));
+        osSyncGearBtn.setOnAction(e -> {
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle("Sync with OS");
+            alert.setHeaderText("Operating System Theme Synchronization");
+            alert.setContentText("When enabled, the IDE automatically switches between Light and Dark themes according to your system display settings.");
+            alert.showAndWait();
+        });
+
+        HBox themeRow = new HBox(10, themeLabel, themeCombo, syncWithOsCheck, osSyncGearBtn);
+        themeRow.setAlignment(Pos.CENTER_LEFT);
+
+        // Editor color scheme
+        Label schemeLabel = new Label("Editor color scheme:");
+        schemeLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        schemeLabel.setMinWidth(140);
+        schemeLabel.setPadding(new Insets(0, 0, 0, 16));
+
+        ComboBox<String> schemeCombo = new ComboBox<>();
+        schemeCombo.getItems().addAll(AppSettingsStore.Settings.defaultEditorColorSchemes());
+        schemeCombo.getSelectionModel().select(settings.getEditorColorScheme());
+        schemeCombo.setPrefWidth(220);
+        inputs.put("appearance_editorColorScheme", schemeCombo);
+
+        Button schemeGearBtn = new Button("⚙");
+        schemeGearBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: -text-dim; -fx-font-size: 13px; -fx-cursor: hand; -fx-padding: 2 4 2 4;");
+        schemeGearBtn.setTooltip(new Tooltip("Open Editor Color Scheme settings"));
+        if (navigateTo != null) {
+            schemeGearBtn.setOnAction(e -> navigateTo.accept("Editor / Color Scheme"));
+        }
+
+        HBox schemeRow = new HBox(10, schemeLabel, schemeCombo, schemeGearBtn);
+        schemeRow.setAlignment(Pos.CENTER_LEFT);
+
+        // Different tool window background
+        CheckBox diffToolWindowBgCheck = new CheckBox("Different tool window background");
+        diffToolWindowBgCheck.setSelected(settings.isDifferentToolWindowBackground());
+        diffToolWindowBgCheck.setPadding(new Insets(0, 0, 0, 16));
+        inputs.put("appearance_differentToolWindowBackground", diffToolWindowBgCheck);
+
+        Label diffToolWindowBgSubtext = new Label("Use lighter color in the dark theme and darker color in the light theme as a background");
+        diffToolWindowBgSubtext.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 11px;");
+        diffToolWindowBgSubtext.setPadding(new Insets(0, 0, 0, 38));
+
+        VBox toolWinBgBox = new VBox(2, diffToolWindowBgCheck, diffToolWindowBgSubtext);
+
+        // =========================================================================
+        // Section: Accessibility
+        // =========================================================================
+        HBox accessSection = buildTitledSectionLine("Accessibility");
+
+        Label zoomLabel = new Label("Zoom:");
+        zoomLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        zoomLabel.setMinWidth(50);
+
+        ComboBox<String> zoomCombo = new ComboBox<>();
+        zoomCombo.getItems().addAll(AppSettingsStore.Settings.defaultIdeZooms());
+        zoomCombo.getSelectionModel().select(settings.getIdeZoom());
+        zoomCombo.setPrefWidth(110);
+        inputs.put("appearance_ideZoom", zoomCombo);
+
+        Label zoomHint = new Label("Change with Ctrl+Alt+Shift+= or Ctrl+Alt+Shift+Minus. Set to 100% with Ctrl+Alt+Shift+0");
+        zoomHint.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 11px;");
+
+        HBox zoomRow = new HBox(12, zoomLabel, zoomCombo, zoomHint);
+        zoomRow.setAlignment(Pos.CENTER_LEFT);
+
+        CheckBox useCustomFontCheck = new CheckBox("Use custom font:");
+        useCustomFontCheck.setSelected(settings.isUseCustomIdeFont());
+        inputs.put("appearance_useCustomIdeFont", useCustomFontCheck);
+
+        ComboBox<String> fontFamCombo = new ComboBox<>();
+        fontFamCombo.getItems().addAll("Inter", "JetBrains Sans", "Segoe UI", "SF Pro Text", "Ubuntu", "Cantarell", "Roboto", "Arial", "System-ui");
+        fontFamCombo.getSelectionModel().select(settings.getCustomIdeFontFamily());
+        fontFamCombo.setPrefWidth(220);
+        fontFamCombo.disableProperty().bind(useCustomFontCheck.selectedProperty().not());
+        inputs.put("appearance_customIdeFontFamily", fontFamCombo);
+
+        Label fontSizeLabel = new Label("Size:");
+        fontSizeLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+
+        ComboBox<Integer> fontSizeCombo = new ComboBox<>();
+        fontSizeCombo.getItems().addAll(10, 11, 12, 13, 14, 15, 16, 18, 20, 22, 24);
+        fontSizeCombo.getSelectionModel().select(Integer.valueOf(settings.getCustomIdeFontSize()));
+        fontSizeCombo.setPrefWidth(80);
+        fontSizeCombo.disableProperty().bind(useCustomFontCheck.selectedProperty().not());
+        inputs.put("appearance_customIdeFontSize", fontSizeCombo);
+
+        HBox fontRow = new HBox(10, useCustomFontCheck, fontFamCombo, fontSizeLabel, fontSizeCombo);
+        fontRow.setAlignment(Pos.CENTER_LEFT);
+
+        CheckBox screenReaderCheck = new CheckBox("Support screen readers");
+        screenReaderCheck.setSelected(settings.isSupportScreenReaders());
+        inputs.put("appearance_supportScreenReaders", screenReaderCheck);
+
+        Label reqRestart1 = new Label("Requires restart");
+        reqRestart1.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 11px;");
+
+        HBox screenReaderRow = new HBox(8, screenReaderCheck, reqRestart1);
+        screenReaderRow.setAlignment(Pos.CENTER_LEFT);
+
+        Label screenReaderSubtext = new Label("Ctrl+Tab and Ctrl+Shift+Tab will navigate UI controls in dialogs and will not be available for switching editor tabs or other IDE actions. Tooltips on mouse hover will be disabled.");
+        screenReaderSubtext.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 11px;");
+        screenReaderSubtext.setWrapText(true);
+        screenReaderSubtext.setPadding(new Insets(0, 0, 0, 22));
+        screenReaderSubtext.setMaxWidth(680);
+
+        VBox screenReaderBox = new VBox(2, screenReaderRow, screenReaderSubtext);
+
+        CheckBox contrastScrollbarsCheck = new CheckBox("Use contrast scrollbars");
+        contrastScrollbarsCheck.setSelected(settings.isUseContrastScrollbars());
+        inputs.put("appearance_useContrastScrollbars", contrastScrollbarsCheck);
+
+        CheckBox visionDeficiencyCheck = new CheckBox("Adjust colors for red-green vision deficiency");
+        visionDeficiencyCheck.setSelected(settings.isAdjustColorsForVisionDeficiency());
+        inputs.put("appearance_adjustColorsForVisionDeficiency", visionDeficiencyCheck);
+
+        Hyperlink howItWorksLink = new Hyperlink("How it works ↗");
+        howItWorksLink.setStyle("-fx-text-fill: #589df6; -fx-font-size: 12px; -fx-underline: false;");
+        howItWorksLink.setOnAction(e -> {
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle("Color Vision Deficiency Assistance");
+            alert.setHeaderText("Adjust colors for protanopia and deuteranopia");
+            alert.setContentText("This option replaces red and green highlighting in the editor, diff viewer, and UI indicators with high-contrast blue and orange palettes to ensure readability.");
+            alert.showAndWait();
+        });
+
+        HBox visionRow = new HBox(8, visionDeficiencyCheck, howItWorksLink);
+        visionRow.setAlignment(Pos.CENTER_LEFT);
+
+        Label visionSubtext = new Label("Requires restart. For protanopia and deuteranopia.");
+        visionSubtext.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 11px;");
+        visionSubtext.setPadding(new Insets(0, 0, 0, 22));
+
+        VBox visionBox = new VBox(2, visionRow, visionSubtext);
+
+        // =========================================================================
+        // Section: UI Options
+        // =========================================================================
+        HBox uiOptionsSection = buildTitledSectionLine("UI Options");
+
+        // Left Column
+        CheckBox compactModeCheck = new CheckBox("Compact mode");
+        compactModeCheck.setSelected(settings.isCompactMode());
+        inputs.put("appearance_compactMode", compactModeCheck);
+
+        Label compactModeSubtext = new Label("UI elements take up less screen space");
+        compactModeSubtext.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 11px;");
+        compactModeSubtext.setPadding(new Insets(0, 0, 0, 22));
+        VBox compactBox = new VBox(2, compactModeCheck, compactModeSubtext);
+
+        CheckBox fullPathCheck = new CheckBox("Always show full path in window header");
+        fullPathCheck.setSelected(settings.isAlwaysShowFullPathInWindowHeader());
+        inputs.put("appearance_alwaysShowFullPathInWindowHeader", fullPathCheck);
+
+        CheckBox projectColorsToolbarCheck = new CheckBox("Use project colors in main toolbar");
+        projectColorsToolbarCheck.setSelected(settings.isUseProjectColorsInMainToolbar());
+        inputs.put("appearance_useProjectColorsInMainToolbar", projectColorsToolbarCheck);
+
+        Label projectColorsSubtext = new Label("Distinguish projects with different toolbar colors at a glance.");
+        projectColorsSubtext.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 11px;");
+        projectColorsSubtext.setPadding(new Insets(0, 0, 0, 22));
+        VBox projectColorsBox = new VBox(2, projectColorsToolbarCheck, projectColorsSubtext);
+
+        CheckBox keepPopupsCheck = new CheckBox("Keep popups open for toggle items");
+        keepPopupsCheck.setSelected(settings.isKeepPopupsOpenForToggleItems());
+        inputs.put("appearance_keepPopupsOpenForToggleItems", keepPopupsCheck);
+
+        VBox leftUiCol = new VBox(10, compactBox, fullPathCheck, projectColorsBox, keepPopupsCheck);
+        leftUiCol.setPrefWidth(340);
+
+        // Right Column
+        CheckBox dragDropAltCheck = new CheckBox("Drag-and-drop with Alt pressed only");
+        dragDropAltCheck.setSelected(settings.isDragAndDropWithAltPressedOnly());
+        inputs.put("appearance_dragAndDropWithAltPressedOnly", dragDropAltCheck);
+
+        CheckBox smoothScrollingCheck = new CheckBox("Smooth scrolling");
+        smoothScrollingCheck.setSelected(settings.isSmoothScrolling());
+        inputs.put("appearance_smoothScrolling", smoothScrollingCheck);
+
+        Label smoothScrollHelp = createHelpTooltip("Enables smooth kinetic scrolling animation in editors and table viewers");
+        HBox smoothScrollRow = new HBox(6, smoothScrollingCheck, smoothScrollHelp);
+        smoothScrollRow.setAlignment(Pos.CENTER_LEFT);
+
+        CheckBox mnemonicsControlsCheck = new CheckBox("Enable mnemonics in controls");
+        mnemonicsControlsCheck.setSelected(settings.isEnableMnemonicsInControls());
+        inputs.put("appearance_enableMnemonicsInControls", mnemonicsControlsCheck);
+
+        CheckBox mnemonicsMenuCheck = new CheckBox("Enable mnemonics in menu");
+        mnemonicsMenuCheck.setSelected(settings.isEnableMnemonicsInMenu());
+        inputs.put("appearance_enableMnemonicsInMenu", mnemonicsMenuCheck);
+
+        CheckBox displayIconsMenuCheck = new CheckBox("Display icons in menu items");
+        displayIconsMenuCheck.setSelected(settings.isDisplayIconsInMenuItems());
+        inputs.put("appearance_displayIconsInMenuItems", displayIconsMenuCheck);
+
+        VBox rightUiCol = new VBox(10, dragDropAltCheck, smoothScrollRow, mnemonicsControlsCheck, mnemonicsMenuCheck, displayIconsMenuCheck);
+        rightUiCol.setPrefWidth(340);
+
+        HBox uiCols = new HBox(20, leftUiCol, rightUiCol);
+
+        // Main menu
+        Label mainMenuLabel = new Label("Main menu:");
+        mainMenuLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        mainMenuLabel.setMinWidth(75);
+
+        ComboBox<String> mainMenuCombo = new ComboBox<>();
+        mainMenuCombo.getItems().addAll(AppSettingsStore.Settings.defaultMainMenuOptions());
+        mainMenuCombo.getSelectionModel().select(settings.getMainMenuPresentation());
+        mainMenuCombo.setPrefWidth(220);
+        inputs.put("appearance_mainMenuPresentation", mainMenuCombo);
+
+        HBox mainMenuRow = new HBox(10, mainMenuLabel, mainMenuCombo);
+        mainMenuRow.setAlignment(Pos.CENTER_LEFT);
+
+        Label mainMenuRestart = new Label("Requires restart");
+        mainMenuRestart.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 11px;");
+        mainMenuRestart.setPadding(new Insets(0, 0, 0, 85));
+
+        VBox mainMenuBox = new VBox(2, mainMenuRow, mainMenuRestart);
+
+        // Background Image button
+        Button bgImageBtn = new Button("Background Image...");
+        bgImageBtn.getStyleClass().add("connection-action-button");
+        bgImageBtn.setOnAction(e -> showBackgroundImageDialog(settings, inputs));
+
+        // =========================================================================
+        // Section: Tree Views
+        // =========================================================================
+        HBox treeViewsSection = buildTitledSectionLine("Tree Views");
+
+        CheckBox showIndentGuidesCheck = new CheckBox("Show indent guides");
+        showIndentGuidesCheck.setSelected(settings.isShowIndentGuides());
+        showIndentGuidesCheck.setPrefWidth(340);
+        inputs.put("appearance_showIndentGuides", showIndentGuidesCheck);
+
+        CheckBox useSmallerIndentsCheck = new CheckBox("Use smaller indents");
+        useSmallerIndentsCheck.setSelected(settings.isUseSmallerIndents());
+        useSmallerIndentsCheck.setPrefWidth(340);
+        inputs.put("appearance_useSmallerIndents", useSmallerIndentsCheck);
+
+        HBox treeViewsRow = new HBox(20, showIndentGuidesCheck, useSmallerIndentsCheck);
+
+        // =========================================================================
+        // Section: Tool Windows
+        // =========================================================================
+        HBox toolWindowsSection = buildTitledSectionLine("Tool Windows");
+
+        CheckBox showToolBarsCheck = new CheckBox("Show tool window bars");
+        showToolBarsCheck.setSelected(settings.isShowToolWindowBars());
+        inputs.put("appearance_showToolWindowBars", showToolBarsCheck);
+
+        CheckBox showToolNamesCheck = new CheckBox("Show tool window names");
+        showToolNamesCheck.setSelected(settings.isShowToolWindowNames());
+        inputs.put("appearance_showToolWindowNames", showToolNamesCheck);
+
+        CheckBox sideBySideLeftCheck = new CheckBox("Side-by-side layout on the left");
+        sideBySideLeftCheck.setSelected(settings.isSideBySideLayoutOnLeft());
+        inputs.put("appearance_sideBySideLayoutOnLeft", sideBySideLeftCheck);
+
+        CheckBox sideBySideRightCheck = new CheckBox("Side-by-side layout on the right");
+        sideBySideRightCheck.setSelected(settings.isSideBySideLayoutOnRight());
+        inputs.put("appearance_sideBySideLayoutOnRight", sideBySideRightCheck);
+
+        CheckBox widescreenCheck = new CheckBox("Widescreen tool window layout");
+        widescreenCheck.setSelected(settings.isWidescreenToolWindowLayout());
+        inputs.put("appearance_widescreenToolWindowLayout", widescreenCheck);
+
+        Label widescreenHelp = createHelpTooltip("Maximizes vertical height for tool windows on widescreen displays");
+        HBox widescreenRow = new HBox(6, widescreenCheck, widescreenHelp);
+        widescreenRow.setAlignment(Pos.CENTER_LEFT);
+
+        CheckBox rememberSizeCheck = new CheckBox("Remember size for each tool window");
+        rememberSizeCheck.setSelected(settings.isRememberSizeForEachToolWindow());
+        inputs.put("appearance_rememberSizeForEachToolWindow", rememberSizeCheck);
+
+        VBox toolWinChecks = new VBox(10, showToolBarsCheck, showToolNamesCheck, sideBySideLeftCheck, sideBySideRightCheck, widescreenRow, rememberSizeCheck);
+        toolWinChecks.setPrefWidth(340);
+
+        Pane ideMockup = buildIdeToolWindowMockup(
+                showToolBarsCheck.selectedProperty(),
+                showToolNamesCheck.selectedProperty(),
+                sideBySideLeftCheck.selectedProperty(),
+                sideBySideRightCheck.selectedProperty(),
+                widescreenCheck.selectedProperty()
+        );
+
+        HBox toolWindowsBox = new HBox(20, toolWinChecks, ideMockup);
+        toolWindowsBox.setAlignment(Pos.CENTER_LEFT);
+
+        // =========================================================================
+        // Section: Presentation Mode
+        // =========================================================================
+        HBox presModeSection = buildTitledSectionLine("Presentation Mode");
+
+        Label presZoomLabel = new Label("Zoom:");
+        presZoomLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        presZoomLabel.setMinWidth(50);
+
+        ComboBox<String> presZoomCombo = new ComboBox<>();
+        presZoomCombo.getItems().addAll(AppSettingsStore.Settings.defaultPresentationModeZooms());
+        presZoomCombo.getSelectionModel().select(settings.getPresentationModeZoom());
+        presZoomCombo.setPrefWidth(110);
+        inputs.put("appearance_presentationModeZoom", presZoomCombo);
+
+        HBox presZoomRow = new HBox(12, presZoomLabel, presZoomCombo);
+        presZoomRow.setAlignment(Pos.CENTER_LEFT);
+
+        // =========================================================================
+        // Section: Antialiasing
+        // =========================================================================
+        HBox aaSection = buildTitledSectionLine("Antialiasing");
+
+        Label ideAaLabel = new Label("IDE:");
+        ideAaLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+
+        ComboBox<String> ideAaCombo = new ComboBox<>();
+        ideAaCombo.getItems().addAll(AppSettingsStore.Settings.defaultAntialiasingOptions());
+        ideAaCombo.getSelectionModel().select(settings.getIdeAntialiasing());
+        ideAaCombo.setPrefWidth(130);
+        inputs.put("appearance_ideAntialiasing", ideAaCombo);
+
+        Label editorAaLabel = new Label("Editor:");
+        editorAaLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        editorAaLabel.setPadding(new Insets(0, 0, 0, 20));
+
+        ComboBox<String> editorAaCombo = new ComboBox<>();
+        editorAaCombo.getItems().addAll(AppSettingsStore.Settings.defaultAntialiasingOptions());
+        editorAaCombo.getSelectionModel().select(settings.getEditorAntialiasing());
+        editorAaCombo.setPrefWidth(130);
+        inputs.put("appearance_editorAntialiasing", editorAaCombo);
+
+        HBox aaRow = new HBox(10, ideAaLabel, ideAaCombo, editorAaLabel, editorAaCombo);
+        aaRow.setAlignment(Pos.CENTER_LEFT);
+
+        VBox panel = new VBox(10,
+                themeRow, schemeRow, toolWinBgBox,
+                accessSection, zoomRow, fontRow, screenReaderBox, contrastScrollbarsCheck, visionBox,
+                uiOptionsSection, uiCols, mainMenuBox, bgImageBtn,
+                treeViewsSection, treeViewsRow,
+                toolWindowsSection, toolWindowsBox,
+                presModeSection, presZoomRow,
+                aaSection, aaRow
+        );
+        panel.setPadding(new Insets(4, 8, 24, 8));
         return panel;
     }
+
+    private static Pane buildIdeToolWindowMockup(
+            javafx.beans.value.ObservableValue<Boolean> showBars,
+            javafx.beans.value.ObservableValue<Boolean> showNames,
+            javafx.beans.value.ObservableValue<Boolean> sideBySideLeft,
+            javafx.beans.value.ObservableValue<Boolean> sideBySideRight,
+            javafx.beans.value.ObservableValue<Boolean> widescreen) {
+
+        VBox frame = new VBox();
+        frame.setPrefSize(340, 160);
+        frame.setMaxSize(340, 160);
+        frame.setMinSize(340, 160);
+        frame.setStyle("-fx-background-color: #1e1f22; -fx-border-color: #393b40; -fx-border-radius: 4; -fx-background-radius: 4;");
+
+        // Top bar with 3 dots
+        HBox topBar = new HBox(5);
+        topBar.setAlignment(Pos.CENTER_LEFT);
+        topBar.setPadding(new Insets(4, 8, 4, 8));
+        topBar.setStyle("-fx-background-color: #26282e; -fx-border-color: #393b40; -fx-border-width: 0 0 1 0; -fx-background-radius: 4 4 0 0;");
+
+        Region dot1 = new Region();
+        dot1.setPrefSize(6, 6);
+        dot1.setStyle("-fx-background-color: #ed6a5e; -fx-background-radius: 3;");
+        Region dot2 = new Region();
+        dot2.setPrefSize(6, 6);
+        dot2.setStyle("-fx-background-color: #f4bf4f; -fx-background-radius: 3;");
+        Region dot3 = new Region();
+        dot3.setPrefSize(6, 6);
+        dot3.setStyle("-fx-background-color: #61c554; -fx-background-radius: 3;");
+        topBar.getChildren().addAll(dot1, dot2, dot3);
+
+        // Body with toolbars and panes
+        HBox body = new HBox();
+        VBox.setVgrow(body, Priority.ALWAYS);
+
+        // Left tool strip
+        VBox leftStrip = new VBox(4);
+        leftStrip.setPrefWidth(12);
+        leftStrip.setAlignment(Pos.TOP_CENTER);
+        leftStrip.setPadding(new Insets(4, 2, 4, 2));
+        leftStrip.setStyle("-fx-background-color: #2b2d30; -fx-border-color: #393b40; -fx-border-width: 0 1 0 0;");
+        leftStrip.visibleProperty().bind(showBars);
+        leftStrip.managedProperty().bind(showBars);
+
+        // Left pane (e.g. Database Explorer)
+        VBox leftPane = new VBox();
+        leftPane.setPrefWidth(60);
+        leftPane.setStyle("-fx-background-color: #26282e; -fx-border-color: #393b40; -fx-border-width: 0 1 0 0;");
+
+        // Center editor pane
+        VBox centerPane = new VBox();
+        HBox.setHgrow(centerPane, Priority.ALWAYS);
+        centerPane.setStyle("-fx-background-color: #1e1f22;");
+
+        // Right pane
+        VBox rightPane = new VBox();
+        rightPane.setPrefWidth(60);
+        rightPane.setStyle("-fx-background-color: #26282e; -fx-border-color: #393b40; -fx-border-width: 0 0 0 1;");
+
+        // Right tool strip
+        VBox rightStrip = new VBox(4);
+        rightStrip.setPrefWidth(12);
+        rightStrip.setAlignment(Pos.TOP_CENTER);
+        rightStrip.setPadding(new Insets(4, 2, 4, 2));
+        rightStrip.setStyle("-fx-background-color: #2b2d30; -fx-border-color: #393b40; -fx-border-width: 0 0 0 1;");
+        rightStrip.visibleProperty().bind(showBars);
+        rightStrip.managedProperty().bind(showBars);
+
+        body.getChildren().addAll(leftStrip, leftPane, centerPane, rightPane, rightStrip);
+        frame.getChildren().addAll(topBar, body);
+
+        // Reactive layout adjustments
+        sideBySideLeft.addListener((obs, oldVal, newVal) -> {
+            if (Boolean.TRUE.equals(newVal)) {
+                leftPane.setPrefWidth(85);
+            } else {
+                leftPane.setPrefWidth(60);
+            }
+        });
+
+        sideBySideRight.addListener((obs, oldVal, newVal) -> {
+            if (Boolean.TRUE.equals(newVal)) {
+                rightPane.setPrefWidth(85);
+            } else {
+                rightPane.setPrefWidth(60);
+            }
+        });
+
+        return frame;
+    }
+
+    private static void showBackgroundImageDialog(AppSettingsStore.Settings settings, Map<String, Object> inputs) {
+        Stage dialog = new Stage();
+        dialog.initModality(Modality.APPLICATION_MODAL);
+        dialog.setTitle("Background Image");
+        dialog.setResizable(true);
+
+        Label imgLabel = new Label("Image:");
+        imgLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        imgLabel.setMinWidth(60);
+
+        TextField imgPathField = new TextField(settings.getBackgroundImagePath());
+        imgPathField.setPromptText("Path or URL to image file");
+        HBox.setHgrow(imgPathField, Priority.ALWAYS);
+
+        Button browseBtn = new Button("...");
+        browseBtn.setOnAction(ev -> {
+            FileChooser chooser = new FileChooser();
+            chooser.setTitle("Select Background Image");
+            chooser.getExtensionFilters().add(
+                    new FileChooser.ExtensionFilter("Image Files", "*.png", "*.jpg", "*.jpeg", "*.gif", "*.svg", "*.webp")
+            );
+            java.io.File file = chooser.showOpenDialog(dialog);
+            if (file != null) {
+                imgPathField.setText(file.getAbsolutePath());
+            }
+        });
+
+        HBox imgRow = new HBox(8, imgLabel, imgPathField, browseBtn);
+        imgRow.setAlignment(Pos.CENTER_LEFT);
+
+        Label opLabel = new Label("Opacity:");
+        opLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        opLabel.setMinWidth(60);
+
+        Slider opSlider = new Slider(0, 100, settings.getBackgroundImageOpacity());
+        HBox.setHgrow(opSlider, Priority.ALWAYS);
+
+        Spinner<Integer> opSpinner = new Spinner<>(0, 100, settings.getBackgroundImageOpacity());
+        opSpinner.setPrefWidth(70);
+        opSpinner.setEditable(true);
+
+        opSlider.valueProperty().addListener((obs, oldVal, newVal) -> {
+            if (!opSpinner.isFocused()) {
+                opSpinner.getValueFactory().setValue(newVal.intValue());
+            }
+        });
+        opSpinner.valueProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal != null) {
+                opSlider.setValue(newVal);
+            }
+        });
+
+        HBox opRow = new HBox(8, opLabel, opSlider, opSpinner);
+        opRow.setAlignment(Pos.CENTER_LEFT);
+
+        // Placement buttons
+        ToggleGroup placementGroup = new ToggleGroup();
+        ToggleButton splitV = new ToggleButton("◫");
+        splitV.setTooltip(new Tooltip("Split vertically"));
+        ToggleButton splitH = new ToggleButton("⬒");
+        splitH.setTooltip(new Tooltip("Split horizontally"));
+        ToggleButton centerBtn = new ToggleButton("⊙");
+        centerBtn.setTooltip(new Tooltip("Center"));
+        centerBtn.setToggleGroup(placementGroup);
+        ToggleButton fillBtn = new ToggleButton("🔲");
+        fillBtn.setTooltip(new Tooltip("Scale to fill"));
+        fillBtn.setToggleGroup(placementGroup);
+        fillBtn.setSelected(true);
+        ToggleButton tileBtn = new ToggleButton("▦");
+        tileBtn.setTooltip(new Tooltip("Tile / repeat"));
+        tileBtn.setToggleGroup(placementGroup);
+        ToggleButton anchorBtn = new ToggleButton("☵");
+        anchorBtn.setTooltip(new Tooltip("Anchor to grid"));
+        anchorBtn.setToggleGroup(placementGroup);
+
+        HBox placementRow = new HBox(8, splitV, splitH, new Separator(javafx.geometry.Orientation.VERTICAL),
+                centerBtn, fillBtn, tileBtn, anchorBtn);
+        placementRow.setAlignment(Pos.CENTER_LEFT);
+
+        CheckBox projectOnlyCheck = new CheckBox("This project only");
+        projectOnlyCheck.setSelected(settings.isBackgroundImageThisProjectOnly());
+
+        // Tabs for Editor and Tools vs Empty Frame
+        TabPane tabPane = new TabPane();
+        tabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
+        Tab editorTab = new Tab("Editor and Tools");
+        Tab emptyFrameTab = new Tab("Empty Frame");
+
+        // Code preview
+        TextArea codePreview = new TextArea(
+                "---\n" +
+                "title: Title example\n" +
+                "---\n\n" +
+                "flowchart LR\n" +
+                "A --> B\n" +
+                "subgraph name\n" +
+                "C --> D\n" +
+                "end\n" +
+                "id1([This is the text in the box])\n" +
+                "id2[\"This is the (text) in the box\"]\n\n" +
+                "stateDiagram-v2\n" +
+                "S1: The state with a note\n" +
+                "note right of S1\n" +
+                "This is note\n" +
+                "end note"
+        );
+        codePreview.setEditable(false);
+        codePreview.setStyle("-fx-font-family: 'JetBrains Mono', 'Consolas', monospace; -fx-font-size: 12px; -fx-control-inner-background: #1e1f22;");
+        codePreview.setPrefRowCount(12);
+        VBox.setVgrow(codePreview, Priority.ALWAYS);
+
+        editorTab.setContent(codePreview);
+        emptyFrameTab.setContent(new StackPane(new Label("Empty Frame Background Preview")));
+        tabPane.getTabs().addAll(editorTab, emptyFrameTab);
+
+        Button setBtn = new Button("Set for Editor and Tools");
+        setBtn.setDefaultButton(true);
+        setBtn.setOnAction(ev -> {
+            inputs.put("appearance_backgroundImagePath", imgPathField.getText().trim());
+            inputs.put("appearance_backgroundImageOpacity", (int) opSlider.getValue());
+            inputs.put("appearance_backgroundImageThisProjectOnly", projectOnlyCheck.isSelected());
+            inputs.put("appearance_backgroundImageTarget", tabPane.getSelectionModel().getSelectedItem().getText());
+            settings.setBackgroundImagePath(imgPathField.getText().trim());
+            settings.setBackgroundImageOpacity((int) opSlider.getValue());
+            settings.setBackgroundImageThisProjectOnly(projectOnlyCheck.isSelected());
+            settings.setBackgroundImageTarget(tabPane.getSelectionModel().getSelectedItem().getText());
+            dialog.close();
+        });
+
+        Button cancelBtn = new Button("Cancel");
+        cancelBtn.setOnAction(ev -> dialog.close());
+
+        Button clearBtn = new Button("Clear and Close");
+        clearBtn.setOnAction(ev -> {
+            imgPathField.setText("");
+            inputs.put("appearance_backgroundImagePath", "");
+            settings.setBackgroundImagePath("");
+            dialog.close();
+        });
+
+        HBox btnBar = new HBox(10, setBtn, cancelBtn, clearBtn);
+        btnBar.setAlignment(Pos.CENTER_RIGHT);
+        btnBar.setPadding(new Insets(12, 0, 0, 0));
+
+        VBox root = new VBox(12, imgRow, opRow, placementRow, projectOnlyCheck, tabPane, btnBar);
+        root.setPadding(new Insets(16));
+        root.setPrefWidth(680);
+        root.setPrefHeight(520);
+        root.setStyle("-fx-background-color: #2b2d30;");
+
+        dialog.setScene(new Scene(root));
+        dialog.show();
+    }
+
 
     private static VBox buildUpdatesPanel(AppSettingsStore.Settings settings, Map<String, Object> inputs) {
         Label title = new Label("Updates");
@@ -4428,13 +4999,175 @@ public final class SettingsDialog {
 
     @SuppressWarnings("unchecked")
     private static void applySettings(MainWindow mainWindow, AppSettingsStore.Settings settings, Map<String, Object> inputs) {
-        // Theme
-        if (inputs.containsKey("themeCombo")) {
-            ComboBox<AppSettingsStore.Theme> combo = (ComboBox<AppSettingsStore.Theme>) inputs.get("themeCombo");
-            if (combo.getValue() != null) {
-                settings.setTheme(combo.getValue());
-                ThemeManager.setTheme(combo.getValue());
+        // Theme & UI Appearance
+        if (inputs.containsKey("appearance_uiTheme")) {
+            Object obj = inputs.get("appearance_uiTheme");
+            if (obj instanceof ComboBox<?> cb && cb.getValue() != null) {
+                String themeName = cb.getValue().toString();
+                settings.setUiTheme(themeName);
+                AppSettingsStore.Theme t = themeName.toLowerCase().contains("light")
+                        ? AppSettingsStore.Theme.LIGHT
+                        : AppSettingsStore.Theme.DARK;
+                settings.setTheme(t);
+                ThemeManager.setTheme(t);
             }
+        } else if (inputs.containsKey("themeCombo")) {
+            Object obj = inputs.get("themeCombo");
+            if (obj instanceof ComboBox<?> cb && cb.getValue() != null) {
+                if (cb.getValue() instanceof AppSettingsStore.Theme t) {
+                    settings.setTheme(t);
+                    ThemeManager.setTheme(t);
+                } else {
+                    String themeName = cb.getValue().toString();
+                    settings.setUiTheme(themeName);
+                    AppSettingsStore.Theme t = themeName.toLowerCase().contains("light")
+                            ? AppSettingsStore.Theme.LIGHT
+                            : AppSettingsStore.Theme.DARK;
+                    settings.setTheme(t);
+                    ThemeManager.setTheme(t);
+                }
+            }
+        }
+        if (inputs.containsKey("appearance_syncWithOs")) {
+            CheckBox cb = (CheckBox) inputs.get("appearance_syncWithOs");
+            settings.setSyncThemeWithOs(cb.isSelected());
+        }
+        if (inputs.containsKey("appearance_editorColorScheme")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("appearance_editorColorScheme");
+            if (cb.getValue() != null) settings.setEditorColorScheme(cb.getValue());
+        }
+        if (inputs.containsKey("appearance_differentToolWindowBackground")) {
+            CheckBox cb = (CheckBox) inputs.get("appearance_differentToolWindowBackground");
+            settings.setDifferentToolWindowBackground(cb.isSelected());
+        }
+        if (inputs.containsKey("appearance_ideZoom")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("appearance_ideZoom");
+            if (cb.getValue() != null) settings.setIdeZoom(cb.getValue());
+        }
+        if (inputs.containsKey("appearance_useCustomIdeFont")) {
+            CheckBox cb = (CheckBox) inputs.get("appearance_useCustomIdeFont");
+            settings.setUseCustomIdeFont(cb.isSelected());
+        }
+        if (inputs.containsKey("appearance_customIdeFontFamily")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("appearance_customIdeFontFamily");
+            if (cb.getValue() != null) settings.setCustomIdeFontFamily(cb.getValue());
+        }
+        if (inputs.containsKey("appearance_customIdeFontSize")) {
+            ComboBox<Integer> cb = (ComboBox<Integer>) inputs.get("appearance_customIdeFontSize");
+            if (cb.getValue() != null) settings.setCustomIdeFontSize(cb.getValue());
+        }
+        if (inputs.containsKey("appearance_supportScreenReaders")) {
+            CheckBox cb = (CheckBox) inputs.get("appearance_supportScreenReaders");
+            settings.setSupportScreenReaders(cb.isSelected());
+        }
+        if (inputs.containsKey("appearance_useContrastScrollbars")) {
+            CheckBox cb = (CheckBox) inputs.get("appearance_useContrastScrollbars");
+            settings.setUseContrastScrollbars(cb.isSelected());
+        }
+        if (inputs.containsKey("appearance_adjustColorsForVisionDeficiency")) {
+            CheckBox cb = (CheckBox) inputs.get("appearance_adjustColorsForVisionDeficiency");
+            settings.setAdjustColorsForVisionDeficiency(cb.isSelected());
+        }
+        if (inputs.containsKey("appearance_compactMode")) {
+            CheckBox cb = (CheckBox) inputs.get("appearance_compactMode");
+            settings.setCompactMode(cb.isSelected());
+        }
+        if (inputs.containsKey("appearance_alwaysShowFullPathInWindowHeader")) {
+            CheckBox cb = (CheckBox) inputs.get("appearance_alwaysShowFullPathInWindowHeader");
+            settings.setAlwaysShowFullPathInWindowHeader(cb.isSelected());
+        }
+        if (inputs.containsKey("appearance_useProjectColorsInMainToolbar")) {
+            CheckBox cb = (CheckBox) inputs.get("appearance_useProjectColorsInMainToolbar");
+            settings.setUseProjectColorsInMainToolbar(cb.isSelected());
+        }
+        if (inputs.containsKey("appearance_keepPopupsOpenForToggleItems")) {
+            CheckBox cb = (CheckBox) inputs.get("appearance_keepPopupsOpenForToggleItems");
+            settings.setKeepPopupsOpenForToggleItems(cb.isSelected());
+        }
+        if (inputs.containsKey("appearance_dragAndDropWithAltPressedOnly")) {
+            CheckBox cb = (CheckBox) inputs.get("appearance_dragAndDropWithAltPressedOnly");
+            settings.setDragAndDropWithAltPressedOnly(cb.isSelected());
+        }
+        if (inputs.containsKey("appearance_smoothScrolling")) {
+            CheckBox cb = (CheckBox) inputs.get("appearance_smoothScrolling");
+            settings.setSmoothScrolling(cb.isSelected());
+        }
+        if (inputs.containsKey("appearance_enableMnemonicsInControls")) {
+            CheckBox cb = (CheckBox) inputs.get("appearance_enableMnemonicsInControls");
+            settings.setEnableMnemonicsInControls(cb.isSelected());
+        }
+        if (inputs.containsKey("appearance_enableMnemonicsInMenu")) {
+            CheckBox cb = (CheckBox) inputs.get("appearance_enableMnemonicsInMenu");
+            settings.setEnableMnemonicsInMenu(cb.isSelected());
+        }
+        if (inputs.containsKey("appearance_displayIconsInMenuItems")) {
+            CheckBox cb = (CheckBox) inputs.get("appearance_displayIconsInMenuItems");
+            settings.setDisplayIconsInMenuItems(cb.isSelected());
+        }
+        if (inputs.containsKey("appearance_mainMenuPresentation")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("appearance_mainMenuPresentation");
+            if (cb.getValue() != null) settings.setMainMenuPresentation(cb.getValue());
+        }
+        if (inputs.containsKey("appearance_backgroundImagePath")) {
+            settings.setBackgroundImagePath((String) inputs.get("appearance_backgroundImagePath"));
+        }
+        if (inputs.containsKey("appearance_backgroundImageOpacity")) {
+            Object op = inputs.get("appearance_backgroundImageOpacity");
+            if (op instanceof Integer i) settings.setBackgroundImageOpacity(i);
+        }
+        if (inputs.containsKey("appearance_backgroundImagePlacement")) {
+            settings.setBackgroundImagePlacement((String) inputs.get("appearance_backgroundImagePlacement"));
+        }
+        if (inputs.containsKey("appearance_backgroundImageThisProjectOnly")) {
+            Object val = inputs.get("appearance_backgroundImageThisProjectOnly");
+            if (val instanceof Boolean b) settings.setBackgroundImageThisProjectOnly(b);
+        }
+        if (inputs.containsKey("appearance_backgroundImageTarget")) {
+            settings.setBackgroundImageTarget((String) inputs.get("appearance_backgroundImageTarget"));
+        }
+        if (inputs.containsKey("appearance_showIndentGuides")) {
+            CheckBox cb = (CheckBox) inputs.get("appearance_showIndentGuides");
+            settings.setShowIndentGuides(cb.isSelected());
+        }
+        if (inputs.containsKey("appearance_useSmallerIndents")) {
+            CheckBox cb = (CheckBox) inputs.get("appearance_useSmallerIndents");
+            settings.setUseSmallerIndents(cb.isSelected());
+        }
+        if (inputs.containsKey("appearance_showToolWindowBars")) {
+            CheckBox cb = (CheckBox) inputs.get("appearance_showToolWindowBars");
+            settings.setShowToolWindowBars(cb.isSelected());
+        }
+        if (inputs.containsKey("appearance_showToolWindowNames")) {
+            CheckBox cb = (CheckBox) inputs.get("appearance_showToolWindowNames");
+            settings.setShowToolWindowNames(cb.isSelected());
+        }
+        if (inputs.containsKey("appearance_sideBySideLayoutOnLeft")) {
+            CheckBox cb = (CheckBox) inputs.get("appearance_sideBySideLayoutOnLeft");
+            settings.setSideBySideLayoutOnLeft(cb.isSelected());
+        }
+        if (inputs.containsKey("appearance_sideBySideLayoutOnRight")) {
+            CheckBox cb = (CheckBox) inputs.get("appearance_sideBySideLayoutOnRight");
+            settings.setSideBySideLayoutOnRight(cb.isSelected());
+        }
+        if (inputs.containsKey("appearance_widescreenToolWindowLayout")) {
+            CheckBox cb = (CheckBox) inputs.get("appearance_widescreenToolWindowLayout");
+            settings.setWidescreenToolWindowLayout(cb.isSelected());
+        }
+        if (inputs.containsKey("appearance_rememberSizeForEachToolWindow")) {
+            CheckBox cb = (CheckBox) inputs.get("appearance_rememberSizeForEachToolWindow");
+            settings.setRememberSizeForEachToolWindow(cb.isSelected());
+        }
+        if (inputs.containsKey("appearance_presentationModeZoom")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("appearance_presentationModeZoom");
+            if (cb.getValue() != null) settings.setPresentationModeZoom(cb.getValue());
+        }
+        if (inputs.containsKey("appearance_ideAntialiasing")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("appearance_ideAntialiasing");
+            if (cb.getValue() != null) settings.setIdeAntialiasing(cb.getValue());
+        }
+        if (inputs.containsKey("appearance_editorAntialiasing")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("appearance_editorAntialiasing");
+            if (cb.getValue() != null) settings.setEditorAntialiasing(cb.getValue());
         }
 
         // Editor font & size

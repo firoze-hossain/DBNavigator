@@ -168,6 +168,103 @@ public final class AppSettingsStore {
         public String defaultResolveModeForConsoles = "Playground";
         public String statementDelimiter = "";
 
+        // Appearance: Theme & Colors (DataGrip Alignment)
+        public String uiTheme = "Islands Dark";
+        public boolean syncThemeWithOs = false;
+        public String editorColorScheme = "Islands Dark Theme default";
+        public boolean differentToolWindowBackground = false;
+
+        // Appearance: Accessibility (DataGrip Alignment)
+        public String ideZoom = "100%";
+        public boolean useCustomIdeFont = false;
+        public String customIdeFontFamily = "Inter";
+        public int customIdeFontSize = 13;
+        public boolean supportScreenReaders = false;
+        public boolean useContrastScrollbars = false;
+        public boolean adjustColorsForVisionDeficiency = false;
+
+        // Appearance: UI Options (DataGrip Alignment)
+        public boolean compactMode = false;
+        public boolean alwaysShowFullPathInWindowHeader = false;
+        public boolean useProjectColorsInMainToolbar = true;
+        public boolean keepPopupsOpenForToggleItems = true;
+        public boolean dragAndDropWithAltPressedOnly = false;
+        public boolean smoothScrolling = true;
+        public boolean enableMnemonicsInControls = true;
+        public boolean enableMnemonicsInMenu = true;
+        public boolean displayIconsInMenuItems = true;
+        public String mainMenuPresentation = "Hide under Hamburger Button";
+
+        // Appearance: Background Image (DataGrip Alignment)
+        public String backgroundImagePath = "";
+        public int backgroundImageOpacity = 15;
+        public String backgroundImagePlacement = "Fill";
+        public boolean backgroundImageThisProjectOnly = false;
+        public String backgroundImageTarget = "Editor and Tools";
+
+        // Appearance: Tree Views (DataGrip Alignment)
+        public boolean showIndentGuides = false;
+        public boolean useSmallerIndents = false;
+
+        // Appearance: Tool Windows (DataGrip Alignment)
+        public boolean showToolWindowBars = false;
+        public boolean showToolWindowNames = false;
+        public boolean sideBySideLayoutOnLeft = false;
+        public boolean sideBySideLayoutOnRight = false;
+        public boolean widescreenToolWindowLayout = false;
+        public boolean rememberSizeForEachToolWindow = false;
+
+        // Appearance: Presentation Mode (DataGrip Alignment)
+        public String presentationModeZoom = "175%";
+
+        // Appearance: Antialiasing (DataGrip Alignment)
+        public String ideAntialiasing = "Subpixel";
+        public String editorAntialiasing = "Subpixel";
+
+        public static List<String> defaultUiThemes() {
+            return List.of(
+                    "Islands Dark",
+                    "Islands Light",
+                    "Islands Darcula",
+                    "High Contrast",
+                    "Dark",
+                    "Light",
+                    "Light with Light Header",
+                    "Darcula",
+                    "Get More Themes..."
+            );
+        }
+
+        public static List<String> defaultEditorColorSchemes() {
+            return List.of(
+                    "Islands Dark Theme default",
+                    "Darcula",
+                    "High Contrast",
+                    "Light",
+                    "Classic Light"
+            );
+        }
+
+        public static List<String> defaultMainMenuOptions() {
+            return List.of(
+                    "Hide under Hamburger Button",
+                    "Merge with Main Toolbar",
+                    "Show above Main Toolbar"
+            );
+        }
+
+        public static List<String> defaultIdeZooms() {
+            return List.of("100%", "110%", "125%", "150%", "175%", "200%", "250%", "300%");
+        }
+
+        public static List<String> defaultPresentationModeZooms() {
+            return List.of("100%", "125%", "150%", "175%", "200%", "225%", "250%", "300%");
+        }
+
+        public static List<String> defaultAntialiasingOptions() {
+            return List.of("Subpixel", "Greyscale", "No antialiasing");
+        }
+
         public static List<UserParameterPattern> defaultUserParameterPatterns() {
             List<UserParameterPattern> list = new ArrayList<>();
             list.add(new UserParameterPattern("\"#name#\"", "everywhere", "XML", true, false));
@@ -683,6 +780,151 @@ public final class AppSettingsStore {
         public String getStatementDelimiter() { return statementDelimiter; }
         public void setStatementDelimiter(String statementDelimiter) {
             this.statementDelimiter = statementDelimiter != null ? statementDelimiter : "";
+        }
+
+        // Appearance: Theme & Colors Getters and Setters
+        public String getUiTheme() { return uiTheme; }
+        public void setUiTheme(String uiTheme) {
+            this.uiTheme = (uiTheme != null && !uiTheme.isBlank()) ? uiTheme : "Islands Dark";
+        }
+
+        public boolean isSyncThemeWithOs() { return syncThemeWithOs; }
+        public void setSyncThemeWithOs(boolean syncThemeWithOs) { this.syncThemeWithOs = syncThemeWithOs; }
+
+        public String getEditorColorScheme() { return editorColorScheme; }
+        public void setEditorColorScheme(String editorColorScheme) {
+            this.editorColorScheme = (editorColorScheme != null && !editorColorScheme.isBlank()) ? editorColorScheme : "Islands Dark Theme default";
+        }
+
+        public boolean isDifferentToolWindowBackground() { return differentToolWindowBackground; }
+        public void setDifferentToolWindowBackground(boolean differentToolWindowBackground) { this.differentToolWindowBackground = differentToolWindowBackground; }
+
+        // Appearance: Accessibility Getters and Setters
+        public String getIdeZoom() { return ideZoom; }
+        public void setIdeZoom(String ideZoom) {
+            this.ideZoom = (ideZoom != null && !ideZoom.isBlank()) ? ideZoom : "100%";
+        }
+
+        public boolean isUseCustomIdeFont() { return useCustomIdeFont; }
+        public void setUseCustomIdeFont(boolean useCustomIdeFont) { this.useCustomIdeFont = useCustomIdeFont; }
+
+        public String getCustomIdeFontFamily() { return customIdeFontFamily; }
+        public void setCustomIdeFontFamily(String customIdeFontFamily) {
+            this.customIdeFontFamily = (customIdeFontFamily != null && !customIdeFontFamily.isBlank()) ? customIdeFontFamily : "Inter";
+        }
+
+        public int getCustomIdeFontSize() { return customIdeFontSize; }
+        public void setCustomIdeFontSize(int customIdeFontSize) {
+            this.customIdeFontSize = (customIdeFontSize > 0) ? customIdeFontSize : 13;
+        }
+
+        public boolean isSupportScreenReaders() { return supportScreenReaders; }
+        public void setSupportScreenReaders(boolean supportScreenReaders) { this.supportScreenReaders = supportScreenReaders; }
+
+        public boolean isUseContrastScrollbars() { return useContrastScrollbars; }
+        public void setUseContrastScrollbars(boolean useContrastScrollbars) { this.useContrastScrollbars = useContrastScrollbars; }
+
+        public boolean isAdjustColorsForVisionDeficiency() { return adjustColorsForVisionDeficiency; }
+        public void setAdjustColorsForVisionDeficiency(boolean adjustColorsForVisionDeficiency) { this.adjustColorsForVisionDeficiency = adjustColorsForVisionDeficiency; }
+
+        // Appearance: UI Options Getters and Setters
+        public boolean isCompactMode() { return compactMode; }
+        public void setCompactMode(boolean compactMode) { this.compactMode = compactMode; }
+
+        public boolean isAlwaysShowFullPathInWindowHeader() { return alwaysShowFullPathInWindowHeader; }
+        public void setAlwaysShowFullPathInWindowHeader(boolean alwaysShowFullPathInWindowHeader) { this.alwaysShowFullPathInWindowHeader = alwaysShowFullPathInWindowHeader; }
+
+        public boolean isUseProjectColorsInMainToolbar() { return useProjectColorsInMainToolbar; }
+        public void setUseProjectColorsInMainToolbar(boolean useProjectColorsInMainToolbar) { this.useProjectColorsInMainToolbar = useProjectColorsInMainToolbar; }
+
+        public boolean isKeepPopupsOpenForToggleItems() { return keepPopupsOpenForToggleItems; }
+        public void setKeepPopupsOpenForToggleItems(boolean keepPopupsOpenForToggleItems) { this.keepPopupsOpenForToggleItems = keepPopupsOpenForToggleItems; }
+
+        public boolean isDragAndDropWithAltPressedOnly() { return dragAndDropWithAltPressedOnly; }
+        public void setDragAndDropWithAltPressedOnly(boolean dragAndDropWithAltPressedOnly) { this.dragAndDropWithAltPressedOnly = dragAndDropWithAltPressedOnly; }
+
+        public boolean isSmoothScrolling() { return smoothScrolling; }
+        public void setSmoothScrolling(boolean smoothScrolling) { this.smoothScrolling = smoothScrolling; }
+
+        public boolean isEnableMnemonicsInControls() { return enableMnemonicsInControls; }
+        public void setEnableMnemonicsInControls(boolean enableMnemonicsInControls) { this.enableMnemonicsInControls = enableMnemonicsInControls; }
+
+        public boolean isEnableMnemonicsInMenu() { return enableMnemonicsInMenu; }
+        public void setEnableMnemonicsInMenu(boolean enableMnemonicsInMenu) { this.enableMnemonicsInMenu = enableMnemonicsInMenu; }
+
+        public boolean isDisplayIconsInMenuItems() { return displayIconsInMenuItems; }
+        public void setDisplayIconsInMenuItems(boolean displayIconsInMenuItems) { this.displayIconsInMenuItems = displayIconsInMenuItems; }
+
+        public String getMainMenuPresentation() { return mainMenuPresentation; }
+        public void setMainMenuPresentation(String mainMenuPresentation) {
+            this.mainMenuPresentation = (mainMenuPresentation != null && !mainMenuPresentation.isBlank()) ? mainMenuPresentation : "Hide under Hamburger Button";
+        }
+
+        // Appearance: Background Image Getters and Setters
+        public String getBackgroundImagePath() { return backgroundImagePath; }
+        public void setBackgroundImagePath(String backgroundImagePath) {
+            this.backgroundImagePath = backgroundImagePath != null ? backgroundImagePath : "";
+        }
+
+        public int getBackgroundImageOpacity() { return backgroundImageOpacity; }
+        public void setBackgroundImageOpacity(int backgroundImageOpacity) {
+            this.backgroundImageOpacity = Math.max(0, Math.min(100, backgroundImageOpacity));
+        }
+
+        public String getBackgroundImagePlacement() { return backgroundImagePlacement; }
+        public void setBackgroundImagePlacement(String backgroundImagePlacement) {
+            this.backgroundImagePlacement = (backgroundImagePlacement != null && !backgroundImagePlacement.isBlank()) ? backgroundImagePlacement : "Fill";
+        }
+
+        public boolean isBackgroundImageThisProjectOnly() { return backgroundImageThisProjectOnly; }
+        public void setBackgroundImageThisProjectOnly(boolean val) { this.backgroundImageThisProjectOnly = val; }
+
+        public String getBackgroundImageTarget() { return backgroundImageTarget; }
+        public void setBackgroundImageTarget(String val) {
+            this.backgroundImageTarget = (val != null && !val.isBlank()) ? val : "Editor and Tools";
+        }
+
+        // Appearance: Tree Views Getters and Setters
+        public boolean isShowIndentGuides() { return showIndentGuides; }
+        public void setShowIndentGuides(boolean showIndentGuides) { this.showIndentGuides = showIndentGuides; }
+
+        public boolean isUseSmallerIndents() { return useSmallerIndents; }
+        public void setUseSmallerIndents(boolean useSmallerIndents) { this.useSmallerIndents = useSmallerIndents; }
+
+        // Appearance: Tool Windows Getters and Setters
+        public boolean isShowToolWindowBars() { return showToolWindowBars; }
+        public void setShowToolWindowBars(boolean showToolWindowBars) { this.showToolWindowBars = showToolWindowBars; }
+
+        public boolean isShowToolWindowNames() { return showToolWindowNames; }
+        public void setShowToolWindowNames(boolean showToolWindowNames) { this.showToolWindowNames = showToolWindowNames; }
+
+        public boolean isSideBySideLayoutOnLeft() { return sideBySideLayoutOnLeft; }
+        public void setSideBySideLayoutOnLeft(boolean sideBySideLayoutOnLeft) { this.sideBySideLayoutOnLeft = sideBySideLayoutOnLeft; }
+
+        public boolean isSideBySideLayoutOnRight() { return sideBySideLayoutOnRight; }
+        public void setSideBySideLayoutOnRight(boolean sideBySideLayoutOnRight) { this.sideBySideLayoutOnRight = sideBySideLayoutOnRight; }
+
+        public boolean isWidescreenToolWindowLayout() { return widescreenToolWindowLayout; }
+        public void setWidescreenToolWindowLayout(boolean widescreenToolWindowLayout) { this.widescreenToolWindowLayout = widescreenToolWindowLayout; }
+
+        public boolean isRememberSizeForEachToolWindow() { return rememberSizeForEachToolWindow; }
+        public void setRememberSizeForEachToolWindow(boolean rememberSizeForEachToolWindow) { this.rememberSizeForEachToolWindow = rememberSizeForEachToolWindow; }
+
+        // Appearance: Presentation Mode Getters and Setters
+        public String getPresentationModeZoom() { return presentationModeZoom; }
+        public void setPresentationModeZoom(String presentationModeZoom) {
+            this.presentationModeZoom = (presentationModeZoom != null && !presentationModeZoom.isBlank()) ? presentationModeZoom : "175%";
+        }
+
+        // Appearance: Antialiasing Getters and Setters
+        public String getIdeAntialiasing() { return ideAntialiasing; }
+        public void setIdeAntialiasing(String ideAntialiasing) {
+            this.ideAntialiasing = (ideAntialiasing != null && !ideAntialiasing.isBlank()) ? ideAntialiasing : "Subpixel";
+        }
+
+        public String getEditorAntialiasing() { return editorAntialiasing; }
+        public void setEditorAntialiasing(String editorAntialiasing) {
+            this.editorAntialiasing = (editorAntialiasing != null && !editorAntialiasing.isBlank()) ? editorAntialiasing : "Subpixel";
         }
     }
 
