@@ -239,6 +239,9 @@ public class MainWindow {
         for (TabPane pane : editorTabPanes()) {
             applyTabPaneSettings(pane, settings);
         }
+        if (runPanel != null) {
+            runPanel.applyOutputConsoleSettings(settings);
+        }
         forEachEditorTab(tab -> {
             if (tab instanceof QueryTab queryTab) {
                 queryTab.applyEditorFontFromSettings();

@@ -13,6 +13,7 @@ import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import org.kordamp.ikonli.fontawesome5.FontAwesomeSolid;
 
+import com.roze.dbnavigator.db.AppSettingsStore;
 import java.io.File;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
@@ -82,6 +83,16 @@ public class RunPanel extends BorderPane {
     /** Wires the minimize ("—") button to whatever the host does to collapse this panel. */
     public void setOnMinimize(Runnable action) {
         this.onMinimize = action;
+    }
+
+    public void applyOutputConsoleSettings(AppSettingsStore.Settings settings) {
+        if (settings == null) return;
+        boolean wrap = settings.isOutputConsoleUseSoftWraps();
+        for (Tab t : tabs.getTabs()) {
+            if (t.getContent() instanceof RunTabContent c) {
+                c.output.setWrapText(wrap);
+            }
+        }
     }
 
     private static MenuItem menuItem(String text, Runnable action) {
@@ -156,7 +167,7 @@ public class RunPanel extends BorderPane {
             getStyleClass().add("run-tab-content");
 
             output.setEditable(false);
-            output.setWrapText(false);
+            output.setWrapText(AppSettingsStore.load().isOutputConsoleUseSoftWraps());
             output.getStyleClass().add("process-output");
             HBox.setHgrow(output, Priority.ALWAYS);
 

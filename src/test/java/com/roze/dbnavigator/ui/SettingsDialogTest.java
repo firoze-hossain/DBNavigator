@@ -107,7 +107,7 @@ public class SettingsDialogTest {
 
         // Subtree under General
         List<String> genChildren = SettingsDialog.getChildCategoryNames("Editor / General");
-        assertEquals(13, genChildren.size(), "General should have 13 children");
+        assertEquals(14, genChildren.size(), "General should have 14 children matching DataGrip");
         assertEquals("Auto Import", genChildren.get(0));
         assertEquals("Appearance", genChildren.get(1));
         assertEquals("Breadcrumbs", genChildren.get(2));
@@ -115,12 +115,13 @@ public class SettingsDialogTest {
         assertEquals("Code Folding", genChildren.get(4));
         assertEquals("Editor Tabs", genChildren.get(5));
         assertEquals("Gutter Icons", genChildren.get(6));
-        assertEquals("Output Console", genChildren.get(7));
-        assertEquals("Postfix Completion", genChildren.get(8));
-        assertEquals("Smart Keys", genChildren.get(9));
-        assertEquals("Sticky Lines", genChildren.get(10));
-        assertEquals("Code Editing", genChildren.get(11));
-        assertEquals("Font", genChildren.get(12));
+        assertEquals("Inline Completion", genChildren.get(7));
+        assertEquals("Output Console", genChildren.get(8));
+        assertEquals("Postfix Completion", genChildren.get(9));
+        assertEquals("Smart Keys", genChildren.get(10));
+        assertEquals("Sticky Lines", genChildren.get(11));
+        assertEquals("Code Editing", genChildren.get(12));
+        assertEquals("Font", genChildren.get(13));
 
         // Subtree under Code Completion
         List<String> ccChildren = SettingsDialog.getChildCategoryNames("Editor / General / Code Completion");
@@ -1435,5 +1436,131 @@ public class SettingsDialogTest {
 
         assertTrue(loaded.isEditorTabsAlwaysShowQualifiedNames());
         assertFalse(loaded.isEditorTabsShortenNames());
+    }
+
+    @Test
+    public void testOutputConsoleGutterIconsAndInlineCompletionDescriptions() {
+        String ocDesc = SettingsDialog.getCategoryDescription("Editor / General / Output Console");
+        assertEquals("Configure console buffer size, folding, and cyclic buffer limits.", ocDesc);
+
+        String giDesc = SettingsDialog.getCategoryDescription("Editor / General / Gutter Icons");
+        assertEquals("Configure run, breakpoint, and line-marker icons in the left gutter.", giDesc);
+
+        String icDesc = SettingsDialog.getCategoryDescription("Editor / General / Inline Completion");
+        assertEquals("Configure full line and inline completion suggestions and typing triggers.", icDesc);
+    }
+
+    @Test
+    public void testOutputConsoleSettings() throws Exception {
+        AppSettingsStore.Settings settings = new AppSettingsStore.Settings();
+
+        // 1. Verify default values match DataGrip screenshots
+        assertFalse(settings.isOutputConsoleUseSoftWraps());
+        assertEquals(300, settings.getOutputConsoleHistorySize());
+        assertFalse(settings.isOutputConsoleOverrideCycleBuffer());
+        assertEquals(1024, settings.getOutputConsoleCycleBufferSizeKb());
+        assertEquals("<System Default: UTF-8>", settings.getOutputConsoleDefaultEncoding());
+        assertNotNull(settings.getOutputConsoleFoldingPatterns());
+        assertTrue(settings.getOutputConsoleFoldingPatterns().isEmpty());
+        assertNotNull(settings.getOutputConsoleFoldingExceptions());
+        assertTrue(settings.getOutputConsoleFoldingExceptions().isEmpty());
+
+        // 2. Mutate settings
+        settings.setOutputConsoleUseSoftWraps(true);
+        settings.setOutputConsoleHistorySize(500);
+        settings.setOutputConsoleOverrideCycleBuffer(true);
+        settings.setOutputConsoleCycleBufferSizeKb(2048);
+        settings.setOutputConsoleDefaultEncoding("UTF-8");
+        settings.getOutputConsoleFoldingPatterns().add("at org.springframework");
+        settings.getOutputConsoleFoldingPatterns().add("at com.intellij");
+        settings.getOutputConsoleFoldingExceptions().add("Caused by:");
+
+        // 3. Jackson JSON Roundtrip Serialization
+        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        String json = mapper.writeValueAsString(settings);
+        AppSettingsStore.Settings loaded = mapper.readValue(json, AppSettingsStore.Settings.class);
+
+        // 4. Verify deserialized values
+        assertTrue(loaded.isOutputConsoleUseSoftWraps());
+        assertEquals(500, loaded.getOutputConsoleHistorySize());
+        assertTrue(loaded.isOutputConsoleOverrideCycleBuffer());
+        assertEquals(2048, loaded.getOutputConsoleCycleBufferSizeKb());
+        assertEquals("UTF-8", loaded.getOutputConsoleDefaultEncoding());
+        assertEquals(2, loaded.getOutputConsoleFoldingPatterns().size());
+        assertEquals("at org.springframework", loaded.getOutputConsoleFoldingPatterns().get(0));
+        assertEquals("at com.intellij", loaded.getOutputConsoleFoldingPatterns().get(1));
+        assertEquals(1, loaded.getOutputConsoleFoldingExceptions().size());
+        assertEquals("Caused by:", loaded.getOutputConsoleFoldingExceptions().get(0));
+    }
+
+    @Test
+    public void testGutterIconsSettings() throws Exception {
+        AppSettingsStore.Settings settings = new AppSettingsStore.Settings();
+
+        // 1. Verify default values match DataGrip screenshots
+        assertTrue(settings.isShowGutterIcons());
+        assertTrue(settings.isGutterColorPreview());
+        assertTrue(settings.isGutterDocComments());
+        assertTrue(settings.isGutterRunLineMarker());
+        assertTrue(settings.isGutterRecursiveCall());
+        assertTrue(settings.isGutterVcsIgnoredDirectories());
+        assertTrue(settings.isGutterConfigureHtmlImage());
+        assertTrue(settings.isGutterConfigureMarkdownImage());
+        assertTrue(settings.isGutterInstallPlantUml());
+
+        // 2. Mutate settings
+        settings.setShowGutterIcons(false);
+        settings.setGutterColorPreview(false);
+        settings.setGutterDocComments(false);
+        settings.setGutterRunLineMarker(false);
+        settings.setGutterRecursiveCall(false);
+        settings.setGutterVcsIgnoredDirectories(false);
+        settings.setGutterConfigureHtmlImage(false);
+        settings.setGutterConfigureMarkdownImage(false);
+        settings.setGutterInstallPlantUml(false);
+
+        // 3. Jackson JSON Roundtrip Serialization
+        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        String json = mapper.writeValueAsString(settings);
+        AppSettingsStore.Settings loaded = mapper.readValue(json, AppSettingsStore.Settings.class);
+
+        // 4. Verify deserialized values
+        assertFalse(loaded.isShowGutterIcons());
+        assertFalse(loaded.isGutterColorPreview());
+        assertFalse(loaded.isGutterDocComments());
+        assertFalse(loaded.isGutterRunLineMarker());
+        assertFalse(loaded.isGutterRecursiveCall());
+        assertFalse(loaded.isGutterVcsIgnoredDirectories());
+        assertFalse(loaded.isGutterConfigureHtmlImage());
+        assertFalse(loaded.isGutterConfigureMarkdownImage());
+        assertFalse(loaded.isGutterInstallPlantUml());
+    }
+
+    @Test
+    public void testInlineCompletionSettings() throws Exception {
+        AppSettingsStore.Settings settings = new AppSettingsStore.Settings();
+
+        // 1. Verify default values match DataGrip screenshots
+        assertTrue(settings.isInlineCompletionEnabled());
+        assertTrue(settings.isInlineAutoOnTyping());
+        assertTrue(settings.isInlineMultilineSuggestions());
+        assertFalse(settings.isInlineSyncWithPopup());
+
+        // 2. Mutate settings
+        settings.setInlineCompletionEnabled(false);
+        settings.setInlineAutoOnTyping(false);
+        settings.setInlineMultilineSuggestions(false);
+        settings.setInlineSyncWithPopup(true);
+
+        // 3. Jackson JSON Roundtrip Serialization
+        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        String json = mapper.writeValueAsString(settings);
+        AppSettingsStore.Settings loaded = mapper.readValue(json, AppSettingsStore.Settings.class);
+
+        // 4. Verify deserialized values
+        assertFalse(loaded.isInlineCompletionEnabled());
+        assertFalse(loaded.isInlineAutoOnTyping());
+        assertFalse(loaded.isInlineMultilineSuggestions());
+        assertTrue(loaded.isInlineSyncWithPopup());
     }
 }
