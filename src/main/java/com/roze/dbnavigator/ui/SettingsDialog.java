@@ -321,11 +321,12 @@ public final class SettingsDialog {
 
         general.getChildren().add(new CategoryDef("editor.general.sticky_lines", "Sticky Lines", "Editor / General / Sticky Lines",
                 "Keep current scope header visible at the top of the editor while scrolling."));
-        general.getChildren().add(new CategoryDef("editor.code_editing", "Code Editing", "Editor / General / Code Editing",
-                "Configure code completion, quote pairing, and auto-insertion rules."));
-        general.getChildren().add(new CategoryDef("editor.font", "Font", "Editor / General / Font",
-                "Customize the font family, font size, and line spacing for SQL consoles and editors."));
         editor.getChildren().add(general);
+
+        editor.getChildren().add(new CategoryDef("editor.code_editing", "Code Editing", "Editor / Code Editing",
+                "Configure caret movement highlighting, quick doc, refactoring options, error highlighting, and tooltips."));
+        editor.getChildren().add(new CategoryDef("editor.font", "Font", "Editor / Font",
+                "Customize the font family, font size, line height, ligatures, and typography for SQL consoles and editors."));
 
         // Color Scheme (26 subcategories from DataGrip)
         CategoryDef colorScheme = new CategoryDef("editor.color_scheme", "Color Scheme", "Editor / Color Scheme",
@@ -892,10 +893,14 @@ public final class SettingsDialog {
             return buildSmartKeysSqlPanel(settings, inputs);
         } else if ("Editor / General / Smart Keys".equals(fullPath) || "Smart Keys".equals(fullPath)) {
             return buildSmartKeysPanel(settings, inputs, navigateTo);
+        } else if ("Editor / General / Sticky Lines".equals(fullPath) || "Sticky Lines".equals(fullPath)) {
+            return buildStickyLinesPanel(settings, inputs, navigateTo);
+        } else if ("Editor / Code Editing".equals(fullPath) || "Editor / General / Code Editing".equals(fullPath) || "Code Editing".equals(fullPath)) {
+            return buildCodeEditingPanel(settings, inputs);
+        } else if ("Editor / Font".equals(fullPath) || "Editor / General / Font".equals(fullPath) || "Font".equals(fullPath)) {
+            return buildFontPanel(settings, inputs, navigateTo);
         } else if ("Editor / General".equals(fullPath)) {
             return buildGeneralEditorPanel(settings, inputs);
-        } else if ("Editor / General / Font".equals(fullPath) || "Editor / Font".equals(fullPath) || "Font".equals(fullPath)) {
-            return buildFontPanel(settings, inputs);
         } else if ("Database / Query Execution".equals(fullPath)) {
             return buildQueryExecutionPanel(settings, inputs, navigateTo);
         } else if ("Database / Query Execution / Output and Results".equals(fullPath) || "Output and Results".equals(fullPath)) {
@@ -4263,65 +4268,504 @@ public final class SettingsDialog {
         });
     }
 
-    private static VBox buildFontPanel(AppSettingsStore.Settings settings, Map<String, Object> inputs) {
-        Label title = new Label("Font");
-        title.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: -text;");
+    private static VBox buildStickyLinesPanel(AppSettingsStore.Settings settings, Map<String, Object> inputs,
+                                              java.util.function.Consumer<String> navigateTo) {
+        VBox panel = new VBox(12);
+        panel.setPadding(new Insets(10, 16, 16, 16));
 
+        CheckBox showStickyLinesCheck = new CheckBox("Show sticky lines while scrolling");
+        showStickyLinesCheck.setSelected(settings.isStickyLinesEnabled());
+        showStickyLinesCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("stickyLines_enabled", showStickyLinesCheck);
+
+        VBox indented = new VBox(12);
+        indented.setPadding(new Insets(4, 0, 8, 20));
+        indented.disableProperty().bind(showStickyLinesCheck.selectedProperty().not());
+
+        // Maximum number of lines
+        Label maxLinesLabel = new Label("Maximum number of lines:");
+        maxLinesLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        maxLinesLabel.setMinWidth(160);
+
+        Spinner<Integer> maxLinesSpinner = new Spinner<>(1, 20, settings.getStickyLinesMaxLines(), 1);
+        maxLinesSpinner.setEditable(true);
+        maxLinesSpinner.setPrefWidth(65);
+        maxLinesSpinner.setStyle("-fx-font-size: 12px;");
+        inputs.put("stickyLines_maxLines", maxLinesSpinner);
+
+        HBox maxLinesRow = new HBox(8, maxLinesLabel, maxLinesSpinner);
+        maxLinesRow.setAlignment(Pos.CENTER_LEFT);
+
+        // Languages
+        Label languagesLabel = new Label("Languages:");
+        languagesLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+
+        GridPane langGrid = new GridPane();
+        langGrid.setHgap(32);
+        langGrid.setVgap(8);
+
+        CheckBox htmlCheck = new CheckBox("HTML");
+        htmlCheck.setSelected(settings.isStickyLinesHtml());
+        htmlCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("stickyLines_html", htmlCheck);
+
+        CheckBox mdCheck = new CheckBox("Markdown");
+        mdCheck.setSelected(settings.isStickyLinesMarkdown());
+        mdCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("stickyLines_markdown", mdCheck);
+
+        CheckBox xhtmlCheck = new CheckBox("XHTML");
+        xhtmlCheck.setSelected(settings.isStickyLinesXhtml());
+        xhtmlCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("stickyLines_xhtml", xhtmlCheck);
+
+        CheckBox jsonCheck = new CheckBox("JSON");
+        jsonCheck.setSelected(settings.isStickyLinesJson());
+        jsonCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("stickyLines_json", jsonCheck);
+
+        CheckBox sqlCheck = new CheckBox("SQL");
+        sqlCheck.setSelected(settings.isStickyLinesSql());
+        sqlCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("stickyLines_sql", sqlCheck);
+
+        CheckBox xmlCheck = new CheckBox("XML");
+        xmlCheck.setSelected(settings.isStickyLinesXml());
+        xmlCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("stickyLines_xml", xmlCheck);
+
+        langGrid.add(htmlCheck, 0, 0);
+        langGrid.add(mdCheck, 1, 0);
+        langGrid.add(xhtmlCheck, 2, 0);
+        langGrid.add(jsonCheck, 0, 1);
+        langGrid.add(sqlCheck, 1, 1);
+        langGrid.add(xmlCheck, 2, 1);
+
+        // Manage colors hyperlink
+        Hyperlink manageColorsLink = new Hyperlink("Manage colors");
+        manageColorsLink.setStyle("-fx-text-fill: -accent; -fx-font-size: 13px; -fx-underline: true; -fx-padding: 4 0 0 0;");
+        manageColorsLink.setOnAction(e -> {
+            if (navigateTo != null) navigateTo.accept("Editor / Color Scheme / General");
+        });
+
+        indented.getChildren().addAll(maxLinesRow, languagesLabel, langGrid, manageColorsLink);
+        panel.getChildren().addAll(showStickyLinesCheck, indented);
+        return panel;
+    }
+
+    private static VBox buildCodeEditingPanel(AppSettingsStore.Settings settings, Map<String, Object> inputs) {
+        VBox panel = new VBox(10);
+        panel.setPadding(new Insets(10, 16, 16, 16));
+
+        // 1. Highlight on Caret Movement
+        HBox caretMoveHeader = createSectionHeader("Highlight on Caret Movement");
+
+        CheckBox matchedBraceCheck = new CheckBox("Matched brace");
+        matchedBraceCheck.setSelected(settings.isCodeEditingHighlightMatchedBrace());
+        matchedBraceCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("codeEditing_highlightMatchedBrace", matchedBraceCheck);
+
+        CheckBox currentScopeCheck = new CheckBox("Current scope");
+        currentScopeCheck.setSelected(settings.isCodeEditingHighlightCurrentScope());
+        currentScopeCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("codeEditing_highlightCurrentScope", currentScopeCheck);
+
+        CheckBox usagesCheck = new CheckBox("Usages of element at caret");
+        usagesCheck.setSelected(settings.isCodeEditingHighlightUsages());
+        usagesCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("codeEditing_highlightUsages", usagesCheck);
+
+        VBox caretMoveBox = new VBox(8, matchedBraceCheck, currentScopeCheck, usagesCheck);
+        caretMoveBox.setPadding(new Insets(2, 0, 8, 18));
+
+        // 2. Quick Documentation
+        HBox quickDocHeader = createSectionHeader("Quick Documentation");
+
+        CheckBox showDocCheck = new CheckBox("Show quick documentation on hover");
+        showDocCheck.setSelected(settings.isCodeEditingShowDocOnHover());
+        showDocCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("codeEditing_showDocOnHover", showDocCheck);
+
+        VBox quickDocBox = new VBox(8, showDocCheck);
+        quickDocBox.setPadding(new Insets(2, 0, 8, 18));
+
+        // 3. Refactorings
+        HBox refactorHeader = createSectionHeader("Refactorings");
+
+        Label specifyRefactorLabel = new Label("Specify refactoring options:");
+        specifyRefactorLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+
+        ToggleGroup refactorGroup = new ToggleGroup();
+        RadioButton inEditorRadio = new RadioButton("In the editor");
+        inEditorRadio.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inEditorRadio.setToggleGroup(refactorGroup);
+
+        RadioButton inDialogsRadio = new RadioButton("In modal dialogs");
+        inDialogsRadio.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inDialogsRadio.setToggleGroup(refactorGroup);
+
+        if ("In modal dialogs".equalsIgnoreCase(settings.getCodeEditingRefactoringOption())) {
+            inDialogsRadio.setSelected(true);
+        } else {
+            inEditorRadio.setSelected(true);
+        }
+        inputs.put("codeEditing_refactoringOption", refactorGroup);
+
+        VBox radioBox = new VBox(6, inEditorRadio, inDialogsRadio);
+        radioBox.setPadding(new Insets(0, 0, 0, 16));
+
+        CheckBox preselectSymbolCheck = new CheckBox("Preselect current symbol name for Rename refactoring");
+        preselectSymbolCheck.setSelected(settings.isCodeEditingPreselectCurrentSymbol());
+        preselectSymbolCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("codeEditing_preselectCurrentSymbol", preselectSymbolCheck);
+
+        CheckBox showInlineDialogCheck = new CheckBox("Show inline dialog for local variables");
+        showInlineDialogCheck.setSelected(settings.isCodeEditingShowInlineDialogForLocalVars());
+        showInlineDialogCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("codeEditing_showInlineDialogForLocalVars", showInlineDialogCheck);
+
+        VBox refactorBox = new VBox(8, specifyRefactorLabel, radioBox, preselectSymbolCheck, showInlineDialogCheck);
+        refactorBox.setPadding(new Insets(2, 0, 8, 18));
+
+        // 4. Error Highlighting
+        HBox errorHighlightHeader = createSectionHeader("Error Highlighting");
+
+        Label stripeHeightLabel = new Label("Error stripe mark min height:");
+        stripeHeightLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        stripeHeightLabel.setMinWidth(180);
+
+        Spinner<Integer> stripeSpinner = new Spinner<>(1, 100, settings.getCodeEditingErrorStripeMarkMinHeight(), 1);
+        stripeSpinner.setEditable(true);
+        stripeSpinner.setPrefWidth(60);
+        stripeSpinner.setStyle("-fx-font-size: 12px;");
+        inputs.put("codeEditing_errorStripeMarkMinHeight", stripeSpinner);
+
+        Label pixelsLabel = new Label("pixels");
+        pixelsLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+
+        HBox stripeRow = new HBox(8, stripeHeightLabel, stripeSpinner, pixelsLabel);
+        stripeRow.setAlignment(Pos.CENTER_LEFT);
+
+        Label autoreparseLabel = new Label("Autoreparse delay:");
+        autoreparseLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        autoreparseLabel.setMinWidth(180);
+
+        Spinner<Integer> autoreparseSpinner = new Spinner<>(0, 10000, settings.getCodeEditingAutoreparseDelayMs(), 50);
+        autoreparseSpinner.setEditable(true);
+        autoreparseSpinner.setPrefWidth(70);
+        autoreparseSpinner.setStyle("-fx-font-size: 12px;");
+        inputs.put("codeEditing_autoreparseDelayMs", autoreparseSpinner);
+
+        Label msLabel = new Label("milliseconds");
+        msLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+
+        HBox autoreparseRow = new HBox(8, autoreparseLabel, autoreparseSpinner, msLabel);
+        autoreparseRow.setAlignment(Pos.CENTER_LEFT);
+
+        Label nextErrorLabel = new Label("The 'Next Error' action goes through:");
+        nextErrorLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        nextErrorLabel.setMinWidth(240);
+
+        ComboBox<String> nextErrorCombo = new ComboBox<>();
+        nextErrorCombo.getItems().addAll(AppSettingsStore.Settings.defaultNextErrorActionOptions());
+        nextErrorCombo.setValue(settings.getCodeEditingNextErrorAction());
+        nextErrorCombo.setPrefWidth(260);
+        nextErrorCombo.setStyle("-fx-font-size: 12px;");
+        inputs.put("codeEditing_nextErrorAction", nextErrorCombo);
+
+        HBox nextErrorRow = new HBox(8, nextErrorLabel, nextErrorCombo);
+        nextErrorRow.setAlignment(Pos.CENTER_LEFT);
+
+        VBox errorHighlightBox = new VBox(8, stripeRow, autoreparseRow, nextErrorRow);
+        errorHighlightBox.setPadding(new Insets(2, 0, 8, 18));
+
+        // 5. Editor Tooltips
+        HBox tooltipsHeader = createSectionHeader("Editor Tooltips");
+
+        Label tooltipDelayLabel = new Label("Tooltip delay:");
+        tooltipDelayLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        tooltipDelayLabel.setMinWidth(180);
+
+        Spinner<Integer> tooltipDelaySpinner = new Spinner<>(0, 5000, settings.getCodeEditingTooltipDelayMs(), 50);
+        tooltipDelaySpinner.setEditable(true);
+        tooltipDelaySpinner.setPrefWidth(70);
+        tooltipDelaySpinner.setStyle("-fx-font-size: 12px;");
+        inputs.put("codeEditing_tooltipDelayMs", tooltipDelaySpinner);
+
+        Label tooltipMsLabel = new Label("milliseconds");
+        tooltipMsLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+
+        HBox tooltipDelayRow = new HBox(8, tooltipDelayLabel, tooltipDelaySpinner, tooltipMsLabel);
+        tooltipDelayRow.setAlignment(Pos.CENTER_LEFT);
+
+        VBox tooltipsBox = new VBox(8, tooltipDelayRow);
+        tooltipsBox.setPadding(new Insets(2, 0, 8, 18));
+
+        panel.getChildren().addAll(
+                caretMoveHeader, caretMoveBox,
+                quickDocHeader, quickDocBox,
+                refactorHeader, refactorBox,
+                errorHighlightHeader, errorHighlightBox,
+                tooltipsHeader, tooltipsBox
+        );
+        return panel;
+    }
+
+    private static HBox buildFontPanel(AppSettingsStore.Settings settings, Map<String, Object> inputs,
+                                       java.util.function.Consumer<String> navigateTo) {
+        HBox mainContainer = new HBox(20);
+        mainContainer.setPadding(new Insets(10, 16, 16, 16));
+
+        // --- Left Configuration Pane ---
+        VBox leftPane = new VBox(12);
+        leftPane.setMinWidth(410);
+        leftPane.setPrefWidth(430);
+
+        // Row 1: Font dropdown
         Label fontLabel = new Label("Font:");
-        fontLabel.getStyleClass().add("connection-field-label");
+        fontLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        fontLabel.setMinWidth(48);
+
         ComboBox<String> fontCombo = new ComboBox<>();
-        fontCombo.getItems().addAll(Font.getFamilies());
-        fontCombo.getSelectionModel().select(settings.getEditorFontFamily());
-        fontCombo.setPrefWidth(240);
-        fontCombo.setEditable(true);
-
-        Label sizeLabel = new Label("Size:");
-        sizeLabel.getStyleClass().add("connection-field-label");
-        Spinner<Double> sizeSpinner = new Spinner<>(8, 48, settings.getEditorFontSize(), 1);
-        sizeSpinner.setEditable(true);
-        sizeSpinner.setPrefWidth(90);
-
-        Label spacingLabel = new Label("Line spacing:");
-        spacingLabel.getStyleClass().add("connection-field-label");
-        Spinner<Double> spacingSpinner = new Spinner<>(1.0, 2.0, 1.2, 0.1);
-        spacingSpinner.setEditable(true);
-        spacingSpinner.setPrefWidth(90);
-
-        GridPane grid = new GridPane();
-        grid.setHgap(14);
-        grid.setVgap(10);
-        grid.add(fontLabel, 0, 0);
-        grid.add(fontCombo, 1, 0);
-        grid.add(sizeLabel, 0, 1);
-        grid.add(sizeSpinner, 1, 1);
-        grid.add(spacingLabel, 0, 2);
-        grid.add(spacingSpinner, 1, 2);
-
-        TextArea preview = new TextArea(
-                "SELECT u.id, u.username, count(o.id) AS order_count\n"
-                        + "FROM users u\n"
-                        + "LEFT JOIN orders o ON o.user_id = u.id\n"
-                        + "WHERE u.active = true\n"
-                        + "GROUP BY u.id, u.username\n"
-                        + "ORDER BY order_count DESC;\n"
-                        + "-- Live font preview matching DataGrip console");
-        preview.setEditable(false);
-        preview.setPrefRowCount(7);
-        preview.getStyleClass().add("process-output");
-
-        Runnable refreshPreview = () -> preview.setStyle(
-                "-fx-font-family: '" + fontCombo.getValue() + "'; -fx-font-size: " + sizeSpinner.getValue() + "px;");
-        fontCombo.valueProperty().addListener((o, a, b) -> refreshPreview.run());
-        sizeSpinner.valueProperty().addListener((o, a, b) -> refreshPreview.run());
-        refreshPreview.run();
-
+        // Monospaced fonts prioritized
+        List<String> preferredFonts = List.of(
+                "JetBrains Mono", "Fira Code", "Inconsolata", "Source Code Pro",
+                "Menlo", "Monaco", "Courier New", "Droid Sans Mono", "Consolas"
+        );
+        List<String> installed = Font.getFamilies();
+        for (String pf : preferredFonts) {
+            if (installed.contains(pf) && !fontCombo.getItems().contains(pf)) {
+                fontCombo.getItems().add(pf);
+            }
+        }
+        for (String fam : installed) {
+            if (!fontCombo.getItems().contains(fam)) {
+                fontCombo.getItems().add(fam);
+            }
+        }
+        if (!fontCombo.getItems().contains(settings.getEditorFontFamily())) {
+            fontCombo.getItems().add(0, settings.getEditorFontFamily());
+        }
+        fontCombo.setValue(settings.getEditorFontFamily());
+        fontCombo.setPrefWidth(260);
+        fontCombo.setStyle("-fx-font-size: 12px;");
         inputs.put("fontCombo", fontCombo);
+
+        HBox fontRow = new HBox(8, fontLabel, fontCombo);
+        fontRow.setAlignment(Pos.CENTER_LEFT);
+
+        // Row 2: Size & Line height
+        Label sizeLabel = new Label("Size:");
+        sizeLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        sizeLabel.setMinWidth(36);
+
+        Spinner<Double> sizeSpinner = new Spinner<>(8.0, 48.0, settings.getEditorFontSize(), 0.5);
+        sizeSpinner.setEditable(true);
+        sizeSpinner.setPrefWidth(75);
+        sizeSpinner.setStyle("-fx-font-size: 12px;");
         inputs.put("sizeSpinner", sizeSpinner);
 
-        VBox panel = new VBox(12, title, grid, new Label("Preview:"), preview);
-        VBox.setVgrow(preview, Priority.ALWAYS);
-        panel.setPadding(new Insets(4, 8, 16, 8));
-        return panel;
+        Label lineHeightLabel = new Label("Line height:");
+        lineHeightLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        lineHeightLabel.setMinWidth(75);
+
+        Spinner<Double> lineHeightSpinner = new Spinner<>(0.8, 3.0, settings.getEditorLineHeight(), 0.1);
+        lineHeightSpinner.setEditable(true);
+        lineHeightSpinner.setPrefWidth(65);
+        lineHeightSpinner.setStyle("-fx-font-size: 12px;");
+        inputs.put("editor_lineHeight", lineHeightSpinner);
+
+        HBox sizeLineRow = new HBox(8, sizeLabel, sizeSpinner, lineHeightLabel, lineHeightSpinner);
+        sizeLineRow.setAlignment(Pos.CENTER_LEFT);
+
+        // Row 3: Enable ligatures
+        CheckBox enableLigaturesCheck = new CheckBox("Enable ligatures");
+        enableLigaturesCheck.setSelected(settings.isEditorEnableLigatures());
+        enableLigaturesCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("editor_enableLigatures", enableLigaturesCheck);
+
+        Label infoIcon = new Label("?");
+        infoIcon.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 11px; -fx-border-color: -text-dim; -fx-border-radius: 10px; -fx-padding: 0 4 0 4;");
+        Tooltip.install(infoIcon, new Tooltip("Enable typographic ligatures supported by the font (e.g. !=, >=, ->, =>)"));
+
+        HBox ligaturesRow = new HBox(6, enableLigaturesCheck, infoIcon);
+        ligaturesRow.setAlignment(Pos.CENTER_LEFT);
+
+        // Row 4: Reader mode link
+        Label readerModePre = new Label("See line height and ligatures also in ");
+        readerModePre.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 12px;");
+
+        Hyperlink readerModeLink = new Hyperlink("Reader mode");
+        readerModeLink.setStyle("-fx-text-fill: -accent; -fx-font-size: 12px; -fx-underline: true; -fx-padding: 0;");
+        readerModeLink.setOnAction(e -> {
+            if (navigateTo != null) navigateTo.accept("Editor / Reader Mode");
+        });
+
+        HBox readerModeRow = new HBox(readerModePre, readerModeLink);
+        readerModeRow.setAlignment(Pos.CENTER_LEFT);
+
+        // Typography Settings
+        HBox typographyHeader = createSectionHeader("Typography Settings");
+
+        Label mainWeightLabel = new Label("Main weight:");
+        mainWeightLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        mainWeightLabel.setMinWidth(90);
+
+        ComboBox<String> mainWeightCombo = new ComboBox<>();
+        mainWeightCombo.getItems().addAll(AppSettingsStore.Settings.defaultFontWeights());
+        mainWeightCombo.setValue(settings.getEditorFontMainWeight());
+        mainWeightCombo.setPrefWidth(220);
+        mainWeightCombo.setStyle("-fx-font-size: 12px;");
+        inputs.put("editor_fontMainWeight", mainWeightCombo);
+
+        HBox mainWeightRow = new HBox(8, mainWeightLabel, mainWeightCombo);
+        mainWeightRow.setAlignment(Pos.CENTER_LEFT);
+
+        Label boldWeightLabel = new Label("Bold weight:");
+        boldWeightLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        boldWeightLabel.setMinWidth(90);
+
+        ComboBox<String> boldWeightCombo = new ComboBox<>();
+        boldWeightCombo.getItems().addAll(AppSettingsStore.Settings.defaultFontBoldWeights());
+        boldWeightCombo.setValue(settings.getEditorFontBoldWeight());
+        boldWeightCombo.setPrefWidth(220);
+        boldWeightCombo.setStyle("-fx-font-size: 12px;");
+        inputs.put("editor_fontBoldWeight", boldWeightCombo);
+
+        HBox boldWeightRow = new HBox(8, boldWeightLabel, boldWeightCombo);
+        boldWeightRow.setAlignment(Pos.CENTER_LEFT);
+
+        Label boldHelperPre = new Label("Used for the bold settings in ");
+        boldHelperPre.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 11px;");
+
+        Hyperlink colorSchemeLink = new Hyperlink("color scheme");
+        colorSchemeLink.setStyle("-fx-text-fill: -accent; -fx-font-size: 11px; -fx-underline: true; -fx-padding: 0;");
+        colorSchemeLink.setOnAction(e -> {
+            if (navigateTo != null) navigateTo.accept("Editor / Color Scheme / General");
+        });
+
+        HBox boldHelperRow = new HBox(boldHelperPre, colorSchemeLink);
+        boldHelperRow.setPadding(new Insets(0, 0, 4, 98));
+
+        Label fallbackLabel = new Label("Fallback font:");
+        fallbackLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        fallbackLabel.setMinWidth(90);
+
+        ComboBox<String> fallbackCombo = new ComboBox<>();
+        fallbackCombo.getItems().add("<None>");
+        for (String pf : preferredFonts) {
+            if (installed.contains(pf) && !fallbackCombo.getItems().contains(pf)) {
+                fallbackCombo.getItems().add(pf);
+            }
+        }
+        fallbackCombo.setValue(settings.getEditorFallbackFont());
+        fallbackCombo.setPrefWidth(220);
+        fallbackCombo.setStyle("-fx-font-size: 12px;");
+        inputs.put("editor_fallbackFont", fallbackCombo);
+
+        HBox fallbackRow = new HBox(8, fallbackLabel, fallbackCombo);
+        fallbackRow.setAlignment(Pos.CENTER_LEFT);
+
+        Label fallbackHelper = new Label("Used for symbols not supported by the main font");
+        fallbackHelper.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 11px;");
+        fallbackHelper.setPadding(new Insets(0, 0, 0, 98));
+
+        VBox typographyBox = new VBox(8,
+                mainWeightRow,
+                boldWeightRow,
+                boldHelperRow,
+                fallbackRow,
+                fallbackHelper
+        );
+        typographyBox.setPadding(new Insets(2, 0, 8, 18));
+
+        leftPane.getChildren().addAll(
+                fontRow,
+                sizeLineRow,
+                ligaturesRow,
+                readerModeRow,
+                typographyHeader,
+                typographyBox
+        );
+
+        // --- Right Preview Pane ---
+        VBox rightPane = new VBox(8);
+        HBox.setHgrow(rightPane, Priority.ALWAYS);
+
+        String sampleText = "DataGrip is an Integrated\n"
+                + "Development Environment (IDE) designed\n"
+                + "to maximize productivity. It provides\n"
+                + "clever code completion, static code\n"
+                + "analysis, and refactorings, and lets\n"
+                + "you focus on the bright side of\n"
+                + "software development making\n"
+                + "it an enjoyable experience.\n\n"
+                + "Default:\n"
+                + "abcdefghijklmnopqrstuvwxyz\n"
+                + "ABCDEFGHIJKLMNOPQRSTUVWXYZ\n"
+                + "0123456789 (){}[]\n"
+                + "+ - * / = . , ; : !? #&$%@|^\n\n"
+                + "Bold:\n"
+                + "abcdefghijklmnopqrstuvwxyz\n"
+                + "ABCDEFGHIJKLMNOPQRSTUVWXYZ\n"
+                + "0123456789 (){}[]\n"
+                + "+ - * / = . , ; : !? #&$%@|^\n\n"
+                + "<!-- -- != := === >= >- >=> |-> -> <$>\n"
+                + "</> #[ |||> |= ~@\n";
+
+        TextArea previewArea = new TextArea(sampleText);
+        previewArea.setEditable(false);
+        previewArea.setWrapText(false);
+        VBox.setVgrow(previewArea, Priority.ALWAYS);
+
+        TextField customInput = new TextField();
+        customInput.setPromptText("Enter any text to preview");
+        customInput.setStyle("-fx-font-size: 12px;");
+
+        Runnable refreshPreview = () -> {
+            String fam = fontCombo.getValue() != null ? fontCombo.getValue() : "JetBrains Mono";
+            Double sz = sizeSpinner.getValue() != null ? sizeSpinner.getValue() : 13.0;
+            Double lh = lineHeightSpinner.getValue() != null ? lineHeightSpinner.getValue() : 1.2;
+            String wt = mainWeightCombo.getValue() != null ? mainWeightCombo.getValue() : "Regular";
+            double spacingPx = Math.max(0, (lh - 1.0) * sz);
+
+            String fxWeight = "normal";
+            if ("Bold".equalsIgnoreCase(wt) || "ExtraBold".equalsIgnoreCase(wt) || "Bold Recommended".equalsIgnoreCase(wt)) {
+                fxWeight = "bold";
+            } else if ("Light".equalsIgnoreCase(wt) || "ExtraLight".equalsIgnoreCase(wt) || "Thin".equalsIgnoreCase(wt)) {
+                fxWeight = "100";
+            }
+
+            previewArea.setStyle(
+                    "-fx-font-family: '" + fam + "'; "
+                            + "-fx-font-size: " + sz + "px; "
+                            + "-fx-line-spacing: " + spacingPx + "px; "
+                            + "-fx-font-weight: " + fxWeight + "; "
+                            + "-fx-control-inner-background: #1e1f22; "
+                            + "-fx-text-fill: -text;"
+            );
+            customInput.setStyle("-fx-font-family: '" + fam + "'; -fx-font-size: " + sz + "px;");
+        };
+
+        fontCombo.valueProperty().addListener((o, a, b) -> refreshPreview.run());
+        sizeSpinner.valueProperty().addListener((o, a, b) -> refreshPreview.run());
+        lineHeightSpinner.valueProperty().addListener((o, a, b) -> refreshPreview.run());
+        mainWeightCombo.valueProperty().addListener((o, a, b) -> refreshPreview.run());
+
+        customInput.textProperty().addListener((o, a, b) -> {
+            if (b != null && !b.isEmpty()) {
+                previewArea.setText(sampleText + "\nUser Preview:\n" + b + "\n");
+            } else {
+                previewArea.setText(sampleText);
+            }
+        });
+
+        refreshPreview.run();
+
+        rightPane.getChildren().addAll(previewArea, customInput);
+
+        mainContainer.getChildren().addAll(leftPane, rightPane);
+        return mainContainer;
     }
 
     private static VBox buildQueryExecutionPanel(AppSettingsStore.Settings settings, Map<String, Object> inputs,
@@ -7530,6 +7974,26 @@ public final class SettingsDialog {
             Spinner<Double> sizeSpinner = (Spinner<Double>) inputs.get("sizeSpinner");
             settings.setEditorFontSize(sizeSpinner.getValue());
         }
+        if (inputs.containsKey("editor_lineHeight")) {
+            Spinner<Double> sp = (Spinner<Double>) inputs.get("editor_lineHeight");
+            settings.setEditorLineHeight(sp.getValue());
+        }
+        if (inputs.containsKey("editor_enableLigatures")) {
+            CheckBox cb = (CheckBox) inputs.get("editor_enableLigatures");
+            settings.setEditorEnableLigatures(cb.isSelected());
+        }
+        if (inputs.containsKey("editor_fontMainWeight")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("editor_fontMainWeight");
+            if (cb.getValue() != null) settings.setEditorFontMainWeight(cb.getValue());
+        }
+        if (inputs.containsKey("editor_fontBoldWeight")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("editor_fontBoldWeight");
+            if (cb.getValue() != null) settings.setEditorFontBoldWeight(cb.getValue());
+        }
+        if (inputs.containsKey("editor_fallbackFont")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("editor_fallbackFont");
+            if (cb.getValue() != null) settings.setEditorFallbackFont(cb.getValue());
+        }
 
         // Ctrl Scroll Zoom
         if (inputs.containsKey("ctrlScrollCheck")) {
@@ -8807,6 +9271,88 @@ public final class SettingsDialog {
                 }
                 settings.setPostfixTemplates(copies);
             }
+        }
+
+        // Editor > General > Sticky Lines
+        if (inputs.containsKey("stickyLines_enabled")) {
+            CheckBox cb = (CheckBox) inputs.get("stickyLines_enabled");
+            settings.setStickyLinesEnabled(cb.isSelected());
+        }
+        if (inputs.containsKey("stickyLines_maxLines")) {
+            Spinner<Integer> sp = (Spinner<Integer>) inputs.get("stickyLines_maxLines");
+            settings.setStickyLinesMaxLines(sp.getValue());
+        }
+        if (inputs.containsKey("stickyLines_html")) {
+            CheckBox cb = (CheckBox) inputs.get("stickyLines_html");
+            settings.setStickyLinesHtml(cb.isSelected());
+        }
+        if (inputs.containsKey("stickyLines_markdown")) {
+            CheckBox cb = (CheckBox) inputs.get("stickyLines_markdown");
+            settings.setStickyLinesMarkdown(cb.isSelected());
+        }
+        if (inputs.containsKey("stickyLines_xhtml")) {
+            CheckBox cb = (CheckBox) inputs.get("stickyLines_xhtml");
+            settings.setStickyLinesXhtml(cb.isSelected());
+        }
+        if (inputs.containsKey("stickyLines_json")) {
+            CheckBox cb = (CheckBox) inputs.get("stickyLines_json");
+            settings.setStickyLinesJson(cb.isSelected());
+        }
+        if (inputs.containsKey("stickyLines_sql")) {
+            CheckBox cb = (CheckBox) inputs.get("stickyLines_sql");
+            settings.setStickyLinesSql(cb.isSelected());
+        }
+        if (inputs.containsKey("stickyLines_xml")) {
+            CheckBox cb = (CheckBox) inputs.get("stickyLines_xml");
+            settings.setStickyLinesXml(cb.isSelected());
+        }
+
+        // Editor > Code Editing
+        if (inputs.containsKey("codeEditing_highlightMatchedBrace")) {
+            CheckBox cb = (CheckBox) inputs.get("codeEditing_highlightMatchedBrace");
+            settings.setCodeEditingHighlightMatchedBrace(cb.isSelected());
+        }
+        if (inputs.containsKey("codeEditing_highlightCurrentScope")) {
+            CheckBox cb = (CheckBox) inputs.get("codeEditing_highlightCurrentScope");
+            settings.setCodeEditingHighlightCurrentScope(cb.isSelected());
+        }
+        if (inputs.containsKey("codeEditing_highlightUsages")) {
+            CheckBox cb = (CheckBox) inputs.get("codeEditing_highlightUsages");
+            settings.setCodeEditingHighlightUsages(cb.isSelected());
+        }
+        if (inputs.containsKey("codeEditing_showDocOnHover")) {
+            CheckBox cb = (CheckBox) inputs.get("codeEditing_showDocOnHover");
+            settings.setCodeEditingShowDocOnHover(cb.isSelected());
+        }
+        if (inputs.containsKey("codeEditing_refactoringOption")) {
+            ToggleGroup tg = (ToggleGroup) inputs.get("codeEditing_refactoringOption");
+            if (tg.getSelectedToggle() instanceof RadioButton rb) {
+                settings.setCodeEditingRefactoringOption(rb.getText());
+            }
+        }
+        if (inputs.containsKey("codeEditing_preselectCurrentSymbol")) {
+            CheckBox cb = (CheckBox) inputs.get("codeEditing_preselectCurrentSymbol");
+            settings.setCodeEditingPreselectCurrentSymbol(cb.isSelected());
+        }
+        if (inputs.containsKey("codeEditing_showInlineDialogForLocalVars")) {
+            CheckBox cb = (CheckBox) inputs.get("codeEditing_showInlineDialogForLocalVars");
+            settings.setCodeEditingShowInlineDialogForLocalVars(cb.isSelected());
+        }
+        if (inputs.containsKey("codeEditing_errorStripeMarkMinHeight")) {
+            Spinner<Integer> sp = (Spinner<Integer>) inputs.get("codeEditing_errorStripeMarkMinHeight");
+            settings.setCodeEditingErrorStripeMarkMinHeight(sp.getValue());
+        }
+        if (inputs.containsKey("codeEditing_autoreparseDelayMs")) {
+            Spinner<Integer> sp = (Spinner<Integer>) inputs.get("codeEditing_autoreparseDelayMs");
+            settings.setCodeEditingAutoreparseDelayMs(sp.getValue());
+        }
+        if (inputs.containsKey("codeEditing_nextErrorAction")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("codeEditing_nextErrorAction");
+            if (cb.getValue() != null) settings.setCodeEditingNextErrorAction(cb.getValue());
+        }
+        if (inputs.containsKey("codeEditing_tooltipDelayMs")) {
+            Spinner<Integer> sp = (Spinner<Integer>) inputs.get("codeEditing_tooltipDelayMs");
+            settings.setCodeEditingTooltipDelayMs(sp.getValue());
         }
 
         // Persist

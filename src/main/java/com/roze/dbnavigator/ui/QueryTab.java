@@ -944,8 +944,18 @@ public class QueryTab extends Tab {
     }
 
     private void updateEditorFontStyle() {
+        var settings = com.roze.dbnavigator.db.AppSettingsStore.load();
+        double lh = settings.getEditorLineHeight();
+        String weight = settings.getEditorFontMainWeight();
+        String fxWeight = "normal";
+        if ("Bold".equalsIgnoreCase(weight) || "ExtraBold".equalsIgnoreCase(weight) || "Bold Recommended".equalsIgnoreCase(weight)) {
+            fxWeight = "bold";
+        } else if ("Light".equalsIgnoreCase(weight) || "ExtraLight".equalsIgnoreCase(weight) || "Thin".equalsIgnoreCase(weight)) {
+            fxWeight = "100";
+        }
+        double lineSpacingPx = Math.max(0, (lh - 1.0) * currentEditorFontSize);
         editor.setStyle("-fx-font-family: '" + currentEditorFontFamily + "'; -fx-font-size: "
-                + currentEditorFontSize + "px;");
+                + currentEditorFontSize + "px; -fx-line-spacing: " + lineSpacingPx + "px; -fx-font-weight: " + fxWeight + ";");
     }
 
     /**

@@ -22,7 +22,12 @@ public final class AppSettingsStore {
     public static class Settings {
         public Theme theme = Theme.DARK;
         public String editorFontFamily = "JetBrains Mono";
-        public double editorFontSize = 14;
+        public double editorFontSize = 13.0;
+        public double editorLineHeight = 1.2;
+        public boolean editorEnableLigatures = false;
+        public String editorFontMainWeight = "Regular";
+        public String editorFontBoldWeight = "Bold Recommended";
+        public String editorFallbackFont = "<None>";
         public boolean ctrlScrollZoomEnabled = true;
         public boolean autoUpdateEnabled = true;
         public boolean autoDownloadUpdates = false;
@@ -419,6 +424,34 @@ public final class AppSettingsStore {
         public String postfixCompletionExpandWith = "Tab";
         public List<PostfixTemplateConfig> postfixTemplates = defaultPostfixTemplates();
 
+        // Editor > General > Sticky Lines (DataGrip Alignment)
+        public boolean stickyLinesEnabled = true;
+        public int stickyLinesMaxLines = 5;
+        public boolean stickyLinesHtml = true;
+        public boolean stickyLinesMarkdown = true;
+        public boolean stickyLinesXhtml = true;
+        public boolean stickyLinesJson = true;
+        public boolean stickyLinesSql = true;
+        public boolean stickyLinesXml = true;
+
+        // Editor > Code Editing (DataGrip Alignment)
+        // Highlight on Caret Movement
+        public boolean codeEditingHighlightMatchedBrace = true;
+        public boolean codeEditingHighlightCurrentScope = false;
+        public boolean codeEditingHighlightUsages = true;
+        // Quick Documentation
+        public boolean codeEditingShowDocOnHover = true;
+        // Refactorings
+        public String codeEditingRefactoringOption = "In the editor";
+        public boolean codeEditingPreselectCurrentSymbol = true;
+        public boolean codeEditingShowInlineDialogForLocalVars = true;
+        // Error Highlighting
+        public int codeEditingErrorStripeMarkMinHeight = 2;
+        public int codeEditingAutoreparseDelayMs = 300;
+        public String codeEditingNextErrorAction = "The problems with the highest priority";
+        // Editor Tooltips
+        public int codeEditingTooltipDelayMs = 500;
+
         public static List<String> defaultUiThemes() {
             return List.of(
                     "Islands Dark",
@@ -477,6 +510,22 @@ public final class AppSettingsStore {
 
         public static List<String> defaultPostfixExpandWithOptions() {
             return List.of("Tab", "Space", "Enter");
+        }
+
+        public static List<String> defaultNextErrorActionOptions() {
+            return List.of("The problems with the highest priority", "All problems");
+        }
+
+        public static List<String> defaultRefactoringOptions() {
+            return List.of("In the editor", "In modal dialogs");
+        }
+
+        public static List<String> defaultFontWeights() {
+            return List.of("Thin", "ExtraLight", "Light", "Regular", "Medium", "SemiBold", "Bold", "ExtraBold");
+        }
+
+        public static List<String> defaultFontBoldWeights() {
+            return List.of("Thin", "ExtraLight", "Light", "Regular", "Medium", "SemiBold", "Bold Recommended", "ExtraBold");
         }
 
         public static List<PostfixTemplateConfig> defaultPostfixTemplates() {
@@ -572,6 +621,16 @@ public final class AppSettingsStore {
         public void setEditorFontFamily(String editorFontFamily) { this.editorFontFamily = editorFontFamily; }
         public double getEditorFontSize() { return editorFontSize; }
         public void setEditorFontSize(double editorFontSize) { this.editorFontSize = editorFontSize; }
+        public double getEditorLineHeight() { return editorLineHeight; }
+        public void setEditorLineHeight(double editorLineHeight) { this.editorLineHeight = editorLineHeight; }
+        public boolean isEditorEnableLigatures() { return editorEnableLigatures; }
+        public void setEditorEnableLigatures(boolean editorEnableLigatures) { this.editorEnableLigatures = editorEnableLigatures; }
+        public String getEditorFontMainWeight() { return editorFontMainWeight; }
+        public void setEditorFontMainWeight(String editorFontMainWeight) { this.editorFontMainWeight = editorFontMainWeight != null ? editorFontMainWeight : "Regular"; }
+        public String getEditorFontBoldWeight() { return editorFontBoldWeight; }
+        public void setEditorFontBoldWeight(String editorFontBoldWeight) { this.editorFontBoldWeight = editorFontBoldWeight != null ? editorFontBoldWeight : "Bold Recommended"; }
+        public String getEditorFallbackFont() { return editorFallbackFont; }
+        public void setEditorFallbackFont(String editorFallbackFont) { this.editorFallbackFont = editorFallbackFont != null ? editorFallbackFont : "<None>"; }
         public boolean isCtrlScrollZoomEnabled() { return ctrlScrollZoomEnabled; }
         public void setCtrlScrollZoomEnabled(boolean ctrlScrollZoomEnabled) {
             this.ctrlScrollZoomEnabled = ctrlScrollZoomEnabled;
@@ -1537,6 +1596,48 @@ public final class AppSettingsStore {
             this.postfixTemplates = (postfixTemplates == null || postfixTemplates.isEmpty())
                     ? defaultPostfixTemplates() : postfixTemplates;
         }
+
+        // Sticky Lines
+        public boolean isStickyLinesEnabled() { return stickyLinesEnabled; }
+        public void setStickyLinesEnabled(boolean val) { this.stickyLinesEnabled = val; }
+        public int getStickyLinesMaxLines() { return stickyLinesMaxLines; }
+        public void setStickyLinesMaxLines(int val) { this.stickyLinesMaxLines = Math.max(1, Math.min(20, val)); }
+        public boolean isStickyLinesHtml() { return stickyLinesHtml; }
+        public void setStickyLinesHtml(boolean val) { this.stickyLinesHtml = val; }
+        public boolean isStickyLinesMarkdown() { return stickyLinesMarkdown; }
+        public void setStickyLinesMarkdown(boolean val) { this.stickyLinesMarkdown = val; }
+        public boolean isStickyLinesXhtml() { return stickyLinesXhtml; }
+        public void setStickyLinesXhtml(boolean val) { this.stickyLinesXhtml = val; }
+        public boolean isStickyLinesJson() { return stickyLinesJson; }
+        public void setStickyLinesJson(boolean val) { this.stickyLinesJson = val; }
+        public boolean isStickyLinesSql() { return stickyLinesSql; }
+        public void setStickyLinesSql(boolean val) { this.stickyLinesSql = val; }
+        public boolean isStickyLinesXml() { return stickyLinesXml; }
+        public void setStickyLinesXml(boolean val) { this.stickyLinesXml = val; }
+
+        // Code Editing
+        public boolean isCodeEditingHighlightMatchedBrace() { return codeEditingHighlightMatchedBrace; }
+        public void setCodeEditingHighlightMatchedBrace(boolean val) { this.codeEditingHighlightMatchedBrace = val; }
+        public boolean isCodeEditingHighlightCurrentScope() { return codeEditingHighlightCurrentScope; }
+        public void setCodeEditingHighlightCurrentScope(boolean val) { this.codeEditingHighlightCurrentScope = val; }
+        public boolean isCodeEditingHighlightUsages() { return codeEditingHighlightUsages; }
+        public void setCodeEditingHighlightUsages(boolean val) { this.codeEditingHighlightUsages = val; }
+        public boolean isCodeEditingShowDocOnHover() { return codeEditingShowDocOnHover; }
+        public void setCodeEditingShowDocOnHover(boolean val) { this.codeEditingShowDocOnHover = val; }
+        public String getCodeEditingRefactoringOption() { return codeEditingRefactoringOption; }
+        public void setCodeEditingRefactoringOption(String val) { this.codeEditingRefactoringOption = val != null ? val : "In the editor"; }
+        public boolean isCodeEditingPreselectCurrentSymbol() { return codeEditingPreselectCurrentSymbol; }
+        public void setCodeEditingPreselectCurrentSymbol(boolean val) { this.codeEditingPreselectCurrentSymbol = val; }
+        public boolean isCodeEditingShowInlineDialogForLocalVars() { return codeEditingShowInlineDialogForLocalVars; }
+        public void setCodeEditingShowInlineDialogForLocalVars(boolean val) { this.codeEditingShowInlineDialogForLocalVars = val; }
+        public int getCodeEditingErrorStripeMarkMinHeight() { return codeEditingErrorStripeMarkMinHeight; }
+        public void setCodeEditingErrorStripeMarkMinHeight(int val) { this.codeEditingErrorStripeMarkMinHeight = Math.max(1, val); }
+        public int getCodeEditingAutoreparseDelayMs() { return codeEditingAutoreparseDelayMs; }
+        public void setCodeEditingAutoreparseDelayMs(int val) { this.codeEditingAutoreparseDelayMs = Math.max(0, val); }
+        public String getCodeEditingNextErrorAction() { return codeEditingNextErrorAction; }
+        public void setCodeEditingNextErrorAction(String val) { this.codeEditingNextErrorAction = val != null ? val : "The problems with the highest priority"; }
+        public int getCodeEditingTooltipDelayMs() { return codeEditingTooltipDelayMs; }
+        public void setCodeEditingTooltipDelayMs(int val) { this.codeEditingTooltipDelayMs = Math.max(0, val); }
     }
 
     public static class UserParameterPattern {
