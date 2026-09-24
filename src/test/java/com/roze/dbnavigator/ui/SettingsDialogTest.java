@@ -1004,4 +1004,124 @@ public class SettingsDialogTest {
         assertEquals("Greyscale", loaded.getIdeAntialiasing());
         assertEquals("No antialiasing", loaded.getEditorAntialiasing());
     }
+
+    @Test
+    public void testEditorGeneralAutoImportBreadcrumbsAppearanceSettings() throws Exception {
+        AppSettingsStore.Settings settings = new AppSettingsStore.Settings();
+
+        // 1. Auto Import Defaults (Image 1)
+        assertTrue(settings.isShowXmlAutoImportTooltip(), "Auto import XML tooltip should be enabled by default");
+
+        // 2. Breadcrumbs Defaults (Image 2)
+        assertTrue(settings.isShowBreadcrumbs(), "Breadcrumbs should be enabled by default");
+        assertEquals("Bottom", settings.getBreadcrumbsPlacement(), "Breadcrumbs placement default should be Bottom");
+        assertFalse(settings.isBreadcrumbsHtml());
+        assertFalse(settings.isBreadcrumbsMarkdown());
+        assertFalse(settings.isBreadcrumbsXhtml());
+        assertFalse(settings.isBreadcrumbsJson());
+        assertFalse(settings.isBreadcrumbsSql());
+        assertFalse(settings.isBreadcrumbsXml());
+
+        // 3. Editor Appearance Defaults (Images 3 & 4)
+        assertTrue(settings.isCaretBlinking());
+        assertEquals(500, settings.getCaretBlinkingMs());
+        assertFalse(settings.isUseBlockCaret());
+        assertFalse(settings.isUseFullLineHeightCaret());
+        assertTrue(settings.isHighlightOccurrences());
+        assertTrue(settings.isShowHardWrapAndVisualGuides());
+        assertTrue(settings.isShowLineNumbers());
+        assertEquals("Absolute", settings.getLineNumbersMode());
+        assertFalse(settings.isShowLinesBetweenStatements());
+        assertFalse(settings.isShowWhitespaces());
+        assertTrue(settings.isShowWhitespacesLeading());
+        assertTrue(settings.isShowWhitespacesInner());
+        assertTrue(settings.isShowWhitespacesTrailing());
+        assertTrue(settings.isShowWhitespacesSelection());
+        assertTrue(settings.isShowEditorIndentGuides());
+        assertTrue(settings.isShowIntentionBulb());
+        assertTrue(settings.isShowPreviewForIntentionActions());
+        assertFalse(settings.isRenderDocComments());
+        assertTrue(settings.isShowCodeLensOnScrollbarHover());
+        assertFalse(settings.isUseEditorFontForInlayHints());
+        assertTrue(settings.isEnableTagTreeHighlighting());
+        assertEquals(6, settings.getTagTreeLevelsToHighlight());
+        assertEquals(0.1, settings.getTagTreeOpacity(), 0.001);
+
+        // Mutate and set new values
+        settings.setShowXmlAutoImportTooltip(false);
+
+        settings.setShowBreadcrumbs(false);
+        settings.setBreadcrumbsPlacement("Top");
+        settings.setBreadcrumbsHtml(true);
+        settings.setBreadcrumbsMarkdown(true);
+        settings.setBreadcrumbsXhtml(true);
+        settings.setBreadcrumbsJson(true);
+        settings.setBreadcrumbsSql(true);
+        settings.setBreadcrumbsXml(true);
+
+        settings.setCaretBlinking(false);
+        settings.setCaretBlinkingMs(750);
+        settings.setUseBlockCaret(true);
+        settings.setUseFullLineHeightCaret(true);
+        settings.setHighlightOccurrences(false);
+        settings.setShowHardWrapAndVisualGuides(false);
+        settings.setShowLineNumbers(false);
+        settings.setLineNumbersMode("Relative");
+        settings.setShowLinesBetweenStatements(true);
+        settings.setShowWhitespaces(true);
+        settings.setShowWhitespacesLeading(false);
+        settings.setShowWhitespacesInner(false);
+        settings.setShowWhitespacesTrailing(false);
+        settings.setShowWhitespacesSelection(false);
+        settings.setShowEditorIndentGuides(false);
+        settings.setShowIntentionBulb(false);
+        settings.setShowPreviewForIntentionActions(false);
+        settings.setRenderDocComments(true);
+        settings.setShowCodeLensOnScrollbarHover(false);
+        settings.setUseEditorFontForInlayHints(true);
+        settings.setEnableTagTreeHighlighting(false);
+        settings.setTagTreeLevelsToHighlight(10);
+        settings.setTagTreeOpacity(0.35);
+
+        // Serialization round-trip
+        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        String json = mapper.writeValueAsString(settings);
+        AppSettingsStore.Settings loaded = mapper.readValue(json, AppSettingsStore.Settings.class);
+
+        // Verify loaded properties
+        assertFalse(loaded.isShowXmlAutoImportTooltip());
+
+        assertFalse(loaded.isShowBreadcrumbs());
+        assertEquals("Top", loaded.getBreadcrumbsPlacement());
+        assertTrue(loaded.isBreadcrumbsHtml());
+        assertTrue(loaded.isBreadcrumbsMarkdown());
+        assertTrue(loaded.isBreadcrumbsXhtml());
+        assertTrue(loaded.isBreadcrumbsJson());
+        assertTrue(loaded.isBreadcrumbsSql());
+        assertTrue(loaded.isBreadcrumbsXml());
+
+        assertFalse(loaded.isCaretBlinking());
+        assertEquals(750, loaded.getCaretBlinkingMs());
+        assertTrue(loaded.isUseBlockCaret());
+        assertTrue(loaded.isUseFullLineHeightCaret());
+        assertFalse(loaded.isHighlightOccurrences());
+        assertFalse(loaded.isShowHardWrapAndVisualGuides());
+        assertFalse(loaded.isShowLineNumbers());
+        assertEquals("Relative", loaded.getLineNumbersMode());
+        assertTrue(loaded.isShowLinesBetweenStatements());
+        assertTrue(loaded.isShowWhitespaces());
+        assertFalse(loaded.isShowWhitespacesLeading());
+        assertFalse(loaded.isShowWhitespacesInner());
+        assertFalse(loaded.isShowWhitespacesTrailing());
+        assertFalse(loaded.isShowWhitespacesSelection());
+        assertFalse(loaded.isShowEditorIndentGuides());
+        assertFalse(loaded.isShowIntentionBulb());
+        assertFalse(loaded.isShowPreviewForIntentionActions());
+        assertTrue(loaded.isRenderDocComments());
+        assertFalse(loaded.isShowCodeLensOnScrollbarHover());
+        assertTrue(loaded.isUseEditorFontForInlayHints());
+        assertFalse(loaded.isEnableTagTreeHighlighting());
+        assertEquals(10, loaded.getTagTreeLevelsToHighlight());
+        assertEquals(0.35, loaded.getTagTreeOpacity(), 0.001);
+    }
 }

@@ -37,6 +37,7 @@ import javafx.stage.FileChooser;
 import javafx.stage.Popup;
 import org.fxmisc.flowless.VirtualizedScrollPane;
 import org.fxmisc.richtext.CodeArea;
+import org.fxmisc.richtext.LineNumberFactory;
 import org.kordamp.ikonli.fontawesome5.FontAwesomeSolid;
 
 import java.io.File;
@@ -66,6 +67,12 @@ public class QueryTab extends Tab {
     private final ConnectionProfile profile;
     private final String catalog;   // nullable: default database of the profile
     private final CodeArea editor = SqlHighlighter.createEditor();
+    private final VirtualizedScrollPane<CodeArea> editorScroll;
+    private final VBox editorContainer = new VBox();
+    private final HBox breadcrumbsBar = new HBox(6);
+    private final Label breadcrumbsFileLabel = new Label("console.sql");
+    private final Label breadcrumbsSepLabel = new Label("›");
+    private final Label breadcrumbsStmtLabel = new Label("SELECT");
     private final ResultGrid resultGrid = new ResultGrid();
     private final TabPane resultsTabPane = new TabPane();
     private int resultTabCounter = 1;
@@ -191,8 +198,11 @@ public class QueryTab extends Tab {
         // ---- Editor ----
         editor.replaceText("-- " + profile.getType().getDisplayName()
                 + " console. Ctrl+Enter runs, Ctrl+Space completes.\n");
-        VirtualizedScrollPane<CodeArea> editorScroll = new VirtualizedScrollPane<>(editor);
+        editorScroll = new VirtualizedScrollPane<>(editor);
+        VBox.setVgrow(editorScroll, Priority.ALWAYS);
+        initBreadcrumbsBar();
         applyEditorFontFromSettings();
+        applyEditorAppearanceFromSettings();
         setupCtrlScrollFontZoom(editorScroll);
         setupKeyboardFontZoom();
         resultGrid.setSortRequestListener(this::sortByColumn);
@@ -228,7 +238,7 @@ public class QueryTab extends Tab {
                         submitButton, revertButton, this::rerunLastSql, statusLabel::setText);
             }
         });
-        editorResultSplit.getItems().addAll(editorScroll, resultsTabPane);
+        editorResultSplit.getItems().addAll(editorContainer, resultsTabPane);
         editorResultSplit.setOrientation(Orientation.VERTICAL);
         editorResultSplit.setDividerPositions(0.45);
 
@@ -522,16 +532,110 @@ public class QueryTab extends Tab {
     private void setupStatementHighlighting() {
         editor.multiPlainChanges()
                 .successionEnds(Duration.ofMillis(120))
-                .subscribe(ignore -> refreshEditorStyling());
-        editor.caretPositionProperty().addListener((obs, o, n) -> refreshEditorStyling());
+                .subscribe(ignore -> {
+                    refreshEditorStyling();
+                    updateBreadcrumbsText();
+                });
+        editor.caretPositionProperty().addListener((obs, o, n) -> {
+            refreshEditorStyling();
+            updateBreadcrumbsText();
+        });
         // Recompute after every mouse press (including right-clicks) too — a
         // right-click's ContextMenuEvent can fire before the caret-position
         // property listener has settled, which is why the wrong statement was
         // sometimes still shown highlighted when the menu opened.
         editor.addEventFilter(javafx.scene.input.MouseEvent.MOUSE_PRESSED,
-                e -> Platform.runLater(this::refreshEditorStyling));
-        Platform.runLater(this::refreshEditorStyling);
+                e -> Platform.runLater(() -> {
+                    refreshEditorStyling();
+                    updateBreadcrumbsText();
+                }));
+        Platform.runLater(() -> {
+            refreshEditorStyling();
+            updateBreadcrumbsText();
+        });
     }
+
+    private void initBreadcrumbsBar() {
+        breadcrumbsBar.setAlignment(Pos.CENTER_LEFT);
+        breadcrumbsBar.setPadding(new Insets(3, 10, 3, 10));
+        breadcrumbsBar.setStyle("-fx-background-color: -bg-darkest; -fx-border-color: -border-subtle; -fx-border-width: 1 0 1 0;");
+        breadcrumbsFileLabel.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 11px;");
+        breadcrumbsSepLabel.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 11px;");
+        breadcrumbsStmtLabel.setStyle("-fx-text-fill: #3574F0; -fx-font-size: 11px; -fx-font-weight: bold;");
+        breadcrumbsBar.getChildren().addAll(breadcrumbsFileLabel, breadcrumbsSepLabel, breadcrumbsStmtLabel);
+    }
+
+    private void updateBreadcrumbsText() {
+        try {
+            String text = editor.getText();
+            int[] range = currentStatementCharRange(text);
+            String file = (catalog != null ? catalog : profile.getName()) + ".sql";
+            breadcrumbsFileLabel.setText(file);
+            if (range != null && range[1] > range[0]) {
+                String stmt = text.substring(range[0], range[1]).trim();
+                String firstWord = stmt.split("\\s+")[0].toUpperCase();
+                breadcrumbsStmtLabel.setText(firstWord.isBlank() ? "Statement" : firstWord);
+            } else {
+                int line = editor.getCurrentParagraph() + 1;
+                int col = editor.getCaretColumn() + 1;
+                breadcrumbsStmtLabel.setText("Line " + line + ":" + col);
+            }
+        } catch (Exception ignored) {}
+    }
+
+    /** File → Settings → Editor → General → Appearance & Breadcrumbs, applied here and re-applied after Apply/OK. */
+    public void applyEditorAppearanceFromSettings() {
+        var settings = com.roze.dbnavigator.db.AppSettingsStore.load();
+
+        // 1. Line numbers
+        if (!settings.isShowLineNumbers()) {
+            editor.setParagraphGraphicFactory(null);
+        } else {
+            String mode = settings.getLineNumbersMode();
+            if ("Relative".equalsIgnoreCase(mode)) {
+                editor.setParagraphGraphicFactory(LineNumberFactory.get(editor, lineIdx -> {
+                    int cur = editor.getCurrentParagraph();
+                    return String.valueOf(Math.abs(lineIdx - cur));
+                }));
+            } else if ("Hybrid".equalsIgnoreCase(mode)) {
+                editor.setParagraphGraphicFactory(LineNumberFactory.get(editor, lineIdx -> {
+                    int cur = editor.getCurrentParagraph();
+                    return (lineIdx == cur) ? String.valueOf(lineIdx + 1) : String.valueOf(Math.abs(lineIdx - cur));
+                }));
+            } else {
+                editor.setParagraphGraphicFactory(LineNumberFactory.get(editor));
+            }
+        }
+
+        // 2. Caret blinking
+        try {
+            var caret = editor.getCaretSelectionBind().getUnderlyingCaret();
+            if (caret != null) {
+                if (settings.isCaretBlinking()) {
+                    caret.setBlinkRate(javafx.util.Duration.millis(settings.getCaretBlinkingMs()));
+                } else {
+                    caret.setBlinkRate(javafx.util.Duration.ZERO);
+                }
+            }
+        } catch (Exception ignored) {}
+
+        // 3. Breadcrumbs
+        if (editorContainer != null && editorScroll != null) {
+            boolean show = settings.isShowBreadcrumbs();
+            if (!show) {
+                editorContainer.getChildren().setAll(editorScroll);
+            } else {
+                String placement = settings.getBreadcrumbsPlacement();
+                if ("Top".equalsIgnoreCase(placement)) {
+                    editorContainer.getChildren().setAll(breadcrumbsBar, editorScroll);
+                } else {
+                    editorContainer.getChildren().setAll(editorScroll, breadcrumbsBar);
+                }
+                updateBreadcrumbsText();
+            }
+        }
+    }
+
     /** File → Settings → Editor → Font, applied here and re-applied after Apply/OK. */
     public void applyEditorFontFromSettings() {
         var settings = com.roze.dbnavigator.db.AppSettingsStore.load();

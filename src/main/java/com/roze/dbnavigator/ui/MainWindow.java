@@ -233,6 +233,16 @@ public class MainWindow {
         });
     }
 
+    /** Re-applies the saved editor appearance, breadcrumbs, and font to every currently open console. */
+    public void applyEditorSettingsToOpenConsoles() {
+        forEachEditorTab(tab -> {
+            if (tab instanceof QueryTab queryTab) {
+                queryTab.applyEditorFontFromSettings();
+                queryTab.applyEditorAppearanceFromSettings();
+            }
+        });
+    }
+
     /** Shows the docked Run panel, expanding it if it was collapsed. */
     public void showRunPanel() {
         if (!runPanelVisible) {

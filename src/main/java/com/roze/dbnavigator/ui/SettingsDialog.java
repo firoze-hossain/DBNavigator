@@ -853,10 +853,16 @@ public final class SettingsDialog {
         }
 
         // Functional leaf panels
-        if ("Appearance & Behavior / Appearance".equals(fullPath) || "Appearance".equals(fullPath)) {
+        if ("Editor / General / Appearance".equals(fullPath)) {
+            return buildEditorAppearancePanel(settings, inputs, navigateTo);
+        } else if ("Appearance & Behavior / Appearance".equals(fullPath) || "Appearance".equals(fullPath)) {
             return buildAppearancePanel(settings, inputs, navigateTo);
         } else if ("Appearance & Behavior / System Settings / Updates".equals(fullPath) || "Updates".equals(fullPath)) {
             return buildUpdatesPanel(settings, inputs);
+        } else if ("Editor / General / Auto Import".equals(fullPath) || "Auto Import".equals(fullPath)) {
+            return buildAutoImportPanel(settings, inputs);
+        } else if ("Editor / General / Breadcrumbs".equals(fullPath) || "Breadcrumbs".equals(fullPath)) {
+            return buildBreadcrumbsPanel(settings, inputs, navigateTo);
         } else if ("Editor / General".equals(fullPath)) {
             return buildGeneralEditorPanel(settings, inputs);
         } else if ("Editor / General / Font".equals(fullPath) || "Editor / Font".equals(fullPath) || "Font".equals(fullPath)) {
@@ -1911,6 +1917,328 @@ public final class SettingsDialog {
                 new Separator(),
                 dropdownsGrid, reformatLineBreaks);
         panel.setPadding(new Insets(4, 8, 16, 8));
+        return panel;
+    }
+
+    private static VBox buildAutoImportPanel(AppSettingsStore.Settings settings, Map<String, Object> inputs) {
+        VBox panel = new VBox(12);
+        panel.setPadding(new Insets(10, 16, 16, 16));
+
+        HBox xmlHeader = createSectionHeader("XML");
+
+        CheckBox showXmlTooltipCheck = new CheckBox("Show auto-import tooltip");
+        showXmlTooltipCheck.setSelected(settings.isShowXmlAutoImportTooltip());
+        showXmlTooltipCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("editor_autoImport_showXmlTooltip", showXmlTooltipCheck);
+
+        panel.getChildren().addAll(xmlHeader, showXmlTooltipCheck);
+        return panel;
+    }
+
+    private static VBox buildBreadcrumbsPanel(AppSettingsStore.Settings settings, Map<String, Object> inputs,
+                                              java.util.function.Consumer<String> navigateTo) {
+        VBox panel = new VBox(12);
+        panel.setPadding(new Insets(10, 16, 16, 16));
+
+        CheckBox showBreadcrumbsCheck = new CheckBox("Show breadcrumbs");
+        showBreadcrumbsCheck.setSelected(settings.isShowBreadcrumbs());
+        showBreadcrumbsCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("editor_breadcrumbs_show", showBreadcrumbsCheck);
+
+        VBox contentBox = new VBox(12);
+        contentBox.setPadding(new Insets(6, 0, 6, 24));
+        contentBox.disableProperty().bind(showBreadcrumbsCheck.selectedProperty().not());
+
+        // Placement Row
+        Label placementLabel = new Label("Placement:");
+        placementLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        placementLabel.setMinWidth(80);
+
+        ToggleGroup placementGroup = new ToggleGroup();
+        RadioButton topRadio = new RadioButton("Top");
+        topRadio.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        topRadio.setToggleGroup(placementGroup);
+
+        RadioButton bottomRadio = new RadioButton("Bottom");
+        bottomRadio.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        bottomRadio.setToggleGroup(placementGroup);
+
+        if ("Top".equalsIgnoreCase(settings.getBreadcrumbsPlacement())) {
+            topRadio.setSelected(true);
+        } else {
+            bottomRadio.setSelected(true);
+        }
+        inputs.put("editor_breadcrumbs_topRadio", topRadio);
+        inputs.put("editor_breadcrumbs_bottomRadio", bottomRadio);
+
+        HBox placementRow = new HBox(16, placementLabel, topRadio, bottomRadio);
+        placementRow.setAlignment(Pos.CENTER_LEFT);
+
+        // Languages Grid
+        Label languagesLabel = new Label("Languages:");
+        languagesLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+
+        GridPane langGrid = new GridPane();
+        langGrid.setHgap(36);
+        langGrid.setVgap(10);
+        langGrid.setPadding(new Insets(2, 0, 4, 0));
+
+        CheckBox htmlCheck = new CheckBox("HTML");
+        htmlCheck.setSelected(settings.isBreadcrumbsHtml());
+        htmlCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        htmlCheck.setPrefWidth(110);
+        inputs.put("editor_breadcrumbs_html", htmlCheck);
+
+        CheckBox mdCheck = new CheckBox("Markdown");
+        mdCheck.setSelected(settings.isBreadcrumbsMarkdown());
+        mdCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        mdCheck.setPrefWidth(110);
+        inputs.put("editor_breadcrumbs_markdown", mdCheck);
+
+        CheckBox xhtmlCheck = new CheckBox("XHTML");
+        xhtmlCheck.setSelected(settings.isBreadcrumbsXhtml());
+        xhtmlCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        xhtmlCheck.setPrefWidth(110);
+        inputs.put("editor_breadcrumbs_xhtml", xhtmlCheck);
+
+        CheckBox jsonCheck = new CheckBox("JSON");
+        jsonCheck.setSelected(settings.isBreadcrumbsJson());
+        jsonCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        jsonCheck.setPrefWidth(110);
+        inputs.put("editor_breadcrumbs_json", jsonCheck);
+
+        CheckBox sqlCheck = new CheckBox("SQL");
+        sqlCheck.setSelected(settings.isBreadcrumbsSql());
+        sqlCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        sqlCheck.setPrefWidth(110);
+        inputs.put("editor_breadcrumbs_sql", sqlCheck);
+
+        CheckBox xmlCheck = new CheckBox("XML");
+        xmlCheck.setSelected(settings.isBreadcrumbsXml());
+        xmlCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        xmlCheck.setPrefWidth(110);
+        inputs.put("editor_breadcrumbs_xml", xmlCheck);
+
+        langGrid.add(htmlCheck, 0, 0);
+        langGrid.add(mdCheck, 1, 0);
+        langGrid.add(xhtmlCheck, 2, 0);
+        langGrid.add(jsonCheck, 0, 1);
+        langGrid.add(sqlCheck, 1, 1);
+        langGrid.add(xmlCheck, 2, 1);
+
+        Hyperlink manageColorsLink = new Hyperlink("Manage colors");
+        manageColorsLink.setStyle("-fx-text-fill: #3574F0; -fx-font-size: 13px; -fx-padding: 8 0 0 0; -fx-border-color: transparent; -fx-cursor: hand;");
+        manageColorsLink.setOnAction(e -> {
+            if (navigateTo != null) {
+                navigateTo.accept("Editor / Color Scheme / General");
+            }
+        });
+
+        contentBox.getChildren().addAll(placementRow, languagesLabel, langGrid, manageColorsLink);
+        panel.getChildren().addAll(showBreadcrumbsCheck, contentBox);
+        return panel;
+    }
+
+    private static VBox buildEditorAppearancePanel(AppSettingsStore.Settings settings, Map<String, Object> inputs,
+                                                  java.util.function.Consumer<String> navigateTo) {
+        VBox panel = new VBox(8);
+        panel.setPadding(new Insets(10, 16, 16, 16));
+
+        // 1. Caret blinking
+        CheckBox caretBlinkCheck = new CheckBox("Caret blinking (ms):");
+        caretBlinkCheck.setSelected(settings.isCaretBlinking());
+        caretBlinkCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("editor_appearance_caretBlinking", caretBlinkCheck);
+
+        TextField caretBlinkMsField = new TextField(String.valueOf(settings.getCaretBlinkingMs()));
+        caretBlinkMsField.setPrefWidth(65);
+        caretBlinkMsField.setStyle("-fx-font-size: 12px;");
+        caretBlinkMsField.disableProperty().bind(caretBlinkCheck.selectedProperty().not());
+        inputs.put("editor_appearance_caretBlinkingMs", caretBlinkMsField);
+
+        HBox caretRow = new HBox(8, caretBlinkCheck, caretBlinkMsField);
+        caretRow.setAlignment(Pos.CENTER_LEFT);
+
+        // 2. Use block caret
+        CheckBox useBlockCaretCheck = new CheckBox("Use block caret");
+        useBlockCaretCheck.setSelected(settings.isUseBlockCaret());
+        useBlockCaretCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("editor_appearance_useBlockCaret", useBlockCaretCheck);
+
+        // 3. Use full line height caret
+        CheckBox useFullLineHeightCaretCheck = new CheckBox("Use full line height caret");
+        useFullLineHeightCaretCheck.setSelected(settings.isUseFullLineHeightCaret());
+        useFullLineHeightCaretCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("editor_appearance_useFullLineHeightCaret", useFullLineHeightCaretCheck);
+
+        // 4. Highlight occurrences of selected text
+        CheckBox highlightOccurrencesCheck = new CheckBox("Highlight occurrences of selected text");
+        highlightOccurrencesCheck.setSelected(settings.isHighlightOccurrences());
+        highlightOccurrencesCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("editor_appearance_highlightOccurrences", highlightOccurrencesCheck);
+
+        // 5. Show hard wrap and visual guides
+        CheckBox showHardWrapCheck = new CheckBox("Show hard wrap and visual guides (configured in Code Style options)");
+        showHardWrapCheck.setSelected(settings.isShowHardWrapAndVisualGuides());
+        showHardWrapCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("editor_appearance_showHardWrap", showHardWrapCheck);
+
+        // 6. Show line numbers
+        CheckBox showLineNumbersCheck = new CheckBox("Show line numbers:");
+        showLineNumbersCheck.setSelected(settings.isShowLineNumbers());
+        showLineNumbersCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("editor_appearance_showLineNumbers", showLineNumbersCheck);
+
+        ComboBox<String> lineNumbersCombo = new ComboBox<>();
+        lineNumbersCombo.getItems().addAll("Absolute", "Relative", "Hybrid");
+        lineNumbersCombo.setValue(settings.getLineNumbersMode());
+        lineNumbersCombo.setPrefWidth(110);
+        lineNumbersCombo.setStyle("-fx-font-size: 12px;");
+        lineNumbersCombo.disableProperty().bind(showLineNumbersCheck.selectedProperty().not());
+        inputs.put("editor_appearance_lineNumbersMode", lineNumbersCombo);
+
+        HBox lineNumRow = new HBox(8, showLineNumbersCheck, lineNumbersCombo);
+        lineNumRow.setAlignment(Pos.CENTER_LEFT);
+
+        // 7. Show lines between statements or functions
+        CheckBox showLinesBetweenStatementsCheck = new CheckBox("Show lines between statements or functions");
+        showLinesBetweenStatementsCheck.setSelected(settings.isShowLinesBetweenStatements());
+        showLinesBetweenStatementsCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("editor_appearance_showLinesBetweenStatements", showLinesBetweenStatementsCheck);
+
+        // 8. Show whitespaces
+        CheckBox showWhitespacesCheck = new CheckBox("Show whitespaces");
+        showWhitespacesCheck.setSelected(settings.isShowWhitespaces());
+        showWhitespacesCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("editor_appearance_showWhitespaces", showWhitespacesCheck);
+
+        VBox wsSubBox = new VBox(6);
+        wsSubBox.setPadding(new Insets(2, 0, 4, 20));
+        wsSubBox.disableProperty().bind(showWhitespacesCheck.selectedProperty().not());
+
+        CheckBox wsLeadingCheck = new CheckBox("Leading");
+        wsLeadingCheck.setSelected(settings.isShowWhitespacesLeading());
+        wsLeadingCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("editor_appearance_wsLeading", wsLeadingCheck);
+
+        CheckBox wsInnerCheck = new CheckBox("Inner");
+        wsInnerCheck.setSelected(settings.isShowWhitespacesInner());
+        wsInnerCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("editor_appearance_wsInner", wsInnerCheck);
+
+        CheckBox wsTrailingCheck = new CheckBox("Trailing");
+        wsTrailingCheck.setSelected(settings.isShowWhitespacesTrailing());
+        wsTrailingCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("editor_appearance_wsTrailing", wsTrailingCheck);
+
+        CheckBox wsSelectionCheck = new CheckBox("Selection");
+        wsSelectionCheck.setSelected(settings.isShowWhitespacesSelection());
+        wsSelectionCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("editor_appearance_wsSelection", wsSelectionCheck);
+
+        wsSubBox.getChildren().addAll(wsLeadingCheck, wsInnerCheck, wsTrailingCheck, wsSelectionCheck);
+
+        // 9. Show indent guides
+        CheckBox showIndentGuidesCheck = new CheckBox("Show indent guides");
+        showIndentGuidesCheck.setSelected(settings.isShowEditorIndentGuides());
+        showIndentGuidesCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("editor_appearance_showIndentGuides", showIndentGuidesCheck);
+
+        // 10. Show intention bulb
+        CheckBox showIntentionBulbCheck = new CheckBox("Show intention bulb");
+        showIntentionBulbCheck.setSelected(settings.isShowIntentionBulb());
+        showIntentionBulbCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("editor_appearance_showIntentionBulb", showIntentionBulbCheck);
+
+        // 11. Show preview for intention actions when available
+        CheckBox showPreviewIntentionCheck = new CheckBox("Show preview for intention actions when available");
+        showPreviewIntentionCheck.setSelected(settings.isShowPreviewForIntentionActions());
+        showPreviewIntentionCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("editor_appearance_showPreviewIntention", showPreviewIntentionCheck);
+
+        // 12. Render documentation comments + link
+        CheckBox renderDocCommentsCheck = new CheckBox("Render documentation comments");
+        renderDocCommentsCheck.setSelected(settings.isRenderDocComments());
+        renderDocCommentsCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("editor_appearance_renderDocComments", renderDocCommentsCheck);
+
+        Label alsoInLabel = new Label("Also in");
+        alsoInLabel.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 12px;");
+
+        Hyperlink readerModeLink = new Hyperlink("Reader mode");
+        readerModeLink.setStyle("-fx-text-fill: #3574F0; -fx-font-size: 12px; -fx-padding: 0; -fx-border-color: transparent; -fx-cursor: hand;");
+        readerModeLink.setOnAction(e -> {
+            if (navigateTo != null) {
+                navigateTo.accept("Editor / Reader Mode");
+            }
+        });
+
+        HBox docCommentsRow = new HBox(6, renderDocCommentsCheck, alsoInLabel, readerModeLink);
+        docCommentsRow.setAlignment(Pos.CENTER_LEFT);
+
+        // 13. Show code lens on scrollbar hover
+        CheckBox showCodeLensCheck = new CheckBox("Show code lens on scrollbar hover");
+        showCodeLensCheck.setSelected(settings.isShowCodeLensOnScrollbarHover());
+        showCodeLensCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("editor_appearance_showCodeLens", showCodeLensCheck);
+
+        // 14. Use editor font for inlay hints
+        CheckBox useEditorFontInlayCheck = new CheckBox("Use editor font for inlay hints");
+        useEditorFontInlayCheck.setSelected(settings.isUseEditorFontForInlayHints());
+        useEditorFontInlayCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("editor_appearance_useEditorFontInlay", useEditorFontInlayCheck);
+
+        // 15. Enable HTML/XML tag tree highlighting
+        CheckBox tagTreeCheck = new CheckBox("Enable HTML/XML tag tree highlighting");
+        tagTreeCheck.setSelected(settings.isEnableTagTreeHighlighting());
+        tagTreeCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("editor_appearance_enableTagTree", tagTreeCheck);
+
+        VBox tagTreeSubBox = new VBox(6);
+        tagTreeSubBox.setPadding(new Insets(2, 0, 4, 20));
+        tagTreeSubBox.disableProperty().bind(tagTreeCheck.selectedProperty().not());
+
+        Label levelsLabel = new Label("Levels to highlight:");
+        levelsLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        levelsLabel.setMinWidth(140);
+        Spinner<Integer> levelsSpinner = new Spinner<>(1, 20, settings.getTagTreeLevelsToHighlight(), 1);
+        levelsSpinner.setPrefWidth(90);
+        levelsSpinner.setEditable(true);
+        inputs.put("editor_appearance_tagTreeLevels", levelsSpinner);
+        HBox levelsRow = new HBox(12, levelsLabel, levelsSpinner);
+        levelsRow.setAlignment(Pos.CENTER_LEFT);
+
+        Label opacityLabel = new Label("Opacity:");
+        opacityLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        opacityLabel.setMinWidth(140);
+        Spinner<Double> opacitySpinner = new Spinner<>(new SpinnerValueFactory.DoubleSpinnerValueFactory(0.05, 1.0, settings.getTagTreeOpacity(), 0.05));
+        opacitySpinner.setPrefWidth(90);
+        opacitySpinner.setEditable(true);
+        inputs.put("editor_appearance_tagTreeOpacity", opacitySpinner);
+        HBox opacityRow = new HBox(12, opacityLabel, opacitySpinner);
+        opacityRow.setAlignment(Pos.CENTER_LEFT);
+
+        tagTreeSubBox.getChildren().addAll(levelsRow, opacityRow);
+
+        panel.getChildren().addAll(
+                caretRow,
+                useBlockCaretCheck,
+                useFullLineHeightCaretCheck,
+                highlightOccurrencesCheck,
+                showHardWrapCheck,
+                lineNumRow,
+                showLinesBetweenStatementsCheck,
+                showWhitespacesCheck,
+                wsSubBox,
+                showIndentGuidesCheck,
+                showIntentionBulbCheck,
+                showPreviewIntentionCheck,
+                docCommentsRow,
+                showCodeLensCheck,
+                useEditorFontInlayCheck,
+                tagTreeCheck,
+                tagTreeSubBox
+        );
         return panel;
     }
 
@@ -5707,11 +6035,149 @@ public final class SettingsDialog {
             if (tf.getText() != null) settings.setStatementDelimiter(tf.getText().trim());
         }
 
+        // Auto Import
+        if (inputs.containsKey("editor_autoImport_showXmlTooltip")) {
+            CheckBox cb = (CheckBox) inputs.get("editor_autoImport_showXmlTooltip");
+            settings.setShowXmlAutoImportTooltip(cb.isSelected());
+        }
+
+        // Breadcrumbs
+        if (inputs.containsKey("editor_breadcrumbs_show")) {
+            CheckBox cb = (CheckBox) inputs.get("editor_breadcrumbs_show");
+            settings.setShowBreadcrumbs(cb.isSelected());
+        }
+        if (inputs.containsKey("editor_breadcrumbs_topRadio")) {
+            RadioButton rb = (RadioButton) inputs.get("editor_breadcrumbs_topRadio");
+            settings.setBreadcrumbsPlacement(rb.isSelected() ? "Top" : "Bottom");
+        }
+        if (inputs.containsKey("editor_breadcrumbs_html")) {
+            CheckBox cb = (CheckBox) inputs.get("editor_breadcrumbs_html");
+            settings.setBreadcrumbsHtml(cb.isSelected());
+        }
+        if (inputs.containsKey("editor_breadcrumbs_markdown")) {
+            CheckBox cb = (CheckBox) inputs.get("editor_breadcrumbs_markdown");
+            settings.setBreadcrumbsMarkdown(cb.isSelected());
+        }
+        if (inputs.containsKey("editor_breadcrumbs_xhtml")) {
+            CheckBox cb = (CheckBox) inputs.get("editor_breadcrumbs_xhtml");
+            settings.setBreadcrumbsXhtml(cb.isSelected());
+        }
+        if (inputs.containsKey("editor_breadcrumbs_json")) {
+            CheckBox cb = (CheckBox) inputs.get("editor_breadcrumbs_json");
+            settings.setBreadcrumbsJson(cb.isSelected());
+        }
+        if (inputs.containsKey("editor_breadcrumbs_sql")) {
+            CheckBox cb = (CheckBox) inputs.get("editor_breadcrumbs_sql");
+            settings.setBreadcrumbsSql(cb.isSelected());
+        }
+        if (inputs.containsKey("editor_breadcrumbs_xml")) {
+            CheckBox cb = (CheckBox) inputs.get("editor_breadcrumbs_xml");
+            settings.setBreadcrumbsXml(cb.isSelected());
+        }
+
+        // Editor Appearance
+        if (inputs.containsKey("editor_appearance_caretBlinking")) {
+            CheckBox cb = (CheckBox) inputs.get("editor_appearance_caretBlinking");
+            settings.setCaretBlinking(cb.isSelected());
+        }
+        if (inputs.containsKey("editor_appearance_caretBlinkingMs")) {
+            TextField tf = (TextField) inputs.get("editor_appearance_caretBlinkingMs");
+            try {
+                settings.setCaretBlinkingMs(Integer.parseInt(tf.getText().trim()));
+            } catch (Exception ignored) {}
+        }
+        if (inputs.containsKey("editor_appearance_useBlockCaret")) {
+            CheckBox cb = (CheckBox) inputs.get("editor_appearance_useBlockCaret");
+            settings.setUseBlockCaret(cb.isSelected());
+        }
+        if (inputs.containsKey("editor_appearance_useFullLineHeightCaret")) {
+            CheckBox cb = (CheckBox) inputs.get("editor_appearance_useFullLineHeightCaret");
+            settings.setUseFullLineHeightCaret(cb.isSelected());
+        }
+        if (inputs.containsKey("editor_appearance_highlightOccurrences")) {
+            CheckBox cb = (CheckBox) inputs.get("editor_appearance_highlightOccurrences");
+            settings.setHighlightOccurrences(cb.isSelected());
+        }
+        if (inputs.containsKey("editor_appearance_showHardWrap")) {
+            CheckBox cb = (CheckBox) inputs.get("editor_appearance_showHardWrap");
+            settings.setShowHardWrapAndVisualGuides(cb.isSelected());
+        }
+        if (inputs.containsKey("editor_appearance_showLineNumbers")) {
+            CheckBox cb = (CheckBox) inputs.get("editor_appearance_showLineNumbers");
+            settings.setShowLineNumbers(cb.isSelected());
+        }
+        if (inputs.containsKey("editor_appearance_lineNumbersMode")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("editor_appearance_lineNumbersMode");
+            if (cb.getValue() != null) settings.setLineNumbersMode(cb.getValue());
+        }
+        if (inputs.containsKey("editor_appearance_showLinesBetweenStatements")) {
+            CheckBox cb = (CheckBox) inputs.get("editor_appearance_showLinesBetweenStatements");
+            settings.setShowLinesBetweenStatements(cb.isSelected());
+        }
+        if (inputs.containsKey("editor_appearance_showWhitespaces")) {
+            CheckBox cb = (CheckBox) inputs.get("editor_appearance_showWhitespaces");
+            settings.setShowWhitespaces(cb.isSelected());
+        }
+        if (inputs.containsKey("editor_appearance_wsLeading")) {
+            CheckBox cb = (CheckBox) inputs.get("editor_appearance_wsLeading");
+            settings.setShowWhitespacesLeading(cb.isSelected());
+        }
+        if (inputs.containsKey("editor_appearance_wsInner")) {
+            CheckBox cb = (CheckBox) inputs.get("editor_appearance_wsInner");
+            settings.setShowWhitespacesInner(cb.isSelected());
+        }
+        if (inputs.containsKey("editor_appearance_wsTrailing")) {
+            CheckBox cb = (CheckBox) inputs.get("editor_appearance_wsTrailing");
+            settings.setShowWhitespacesTrailing(cb.isSelected());
+        }
+        if (inputs.containsKey("editor_appearance_wsSelection")) {
+            CheckBox cb = (CheckBox) inputs.get("editor_appearance_wsSelection");
+            settings.setShowWhitespacesSelection(cb.isSelected());
+        }
+        if (inputs.containsKey("editor_appearance_showIndentGuides")) {
+            CheckBox cb = (CheckBox) inputs.get("editor_appearance_showIndentGuides");
+            settings.setShowEditorIndentGuides(cb.isSelected());
+        }
+        if (inputs.containsKey("editor_appearance_showIntentionBulb")) {
+            CheckBox cb = (CheckBox) inputs.get("editor_appearance_showIntentionBulb");
+            settings.setShowIntentionBulb(cb.isSelected());
+        }
+        if (inputs.containsKey("editor_appearance_showPreviewIntention")) {
+            CheckBox cb = (CheckBox) inputs.get("editor_appearance_showPreviewIntention");
+            settings.setShowPreviewForIntentionActions(cb.isSelected());
+        }
+        if (inputs.containsKey("editor_appearance_renderDocComments")) {
+            CheckBox cb = (CheckBox) inputs.get("editor_appearance_renderDocComments");
+            settings.setRenderDocComments(cb.isSelected());
+        }
+        if (inputs.containsKey("editor_appearance_showCodeLens")) {
+            CheckBox cb = (CheckBox) inputs.get("editor_appearance_showCodeLens");
+            settings.setShowCodeLensOnScrollbarHover(cb.isSelected());
+        }
+        if (inputs.containsKey("editor_appearance_useEditorFontInlay")) {
+            CheckBox cb = (CheckBox) inputs.get("editor_appearance_useEditorFontInlay");
+            settings.setUseEditorFontForInlayHints(cb.isSelected());
+        }
+        if (inputs.containsKey("editor_appearance_enableTagTree")) {
+            CheckBox cb = (CheckBox) inputs.get("editor_appearance_enableTagTree");
+            settings.setEnableTagTreeHighlighting(cb.isSelected());
+        }
+        if (inputs.containsKey("editor_appearance_tagTreeLevels")) {
+            Spinner<Integer> sp = (Spinner<Integer>) inputs.get("editor_appearance_tagTreeLevels");
+            if (sp.getValue() != null) settings.setTagTreeLevelsToHighlight(sp.getValue());
+        }
+        if (inputs.containsKey("editor_appearance_tagTreeOpacity")) {
+            Spinner<Double> sp = (Spinner<Double>) inputs.get("editor_appearance_tagTreeOpacity");
+            if (sp.getValue() != null) settings.setTagTreeOpacity(sp.getValue());
+        }
+
         // Persist
         AppSettingsStore.save(settings);
 
         // Apply to open consoles and notify
-        mainWindow.applyEditorFontToOpenConsoles();
-        mainWindow.setStatus("Settings applied");
+        if (mainWindow != null) {
+            mainWindow.applyEditorSettingsToOpenConsoles();
+            mainWindow.setStatus("Settings applied");
+        }
     }
 }
