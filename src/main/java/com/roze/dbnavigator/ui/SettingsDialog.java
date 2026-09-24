@@ -309,16 +309,14 @@ public final class SettingsDialog {
 
         CategoryDef smartKeys = new CategoryDef("editor.general.smart_keys", "Smart Keys", "Editor / General / Smart Keys",
                 "Configure smart typing, auto-closing quotes/brackets, and indent behavior.");
-        smartKeys.getChildren().add(new CategoryDef("editor.general.smart_keys.yaml", "YAML", "Editor / General / Smart Keys / YAML",
-                "Configure smart indentation and key handling for YAML files."));
-        smartKeys.getChildren().add(new CategoryDef("editor.general.smart_keys.json", "JSON", "Editor / General / Smart Keys / JSON",
-                "Configure quote escaping and auto-comma in JSON files."));
-        smartKeys.getChildren().add(new CategoryDef("editor.general.smart_keys.markdown", "Markdown", "Editor / General / Smart Keys / Markdown",
-                "Configure table formatting and link wrapping in Markdown."));
         smartKeys.getChildren().add(new CategoryDef("editor.general.smart_keys.html_css", "HTML/CSS", "Editor / General / Smart Keys / HTML/CSS",
-                "Configure tag auto-closing and attribute completion."));
+                "Configure tag auto-closing, attribute completion, and CSS identifier selection."));
+        smartKeys.getChildren().add(new CategoryDef("editor.general.smart_keys.json", "JSON", "Editor / General / Smart Keys / JSON",
+                "Configure quote escaping, comma insertion, and property colon handling in JSON."));
+        smartKeys.getChildren().add(new CategoryDef("editor.general.smart_keys.markdown", "Markdown", "Editor / General / Smart Keys / Markdown",
+                "Configure table formatting, list numbering, and link handling in Markdown."));
         smartKeys.getChildren().add(new CategoryDef("editor.general.smart_keys.sql", "SQL", "Editor / General / Smart Keys / SQL",
-                "Configure clause auto-capitalization and alias insertion."));
+                "Configure string concatenation and code block closing on Enter in SQL."));
         general.getChildren().add(smartKeys);
 
         general.getChildren().add(new CategoryDef("editor.general.sticky_lines", "Sticky Lines", "Editor / General / Sticky Lines",
@@ -884,6 +882,14 @@ public final class SettingsDialog {
             return buildOutputConsolePanel(settings, inputs);
         } else if ("Editor / General / Postfix Completion".equals(fullPath) || "Postfix Completion".equals(fullPath)) {
             return buildPostfixCompletionPanel(settings, inputs);
+        } else if ("Editor / General / Smart Keys / HTML/CSS".equals(fullPath) || "HTML/CSS".equals(fullPath)) {
+            return buildSmartKeysHtmlCssPanel(settings, inputs);
+        } else if ("Editor / General / Smart Keys / JSON".equals(fullPath) || "JSON".equals(fullPath)) {
+            return buildSmartKeysJsonPanel(settings, inputs);
+        } else if ("Editor / General / Smart Keys / Markdown".equals(fullPath) || "Markdown".equals(fullPath)) {
+            return buildSmartKeysMarkdownPanel(settings, inputs);
+        } else if ("Editor / General / Smart Keys / SQL".equals(fullPath) || "SQL".equals(fullPath)) {
+            return buildSmartKeysSqlPanel(settings, inputs);
         } else if ("Editor / General / Smart Keys".equals(fullPath) || "Smart Keys".equals(fullPath)) {
             return buildSmartKeysPanel(settings, inputs, navigateTo);
         } else if ("Editor / General".equals(fullPath)) {
@@ -2000,6 +2006,239 @@ public final class SettingsDialog {
                 reformatPasteRow,
                 reformatLineBreaksCheck
         );
+        return panel;
+    }
+
+    private static VBox buildSmartKeysHtmlCssPanel(AppSettingsStore.Settings settings, Map<String, Object> inputs) {
+        VBox panel = new VBox(10);
+        panel.setPadding(new Insets(10, 16, 16, 16));
+
+        // XML/HTML Section
+        HBox xmlHtmlHeader = createSectionHeader("XML/HTML");
+
+        CheckBox insertClosingTagCheck = new CheckBox("Insert closing tag on tag completion");
+        insertClosingTagCheck.setSelected(settings.isSmartKeysHtmlInsertClosingTag());
+        insertClosingTagCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("smartKeys_html_insertClosingTag", insertClosingTagCheck);
+
+        CheckBox insertReqAttributesCheck = new CheckBox("Insert required attributes on tag completion");
+        insertReqAttributesCheck.setSelected(settings.isSmartKeysHtmlInsertRequiredAttributes());
+        insertReqAttributesCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("smartKeys_html_insertRequiredAttributes", insertReqAttributesCheck);
+
+        CheckBox insertReqSubtagsCheck = new CheckBox("Insert required subtags on tag completion");
+        insertReqSubtagsCheck.setSelected(settings.isSmartKeysHtmlInsertRequiredSubtags());
+        insertReqSubtagsCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("smartKeys_html_insertRequiredSubtags", insertReqSubtagsCheck);
+
+        CheckBox startAttributeCheck = new CheckBox("Start attribute on tag completion");
+        startAttributeCheck.setSelected(settings.isSmartKeysHtmlStartAttribute());
+        startAttributeCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("smartKeys_html_startAttribute", startAttributeCheck);
+
+        CheckBox addQuotesAttrCheck = new CheckBox("Add quotes for attribute value on typing '=' and attribute completion");
+        addQuotesAttrCheck.setSelected(settings.isSmartKeysHtmlAddQuotesForAttribute());
+        addQuotesAttrCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("smartKeys_html_addQuotesForAttribute", addQuotesAttrCheck);
+
+        CheckBox autoCloseTagCheck = new CheckBox("Auto-close tag on typing '</'");
+        autoCloseTagCheck.setSelected(settings.isSmartKeysHtmlAutoCloseTag());
+        autoCloseTagCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("smartKeys_html_autoCloseTag", autoCloseTagCheck);
+
+        CheckBox simultaneousTagCheck = new CheckBox("Simultaneous '<tag></tag>' editing");
+        simultaneousTagCheck.setSelected(settings.isSmartKeysHtmlSimultaneousTagEditing());
+        simultaneousTagCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("smartKeys_html_simultaneousTagEditing", simultaneousTagCheck);
+
+        VBox xmlHtmlBox = new VBox(8,
+                insertClosingTagCheck,
+                insertReqAttributesCheck,
+                insertReqSubtagsCheck,
+                startAttributeCheck,
+                addQuotesAttrCheck,
+                autoCloseTagCheck,
+                simultaneousTagCheck
+        );
+        xmlHtmlBox.setPadding(new Insets(2, 0, 8, 18));
+
+        // CSS Section
+        HBox cssHeader = createSectionHeader("CSS");
+
+        CheckBox selectWholeCssIdCheck = new CheckBox("Select whole CSS identifiers on double click");
+        selectWholeCssIdCheck.setSelected(settings.isSmartKeysCssSelectWholeCssIdentifiers());
+        selectWholeCssIdCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("smartKeys_css_selectWholeCssIdentifiers", selectWholeCssIdCheck);
+
+        VBox cssBox = new VBox(8, selectWholeCssIdCheck);
+        cssBox.setPadding(new Insets(2, 0, 8, 18));
+
+        panel.getChildren().addAll(xmlHtmlHeader, xmlHtmlBox, cssHeader, cssBox);
+        return panel;
+    }
+
+    private static VBox buildSmartKeysJsonPanel(AppSettingsStore.Settings settings, Map<String, Object> inputs) {
+        VBox panel = new VBox(10);
+        panel.setPadding(new Insets(10, 16, 16, 16));
+
+        CheckBox insertMissingCommaOnEnterCheck = new CheckBox("Insert missing comma on Enter");
+        insertMissingCommaOnEnterCheck.setSelected(settings.isSmartKeysJsonInsertMissingCommaOnEnter());
+        insertMissingCommaOnEnterCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("smartKeys_json_insertMissingCommaOnEnter", insertMissingCommaOnEnterCheck);
+
+        CheckBox insertMissingCommaAfterMatchingCheck = new CheckBox("Insert missing comma after matching braces and quotes");
+        insertMissingCommaAfterMatchingCheck.setSelected(settings.isSmartKeysJsonInsertMissingCommaAfterMatching());
+        insertMissingCommaAfterMatchingCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("smartKeys_json_insertMissingCommaAfterMatching", insertMissingCommaAfterMatchingCheck);
+
+        CheckBox manageCommasOnPasteCheck = new CheckBox("Automatically manage commas when pasting JSON fragments");
+        manageCommasOnPasteCheck.setSelected(settings.isSmartKeysJsonManageCommasOnPaste());
+        manageCommasOnPasteCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("smartKeys_json_manageCommasOnPaste", manageCommasOnPasteCheck);
+
+        CheckBox escapeTextOnPasteCheck = new CheckBox("Escape text on paste in string literals");
+        escapeTextOnPasteCheck.setSelected(settings.isSmartKeysJsonEscapeTextOnPaste());
+        escapeTextOnPasteCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("smartKeys_json_escapeTextOnPaste", escapeTextOnPasteCheck);
+
+        CheckBox addQuotesPropertyNamesCheck = new CheckBox("Automatically add quotes to property names when typing ':'");
+        addQuotesPropertyNamesCheck.setSelected(settings.isSmartKeysJsonAddQuotesToPropertyNames());
+        addQuotesPropertyNamesCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("smartKeys_json_addQuotesToPropertyNames", addQuotesPropertyNamesCheck);
+
+        CheckBox addWhitespaceColonCheck = new CheckBox("Automatically add whitespace when typing ':' after property names");
+        addWhitespaceColonCheck.setSelected(settings.isSmartKeysJsonAddWhitespaceAfterColon());
+        addWhitespaceColonCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("smartKeys_json_addWhitespaceAfterColon", addWhitespaceColonCheck);
+
+        CheckBox moveColonCheck = new CheckBox("Automatically move ':' after the property name if typed inside quotes");
+        moveColonCheck.setSelected(settings.isSmartKeysJsonMoveColonAfterPropertyName());
+        moveColonCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("smartKeys_json_moveColonAfterPropertyName", moveColonCheck);
+
+        CheckBox moveCommaCheck = new CheckBox("Automatically move comma after the property value or array element if inside quotes");
+        moveCommaCheck.setSelected(settings.isSmartKeysJsonMoveCommaAfterPropertyValue());
+        moveCommaCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("smartKeys_json_moveCommaAfterPropertyValue", moveCommaCheck);
+
+        panel.getChildren().addAll(
+                insertMissingCommaOnEnterCheck,
+                insertMissingCommaAfterMatchingCheck,
+                manageCommasOnPasteCheck,
+                escapeTextOnPasteCheck,
+                addQuotesPropertyNamesCheck,
+                addWhitespaceColonCheck,
+                moveColonCheck,
+                moveCommaCheck
+        );
+        return panel;
+    }
+
+    private static VBox buildSmartKeysMarkdownPanel(AppSettingsStore.Settings settings, Map<String, Object> inputs) {
+        VBox panel = new VBox(10);
+        panel.setPadding(new Insets(10, 16, 16, 16));
+
+        // Tables Section
+        HBox tablesHeader = createSectionHeader("Tables");
+
+        CheckBox reformatTableCheck = new CheckBox("Reformat table when typing");
+        reformatTableCheck.setSelected(settings.isSmartKeysMarkdownReformatTable());
+        reformatTableCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("smartKeys_markdown_reformatTable", reformatTableCheck);
+
+        CheckBox insertHtmlLineBreakCheck = new CheckBox("Insert HTML line break ('<br/>') instead of new line inside table cells");
+        insertHtmlLineBreakCheck.setSelected(settings.isSmartKeysMarkdownInsertHtmlLineBreakInTable());
+        insertHtmlLineBreakCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("smartKeys_markdown_insertHtmlLineBreakInTable", insertHtmlLineBreakCheck);
+
+        CheckBox shiftEnterNewTableRowCheck = new CheckBox("Use Shift+Enter to insert new table row");
+        shiftEnterNewTableRowCheck.setSelected(settings.isSmartKeysMarkdownShiftEnterNewTableRow());
+        shiftEnterNewTableRowCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("smartKeys_markdown_shiftEnterNewTableRow", shiftEnterNewTableRowCheck);
+
+        CheckBox tabNavigateTableCheck = new CheckBox("Use Tab/Shift+Tab to navigate table cells");
+        tabNavigateTableCheck.setSelected(settings.isSmartKeysMarkdownTabNavigateTable());
+        tabNavigateTableCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("smartKeys_markdown_tabNavigateTable", tabNavigateTableCheck);
+
+        VBox tablesBox = new VBox(8,
+                reformatTableCheck,
+                insertHtmlLineBreakCheck,
+                shiftEnterNewTableRowCheck,
+                tabNavigateTableCheck
+        );
+        tablesBox.setPadding(new Insets(2, 0, 8, 18));
+
+        // Lists Section
+        HBox listsHeader = createSectionHeader("Lists");
+
+        CheckBox adjustListIndentCheck = new CheckBox("Adjust indentation on type");
+        adjustListIndentCheck.setSelected(settings.isSmartKeysMarkdownAdjustListIndent());
+        adjustListIndentCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("smartKeys_markdown_adjustListIndent", adjustListIndentCheck);
+
+        CheckBox smartEnterBackspaceCheck = new CheckBox("Use smart Enter and Backspace");
+        smartEnterBackspaceCheck.setSelected(settings.isSmartKeysMarkdownSmartEnterBackspace());
+        smartEnterBackspaceCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("smartKeys_markdown_smartEnterBackspace", smartEnterBackspaceCheck);
+
+        CheckBox renumberListCheck = new CheckBox("Renumber list when typing");
+        renumberListCheck.setSelected(settings.isSmartKeysMarkdownRenumberList());
+        renumberListCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("smartKeys_markdown_renumberList", renumberListCheck);
+
+        Label listNumeratingLabel = new Label("List numerating:");
+        listNumeratingLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        listNumeratingLabel.setMinWidth(120);
+
+        ComboBox<String> listNumeratingCombo = new ComboBox<>();
+        listNumeratingCombo.getItems().addAll(AppSettingsStore.Settings.defaultMarkdownListNumeratingOptions());
+        listNumeratingCombo.setValue(settings.getSmartKeysMarkdownListNumerating());
+        listNumeratingCombo.setPrefWidth(200);
+        listNumeratingCombo.setStyle("-fx-font-size: 12px;");
+        inputs.put("smartKeys_markdown_listNumerating", listNumeratingCombo);
+
+        HBox listNumeratingRow = new HBox(8, listNumeratingLabel, listNumeratingCombo);
+        listNumeratingRow.setAlignment(Pos.CENTER_LEFT);
+
+        VBox listsBox = new VBox(8,
+                adjustListIndentCheck,
+                smartEnterBackspaceCheck,
+                renumberListCheck,
+                listNumeratingRow
+        );
+        listsBox.setPadding(new Insets(2, 0, 8, 18));
+
+        // Other Section
+        HBox otherHeader = createSectionHeader("Other");
+
+        CheckBox insertLinksOnDropCheck = new CheckBox("Insert links to images on drag and drop");
+        insertLinksOnDropCheck.setSelected(settings.isSmartKeysMarkdownInsertLinksOnDrop());
+        insertLinksOnDropCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("smartKeys_markdown_insertLinksOnDrop", insertLinksOnDropCheck);
+
+        VBox otherBox = new VBox(8, insertLinksOnDropCheck);
+        otherBox.setPadding(new Insets(2, 0, 8, 18));
+
+        panel.getChildren().addAll(tablesHeader, tablesBox, listsHeader, listsBox, otherHeader, otherBox);
+        return panel;
+    }
+
+    private static VBox buildSmartKeysSqlPanel(AppSettingsStore.Settings settings, Map<String, Object> inputs) {
+        VBox panel = new VBox(10);
+        panel.setPadding(new Insets(10, 16, 16, 16));
+
+        CheckBox insertStringConcatCheck = new CheckBox("Insert string concatenation on Enter");
+        insertStringConcatCheck.setSelected(settings.isSmartKeysSqlInsertStringConcatOnEnter());
+        insertStringConcatCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("smartKeys_sql_insertStringConcatOnEnter", insertStringConcatCheck);
+
+        CheckBox closeCodeBlocksCheck = new CheckBox("Close code blocks on Enter");
+        closeCodeBlocksCheck.setSelected(settings.isSmartKeysSqlCloseCodeBlocksOnEnter());
+        closeCodeBlocksCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("smartKeys_sql_closeCodeBlocksOnEnter", closeCodeBlocksCheck);
+
+        panel.getChildren().addAll(insertStringConcatCheck, closeCodeBlocksCheck);
         return panel;
     }
 
@@ -8432,6 +8671,122 @@ public final class SettingsDialog {
         if (inputs.containsKey("smartKeys_reformatRemoveCustomLineBreaks")) {
             CheckBox cb = (CheckBox) inputs.get("smartKeys_reformatRemoveCustomLineBreaks");
             settings.setSmartKeysReformatRemoveCustomLineBreaks(cb.isSelected());
+        }
+
+        // Editor > General > Smart Keys > SQL
+        if (inputs.containsKey("smartKeys_sql_insertStringConcatOnEnter")) {
+            CheckBox cb = (CheckBox) inputs.get("smartKeys_sql_insertStringConcatOnEnter");
+            settings.setSmartKeysSqlInsertStringConcatOnEnter(cb.isSelected());
+        }
+        if (inputs.containsKey("smartKeys_sql_closeCodeBlocksOnEnter")) {
+            CheckBox cb = (CheckBox) inputs.get("smartKeys_sql_closeCodeBlocksOnEnter");
+            settings.setSmartKeysSqlCloseCodeBlocksOnEnter(cb.isSelected());
+        }
+
+        // Editor > General > Smart Keys > Markdown
+        if (inputs.containsKey("smartKeys_markdown_reformatTable")) {
+            CheckBox cb = (CheckBox) inputs.get("smartKeys_markdown_reformatTable");
+            settings.setSmartKeysMarkdownReformatTable(cb.isSelected());
+        }
+        if (inputs.containsKey("smartKeys_markdown_insertHtmlLineBreakInTable")) {
+            CheckBox cb = (CheckBox) inputs.get("smartKeys_markdown_insertHtmlLineBreakInTable");
+            settings.setSmartKeysMarkdownInsertHtmlLineBreakInTable(cb.isSelected());
+        }
+        if (inputs.containsKey("smartKeys_markdown_shiftEnterNewTableRow")) {
+            CheckBox cb = (CheckBox) inputs.get("smartKeys_markdown_shiftEnterNewTableRow");
+            settings.setSmartKeysMarkdownShiftEnterNewTableRow(cb.isSelected());
+        }
+        if (inputs.containsKey("smartKeys_markdown_tabNavigateTable")) {
+            CheckBox cb = (CheckBox) inputs.get("smartKeys_markdown_tabNavigateTable");
+            settings.setSmartKeysMarkdownTabNavigateTable(cb.isSelected());
+        }
+        if (inputs.containsKey("smartKeys_markdown_adjustListIndent")) {
+            CheckBox cb = (CheckBox) inputs.get("smartKeys_markdown_adjustListIndent");
+            settings.setSmartKeysMarkdownAdjustListIndent(cb.isSelected());
+        }
+        if (inputs.containsKey("smartKeys_markdown_smartEnterBackspace")) {
+            CheckBox cb = (CheckBox) inputs.get("smartKeys_markdown_smartEnterBackspace");
+            settings.setSmartKeysMarkdownSmartEnterBackspace(cb.isSelected());
+        }
+        if (inputs.containsKey("smartKeys_markdown_renumberList")) {
+            CheckBox cb = (CheckBox) inputs.get("smartKeys_markdown_renumberList");
+            settings.setSmartKeysMarkdownRenumberList(cb.isSelected());
+        }
+        if (inputs.containsKey("smartKeys_markdown_listNumerating")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("smartKeys_markdown_listNumerating");
+            if (cb.getValue() != null) settings.setSmartKeysMarkdownListNumerating(cb.getValue());
+        }
+        if (inputs.containsKey("smartKeys_markdown_insertLinksOnDrop")) {
+            CheckBox cb = (CheckBox) inputs.get("smartKeys_markdown_insertLinksOnDrop");
+            settings.setSmartKeysMarkdownInsertLinksOnDrop(cb.isSelected());
+        }
+
+        // Editor > General > Smart Keys > JSON
+        if (inputs.containsKey("smartKeys_json_insertMissingCommaOnEnter")) {
+            CheckBox cb = (CheckBox) inputs.get("smartKeys_json_insertMissingCommaOnEnter");
+            settings.setSmartKeysJsonInsertMissingCommaOnEnter(cb.isSelected());
+        }
+        if (inputs.containsKey("smartKeys_json_insertMissingCommaAfterMatching")) {
+            CheckBox cb = (CheckBox) inputs.get("smartKeys_json_insertMissingCommaAfterMatching");
+            settings.setSmartKeysJsonInsertMissingCommaAfterMatching(cb.isSelected());
+        }
+        if (inputs.containsKey("smartKeys_json_manageCommasOnPaste")) {
+            CheckBox cb = (CheckBox) inputs.get("smartKeys_json_manageCommasOnPaste");
+            settings.setSmartKeysJsonManageCommasOnPaste(cb.isSelected());
+        }
+        if (inputs.containsKey("smartKeys_json_escapeTextOnPaste")) {
+            CheckBox cb = (CheckBox) inputs.get("smartKeys_json_escapeTextOnPaste");
+            settings.setSmartKeysJsonEscapeTextOnPaste(cb.isSelected());
+        }
+        if (inputs.containsKey("smartKeys_json_addQuotesToPropertyNames")) {
+            CheckBox cb = (CheckBox) inputs.get("smartKeys_json_addQuotesToPropertyNames");
+            settings.setSmartKeysJsonAddQuotesToPropertyNames(cb.isSelected());
+        }
+        if (inputs.containsKey("smartKeys_json_addWhitespaceAfterColon")) {
+            CheckBox cb = (CheckBox) inputs.get("smartKeys_json_addWhitespaceAfterColon");
+            settings.setSmartKeysJsonAddWhitespaceAfterColon(cb.isSelected());
+        }
+        if (inputs.containsKey("smartKeys_json_moveColonAfterPropertyName")) {
+            CheckBox cb = (CheckBox) inputs.get("smartKeys_json_moveColonAfterPropertyName");
+            settings.setSmartKeysJsonMoveColonAfterPropertyName(cb.isSelected());
+        }
+        if (inputs.containsKey("smartKeys_json_moveCommaAfterPropertyValue")) {
+            CheckBox cb = (CheckBox) inputs.get("smartKeys_json_moveCommaAfterPropertyValue");
+            settings.setSmartKeysJsonMoveCommaAfterPropertyValue(cb.isSelected());
+        }
+
+        // Editor > General > Smart Keys > HTML/CSS
+        if (inputs.containsKey("smartKeys_html_insertClosingTag")) {
+            CheckBox cb = (CheckBox) inputs.get("smartKeys_html_insertClosingTag");
+            settings.setSmartKeysHtmlInsertClosingTag(cb.isSelected());
+        }
+        if (inputs.containsKey("smartKeys_html_insertRequiredAttributes")) {
+            CheckBox cb = (CheckBox) inputs.get("smartKeys_html_insertRequiredAttributes");
+            settings.setSmartKeysHtmlInsertRequiredAttributes(cb.isSelected());
+        }
+        if (inputs.containsKey("smartKeys_html_insertRequiredSubtags")) {
+            CheckBox cb = (CheckBox) inputs.get("smartKeys_html_insertRequiredSubtags");
+            settings.setSmartKeysHtmlInsertRequiredSubtags(cb.isSelected());
+        }
+        if (inputs.containsKey("smartKeys_html_startAttribute")) {
+            CheckBox cb = (CheckBox) inputs.get("smartKeys_html_startAttribute");
+            settings.setSmartKeysHtmlStartAttribute(cb.isSelected());
+        }
+        if (inputs.containsKey("smartKeys_html_addQuotesForAttribute")) {
+            CheckBox cb = (CheckBox) inputs.get("smartKeys_html_addQuotesForAttribute");
+            settings.setSmartKeysHtmlAddQuotesForAttribute(cb.isSelected());
+        }
+        if (inputs.containsKey("smartKeys_html_autoCloseTag")) {
+            CheckBox cb = (CheckBox) inputs.get("smartKeys_html_autoCloseTag");
+            settings.setSmartKeysHtmlAutoCloseTag(cb.isSelected());
+        }
+        if (inputs.containsKey("smartKeys_html_simultaneousTagEditing")) {
+            CheckBox cb = (CheckBox) inputs.get("smartKeys_html_simultaneousTagEditing");
+            settings.setSmartKeysHtmlSimultaneousTagEditing(cb.isSelected());
+        }
+        if (inputs.containsKey("smartKeys_css_selectWholeCssIdentifiers")) {
+            CheckBox cb = (CheckBox) inputs.get("smartKeys_css_selectWholeCssIdentifiers");
+            settings.setSmartKeysCssSelectWholeCssIdentifiers(cb.isSelected());
         }
 
         // Editor > General > Postfix Completion

@@ -371,20 +371,46 @@ public class QueryTab extends Tab {
                     }
                 }
 
-                // Smart Keys: Smart indent on Enter
+                // Smart Keys: Smart indent and SQL Smart Keys on Enter
                 if (e.getCode() == KeyCode.ENTER && !e.isShiftDown() && !e.isControlDown() && !e.isAltDown() && !e.isMetaDown()) {
-                    if (st.isSmartKeysEnterSmartIndent()) {
-                        int caret = editor.getCaretPosition();
-                        String text = editor.getText();
-                        int lineStart = text.lastIndexOf('\n', caret - 1);
-                        lineStart = lineStart == -1 ? 0 : lineStart + 1;
-                        String lineBefore = text.substring(lineStart, caret);
-                        StringBuilder indent = new StringBuilder();
-                        for (int i = 0; i < lineBefore.length(); i++) {
-                            char ch = lineBefore.charAt(i);
-                            if (ch == ' ' || ch == '\t') indent.append(ch);
-                            else break;
+                    int caret = editor.getCaretPosition();
+                    String text = editor.getText();
+                    int lineStart = text.lastIndexOf('\n', caret - 1);
+                    lineStart = lineStart == -1 ? 0 : lineStart + 1;
+                    String lineBefore = text.substring(lineStart, caret);
+                    StringBuilder indent = new StringBuilder();
+                    for (int i = 0; i < lineBefore.length(); i++) {
+                        char ch = lineBefore.charAt(i);
+                        if (ch == ' ' || ch == '\t') indent.append(ch);
+                        else break;
+                    }
+
+                    // SQL Smart Key: Close code blocks on Enter (CASE ... END, BEGIN ... END)
+                    if (st.isSmartKeysSqlCloseCodeBlocksOnEnter()) {
+                        String trimmed = lineBefore.trim().toUpperCase();
+                        if (trimmed.endsWith("CASE") || trimmed.endsWith("BEGIN")) {
+                            editor.insertText(caret, "\n" + indent + "    \n" + indent + "END");
+                            editor.moveTo(caret + 1 + indent.length() + 4);
+                            e.consume();
+                            return;
                         }
+                    }
+
+                    // SQL Smart Key: Insert string concatenation on Enter inside string literal
+                    if (st.isSmartKeysSqlInsertStringConcatOnEnter()) {
+                        int quotesBefore = 0;
+                        for (int i = lineStart; i < caret; i++) {
+                            if (text.charAt(i) == '\'') quotesBefore++;
+                        }
+                        if (quotesBefore % 2 == 1) {
+                            editor.insertText(caret, "' ||\n" + indent + "'");
+                            editor.moveTo(caret + 5 + indent.length());
+                            e.consume();
+                            return;
+                        }
+                    }
+
+                    if (st.isSmartKeysEnterSmartIndent()) {
                         if (st.isSmartKeysEnterInsertPairBrace() && lineBefore.trim().endsWith("{")) {
                             editor.insertText(caret, "\n" + indent + "    \n" + indent + "}");
                             editor.moveTo(caret + 1 + indent.length() + 4);

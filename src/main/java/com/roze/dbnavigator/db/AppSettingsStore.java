@@ -379,6 +379,41 @@ public final class AppSettingsStore {
         public String smartKeysReformatOnPaste = "None";
         public boolean smartKeysReformatRemoveCustomLineBreaks = false;
 
+        // Editor > General > Smart Keys > SQL (DataGrip Alignment)
+        public boolean smartKeysSqlInsertStringConcatOnEnter = true;
+        public boolean smartKeysSqlCloseCodeBlocksOnEnter = true;
+
+        // Editor > General > Smart Keys > Markdown (DataGrip Alignment)
+        public boolean smartKeysMarkdownReformatTable = true;
+        public boolean smartKeysMarkdownInsertHtmlLineBreakInTable = true;
+        public boolean smartKeysMarkdownShiftEnterNewTableRow = true;
+        public boolean smartKeysMarkdownTabNavigateTable = true;
+        public boolean smartKeysMarkdownAdjustListIndent = true;
+        public boolean smartKeysMarkdownSmartEnterBackspace = true;
+        public boolean smartKeysMarkdownRenumberList = false;
+        public String smartKeysMarkdownListNumerating = "Sequentially";
+        public boolean smartKeysMarkdownInsertLinksOnDrop = true;
+
+        // Editor > General > Smart Keys > JSON (DataGrip Alignment)
+        public boolean smartKeysJsonInsertMissingCommaOnEnter = true;
+        public boolean smartKeysJsonInsertMissingCommaAfterMatching = true;
+        public boolean smartKeysJsonManageCommasOnPaste = true;
+        public boolean smartKeysJsonEscapeTextOnPaste = true;
+        public boolean smartKeysJsonAddQuotesToPropertyNames = true;
+        public boolean smartKeysJsonAddWhitespaceAfterColon = true;
+        public boolean smartKeysJsonMoveColonAfterPropertyName = false;
+        public boolean smartKeysJsonMoveCommaAfterPropertyValue = false;
+
+        // Editor > General > Smart Keys > HTML/CSS (DataGrip Alignment)
+        public boolean smartKeysHtmlInsertClosingTag = true;
+        public boolean smartKeysHtmlInsertRequiredAttributes = true;
+        public boolean smartKeysHtmlInsertRequiredSubtags = true;
+        public boolean smartKeysHtmlStartAttribute = true;
+        public boolean smartKeysHtmlAddQuotesForAttribute = true;
+        public boolean smartKeysHtmlAutoCloseTag = true;
+        public boolean smartKeysHtmlSimultaneousTagEditing = true;
+        public boolean smartKeysCssSelectWholeCssIdentifiers = true;
+
         // Editor > General > Postfix Completion (DataGrip Alignment)
         public boolean postfixCompletionEnabled = true;
         public String postfixCompletionExpandWith = "Tab";
@@ -434,6 +469,10 @@ public final class AppSettingsStore {
 
         public static List<String> defaultSmartKeysReformatOnPasteOptions() {
             return List.of("None", "Indent block", "Indent each line", "Reformat block");
+        }
+
+        public static List<String> defaultMarkdownListNumeratingOptions() {
+            return List.of("Sequentially", "With '1.'", "With previous number");
         }
 
         public static List<String> defaultPostfixExpandWithOptions() {
@@ -1420,6 +1459,68 @@ public final class AppSettingsStore {
         public void setSmartKeysReformatOnPaste(String val) { this.smartKeysReformatOnPaste = val != null ? val : "None"; }
         public boolean isSmartKeysReformatRemoveCustomLineBreaks() { return smartKeysReformatRemoveCustomLineBreaks; }
         public void setSmartKeysReformatRemoveCustomLineBreaks(boolean val) { this.smartKeysReformatRemoveCustomLineBreaks = val; }
+
+        // Smart Keys > SQL
+        public boolean isSmartKeysSqlInsertStringConcatOnEnter() { return smartKeysSqlInsertStringConcatOnEnter; }
+        public void setSmartKeysSqlInsertStringConcatOnEnter(boolean val) { this.smartKeysSqlInsertStringConcatOnEnter = val; }
+        public boolean isSmartKeysSqlCloseCodeBlocksOnEnter() { return smartKeysSqlCloseCodeBlocksOnEnter; }
+        public void setSmartKeysSqlCloseCodeBlocksOnEnter(boolean val) { this.smartKeysSqlCloseCodeBlocksOnEnter = val; }
+
+        // Smart Keys > Markdown
+        public boolean isSmartKeysMarkdownReformatTable() { return smartKeysMarkdownReformatTable; }
+        public void setSmartKeysMarkdownReformatTable(boolean val) { this.smartKeysMarkdownReformatTable = val; }
+        public boolean isSmartKeysMarkdownInsertHtmlLineBreakInTable() { return smartKeysMarkdownInsertHtmlLineBreakInTable; }
+        public void setSmartKeysMarkdownInsertHtmlLineBreakInTable(boolean val) { this.smartKeysMarkdownInsertHtmlLineBreakInTable = val; }
+        public boolean isSmartKeysMarkdownShiftEnterNewTableRow() { return smartKeysMarkdownShiftEnterNewTableRow; }
+        public void setSmartKeysMarkdownShiftEnterNewTableRow(boolean val) { this.smartKeysMarkdownShiftEnterNewTableRow = val; }
+        public boolean isSmartKeysMarkdownTabNavigateTable() { return smartKeysMarkdownTabNavigateTable; }
+        public void setSmartKeysMarkdownTabNavigateTable(boolean val) { this.smartKeysMarkdownTabNavigateTable = val; }
+        public boolean isSmartKeysMarkdownAdjustListIndent() { return smartKeysMarkdownAdjustListIndent; }
+        public void setSmartKeysMarkdownAdjustListIndent(boolean val) { this.smartKeysMarkdownAdjustListIndent = val; }
+        public boolean isSmartKeysMarkdownSmartEnterBackspace() { return smartKeysMarkdownSmartEnterBackspace; }
+        public void setSmartKeysMarkdownSmartEnterBackspace(boolean val) { this.smartKeysMarkdownSmartEnterBackspace = val; }
+        public boolean isSmartKeysMarkdownRenumberList() { return smartKeysMarkdownRenumberList; }
+        public void setSmartKeysMarkdownRenumberList(boolean val) { this.smartKeysMarkdownRenumberList = val; }
+        public String getSmartKeysMarkdownListNumerating() { return smartKeysMarkdownListNumerating; }
+        public void setSmartKeysMarkdownListNumerating(String val) { this.smartKeysMarkdownListNumerating = val != null ? val : "Sequentially"; }
+        public boolean isSmartKeysMarkdownInsertLinksOnDrop() { return smartKeysMarkdownInsertLinksOnDrop; }
+        public void setSmartKeysMarkdownInsertLinksOnDrop(boolean val) { this.smartKeysMarkdownInsertLinksOnDrop = val; }
+
+        // Smart Keys > JSON
+        public boolean isSmartKeysJsonInsertMissingCommaOnEnter() { return smartKeysJsonInsertMissingCommaOnEnter; }
+        public void setSmartKeysJsonInsertMissingCommaOnEnter(boolean val) { this.smartKeysJsonInsertMissingCommaOnEnter = val; }
+        public boolean isSmartKeysJsonInsertMissingCommaAfterMatching() { return smartKeysJsonInsertMissingCommaAfterMatching; }
+        public void setSmartKeysJsonInsertMissingCommaAfterMatching(boolean val) { this.smartKeysJsonInsertMissingCommaAfterMatching = val; }
+        public boolean isSmartKeysJsonManageCommasOnPaste() { return smartKeysJsonManageCommasOnPaste; }
+        public void setSmartKeysJsonManageCommasOnPaste(boolean val) { this.smartKeysJsonManageCommasOnPaste = val; }
+        public boolean isSmartKeysJsonEscapeTextOnPaste() { return smartKeysJsonEscapeTextOnPaste; }
+        public void setSmartKeysJsonEscapeTextOnPaste(boolean val) { this.smartKeysJsonEscapeTextOnPaste = val; }
+        public boolean isSmartKeysJsonAddQuotesToPropertyNames() { return smartKeysJsonAddQuotesToPropertyNames; }
+        public void setSmartKeysJsonAddQuotesToPropertyNames(boolean val) { this.smartKeysJsonAddQuotesToPropertyNames = val; }
+        public boolean isSmartKeysJsonAddWhitespaceAfterColon() { return smartKeysJsonAddWhitespaceAfterColon; }
+        public void setSmartKeysJsonAddWhitespaceAfterColon(boolean val) { this.smartKeysJsonAddWhitespaceAfterColon = val; }
+        public boolean isSmartKeysJsonMoveColonAfterPropertyName() { return smartKeysJsonMoveColonAfterPropertyName; }
+        public void setSmartKeysJsonMoveColonAfterPropertyName(boolean val) { this.smartKeysJsonMoveColonAfterPropertyName = val; }
+        public boolean isSmartKeysJsonMoveCommaAfterPropertyValue() { return smartKeysJsonMoveCommaAfterPropertyValue; }
+        public void setSmartKeysJsonMoveCommaAfterPropertyValue(boolean val) { this.smartKeysJsonMoveCommaAfterPropertyValue = val; }
+
+        // Smart Keys > HTML/CSS
+        public boolean isSmartKeysHtmlInsertClosingTag() { return smartKeysHtmlInsertClosingTag; }
+        public void setSmartKeysHtmlInsertClosingTag(boolean val) { this.smartKeysHtmlInsertClosingTag = val; }
+        public boolean isSmartKeysHtmlInsertRequiredAttributes() { return smartKeysHtmlInsertRequiredAttributes; }
+        public void setSmartKeysHtmlInsertRequiredAttributes(boolean val) { this.smartKeysHtmlInsertRequiredAttributes = val; }
+        public boolean isSmartKeysHtmlInsertRequiredSubtags() { return smartKeysHtmlInsertRequiredSubtags; }
+        public void setSmartKeysHtmlInsertRequiredSubtags(boolean val) { this.smartKeysHtmlInsertRequiredSubtags = val; }
+        public boolean isSmartKeysHtmlStartAttribute() { return smartKeysHtmlStartAttribute; }
+        public void setSmartKeysHtmlStartAttribute(boolean val) { this.smartKeysHtmlStartAttribute = val; }
+        public boolean isSmartKeysHtmlAddQuotesForAttribute() { return smartKeysHtmlAddQuotesForAttribute; }
+        public void setSmartKeysHtmlAddQuotesForAttribute(boolean val) { this.smartKeysHtmlAddQuotesForAttribute = val; }
+        public boolean isSmartKeysHtmlAutoCloseTag() { return smartKeysHtmlAutoCloseTag; }
+        public void setSmartKeysHtmlAutoCloseTag(boolean val) { this.smartKeysHtmlAutoCloseTag = val; }
+        public boolean isSmartKeysHtmlSimultaneousTagEditing() { return smartKeysHtmlSimultaneousTagEditing; }
+        public void setSmartKeysHtmlSimultaneousTagEditing(boolean val) { this.smartKeysHtmlSimultaneousTagEditing = val; }
+        public boolean isSmartKeysCssSelectWholeCssIdentifiers() { return smartKeysCssSelectWholeCssIdentifiers; }
+        public void setSmartKeysCssSelectWholeCssIdentifiers(boolean val) { this.smartKeysCssSelectWholeCssIdentifiers = val; }
 
         // Postfix Completion getters & setters
         public boolean isPostfixCompletionEnabled() { return postfixCompletionEnabled; }
