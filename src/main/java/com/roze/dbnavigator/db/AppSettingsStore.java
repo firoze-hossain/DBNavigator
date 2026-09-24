@@ -361,6 +361,29 @@ public final class AppSettingsStore {
         public boolean inlineMultilineSuggestions = true;
         public boolean inlineSyncWithPopup = false;
 
+        // Editor > General > Smart Keys (DataGrip Alignment)
+        public boolean smartKeysHomeMovesCaret = true;
+        public boolean smartKeysEndBlankLineMovesCaret = true;
+        public boolean smartKeysInsertPairedBrackets = true;
+        public boolean smartKeysInsertPairQuote = true;
+        public boolean smartKeysReformatBlockOnBrace = true;
+        public boolean smartKeysUseCamelHumps = false;
+        public boolean smartKeysHonorCamelHumpsOnDoubleClick = true;
+        public boolean smartKeysSurroundSelectionOnQuoteOrBrace = true;
+        public boolean smartKeysMultiCaretsOnDoubleModifier = true;
+        public boolean smartKeysJumpOutsideBracketWithTab = true;
+        public boolean smartKeysEnterSmartIndent = true;
+        public boolean smartKeysEnterInsertPairBrace = true;
+        public boolean smartKeysEnterCloseBlockComment = true;
+        public String smartKeysUnindentOnBackspace = "To proper indent position";
+        public String smartKeysReformatOnPaste = "None";
+        public boolean smartKeysReformatRemoveCustomLineBreaks = false;
+
+        // Editor > General > Postfix Completion (DataGrip Alignment)
+        public boolean postfixCompletionEnabled = true;
+        public String postfixCompletionExpandWith = "Tab";
+        public List<PostfixTemplateConfig> postfixTemplates = defaultPostfixTemplates();
+
         public static List<String> defaultUiThemes() {
             return List.of(
                     "Islands Dark",
@@ -403,6 +426,28 @@ public final class AppSettingsStore {
 
         public static List<String> defaultAntialiasingOptions() {
             return List.of("Subpixel", "Greyscale", "No antialiasing");
+        }
+
+        public static List<String> defaultSmartKeysUnindentOptions() {
+            return List.of("Disabled", "To proper indent position", "To nearest indent position");
+        }
+
+        public static List<String> defaultSmartKeysReformatOnPasteOptions() {
+            return List.of("None", "Indent block", "Indent each line", "Reformat block");
+        }
+
+        public static List<String> defaultPostfixExpandWithOptions() {
+            return List.of("Tab", "Space", "Enter");
+        }
+
+        public static List<PostfixTemplateConfig> defaultPostfixTemplates() {
+            List<PostfixTemplateConfig> list = new ArrayList<>();
+            list.add(new PostfixTemplateConfig("afrom", "SQL", "select $COLUMNS$ from $EXPR$", "select [c1 as a1, ...] from authors", true, "authors.afrom", "select [c1 as a1, ...] from authors"));
+            list.add(new PostfixTemplateConfig("cast", "SQL", "CAST($EXPR$ as JSON)", "CAST('foo' as JSON)", true, "'foo'.cast", "CAST('foo' as JSON)"));
+            list.add(new PostfixTemplateConfig("cfrom", "SQL", "select * from $EXPR$", "select [all columns] from authors", true, "authors.cfrom", "select [all columns] from authors"));
+            list.add(new PostfixTemplateConfig("from", "SQL", "select * from $EXPR$", "select | from authors", true, "authors.from", "select | from authors"));
+            list.add(new PostfixTemplateConfig("join", "SQL", "select * from $EXPR$ join | on |", "select * from authors join | on |", true, "authors.join", "select * from authors join | on |"));
+            return list;
         }
 
         public static List<UserParameterPattern> defaultUserParameterPatterns() {
@@ -1341,6 +1386,56 @@ public final class AppSettingsStore {
         public void setInlineMultilineSuggestions(boolean inlineMultilineSuggestions) { this.inlineMultilineSuggestions = inlineMultilineSuggestions; }
         public boolean isInlineSyncWithPopup() { return inlineSyncWithPopup; }
         public void setInlineSyncWithPopup(boolean inlineSyncWithPopup) { this.inlineSyncWithPopup = inlineSyncWithPopup; }
+
+        // Smart Keys getters & setters
+        public boolean isSmartKeysHomeMovesCaret() { return smartKeysHomeMovesCaret; }
+        public void setSmartKeysHomeMovesCaret(boolean val) { this.smartKeysHomeMovesCaret = val; }
+        public boolean isSmartKeysEndBlankLineMovesCaret() { return smartKeysEndBlankLineMovesCaret; }
+        public void setSmartKeysEndBlankLineMovesCaret(boolean val) { this.smartKeysEndBlankLineMovesCaret = val; }
+        public boolean isSmartKeysInsertPairedBrackets() { return smartKeysInsertPairedBrackets; }
+        public void setSmartKeysInsertPairedBrackets(boolean val) { this.smartKeysInsertPairedBrackets = val; }
+        public boolean isSmartKeysInsertPairQuote() { return smartKeysInsertPairQuote; }
+        public void setSmartKeysInsertPairQuote(boolean val) { this.smartKeysInsertPairQuote = val; }
+        public boolean isSmartKeysReformatBlockOnBrace() { return smartKeysReformatBlockOnBrace; }
+        public void setSmartKeysReformatBlockOnBrace(boolean val) { this.smartKeysReformatBlockOnBrace = val; }
+        public boolean isSmartKeysUseCamelHumps() { return smartKeysUseCamelHumps; }
+        public void setSmartKeysUseCamelHumps(boolean val) { this.smartKeysUseCamelHumps = val; }
+        public boolean isSmartKeysHonorCamelHumpsOnDoubleClick() { return smartKeysHonorCamelHumpsOnDoubleClick; }
+        public void setSmartKeysHonorCamelHumpsOnDoubleClick(boolean val) { this.smartKeysHonorCamelHumpsOnDoubleClick = val; }
+        public boolean isSmartKeysSurroundSelectionOnQuoteOrBrace() { return smartKeysSurroundSelectionOnQuoteOrBrace; }
+        public void setSmartKeysSurroundSelectionOnQuoteOrBrace(boolean val) { this.smartKeysSurroundSelectionOnQuoteOrBrace = val; }
+        public boolean isSmartKeysMultiCaretsOnDoubleModifier() { return smartKeysMultiCaretsOnDoubleModifier; }
+        public void setSmartKeysMultiCaretsOnDoubleModifier(boolean val) { this.smartKeysMultiCaretsOnDoubleModifier = val; }
+        public boolean isSmartKeysJumpOutsideBracketWithTab() { return smartKeysJumpOutsideBracketWithTab; }
+        public void setSmartKeysJumpOutsideBracketWithTab(boolean val) { this.smartKeysJumpOutsideBracketWithTab = val; }
+        public boolean isSmartKeysEnterSmartIndent() { return smartKeysEnterSmartIndent; }
+        public void setSmartKeysEnterSmartIndent(boolean val) { this.smartKeysEnterSmartIndent = val; }
+        public boolean isSmartKeysEnterInsertPairBrace() { return smartKeysEnterInsertPairBrace; }
+        public void setSmartKeysEnterInsertPairBrace(boolean val) { this.smartKeysEnterInsertPairBrace = val; }
+        public boolean isSmartKeysEnterCloseBlockComment() { return smartKeysEnterCloseBlockComment; }
+        public void setSmartKeysEnterCloseBlockComment(boolean val) { this.smartKeysEnterCloseBlockComment = val; }
+        public String getSmartKeysUnindentOnBackspace() { return smartKeysUnindentOnBackspace; }
+        public void setSmartKeysUnindentOnBackspace(String val) { this.smartKeysUnindentOnBackspace = val != null ? val : "To proper indent position"; }
+        public String getSmartKeysReformatOnPaste() { return smartKeysReformatOnPaste; }
+        public void setSmartKeysReformatOnPaste(String val) { this.smartKeysReformatOnPaste = val != null ? val : "None"; }
+        public boolean isSmartKeysReformatRemoveCustomLineBreaks() { return smartKeysReformatRemoveCustomLineBreaks; }
+        public void setSmartKeysReformatRemoveCustomLineBreaks(boolean val) { this.smartKeysReformatRemoveCustomLineBreaks = val; }
+
+        // Postfix Completion getters & setters
+        public boolean isPostfixCompletionEnabled() { return postfixCompletionEnabled; }
+        public void setPostfixCompletionEnabled(boolean val) { this.postfixCompletionEnabled = val; }
+        public String getPostfixCompletionExpandWith() { return postfixCompletionExpandWith; }
+        public void setPostfixCompletionExpandWith(String val) { this.postfixCompletionExpandWith = val != null ? val : "Tab"; }
+        public List<PostfixTemplateConfig> getPostfixTemplates() {
+            if (postfixTemplates == null || postfixTemplates.isEmpty()) {
+                postfixTemplates = defaultPostfixTemplates();
+            }
+            return postfixTemplates;
+        }
+        public void setPostfixTemplates(List<PostfixTemplateConfig> postfixTemplates) {
+            this.postfixTemplates = (postfixTemplates == null || postfixTemplates.isEmpty())
+                    ? defaultPostfixTemplates() : postfixTemplates;
+        }
     }
 
     public static class UserParameterPattern {
@@ -1657,6 +1752,66 @@ public final class AppSettingsStore {
         @Override
         public String toString() {
             return tableName + " -> " + customAlias;
+        }
+    }
+
+    public static class PostfixTemplateConfig {
+        private String key = "";
+        private String language = "SQL";
+        private String expression = "";
+        private String description = "";
+        private boolean enabled = true;
+        private String exampleBefore = "";
+        private String exampleAfter = "";
+
+        public PostfixTemplateConfig() {}
+
+        public PostfixTemplateConfig(String key, String language, String expression, String description,
+                                     boolean enabled, String exampleBefore, String exampleAfter) {
+            this.key = key != null ? key : "";
+            this.language = language != null ? language : "SQL";
+            this.expression = expression != null ? expression : "";
+            this.description = description != null ? description : "";
+            this.enabled = enabled;
+            this.exampleBefore = exampleBefore != null ? exampleBefore : "";
+            this.exampleAfter = exampleAfter != null ? exampleAfter : "";
+        }
+
+        public PostfixTemplateConfig copy() {
+            return new PostfixTemplateConfig(key, language, expression, description, enabled, exampleBefore, exampleAfter);
+        }
+
+        public String getKey() { return key; }
+        public void setKey(String key) { this.key = key != null ? key : ""; }
+        public String getLanguage() { return language; }
+        public void setLanguage(String language) { this.language = language != null ? language : "SQL"; }
+        public String getExpression() { return expression; }
+        public void setExpression(String expression) { this.expression = expression != null ? expression : ""; }
+        public String getDescription() { return description; }
+        public void setDescription(String description) { this.description = description != null ? description : ""; }
+        public boolean isEnabled() { return enabled; }
+        public void setEnabled(boolean enabled) { this.enabled = enabled; }
+        public String getExampleBefore() { return exampleBefore; }
+        public void setExampleBefore(String exampleBefore) { this.exampleBefore = exampleBefore != null ? exampleBefore : ""; }
+        public String getExampleAfter() { return exampleAfter; }
+        public void setExampleAfter(String exampleAfter) { this.exampleAfter = exampleAfter != null ? exampleAfter : ""; }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            PostfixTemplateConfig that = (PostfixTemplateConfig) o;
+            return Objects.equals(key, that.key) && Objects.equals(language, that.language);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(key, language);
+        }
+
+        @Override
+        public String toString() {
+            return key + " (" + language + ") - " + description;
         }
     }
 
