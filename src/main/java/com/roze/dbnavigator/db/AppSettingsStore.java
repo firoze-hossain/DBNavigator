@@ -335,6 +335,32 @@ public final class AppSettingsStore {
         public boolean editorTabsAlwaysShowQualifiedNames = false;
         public boolean editorTabsShortenNames = true;
 
+        // Editor > General > Output Console (DataGrip Alignment)
+        public boolean outputConsoleUseSoftWraps = false;
+        public int outputConsoleHistorySize = 300;
+        public boolean outputConsoleOverrideCycleBuffer = false;
+        public int outputConsoleCycleBufferSizeKb = 1024;
+        public String outputConsoleDefaultEncoding = "<System Default: UTF-8>";
+        public List<String> outputConsoleFoldingPatterns = new ArrayList<>();
+        public List<String> outputConsoleFoldingExceptions = new ArrayList<>();
+
+        // Editor > General > Gutter Icons (DataGrip Alignment)
+        public boolean showGutterIcons = true;
+        public boolean gutterColorPreview = true;
+        public boolean gutterDocComments = true;
+        public boolean gutterRunLineMarker = true;
+        public boolean gutterRecursiveCall = true;
+        public boolean gutterVcsIgnoredDirectories = true;
+        public boolean gutterConfigureHtmlImage = true;
+        public boolean gutterConfigureMarkdownImage = true;
+        public boolean gutterInstallPlantUml = true;
+
+        // Editor > General > Inline Completion (DataGrip Alignment)
+        public boolean inlineCompletionEnabled = true;
+        public boolean inlineAutoOnTyping = true;
+        public boolean inlineMultilineSuggestions = true;
+        public boolean inlineSyncWithPopup = false;
+
         public static List<String> defaultUiThemes() {
             return List.of(
                     "Islands Dark",
@@ -1259,6 +1285,62 @@ public final class AppSettingsStore {
         public void setEditorTabsAlwaysShowQualifiedNames(boolean editorTabsAlwaysShowQualifiedNames) { this.editorTabsAlwaysShowQualifiedNames = editorTabsAlwaysShowQualifiedNames; }
         public boolean isEditorTabsShortenNames() { return editorTabsShortenNames; }
         public void setEditorTabsShortenNames(boolean editorTabsShortenNames) { this.editorTabsShortenNames = editorTabsShortenNames; }
+
+        // Output Console getters & setters
+        public boolean isOutputConsoleUseSoftWraps() { return outputConsoleUseSoftWraps; }
+        public void setOutputConsoleUseSoftWraps(boolean outputConsoleUseSoftWraps) { this.outputConsoleUseSoftWraps = outputConsoleUseSoftWraps; }
+        public int getOutputConsoleHistorySize() { return outputConsoleHistorySize; }
+        public void setOutputConsoleHistorySize(int outputConsoleHistorySize) { this.outputConsoleHistorySize = outputConsoleHistorySize >= 0 ? outputConsoleHistorySize : 300; }
+        public boolean isOutputConsoleOverrideCycleBuffer() { return outputConsoleOverrideCycleBuffer; }
+        public void setOutputConsoleOverrideCycleBuffer(boolean outputConsoleOverrideCycleBuffer) { this.outputConsoleOverrideCycleBuffer = outputConsoleOverrideCycleBuffer; }
+        public int getOutputConsoleCycleBufferSizeKb() { return outputConsoleCycleBufferSizeKb; }
+        public void setOutputConsoleCycleBufferSizeKb(int outputConsoleCycleBufferSizeKb) { this.outputConsoleCycleBufferSizeKb = outputConsoleCycleBufferSizeKb > 0 ? outputConsoleCycleBufferSizeKb : 1024; }
+        public String getOutputConsoleDefaultEncoding() { return outputConsoleDefaultEncoding; }
+        public void setOutputConsoleDefaultEncoding(String outputConsoleDefaultEncoding) { this.outputConsoleDefaultEncoding = outputConsoleDefaultEncoding != null ? outputConsoleDefaultEncoding : "<System Default: UTF-8>"; }
+        public List<String> getOutputConsoleFoldingPatterns() {
+            if (outputConsoleFoldingPatterns == null) outputConsoleFoldingPatterns = new ArrayList<>();
+            return outputConsoleFoldingPatterns;
+        }
+        public void setOutputConsoleFoldingPatterns(List<String> outputConsoleFoldingPatterns) {
+            this.outputConsoleFoldingPatterns = outputConsoleFoldingPatterns != null ? outputConsoleFoldingPatterns : new ArrayList<>();
+        }
+        public List<String> getOutputConsoleFoldingExceptions() {
+            if (outputConsoleFoldingExceptions == null) outputConsoleFoldingExceptions = new ArrayList<>();
+            return outputConsoleFoldingExceptions;
+        }
+        public void setOutputConsoleFoldingExceptions(List<String> outputConsoleFoldingExceptions) {
+            this.outputConsoleFoldingExceptions = outputConsoleFoldingExceptions != null ? outputConsoleFoldingExceptions : new ArrayList<>();
+        }
+
+        // Gutter Icons getters & setters
+        public boolean isShowGutterIcons() { return showGutterIcons; }
+        public void setShowGutterIcons(boolean showGutterIcons) { this.showGutterIcons = showGutterIcons; }
+        public boolean isGutterColorPreview() { return gutterColorPreview; }
+        public void setGutterColorPreview(boolean gutterColorPreview) { this.gutterColorPreview = gutterColorPreview; }
+        public boolean isGutterDocComments() { return gutterDocComments; }
+        public void setGutterDocComments(boolean gutterDocComments) { this.gutterDocComments = gutterDocComments; }
+        public boolean isGutterRunLineMarker() { return gutterRunLineMarker; }
+        public void setGutterRunLineMarker(boolean gutterRunLineMarker) { this.gutterRunLineMarker = gutterRunLineMarker; }
+        public boolean isGutterRecursiveCall() { return gutterRecursiveCall; }
+        public void setGutterRecursiveCall(boolean gutterRecursiveCall) { this.gutterRecursiveCall = gutterRecursiveCall; }
+        public boolean isGutterVcsIgnoredDirectories() { return gutterVcsIgnoredDirectories; }
+        public void setGutterVcsIgnoredDirectories(boolean gutterVcsIgnoredDirectories) { this.gutterVcsIgnoredDirectories = gutterVcsIgnoredDirectories; }
+        public boolean isGutterConfigureHtmlImage() { return gutterConfigureHtmlImage; }
+        public void setGutterConfigureHtmlImage(boolean gutterConfigureHtmlImage) { this.gutterConfigureHtmlImage = gutterConfigureHtmlImage; }
+        public boolean isGutterConfigureMarkdownImage() { return gutterConfigureMarkdownImage; }
+        public void setGutterConfigureMarkdownImage(boolean gutterConfigureMarkdownImage) { this.gutterConfigureMarkdownImage = gutterConfigureMarkdownImage; }
+        public boolean isGutterInstallPlantUml() { return gutterInstallPlantUml; }
+        public void setGutterInstallPlantUml(boolean gutterInstallPlantUml) { this.gutterInstallPlantUml = gutterInstallPlantUml; }
+
+        // Inline Completion getters & setters
+        public boolean isInlineCompletionEnabled() { return inlineCompletionEnabled; }
+        public void setInlineCompletionEnabled(boolean inlineCompletionEnabled) { this.inlineCompletionEnabled = inlineCompletionEnabled; }
+        public boolean isInlineAutoOnTyping() { return inlineAutoOnTyping; }
+        public void setInlineAutoOnTyping(boolean inlineAutoOnTyping) { this.inlineAutoOnTyping = inlineAutoOnTyping; }
+        public boolean isInlineMultilineSuggestions() { return inlineMultilineSuggestions; }
+        public void setInlineMultilineSuggestions(boolean inlineMultilineSuggestions) { this.inlineMultilineSuggestions = inlineMultilineSuggestions; }
+        public boolean isInlineSyncWithPopup() { return inlineSyncWithPopup; }
+        public void setInlineSyncWithPopup(boolean inlineSyncWithPopup) { this.inlineSyncWithPopup = inlineSyncWithPopup; }
     }
 
     public static class UserParameterPattern {

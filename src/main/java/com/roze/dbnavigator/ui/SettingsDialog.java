@@ -4,10 +4,12 @@ import com.roze.dbnavigator.db.AppSettingsStore;
 import com.roze.dbnavigator.db.ConnectionStore;
 import com.roze.dbnavigator.model.ConnectionProfile;
 import com.roze.dbnavigator.util.CsvFormatEngine;
+import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.stage.Popup;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import org.kordamp.ikonli.fontawesome5.FontAwesomeSolid;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -298,6 +300,8 @@ public final class SettingsDialog {
                 "Configure tab placement, tab closing policy, and multi-row tabs."));
         general.getChildren().add(new CategoryDef("editor.general.gutter_icons", "Gutter Icons", "Editor / General / Gutter Icons",
                 "Configure run, breakpoint, and line-marker icons in the left gutter."));
+        general.getChildren().add(new CategoryDef("editor.general.inline_completion", "Inline Completion", "Editor / General / Inline Completion",
+                "Configure full line and inline completion suggestions and typing triggers."));
         general.getChildren().add(new CategoryDef("editor.general.output_console", "Output Console", "Editor / General / Output Console",
                 "Configure console buffer size, folding, and cyclic buffer limits."));
         general.getChildren().add(new CategoryDef("editor.general.postfix_completion", "Postfix Completion", "Editor / General / Postfix Completion",
@@ -871,6 +875,13 @@ public final class SettingsDialog {
             return buildCodeFoldingPanel(settings, inputs);
         } else if ("Editor / General / Editor Tabs".equals(fullPath) || "Editor Tabs".equals(fullPath)) {
             return buildEditorTabsPanel(settings, inputs);
+        } else if ("Editor / General / Gutter Icons".equals(fullPath) || "Gutter Icons".equals(fullPath)) {
+            return buildGutterIconsPanel(settings, inputs);
+        } else if ("Editor / General / Inline Completion".equals(fullPath) || "Inline Completion".equals(fullPath)
+                || "Editor / General / Code Completion / Inline".equals(fullPath) || "Inline".equals(fullPath)) {
+            return buildInlineCompletionPanel(settings, inputs, navigateTo);
+        } else if ("Editor / General / Output Console".equals(fullPath) || "Output Console".equals(fullPath)) {
+            return buildOutputConsolePanel(settings, inputs);
         } else if ("Editor / General".equals(fullPath)) {
             return buildGeneralEditorPanel(settings, inputs);
         } else if ("Editor / General / Font".equals(fullPath) || "Editor / Font".equals(fullPath) || "Font".equals(fullPath)) {
@@ -3139,6 +3150,447 @@ public final class SettingsDialog {
                 dbBox
         );
         return panel;
+    }
+
+    private static VBox buildGutterIconsPanel(AppSettingsStore.Settings settings, Map<String, Object> inputs) {
+        VBox panel = new VBox(10);
+        panel.setPadding(new Insets(10, 16, 20, 16));
+
+        CheckBox showGutterCheck = new CheckBox("Show gutter icons");
+        showGutterCheck.setSelected(settings.isShowGutterIcons());
+        showGutterCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px; -fx-font-weight: bold;");
+        inputs.put("gutterIcons_showGutterIcons", showGutterCheck);
+
+        VBox contentBox = new VBox(10);
+        contentBox.disableProperty().bind(showGutterCheck.selectedProperty().not());
+
+        // 1. Common
+        HBox commonHeader = createSectionHeader("Common");
+
+        CheckBox colorPreviewCheck = new CheckBox("Color preview");
+        colorPreviewCheck.setSelected(settings.isGutterColorPreview());
+        colorPreviewCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("gutterIcons_colorPreview", colorPreviewCheck);
+        HBox colorPreviewRow = createGutterIconRow(Icons.of(FontAwesomeSolid.PALETTE, "#57965c", 12), colorPreviewCheck);
+
+        CheckBox docCommentsCheck = new CheckBox("Documentation comments in-place rendering");
+        docCommentsCheck.setSelected(settings.isGutterDocComments());
+        docCommentsCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("gutterIcons_docComments", docCommentsCheck);
+        HBox docCommentsRow = createGutterIconRow(Icons.of(FontAwesomeSolid.ALIGN_LEFT, "#808080", 12), docCommentsCheck);
+
+        CheckBox runMarkerCheck = new CheckBox("Run line marker");
+        runMarkerCheck.setSelected(settings.isGutterRunLineMarker());
+        runMarkerCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("gutterIcons_runLineMarker", runMarkerCheck);
+        HBox runMarkerRow = createGutterIconRow(Icons.of(FontAwesomeSolid.PLAY, "#499c54", 12), runMarkerCheck);
+
+        VBox commonBox = new VBox(6, colorPreviewRow, docCommentsRow, runMarkerRow);
+        commonBox.setPadding(new Insets(0, 0, 0, 16));
+
+        // 2. Database Tools and SQL
+        HBox dbHeader = createSectionHeader("Database Tools and SQL");
+
+        CheckBox recursiveCallCheck = new CheckBox("Recursive call");
+        recursiveCallCheck.setSelected(settings.isGutterRecursiveCall());
+        recursiveCallCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("gutterIcons_recursiveCall", recursiveCallCheck);
+        HBox recursiveCallRow = createGutterIconRow(Icons.of(FontAwesomeSolid.REDO, "#6897bb", 12), recursiveCallCheck);
+
+        VBox dbBox = new VBox(6, recursiveCallRow);
+        dbBox.setPadding(new Insets(0, 0, 0, 16));
+
+        // 3. Git
+        HBox gitHeader = createSectionHeader("Git");
+
+        CheckBox vcsIgnoredCheck = new CheckBox("Version control ignored directories");
+        vcsIgnoredCheck.setSelected(settings.isGutterVcsIgnoredDirectories());
+        vcsIgnoredCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("gutterIcons_vcsIgnoredDirectories", vcsIgnoredCheck);
+        HBox vcsIgnoredRow = createGutterIconRow(Icons.of(FontAwesomeSolid.FOLDER, "#808080", 12), vcsIgnoredCheck);
+
+        VBox gitBox = new VBox(6, vcsIgnoredRow);
+        gitBox.setPadding(new Insets(0, 0, 0, 16));
+
+        // 4. Markdown
+        HBox mdHeader = createSectionHeader("Markdown");
+
+        CheckBox htmlImgCheck = new CheckBox("Configure HTML image");
+        htmlImgCheck.setSelected(settings.isGutterConfigureHtmlImage());
+        htmlImgCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("gutterIcons_configureHtmlImage", htmlImgCheck);
+
+        CheckBox mdImgCheck = new CheckBox("Configure Markdown image");
+        mdImgCheck.setSelected(settings.isGutterConfigureMarkdownImage());
+        mdImgCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("gutterIcons_configureMarkdownImage", mdImgCheck);
+
+        CheckBox plantUmlCheck = new CheckBox("Install PlantUML");
+        plantUmlCheck.setSelected(settings.isGutterInstallPlantUml());
+        plantUmlCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("gutterIcons_installPlantUml", plantUmlCheck);
+
+        VBox mdBox = new VBox(6, htmlImgCheck, mdImgCheck, plantUmlCheck);
+        mdBox.setPadding(new Insets(0, 0, 0, 36));
+
+        contentBox.getChildren().addAll(
+                commonHeader,
+                commonBox,
+                dbHeader,
+                dbBox,
+                gitHeader,
+                gitBox,
+                mdHeader,
+                mdBox
+        );
+
+        panel.getChildren().addAll(showGutterCheck, contentBox);
+        return panel;
+    }
+
+    private static HBox createGutterIconRow(Node icon, CheckBox checkBox) {
+        StackPane iconPane = new StackPane(icon);
+        iconPane.setMinWidth(20);
+        iconPane.setAlignment(Pos.CENTER);
+        HBox row = new HBox(8, iconPane, checkBox);
+        row.setAlignment(Pos.CENTER_LEFT);
+        return row;
+    }
+
+    private static VBox buildInlineCompletionPanel(AppSettingsStore.Settings settings, Map<String, Object> inputs, java.util.function.Consumer<String> navigateTo) {
+        VBox panel = new VBox(14);
+        panel.setPadding(new Insets(10, 16, 20, 16));
+
+        // Top link
+        Label goLabel = new Label("Go to ");
+        goLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+
+        Hyperlink ccLink = new Hyperlink("Code Completion settings page");
+        ccLink.setStyle("-fx-font-size: 13px; -fx-text-fill: #589df6; -fx-underline: true; -fx-padding: 0;");
+        ccLink.setOnAction(e -> {
+            if (navigateTo != null) navigateTo.accept("Editor / General / Code Completion");
+        });
+
+        Label adjustLabel = new Label(" to adjust lookup completion settings");
+        adjustLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+
+        HBox topLinkRow = new HBox(goLabel, ccLink, adjustLabel);
+        topLinkRow.setAlignment(Pos.CENTER_LEFT);
+
+        // 1. Enable local Full Line completion suggestions
+        CheckBox fullLineCheck = new CheckBox("Enable local Full Line completion suggestions");
+        fullLineCheck.setSelected(settings.isInlineCompletionEnabled());
+        fullLineCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("inlineCompletion_enabled", fullLineCheck);
+
+        Label fullLineSub1 = new Label("Runs entirely on your local device without sending anything over the internet");
+        fullLineSub1.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 11px;");
+        fullLineSub1.setWrapText(true);
+
+        Label fullLineSub2 = new Label("Currently, Full Line is available only for Python, JS and TS languages, please install one of plugins or use PyCharm and WebStorm");
+        fullLineSub2.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 11px;");
+        fullLineSub2.setWrapText(true);
+
+        VBox fullLineSubBox = new VBox(2, fullLineSub1, fullLineSub2);
+        fullLineSubBox.setPadding(new Insets(0, 0, 0, 24));
+        VBox fullLineBox = new VBox(4, fullLineCheck, fullLineSubBox);
+
+        // 2. Enable automatic completion on typing
+        CheckBox autoTypingCheck = new CheckBox("Enable automatic completion on typing");
+        autoTypingCheck.setSelected(settings.isInlineAutoOnTyping());
+        autoTypingCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("inlineCompletion_autoOnTyping", autoTypingCheck);
+
+        Label autoTypingSub = new Label("If disabled, completion suggestions can still be invoked via ⌥⇧\\ shortcut");
+        autoTypingSub.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 11px;");
+        autoTypingSub.setWrapText(true);
+        autoTypingSub.setPadding(new Insets(0, 0, 0, 24));
+
+        VBox autoTypingBox = new VBox(4, autoTypingCheck, autoTypingSub);
+
+        // 3. Enable multi-line suggestions
+        CheckBox multilineCheck = new CheckBox("Enable multi-line suggestions");
+        multilineCheck.setSelected(settings.isInlineMultilineSuggestions());
+        multilineCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("inlineCompletion_multiline", multilineCheck);
+
+        Label multilineSub = new Label("If disabled, only single-line suggestions will be shown");
+        multilineSub.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 11px;");
+        multilineSub.setWrapText(true);
+        multilineSub.setPadding(new Insets(0, 0, 0, 24));
+
+        VBox multilineBox = new VBox(4, multilineCheck, multilineSub);
+
+        // 4. Synchronize inline and popup completions
+        CheckBox syncPopupCheck = new CheckBox("Synchronize inline and popup completions");
+        syncPopupCheck.setSelected(settings.isInlineSyncWithPopup());
+        syncPopupCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("inlineCompletion_syncWithPopup", syncPopupCheck);
+
+        Label syncPopupSub = new Label("When enabled, inline completions will be shown in the popup completion list to avoid shortcut conflicts");
+        syncPopupSub.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 11px;");
+        syncPopupSub.setWrapText(true);
+        syncPopupSub.setPadding(new Insets(0, 0, 0, 24));
+
+        VBox syncPopupBox = new VBox(4, syncPopupCheck, syncPopupSub);
+
+        panel.getChildren().addAll(
+                topLinkRow,
+                fullLineBox,
+                autoTypingBox,
+                multilineBox,
+                syncPopupBox
+        );
+        return panel;
+    }
+
+    private static VBox buildOutputConsolePanel(AppSettingsStore.Settings settings, Map<String, Object> inputs) {
+        VBox panel = new VBox(12);
+        panel.setPadding(new Insets(10, 16, 20, 16));
+
+        // 1. Use soft wraps in console
+        CheckBox softWrapsCheck = new CheckBox("Use soft wraps in console");
+        softWrapsCheck.setSelected(settings.isOutputConsoleUseSoftWraps());
+        softWrapsCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("outputConsole_useSoftWraps", softWrapsCheck);
+
+        // 2. Console commands history size: [ 300 ]
+        Label historyLabel = new Label("Console commands history size:");
+        historyLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        historyLabel.setMinWidth(210);
+
+        TextField historyField = new TextField(String.valueOf(settings.getOutputConsoleHistorySize()));
+        historyField.setPrefWidth(60);
+        historyField.setStyle("-fx-font-size: 12px;");
+        inputs.put("outputConsole_historySize", historyField);
+
+        HBox historyRow = new HBox(8, historyLabel, historyField);
+        historyRow.setAlignment(Pos.CENTER_LEFT);
+
+        // 3. Override console cycle buffer size (1024 KB) [ 1024 ] KB
+        CheckBox overrideCycleCheck = new CheckBox("Override console cycle buffer size (1024 KB)");
+        overrideCycleCheck.setSelected(settings.isOutputConsoleOverrideCycleBuffer());
+        overrideCycleCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("outputConsole_overrideCycleBuffer", overrideCycleCheck);
+
+        TextField cycleBufferField = new TextField(String.valueOf(settings.getOutputConsoleCycleBufferSizeKb()));
+        cycleBufferField.setPrefWidth(60);
+        cycleBufferField.setStyle("-fx-font-size: 12px;");
+        cycleBufferField.disableProperty().bind(overrideCycleCheck.selectedProperty().not());
+        inputs.put("outputConsole_cycleBufferSizeKb", cycleBufferField);
+
+        Label kbLabel = new Label("KB");
+        kbLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        kbLabel.disableProperty().bind(overrideCycleCheck.selectedProperty().not());
+
+        HBox cycleBufferRow = new HBox(8, overrideCycleCheck, cycleBufferField, kbLabel);
+        cycleBufferRow.setAlignment(Pos.CENTER_LEFT);
+
+        // 4. Default Encoding: <System Default: UTF-8>
+        Label encLabel = new Label("Default Encoding:");
+        encLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        encLabel.setMinWidth(115);
+
+        ComboBox<String> encCombo = new ComboBox<>();
+        encCombo.getItems().addAll(
+                "<System Default: UTF-8>",
+                "ISO-8859-1",
+                "UTF-8",
+                "UTF-16",
+                "US-ASCII",
+                "Big5",
+                "Big5-HKSCS",
+                "CESU-8",
+                "EUC-JP",
+                "EUC-KR",
+                "GB18030"
+        );
+        encCombo.getSelectionModel().select(settings.getOutputConsoleDefaultEncoding());
+        encCombo.setPrefWidth(200);
+        encCombo.setStyle("-fx-font-size: 12px;");
+        inputs.put("outputConsole_defaultEncoding", encCombo);
+
+        HBox encRow = new HBox(8, encLabel, encCombo);
+        encRow.setAlignment(Pos.CENTER_LEFT);
+
+        // 5. Fold console lines that contain:
+        Label foldHeader = new Label("Fold console lines that contain:");
+        foldHeader.setStyle("-fx-text-fill: -text; -fx-font-size: 13px; -fx-padding: 6 0 0 0;");
+
+        ObservableList<String> foldingPatterns = FXCollections.observableArrayList(settings.getOutputConsoleFoldingPatterns());
+        inputs.put("outputConsole_foldingPatterns", foldingPatterns);
+
+        ListView<String> foldingList = new ListView<>(foldingPatterns);
+        foldingList.setPrefHeight(130);
+        foldingList.setStyle("-fx-font-size: 12px;");
+
+        Label foldPlaceholder = new Label("Fold nothing");
+        foldPlaceholder.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 13px;");
+        foldingList.setPlaceholder(foldPlaceholder);
+
+        Button addFoldBtn = new Button("+");
+        addFoldBtn.setPrefWidth(28);
+        addFoldBtn.setStyle("-fx-font-size: 12px;");
+
+        Button removeFoldBtn = new Button("—");
+        removeFoldBtn.setPrefWidth(28);
+        removeFoldBtn.setStyle("-fx-font-size: 12px;");
+        removeFoldBtn.disableProperty().bind(foldingList.getSelectionModel().selectedItemProperty().isNull());
+
+        Button editFoldBtn = new Button("✎");
+        editFoldBtn.setPrefWidth(28);
+        editFoldBtn.setStyle("-fx-font-size: 12px;");
+        editFoldBtn.disableProperty().bind(foldingList.getSelectionModel().selectedItemProperty().isNull());
+
+        addFoldBtn.setOnAction(e -> {
+            showConsolePatternDialog("Folding Pattern",
+                    "Enter a substring of a console line you'd like to see folded:",
+                    "",
+                    res -> {
+                        foldingPatterns.add(res);
+                        foldingList.getSelectionModel().select(res);
+                    });
+        });
+
+        editFoldBtn.setOnAction(e -> {
+            String selected = foldingList.getSelectionModel().getSelectedItem();
+            int idx = foldingList.getSelectionModel().getSelectedIndex();
+            if (selected != null && idx >= 0) {
+                showConsolePatternDialog("Folding Pattern",
+                        "Enter a substring of a console line you'd like to see folded:",
+                        selected,
+                        res -> foldingPatterns.set(idx, res));
+            }
+        });
+
+        removeFoldBtn.setOnAction(e -> {
+            String selected = foldingList.getSelectionModel().getSelectedItem();
+            if (selected != null) foldingPatterns.remove(selected);
+        });
+
+        HBox foldToolbar = new HBox(4, addFoldBtn, removeFoldBtn, editFoldBtn);
+        foldToolbar.setAlignment(Pos.CENTER_LEFT);
+        foldToolbar.setPadding(new Insets(2, 4, 4, 4));
+
+        VBox foldBox = new VBox(2, foldToolbar, foldingList);
+        foldBox.setStyle("-fx-border-color: -panel-border; -fx-border-width: 1px; -fx-border-radius: 4px;");
+
+        // 6. Exceptions:
+        Label exceptHeader = new Label("Exceptions:");
+        exceptHeader.setStyle("-fx-text-fill: -text; -fx-font-size: 13px; -fx-padding: 6 0 0 0;");
+
+        ObservableList<String> foldingExceptions = FXCollections.observableArrayList(settings.getOutputConsoleFoldingExceptions());
+        inputs.put("outputConsole_foldingExceptions", foldingExceptions);
+
+        ListView<String> exceptList = new ListView<>(foldingExceptions);
+        exceptList.setPrefHeight(130);
+        exceptList.setStyle("-fx-font-size: 12px;");
+
+        Label exceptPlaceholder = new Label("No exceptions");
+        exceptPlaceholder.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 13px;");
+        exceptList.setPlaceholder(exceptPlaceholder);
+
+        Button addExceptBtn = new Button("+");
+        addExceptBtn.setPrefWidth(28);
+        addExceptBtn.setStyle("-fx-font-size: 12px;");
+
+        Button removeExceptBtn = new Button("—");
+        removeExceptBtn.setPrefWidth(28);
+        removeExceptBtn.setStyle("-fx-font-size: 12px;");
+        removeExceptBtn.disableProperty().bind(exceptList.getSelectionModel().selectedItemProperty().isNull());
+
+        Button editExceptBtn = new Button("✎");
+        editExceptBtn.setPrefWidth(28);
+        editExceptBtn.setStyle("-fx-font-size: 12px;");
+        editExceptBtn.disableProperty().bind(exceptList.getSelectionModel().selectedItemProperty().isNull());
+
+        addExceptBtn.setOnAction(e -> {
+            showConsolePatternDialog("Folding Pattern Exception",
+                    "Enter a substring of a console line you'd like to exclude from folding:",
+                    "",
+                    res -> {
+                        foldingExceptions.add(res);
+                        exceptList.getSelectionModel().select(res);
+                    });
+        });
+
+        editExceptBtn.setOnAction(e -> {
+            String selected = exceptList.getSelectionModel().getSelectedItem();
+            int idx = exceptList.getSelectionModel().getSelectedIndex();
+            if (selected != null && idx >= 0) {
+                showConsolePatternDialog("Folding Pattern Exception",
+                        "Enter a substring of a console line you'd like to exclude from folding:",
+                        selected,
+                        res -> foldingExceptions.set(idx, res));
+            }
+        });
+
+        removeExceptBtn.setOnAction(e -> {
+            String selected = exceptList.getSelectionModel().getSelectedItem();
+            if (selected != null) foldingExceptions.remove(selected);
+        });
+
+        HBox exceptToolbar = new HBox(4, addExceptBtn, removeExceptBtn, editExceptBtn);
+        exceptToolbar.setAlignment(Pos.CENTER_LEFT);
+        exceptToolbar.setPadding(new Insets(2, 4, 4, 4));
+
+        VBox exceptBox = new VBox(2, exceptToolbar, exceptList);
+        exceptBox.setStyle("-fx-border-color: -panel-border; -fx-border-width: 1px; -fx-border-radius: 4px;");
+
+        panel.getChildren().addAll(
+                softWrapsCheck,
+                historyRow,
+                cycleBufferRow,
+                encRow,
+                foldHeader,
+                foldBox,
+                exceptHeader,
+                exceptBox
+        );
+        return panel;
+    }
+
+    private static void showConsolePatternDialog(String title, String prompt, String initialValue, java.util.function.Consumer<String> onConfirm) {
+        Dialog<String> dialog = new Dialog<>();
+        dialog.setTitle(title);
+        dialog.initModality(Modality.APPLICATION_MODAL);
+
+        VBox content = new VBox(12);
+        content.setPadding(new Insets(16, 20, 16, 20));
+        content.setPrefWidth(420);
+
+        HBox promptRow = new HBox(10);
+        promptRow.setAlignment(Pos.CENTER_LEFT);
+        Label icon = new Label("?");
+        icon.setStyle("-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #3592c4; -fx-background-color: rgba(53, 146, 196, 0.2); -fx-background-radius: 12px; -fx-padding: 2 7 2 7;");
+        Label promptLabel = new Label(prompt);
+        promptLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        promptLabel.setWrapText(true);
+        promptRow.getChildren().addAll(icon, promptLabel);
+
+        TextField field = new TextField(initialValue != null ? initialValue : "");
+        field.setStyle("-fx-font-size: 13px;");
+
+        content.getChildren().addAll(promptRow, field);
+        dialog.getDialogPane().setContent(content);
+
+        ButtonType okButtonType = new ButtonType("OK", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.CANCEL, okButtonType);
+
+        dialog.setResultConverter(dialogButton -> {
+            if (dialogButton == okButtonType) {
+                return field.getText().trim();
+            }
+            return null;
+        });
+
+        Platform.runLater(field::requestFocus);
+
+        dialog.showAndWait().ifPresent(result -> {
+            if (!result.isEmpty()) {
+                onConfirm.accept(result);
+            }
+        });
     }
 
     private static VBox buildFontPanel(AppSettingsStore.Settings settings, Map<String, Object> inputs) {
@@ -7381,6 +7833,108 @@ public final class SettingsDialog {
         if (inputs.containsKey("editorTabs_shortenNames")) {
             CheckBox cb = (CheckBox) inputs.get("editorTabs_shortenNames");
             settings.setEditorTabsShortenNames(cb.isSelected());
+        }
+
+        // Editor > General > Output Console
+        if (inputs.containsKey("outputConsole_useSoftWraps")) {
+            CheckBox cb = (CheckBox) inputs.get("outputConsole_useSoftWraps");
+            settings.setOutputConsoleUseSoftWraps(cb.isSelected());
+        }
+        if (inputs.containsKey("outputConsole_historySize")) {
+            TextField tf = (TextField) inputs.get("outputConsole_historySize");
+            try {
+                settings.setOutputConsoleHistorySize(Integer.parseInt(tf.getText().trim()));
+            } catch (Exception ignored) {}
+        }
+        if (inputs.containsKey("outputConsole_overrideCycleBuffer")) {
+            CheckBox cb = (CheckBox) inputs.get("outputConsole_overrideCycleBuffer");
+            settings.setOutputConsoleOverrideCycleBuffer(cb.isSelected());
+        }
+        if (inputs.containsKey("outputConsole_cycleBufferSizeKb")) {
+            TextField tf = (TextField) inputs.get("outputConsole_cycleBufferSizeKb");
+            try {
+                settings.setOutputConsoleCycleBufferSizeKb(Integer.parseInt(tf.getText().trim()));
+            } catch (Exception ignored) {}
+        }
+        if (inputs.containsKey("outputConsole_defaultEncoding")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("outputConsole_defaultEncoding");
+            if (cb.getValue() != null) settings.setOutputConsoleDefaultEncoding(cb.getValue());
+        }
+        if (inputs.containsKey("outputConsole_foldingPatterns")) {
+            Object obj = inputs.get("outputConsole_foldingPatterns");
+            if (obj instanceof ObservableList<?> ol) {
+                List<String> list = new ArrayList<>();
+                for (Object item : ol) {
+                    if (item != null && !item.toString().isBlank()) list.add(item.toString().trim());
+                }
+                settings.setOutputConsoleFoldingPatterns(list);
+            }
+        }
+        if (inputs.containsKey("outputConsole_foldingExceptions")) {
+            Object obj = inputs.get("outputConsole_foldingExceptions");
+            if (obj instanceof ObservableList<?> ol) {
+                List<String> list = new ArrayList<>();
+                for (Object item : ol) {
+                    if (item != null && !item.toString().isBlank()) list.add(item.toString().trim());
+                }
+                settings.setOutputConsoleFoldingExceptions(list);
+            }
+        }
+
+        // Editor > General > Gutter Icons
+        if (inputs.containsKey("gutterIcons_showGutterIcons")) {
+            CheckBox cb = (CheckBox) inputs.get("gutterIcons_showGutterIcons");
+            settings.setShowGutterIcons(cb.isSelected());
+        }
+        if (inputs.containsKey("gutterIcons_colorPreview")) {
+            CheckBox cb = (CheckBox) inputs.get("gutterIcons_colorPreview");
+            settings.setGutterColorPreview(cb.isSelected());
+        }
+        if (inputs.containsKey("gutterIcons_docComments")) {
+            CheckBox cb = (CheckBox) inputs.get("gutterIcons_docComments");
+            settings.setGutterDocComments(cb.isSelected());
+        }
+        if (inputs.containsKey("gutterIcons_runLineMarker")) {
+            CheckBox cb = (CheckBox) inputs.get("gutterIcons_runLineMarker");
+            settings.setGutterRunLineMarker(cb.isSelected());
+        }
+        if (inputs.containsKey("gutterIcons_recursiveCall")) {
+            CheckBox cb = (CheckBox) inputs.get("gutterIcons_recursiveCall");
+            settings.setGutterRecursiveCall(cb.isSelected());
+        }
+        if (inputs.containsKey("gutterIcons_vcsIgnoredDirectories")) {
+            CheckBox cb = (CheckBox) inputs.get("gutterIcons_vcsIgnoredDirectories");
+            settings.setGutterVcsIgnoredDirectories(cb.isSelected());
+        }
+        if (inputs.containsKey("gutterIcons_configureHtmlImage")) {
+            CheckBox cb = (CheckBox) inputs.get("gutterIcons_configureHtmlImage");
+            settings.setGutterConfigureHtmlImage(cb.isSelected());
+        }
+        if (inputs.containsKey("gutterIcons_configureMarkdownImage")) {
+            CheckBox cb = (CheckBox) inputs.get("gutterIcons_configureMarkdownImage");
+            settings.setGutterConfigureMarkdownImage(cb.isSelected());
+        }
+        if (inputs.containsKey("gutterIcons_installPlantUml")) {
+            CheckBox cb = (CheckBox) inputs.get("gutterIcons_installPlantUml");
+            settings.setGutterInstallPlantUml(cb.isSelected());
+        }
+
+        // Editor > General > Inline Completion
+        if (inputs.containsKey("inlineCompletion_enabled")) {
+            CheckBox cb = (CheckBox) inputs.get("inlineCompletion_enabled");
+            settings.setInlineCompletionEnabled(cb.isSelected());
+        }
+        if (inputs.containsKey("inlineCompletion_autoOnTyping")) {
+            CheckBox cb = (CheckBox) inputs.get("inlineCompletion_autoOnTyping");
+            settings.setInlineAutoOnTyping(cb.isSelected());
+        }
+        if (inputs.containsKey("inlineCompletion_multiline")) {
+            CheckBox cb = (CheckBox) inputs.get("inlineCompletion_multiline");
+            settings.setInlineMultilineSuggestions(cb.isSelected());
+        }
+        if (inputs.containsKey("inlineCompletion_syncWithPopup")) {
+            CheckBox cb = (CheckBox) inputs.get("inlineCompletion_syncWithPopup");
+            settings.setInlineSyncWithPopup(cb.isSelected());
         }
 
         // Persist
