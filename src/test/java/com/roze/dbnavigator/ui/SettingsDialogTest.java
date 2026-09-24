@@ -86,28 +86,30 @@ public class SettingsDialogTest {
     public void testEditorSubcategoriesMatchDataGrip() {
         List<String> editorChildren = SettingsDialog.getChildCategoryNames("Editor");
         assertNotNull(editorChildren);
-        assertEquals(16, editorChildren.size(), "Editor must have 16 direct children");
+        assertEquals(18, editorChildren.size(), "Editor must have 18 direct children");
 
         assertEquals("General", editorChildren.get(0));
-        assertEquals("Color Scheme", editorChildren.get(1));
-        assertEquals("Code Style", editorChildren.get(2));
-        assertEquals("Inspections", editorChildren.get(3));
-        assertEquals("File and Code Templates", editorChildren.get(4));
-        assertEquals("File Encodings", editorChildren.get(5));
-        assertEquals("Live Templates", editorChildren.get(6));
-        assertEquals("File Types", editorChildren.get(7));
-        assertEquals("Inlay Hints", editorChildren.get(8));
-        assertEquals("Duplicates", editorChildren.get(9));
-        assertEquals("Intentions", editorChildren.get(10));
-        assertEquals("Language Injections", editorChildren.get(11));
-        assertEquals("Natural Languages", editorChildren.get(12));
-        assertEquals("Reader Mode", editorChildren.get(13));
-        assertEquals("TextMate Bundles", editorChildren.get(14));
-        assertEquals("TODO", editorChildren.get(15));
+        assertEquals("Code Editing", editorChildren.get(1));
+        assertEquals("Font", editorChildren.get(2));
+        assertEquals("Color Scheme", editorChildren.get(3));
+        assertEquals("Code Style", editorChildren.get(4));
+        assertEquals("Inspections", editorChildren.get(5));
+        assertEquals("File and Code Templates", editorChildren.get(6));
+        assertEquals("File Encodings", editorChildren.get(7));
+        assertEquals("Live Templates", editorChildren.get(8));
+        assertEquals("File Types", editorChildren.get(9));
+        assertEquals("Inlay Hints", editorChildren.get(10));
+        assertEquals("Duplicates", editorChildren.get(11));
+        assertEquals("Intentions", editorChildren.get(12));
+        assertEquals("Language Injections", editorChildren.get(13));
+        assertEquals("Natural Languages", editorChildren.get(14));
+        assertEquals("Reader Mode", editorChildren.get(15));
+        assertEquals("TextMate Bundles", editorChildren.get(16));
+        assertEquals("TODO", editorChildren.get(17));
 
         // Subtree under General
         List<String> genChildren = SettingsDialog.getChildCategoryNames("Editor / General");
-        assertEquals(14, genChildren.size(), "General should have 14 children matching DataGrip");
+        assertEquals(12, genChildren.size(), "General should have 12 children matching DataGrip");
         assertEquals("Auto Import", genChildren.get(0));
         assertEquals("Appearance", genChildren.get(1));
         assertEquals("Breadcrumbs", genChildren.get(2));
@@ -120,8 +122,6 @@ public class SettingsDialogTest {
         assertEquals("Postfix Completion", genChildren.get(9));
         assertEquals("Smart Keys", genChildren.get(10));
         assertEquals("Sticky Lines", genChildren.get(11));
-        assertEquals("Code Editing", genChildren.get(12));
-        assertEquals("Font", genChildren.get(13));
 
         // Subtree under Code Completion
         List<String> ccChildren = SettingsDialog.getChildCategoryNames("Editor / General / Code Completion");
@@ -1840,5 +1840,128 @@ public class SettingsDialogTest {
         assertFalse(loaded.isSmartKeysHtmlAutoCloseTag());
         assertFalse(loaded.isSmartKeysHtmlSimultaneousTagEditing());
         assertFalse(loaded.isSmartKeysCssSelectWholeCssIdentifiers());
+    }
+
+    @Test
+    public void testStickyLinesCodeEditingAndFontCategoryDescriptions() {
+        String stickyDesc = SettingsDialog.getCategoryDescription("Editor / General / Sticky Lines");
+        assertNotNull(stickyDesc);
+        assertEquals("Keep current scope header visible at the top of the editor while scrolling.", stickyDesc);
+
+        String codeEditDesc = SettingsDialog.getCategoryDescription("Editor / Code Editing");
+        assertNotNull(codeEditDesc);
+        assertEquals("Configure caret movement highlighting, quick doc, refactoring options, error highlighting, and tooltips.", codeEditDesc);
+
+        String fontDesc = SettingsDialog.getCategoryDescription("Editor / Font");
+        assertNotNull(fontDesc);
+        assertEquals("Customize the font family, font size, line height, ligatures, and typography for SQL consoles and editors.", fontDesc);
+    }
+
+    @Test
+    public void testStickyLinesCodeEditingAndFontDefaultsAndSerialization() throws Exception {
+        AppSettingsStore.Settings settings = new AppSettingsStore.Settings();
+
+        // 1. Sticky Lines defaults
+        assertTrue(settings.isStickyLinesEnabled());
+        assertEquals(5, settings.getStickyLinesMaxLines());
+        assertTrue(settings.isStickyLinesHtml());
+        assertTrue(settings.isStickyLinesMarkdown());
+        assertTrue(settings.isStickyLinesXhtml());
+        assertTrue(settings.isStickyLinesJson());
+        assertTrue(settings.isStickyLinesSql());
+        assertTrue(settings.isStickyLinesXml());
+
+        // 2. Code Editing defaults
+        assertTrue(settings.isCodeEditingHighlightMatchedBrace());
+        assertFalse(settings.isCodeEditingHighlightCurrentScope());
+        assertTrue(settings.isCodeEditingHighlightUsages());
+        assertTrue(settings.isCodeEditingShowDocOnHover());
+        assertEquals("In the editor", settings.getCodeEditingRefactoringOption());
+        assertTrue(settings.isCodeEditingPreselectCurrentSymbol());
+        assertTrue(settings.isCodeEditingShowInlineDialogForLocalVars());
+        assertEquals(2, settings.getCodeEditingErrorStripeMarkMinHeight());
+        assertEquals(300, settings.getCodeEditingAutoreparseDelayMs());
+        assertEquals("The problems with the highest priority", settings.getCodeEditingNextErrorAction());
+        assertEquals(500, settings.getCodeEditingTooltipDelayMs());
+
+        assertEquals(2, AppSettingsStore.Settings.defaultNextErrorActionOptions().size());
+        assertEquals(2, AppSettingsStore.Settings.defaultRefactoringOptions().size());
+
+        // 3. Font defaults
+        assertEquals("JetBrains Mono", settings.getEditorFontFamily());
+        assertEquals(13.0, settings.getEditorFontSize());
+        assertEquals(1.2, settings.getEditorLineHeight());
+        assertFalse(settings.isEditorEnableLigatures());
+        assertEquals("Regular", settings.getEditorFontMainWeight());
+        assertEquals("Bold Recommended", settings.getEditorFontBoldWeight());
+        assertEquals("<None>", settings.getEditorFallbackFont());
+
+        assertEquals(8, AppSettingsStore.Settings.defaultFontWeights().size());
+        assertEquals(8, AppSettingsStore.Settings.defaultFontBoldWeights().size());
+
+        // 4. Mutate settings
+        settings.setStickyLinesEnabled(false);
+        settings.setStickyLinesMaxLines(8);
+        settings.setStickyLinesHtml(false);
+        settings.setStickyLinesMarkdown(false);
+        settings.setStickyLinesXhtml(false);
+        settings.setStickyLinesJson(false);
+        settings.setStickyLinesSql(false);
+        settings.setStickyLinesXml(false);
+
+        settings.setCodeEditingHighlightMatchedBrace(false);
+        settings.setCodeEditingHighlightCurrentScope(true);
+        settings.setCodeEditingHighlightUsages(false);
+        settings.setCodeEditingShowDocOnHover(false);
+        settings.setCodeEditingRefactoringOption("In modal dialogs");
+        settings.setCodeEditingPreselectCurrentSymbol(false);
+        settings.setCodeEditingShowInlineDialogForLocalVars(false);
+        settings.setCodeEditingErrorStripeMarkMinHeight(4);
+        settings.setCodeEditingAutoreparseDelayMs(500);
+        settings.setCodeEditingNextErrorAction("All problems");
+        settings.setCodeEditingTooltipDelayMs(800);
+
+        settings.setEditorFontFamily("Fira Code");
+        settings.setEditorFontSize(15.0);
+        settings.setEditorLineHeight(1.4);
+        settings.setEditorEnableLigatures(true);
+        settings.setEditorFontMainWeight("Medium");
+        settings.setEditorFontBoldWeight("ExtraBold");
+        settings.setEditorFallbackFont("Courier New");
+
+        // 5. Jackson JSON Roundtrip Serialization
+        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        String json = mapper.writeValueAsString(settings);
+        AppSettingsStore.Settings loaded = mapper.readValue(json, AppSettingsStore.Settings.class);
+
+        // 6. Verify deserialized values
+        assertFalse(loaded.isStickyLinesEnabled());
+        assertEquals(8, loaded.getStickyLinesMaxLines());
+        assertFalse(loaded.isStickyLinesHtml());
+        assertFalse(loaded.isStickyLinesMarkdown());
+        assertFalse(loaded.isStickyLinesXhtml());
+        assertFalse(loaded.isStickyLinesJson());
+        assertFalse(loaded.isStickyLinesSql());
+        assertFalse(loaded.isStickyLinesXml());
+
+        assertFalse(loaded.isCodeEditingHighlightMatchedBrace());
+        assertTrue(loaded.isCodeEditingHighlightCurrentScope());
+        assertFalse(loaded.isCodeEditingHighlightUsages());
+        assertFalse(loaded.isCodeEditingShowDocOnHover());
+        assertEquals("In modal dialogs", loaded.getCodeEditingRefactoringOption());
+        assertFalse(loaded.isCodeEditingPreselectCurrentSymbol());
+        assertFalse(loaded.isCodeEditingShowInlineDialogForLocalVars());
+        assertEquals(4, loaded.getCodeEditingErrorStripeMarkMinHeight());
+        assertEquals(500, loaded.getCodeEditingAutoreparseDelayMs());
+        assertEquals("All problems", loaded.getCodeEditingNextErrorAction());
+        assertEquals(800, loaded.getCodeEditingTooltipDelayMs());
+
+        assertEquals("Fira Code", loaded.getEditorFontFamily());
+        assertEquals(15.0, loaded.getEditorFontSize());
+        assertEquals(1.4, loaded.getEditorLineHeight());
+        assertTrue(loaded.isEditorEnableLigatures());
+        assertEquals("Medium", loaded.getEditorFontMainWeight());
+        assertEquals("ExtraBold", loaded.getEditorFontBoldWeight());
+        assertEquals("Courier New", loaded.getEditorFallbackFont());
     }
 }
