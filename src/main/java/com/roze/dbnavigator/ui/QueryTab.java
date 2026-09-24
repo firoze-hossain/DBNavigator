@@ -46,6 +46,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -349,6 +350,26 @@ public class QueryTab extends Tab {
                 return;
             }
             if (!completionPopup.isShowing()) return;
+
+            AppSettingsStore.Settings s = AppSettingsStore.load();
+            boolean acceptByKey = false;
+            String extraAccept = s.getAdditionalAcceptCharacters();
+            if (extraAccept != null && !extraAccept.isEmpty() && e.getText() != null && !e.getText().isEmpty()) {
+                if (extraAccept.contains(e.getText())) {
+                    acceptByKey = true;
+                }
+            }
+            if (s.isInsertSelectedSuggestionByContextKeys()) {
+                if (e.getCode() == KeyCode.SPACE || e.getCode() == KeyCode.PERIOD) {
+                    acceptByKey = true;
+                }
+            }
+            if (acceptByKey) {
+                insertSelectedCompletion();
+                e.consume();
+                return;
+            }
+
             switch (e.getCode()) {
                 case DOWN -> { completionList.getSelectionModel().selectNext(); e.consume(); }
                 case UP -> { completionList.getSelectionModel().selectPrevious(); e.consume(); }
@@ -360,6 +381,12 @@ public class QueryTab extends Tab {
 
         editor.plainTextChanges().subscribe(change -> {
             if (suppressCompletion) return;
+            if (!AppSettingsStore.load().isShowSuggestionsAsYouType()) {
+                if (completionPopup.isShowing()) {
+                    completionPopup.hide();
+                }
+                return;
+            }
             String inserted = change.getInserted();
             if (inserted.length() == 1 && inserted.matches("[A-Za-z0-9_.]")) {
                 showCompletions();
@@ -381,6 +408,27 @@ public class QueryTab extends Tab {
         }
         List<CompletionService.Suggestion> suggestions =
                 CompletionService.suggest(profile, catalog, editor.getText(), token, context);
+
+        AppSettingsStore.Settings s = AppSettingsStore.load();
+        if (s.isMatchCase() && !token.isEmpty()) {
+            String mode = s.getMatchCaseMode();
+            suggestions = suggestions.stream().filter(sug -> {
+                String t = sug.text();
+                if (t.isEmpty()) return false;
+                if ("First letter only".equalsIgnoreCase(mode)) {
+                    return t.charAt(0) == token.charAt(0);
+                } else if ("All letters".equalsIgnoreCase(mode)) {
+                    return t.startsWith(token);
+                }
+                return true;
+            }).toList();
+        }
+
+        if (s.isSortSuggestionsAlphabetically()) {
+            suggestions = new ArrayList<>(suggestions);
+            suggestions.sort(Comparator.comparing(CompletionService.Suggestion::text, String.CASE_INSENSITIVE_ORDER));
+        }
+
         // Nothing useful, or the token is already the only completion → hide
         if (suggestions.isEmpty()
                 || (suggestions.size() == 1 && suggestions.get(0).text().equalsIgnoreCase(token))) {
@@ -411,7 +459,7 @@ public class QueryTab extends Tab {
     }
 
     private static final Pattern COMPLETION_CONTEXT_KEYWORD = Pattern.compile(
-            "(?i)\\b(select|from|join|update|into|table|sequence|where|on|and|or|by|set|having|between|like|when|then)\\b");
+        "(?i)\\b(select|from|join|update|into|table|sequence|where|on|and|or|by|set|having|between|like|when|then)\\b");
 
     private CompletionService.Context contextAt(int position) {
         String text = editor.getText();
@@ -440,7 +488,40 @@ public class QueryTab extends Tab {
             return;
         }
         suppressCompletion = true;
-        editor.replaceText(tokenStart, editor.getCaretPosition(), selected.text());
+        AppSettingsStore.Settings s = AppSettingsStore.load();
+        String replacement = selected.text();
+
+        // Automatically add parentheses if applicable
+        if (s.isInsertParenthesesAutomatically()) {
+            if (replacement.endsWith("(")) {
+                replacement = replacement + ")";
+            }
+        }
+
+        // Table alias auto-add
+        if (selected.kind() == CompletionService.Kind.TABLE && s.isTableAliasesAutoAdd()) {
+            String alias = null;
+            if (s.getCustomTableAliases() != null) {
+                for (AppSettingsStore.TableAliasConfig tac : s.getCustomTableAliases()) {
+                    if (tac.getTableName() != null && tac.getTableName().equalsIgnoreCase(selected.text())
+                            && tac.getCustomAlias() != null && !tac.getCustomAlias().isBlank()) {
+                        alias = tac.getCustomAlias();
+                        break;
+                    }
+                }
+            }
+            if (alias == null || alias.isBlank()) {
+                StringBuilder sb = new StringBuilder();
+                for (String part : selected.text().split("_")) {
+                    if (!part.isEmpty()) sb.append(Character.toLowerCase(part.charAt(0)));
+                }
+                alias = sb.toString();
+                if (alias.isEmpty()) alias = "t";
+            }
+            replacement = replacement + " " + alias;
+        }
+
+        editor.replaceText(tokenStart, editor.getCaretPosition(), replacement);
         suppressCompletion = false;
         completionPopup.hide();
         editor.requestFocus();

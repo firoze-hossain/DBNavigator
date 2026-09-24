@@ -1124,4 +1124,143 @@ public class SettingsDialogTest {
         assertEquals(10, loaded.getTagTreeLevelsToHighlight());
         assertEquals(0.35, loaded.getTagTreeOpacity(), 0.001);
     }
+
+    @Test
+    public void testCodeCompletionSettings() throws Exception {
+        AppSettingsStore.Settings settings = new AppSettingsStore.Settings();
+
+        // 1. Verify default values match DataGrip screenshots
+        assertTrue(settings.isMatchCase());
+        assertEquals("First letter only", settings.getMatchCaseMode());
+        assertFalse(settings.isSortSuggestionsAlphabetically());
+        assertTrue(settings.isShowSuggestionsAsYouType());
+        assertFalse(settings.isInsertSelectedSuggestionByContextKeys());
+        assertFalse(settings.isShowDocPopup());
+        assertEquals(500, settings.getDocPopupDelayMs());
+        assertTrue(settings.isInsertParenthesesAutomatically());
+
+        assertTrue(settings.isMlSortSuggestions());
+        assertTrue(settings.isMlSortSql());
+        assertTrue(settings.isMlMarkPositionChanges());
+        assertTrue(settings.isMlMarkMostRelevant());
+
+        assertTrue(settings.isHtmlAutoPopupTagCompletion());
+
+        assertTrue(settings.isShowParameterInfoPopup());
+        assertEquals(1000, settings.getParameterInfoDelayMs());
+        assertFalse(settings.isShowFullMethodSignatures());
+
+        assertEquals("The current scope", settings.getSqlSuggestObjectsFrom());
+        assertEquals("Always", settings.getQualifyWithDatabase());
+        assertEquals("Always", settings.getQualifyWithSchema());
+        assertEquals("Always", settings.getQualifyWithTableView());
+        assertEquals("Always", settings.getQualifyWithTableAlias());
+        assertEquals("On collisions", settings.getQualifyInBasicCompletion());
+        assertEquals("Always", settings.getQualifyInJoinCompletion());
+        assertEquals("On collisions", settings.getQualifyInRefactoring());
+        assertEquals("On collisions", settings.getQualifyInLiveTemplates());
+        assertEquals("On collisions", settings.getQualifyInDragDrop());
+
+        assertTrue(settings.isJoinUseAliases());
+        assertFalse(settings.isJoinInvertOperands());
+        assertTrue(settings.isJoinSuggestNonStrictFk());
+
+        assertFalse(settings.isTableAliasesAutoAdd());
+        assertTrue(settings.isTableAliasesSuggest());
+        assertNotNull(settings.getCustomTableAliases());
+        assertTrue(settings.getCustomTableAliases().isEmpty());
+        assertEquals("", settings.getAdditionalAcceptCharacters());
+
+        // 2. Mutate settings
+        settings.setMatchCase(false);
+        settings.setMatchCaseMode("All letters");
+        settings.setSortSuggestionsAlphabetically(true);
+        settings.setShowSuggestionsAsYouType(false);
+        settings.setInsertSelectedSuggestionByContextKeys(true);
+        settings.setShowDocPopup(true);
+        settings.setDocPopupDelayMs(300);
+        settings.setInsertParenthesesAutomatically(false);
+
+        settings.setMlSortSuggestions(false);
+        settings.setMlSortSql(false);
+        settings.setMlMarkPositionChanges(false);
+        settings.setMlMarkMostRelevant(false);
+
+        settings.setHtmlAutoPopupTagCompletion(false);
+
+        settings.setShowParameterInfoPopup(false);
+        settings.setParameterInfoDelayMs(1500);
+        settings.setShowFullMethodSignatures(true);
+
+        settings.setSqlSuggestObjectsFrom("The current search path only");
+        settings.setQualifyWithDatabase("Never");
+        settings.setQualifyWithSchema("Never");
+        settings.setQualifyWithTableView("Never");
+        settings.setQualifyWithTableAlias("Never");
+        settings.setQualifyInBasicCompletion("Never");
+        settings.setQualifyInJoinCompletion("Never");
+        settings.setQualifyInRefactoring("Never");
+        settings.setQualifyInLiveTemplates("Never");
+        settings.setQualifyInDragDrop("Never");
+
+        settings.setJoinUseAliases(false);
+        settings.setJoinInvertOperands(true);
+        settings.setJoinSuggestNonStrictFk(false);
+
+        settings.setTableAliasesAutoAdd(true);
+        settings.setTableAliasesSuggest(false);
+        settings.getCustomTableAliases().add(new AppSettingsStore.TableAliasConfig("orders", "ord"));
+        settings.getCustomTableAliases().add(new AppSettingsStore.TableAliasConfig("customers", "cust"));
+        settings.setAdditionalAcceptCharacters(";,. ");
+
+        // 3. Jackson JSON Roundtrip Serialization
+        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        String json = mapper.writeValueAsString(settings);
+        AppSettingsStore.Settings loaded = mapper.readValue(json, AppSettingsStore.Settings.class);
+
+        // 4. Verify deserialized values
+        assertFalse(loaded.isMatchCase());
+        assertEquals("All letters", loaded.getMatchCaseMode());
+        assertTrue(loaded.isSortSuggestionsAlphabetically());
+        assertFalse(loaded.isShowSuggestionsAsYouType());
+        assertTrue(loaded.isInsertSelectedSuggestionByContextKeys());
+        assertTrue(loaded.isShowDocPopup());
+        assertEquals(300, loaded.getDocPopupDelayMs());
+        assertFalse(loaded.isInsertParenthesesAutomatically());
+
+        assertFalse(loaded.isMlSortSuggestions());
+        assertFalse(loaded.isMlSortSql());
+        assertFalse(loaded.isMlMarkPositionChanges());
+        assertFalse(loaded.isMlMarkMostRelevant());
+
+        assertFalse(loaded.isHtmlAutoPopupTagCompletion());
+
+        assertFalse(loaded.isShowParameterInfoPopup());
+        assertEquals(1500, loaded.getParameterInfoDelayMs());
+        assertTrue(loaded.isShowFullMethodSignatures());
+
+        assertEquals("The current search path only", loaded.getSqlSuggestObjectsFrom());
+        assertEquals("Never", loaded.getQualifyWithDatabase());
+        assertEquals("Never", loaded.getQualifyWithSchema());
+        assertEquals("Never", loaded.getQualifyWithTableView());
+        assertEquals("Never", loaded.getQualifyWithTableAlias());
+        assertEquals("Never", loaded.getQualifyInBasicCompletion());
+        assertEquals("Never", loaded.getQualifyInJoinCompletion());
+        assertEquals("Never", loaded.getQualifyInRefactoring());
+        assertEquals("Never", loaded.getQualifyInLiveTemplates());
+        assertEquals("Never", loaded.getQualifyInDragDrop());
+
+        assertFalse(loaded.isJoinUseAliases());
+        assertTrue(loaded.isJoinInvertOperands());
+        assertFalse(loaded.isJoinSuggestNonStrictFk());
+
+        assertTrue(loaded.isTableAliasesAutoAdd());
+        assertFalse(loaded.isTableAliasesSuggest());
+        assertEquals(2, loaded.getCustomTableAliases().size());
+        assertEquals("orders", loaded.getCustomTableAliases().get(0).getTableName());
+        assertEquals("ord", loaded.getCustomTableAliases().get(0).getCustomAlias());
+        assertEquals("customers", loaded.getCustomTableAliases().get(1).getTableName());
+        assertEquals("cust", loaded.getCustomTableAliases().get(1).getCustomAlias());
+        assertEquals(";,. ", loaded.getAdditionalAcceptCharacters());
+    }
 }
