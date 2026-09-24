@@ -233,14 +233,43 @@ public class MainWindow {
         });
     }
 
-    /** Re-applies the saved editor appearance, breadcrumbs, and font to every currently open console. */
+    /** Re-applies the saved editor appearance, breadcrumbs, font, and tab pane settings to every currently open console. */
     public void applyEditorSettingsToOpenConsoles() {
+        AppSettingsStore.Settings settings = AppSettingsStore.load();
+        for (TabPane pane : editorTabPanes()) {
+            applyTabPaneSettings(pane, settings);
+        }
         forEachEditorTab(tab -> {
             if (tab instanceof QueryTab queryTab) {
                 queryTab.applyEditorFontFromSettings();
                 queryTab.applyEditorAppearanceFromSettings();
             }
         });
+    }
+
+    public void applyTabPaneSettings(TabPane pane) {
+        applyTabPaneSettings(pane, AppSettingsStore.load());
+    }
+
+    public void applyTabPaneSettings(TabPane pane, AppSettingsStore.Settings settings) {
+        if (pane == null || settings == null) return;
+        String placement = settings.getEditorTabPlacement();
+        if ("Bottom".equalsIgnoreCase(placement)) {
+            pane.setSide(Side.BOTTOM);
+        } else if ("Left".equalsIgnoreCase(placement)) {
+            pane.setSide(Side.LEFT);
+        } else if ("Right".equalsIgnoreCase(placement)) {
+            pane.setSide(Side.RIGHT);
+        } else {
+            pane.setSide(Side.TOP);
+        }
+
+        String closePos = settings.getEditorTabsCloseButtonPosition();
+        if ("None".equalsIgnoreCase(closePos)) {
+            pane.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
+        } else {
+            pane.setTabClosingPolicy(TabPane.TabClosingPolicy.ALL_TABS);
+        }
     }
 
     /** Shows the docked Run panel, expanding it if it was collapsed. */
@@ -1966,6 +1995,7 @@ public class MainWindow {
             ActionManager.getInstance().updateActions(this);
         });
         if (activeTabPane == null) activeTabPane = pane;
+        applyTabPaneSettings(pane);
     }
 
     private TabPane activeEditorTabPane() {
