@@ -13,6 +13,7 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.layout.*;
 import javafx.scene.text.Font;
 import javafx.stage.FileChooser;
@@ -863,6 +864,9 @@ public final class SettingsDialog {
             return buildAutoImportPanel(settings, inputs);
         } else if ("Editor / General / Breadcrumbs".equals(fullPath) || "Breadcrumbs".equals(fullPath)) {
             return buildBreadcrumbsPanel(settings, inputs, navigateTo);
+        } else if ("Editor / General / Code Completion".equals(fullPath) || "Code Completion".equals(fullPath)
+                || "Editor / General / Code Completion / Popup".equals(fullPath) || "Popup".equals(fullPath)) {
+            return buildCodeCompletionPanel(settings, inputs, navigateTo);
         } else if ("Editor / General".equals(fullPath)) {
             return buildGeneralEditorPanel(settings, inputs);
         } else if ("Editor / General / Font".equals(fullPath) || "Editor / Font".equals(fullPath) || "Font".equals(fullPath)) {
@@ -2239,6 +2243,484 @@ public final class SettingsDialog {
                 tagTreeCheck,
                 tagTreeSubBox
         );
+        return panel;
+    }
+
+    private static VBox buildCodeCompletionPanel(AppSettingsStore.Settings settings, Map<String, Object> inputs,
+                                                 java.util.function.Consumer<String> navigateTo) {
+        VBox panel = new VBox(10);
+        panel.setPadding(new Insets(10, 16, 20, 16));
+
+        // -------------------------------------------------------------
+        // Top Section: General Code Completion options (DataGrip Alignment)
+        // -------------------------------------------------------------
+        CheckBox matchCaseCheck = new CheckBox("Match case:");
+        matchCaseCheck.setSelected(settings.isMatchCase());
+        matchCaseCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("codeCompletion_matchCase", matchCaseCheck);
+
+        ToggleGroup matchCaseGroup = new ToggleGroup();
+        RadioButton firstLetterRadio = new RadioButton("First letter only");
+        firstLetterRadio.setToggleGroup(matchCaseGroup);
+        firstLetterRadio.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        RadioButton allLettersRadio = new RadioButton("All letters");
+        allLettersRadio.setToggleGroup(matchCaseGroup);
+        allLettersRadio.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+
+        if ("All letters".equalsIgnoreCase(settings.getMatchCaseMode())) {
+            allLettersRadio.setSelected(true);
+        } else {
+            firstLetterRadio.setSelected(true);
+        }
+        firstLetterRadio.disableProperty().bind(matchCaseCheck.selectedProperty().not());
+        allLettersRadio.disableProperty().bind(matchCaseCheck.selectedProperty().not());
+        inputs.put("codeCompletion_firstLetterRadio", firstLetterRadio);
+        inputs.put("codeCompletion_allLettersRadio", allLettersRadio);
+
+        HBox matchCaseRow = new HBox(12, matchCaseCheck, firstLetterRadio, allLettersRadio);
+        matchCaseRow.setAlignment(Pos.CENTER_LEFT);
+
+        CheckBox sortAlphaCheck = new CheckBox("Sort suggestions alphabetically");
+        sortAlphaCheck.setSelected(settings.isSortSuggestionsAlphabetically());
+        sortAlphaCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("codeCompletion_sortAlphabetically", sortAlphaCheck);
+
+        CheckBox showAsYouTypeCheck = new CheckBox("Show suggestions as you type");
+        showAsYouTypeCheck.setSelected(settings.isShowSuggestionsAsYouType());
+        showAsYouTypeCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("codeCompletion_showSuggestionsAsYouType", showAsYouTypeCheck);
+
+        CheckBox insertSelectedKeysCheck = new CheckBox("Insert selected suggestion by pressing space, dot, or other context-dependent keys");
+        insertSelectedKeysCheck.setSelected(settings.isInsertSelectedSuggestionByContextKeys());
+        insertSelectedKeysCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        insertSelectedKeysCheck.setPadding(new Insets(0, 0, 0, 24));
+        insertSelectedKeysCheck.disableProperty().bind(showAsYouTypeCheck.selectedProperty().not());
+        inputs.put("codeCompletion_insertSelectedByContextKeys", insertSelectedKeysCheck);
+
+        CheckBox showDocCheck = new CheckBox("Show the documentation popup in");
+        showDocCheck.setSelected(settings.isShowDocPopup());
+        showDocCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("codeCompletion_showDocPopup", showDocCheck);
+
+        TextField docDelayField = new TextField(String.valueOf(settings.getDocPopupDelayMs()));
+        docDelayField.setPrefWidth(55);
+        docDelayField.setStyle("-fx-font-size: 12px;");
+        docDelayField.disableProperty().bind(showDocCheck.selectedProperty().not());
+        inputs.put("codeCompletion_docPopupDelay", docDelayField);
+
+        Label docMsLabel = new Label("ms");
+        docMsLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        docMsLabel.disableProperty().bind(showDocCheck.selectedProperty().not());
+
+        HBox docRow = new HBox(8, showDocCheck, docDelayField, docMsLabel);
+        docRow.setAlignment(Pos.CENTER_LEFT);
+
+        CheckBox insertParensCheck = new CheckBox("Insert parentheses automatically when applicable");
+        insertParensCheck.setSelected(settings.isInsertParenthesesAutomatically());
+        insertParensCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("codeCompletion_insertParentheses", insertParensCheck);
+
+        // -------------------------------------------------------------
+        // Machine Learning-Assisted Completion Section
+        // -------------------------------------------------------------
+        HBox mlHeader = createSectionHeader("Machine Learning-Assisted Completion");
+
+        Label mlIntro1 = new Label("Go to ");
+        mlIntro1.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        Hyperlink mlLink = new Hyperlink("Inline Completion settings page");
+        mlLink.setStyle("-fx-text-fill: #3574F0; -fx-font-size: 13px; -fx-padding: 0; -fx-border-width: 0;");
+        if (navigateTo != null) {
+            mlLink.setOnAction(e -> navigateTo.accept("Editor / General / Code Completion / Inline"));
+        }
+        Label mlIntro2 = new Label(" to adjust inline completion (e.g. Full Line Code Completion) settings");
+        mlIntro2.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        HBox mlIntroRow = new HBox(0, mlIntro1, mlLink, mlIntro2);
+        mlIntroRow.setAlignment(Pos.CENTER_LEFT);
+
+        CheckBox mlSortSuggestionsCheck = new CheckBox("Sort completion suggestions based on machine learning");
+        mlSortSuggestionsCheck.setSelected(settings.isMlSortSuggestions());
+        mlSortSuggestionsCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("codeCompletion_mlSortSuggestions", mlSortSuggestionsCheck);
+
+        Label mlHelp = new Label(" ⓘ");
+        mlHelp.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 12px; -fx-cursor: hand;");
+        mlHelp.setTooltip(new Tooltip("Order suggestions using machine learning models trained on code"));
+        HBox mlSortRow = new HBox(4, mlSortSuggestionsCheck, mlHelp);
+        mlSortRow.setAlignment(Pos.CENTER_LEFT);
+
+        CheckBox mlSqlCheck = new CheckBox("SQL");
+        mlSqlCheck.setSelected(settings.isMlSortSql());
+        mlSqlCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        mlSqlCheck.setPadding(new Insets(0, 0, 0, 24));
+        mlSqlCheck.disableProperty().bind(mlSortSuggestionsCheck.selectedProperty().not());
+        inputs.put("codeCompletion_mlSortSql", mlSqlCheck);
+
+        CheckBox mlMarkPosCheck = new CheckBox("Mark position changes in the completion popup ↑↓");
+        mlMarkPosCheck.setSelected(settings.isMlMarkPositionChanges());
+        mlMarkPosCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("codeCompletion_mlMarkPositionChanges", mlMarkPosCheck);
+
+        CheckBox mlMarkRelevantCheck = new CheckBox("Mark the most relevant item in the completion popup ★");
+        mlMarkRelevantCheck.setSelected(settings.isMlMarkMostRelevant());
+        mlMarkRelevantCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("codeCompletion_mlMarkMostRelevant", mlMarkRelevantCheck);
+
+        // -------------------------------------------------------------
+        // HTML Section
+        // -------------------------------------------------------------
+        HBox htmlHeader = createSectionHeader("HTML");
+        CheckBox htmlTagCheck = new CheckBox("Enable auto-popup of tag name code completion when typing in HTML text");
+        htmlTagCheck.setSelected(settings.isHtmlAutoPopupTagCompletion());
+        htmlTagCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("codeCompletion_htmlAutoPopupTagCompletion", htmlTagCheck);
+
+        // -------------------------------------------------------------
+        // Parameter Info Section
+        // -------------------------------------------------------------
+        HBox paramHeader = createSectionHeader("Parameter Info");
+
+        CheckBox paramInfoCheck = new CheckBox("Show the parameter info popup in");
+        paramInfoCheck.setSelected(settings.isShowParameterInfoPopup());
+        paramInfoCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("codeCompletion_showParameterInfoPopup", paramInfoCheck);
+
+        TextField paramDelayField = new TextField(String.valueOf(settings.getParameterInfoDelayMs()));
+        paramDelayField.setPrefWidth(60);
+        paramDelayField.setStyle("-fx-font-size: 12px;");
+        paramDelayField.disableProperty().bind(paramInfoCheck.selectedProperty().not());
+        inputs.put("codeCompletion_parameterInfoDelay", paramDelayField);
+
+        Label paramMsLabel = new Label("ms");
+        paramMsLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        paramMsLabel.disableProperty().bind(paramInfoCheck.selectedProperty().not());
+
+        HBox paramRow = new HBox(8, paramInfoCheck, paramDelayField, paramMsLabel);
+        paramRow.setAlignment(Pos.CENTER_LEFT);
+
+        CheckBox showFullSignaturesCheck = new CheckBox("Show full method signatures");
+        showFullSignaturesCheck.setSelected(settings.isShowFullMethodSignatures());
+        showFullSignaturesCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("codeCompletion_showFullMethodSignatures", showFullSignaturesCheck);
+
+        // -------------------------------------------------------------
+        // SQL Section (DataGrip Alignment)
+        // -------------------------------------------------------------
+        HBox sqlHeader = createSectionHeader("SQL");
+
+        Label suggestObjectsLabel = new Label("Suggest objects from:");
+        suggestObjectsLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+
+        ToggleGroup suggestGroup = new ToggleGroup();
+        RadioButton searchPathRadio = new RadioButton("The current search path only");
+        searchPathRadio.setToggleGroup(suggestGroup);
+        searchPathRadio.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+
+        RadioButton scopeRadio = new RadioButton("The current scope");
+        scopeRadio.setToggleGroup(suggestGroup);
+        scopeRadio.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+
+        RadioButton allSchemasRadio = new RadioButton("All available schemas");
+        allSchemasRadio.setToggleGroup(suggestGroup);
+        allSchemasRadio.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+
+        String currentSuggest = settings.getSqlSuggestObjectsFrom();
+        if ("The current search path only".equalsIgnoreCase(currentSuggest)) {
+            searchPathRadio.setSelected(true);
+        } else if ("All available schemas".equalsIgnoreCase(currentSuggest)) {
+            allSchemasRadio.setSelected(true);
+        } else {
+            scopeRadio.setSelected(true);
+        }
+        inputs.put("codeCompletion_suggestSearchPathRadio", searchPathRadio);
+        inputs.put("codeCompletion_suggestScopeRadio", scopeRadio);
+        inputs.put("codeCompletion_suggestAllSchemasRadio", allSchemasRadio);
+
+        VBox suggestRadioBox = new VBox(6, searchPathRadio, scopeRadio, allSchemasRadio);
+        suggestRadioBox.setPadding(new Insets(0, 0, 0, 20));
+        VBox suggestBox = new VBox(6, suggestObjectsLabel, suggestRadioBox);
+
+        // Qualify object with:
+        Label qualifyWithLabel = new Label("Qualify object with:");
+        qualifyWithLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+
+        GridPane qualifyWithGrid = new GridPane();
+        qualifyWithGrid.setHgap(12);
+        qualifyWithGrid.setVgap(8);
+        qualifyWithGrid.setPadding(new Insets(2, 0, 4, 20));
+
+        String[] qualifyOptions = new String[]{"Always", "On collisions", "Never"};
+
+        Label dbLabel = new Label("Database:");
+        dbLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        dbLabel.setMinWidth(110);
+        ComboBox<String> dbCombo = new ComboBox<>();
+        dbCombo.getItems().addAll(qualifyOptions);
+        dbCombo.getSelectionModel().select(settings.getQualifyWithDatabase());
+        dbCombo.setPrefWidth(130);
+        inputs.put("codeCompletion_qualifyWithDatabase", dbCombo);
+        qualifyWithGrid.addRow(0, dbLabel, dbCombo);
+
+        Label schemaLabel = new Label("Schema:");
+        schemaLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        schemaLabel.setMinWidth(110);
+        ComboBox<String> schemaCombo = new ComboBox<>();
+        schemaCombo.getItems().addAll(qualifyOptions);
+        schemaCombo.getSelectionModel().select(settings.getQualifyWithSchema());
+        schemaCombo.setPrefWidth(130);
+        inputs.put("codeCompletion_qualifyWithSchema", schemaCombo);
+        qualifyWithGrid.addRow(1, schemaLabel, schemaCombo);
+
+        Label tableLabel = new Label("Table/View:");
+        tableLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        tableLabel.setMinWidth(110);
+        ComboBox<String> tableCombo = new ComboBox<>();
+        tableCombo.getItems().addAll(qualifyOptions);
+        tableCombo.getSelectionModel().select(settings.getQualifyWithTableView());
+        tableCombo.setPrefWidth(130);
+        inputs.put("codeCompletion_qualifyWithTableView", tableCombo);
+        qualifyWithGrid.addRow(2, tableLabel, tableCombo);
+
+        Label aliasLabel = new Label("Table/view alias:");
+        aliasLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        aliasLabel.setMinWidth(110);
+        ComboBox<String> aliasCombo = new ComboBox<>();
+        aliasCombo.getItems().addAll(qualifyOptions);
+        aliasCombo.getSelectionModel().select(settings.getQualifyWithTableAlias());
+        aliasCombo.setPrefWidth(130);
+        inputs.put("codeCompletion_qualifyWithTableAlias", aliasCombo);
+        qualifyWithGrid.addRow(3, aliasLabel, aliasCombo);
+
+        // Qualify object in:
+        Label qualifyInLabel = new Label("Qualify object in:");
+        qualifyInLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+
+        GridPane qualifyInGrid = new GridPane();
+        qualifyInGrid.setHgap(12);
+        qualifyInGrid.setVgap(8);
+        qualifyInGrid.setPadding(new Insets(2, 0, 4, 20));
+
+        Label basicLabel = new Label("Basic completion");
+        basicLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        basicLabel.setMinWidth(110);
+        ComboBox<String> basicCombo = new ComboBox<>();
+        basicCombo.getItems().addAll(qualifyOptions);
+        basicCombo.getSelectionModel().select(settings.getQualifyInBasicCompletion());
+        basicCombo.setPrefWidth(130);
+        inputs.put("codeCompletion_qualifyInBasic", basicCombo);
+        qualifyInGrid.addRow(0, basicLabel, basicCombo);
+
+        Label joinLabel = new Label("JOIN completion");
+        joinLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        joinLabel.setMinWidth(110);
+        ComboBox<String> joinCombo = new ComboBox<>();
+        joinCombo.getItems().addAll(qualifyOptions);
+        joinCombo.getSelectionModel().select(settings.getQualifyInJoinCompletion());
+        joinCombo.setPrefWidth(130);
+        inputs.put("codeCompletion_qualifyInJoin", joinCombo);
+        qualifyInGrid.addRow(1, joinLabel, joinCombo);
+
+        Label refactorLabel = new Label("Refactoring");
+        refactorLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        refactorLabel.setMinWidth(110);
+        ComboBox<String> refactorCombo = new ComboBox<>();
+        refactorCombo.getItems().addAll(qualifyOptions);
+        refactorCombo.getSelectionModel().select(settings.getQualifyInRefactoring());
+        refactorCombo.setPrefWidth(130);
+        inputs.put("codeCompletion_qualifyInRefactoring", refactorCombo);
+        qualifyInGrid.addRow(2, refactorLabel, refactorCombo);
+
+        Label templatesLabel = new Label("Live templates");
+        templatesLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        templatesLabel.setMinWidth(110);
+        ComboBox<String> templatesCombo = new ComboBox<>();
+        templatesCombo.getItems().addAll(qualifyOptions);
+        templatesCombo.getSelectionModel().select(settings.getQualifyInLiveTemplates());
+        templatesCombo.setPrefWidth(130);
+        inputs.put("codeCompletion_qualifyInLiveTemplates", templatesCombo);
+        qualifyInGrid.addRow(3, templatesLabel, templatesCombo);
+
+        Label dndLabel = new Label("Drag-n-Drop");
+        dndLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        dndLabel.setMinWidth(110);
+        ComboBox<String> dndCombo = new ComboBox<>();
+        dndCombo.getItems().addAll(qualifyOptions);
+        dndCombo.getSelectionModel().select(settings.getQualifyInDragDrop());
+        dndCombo.setPrefWidth(130);
+        inputs.put("codeCompletion_qualifyInDragDrop", dndCombo);
+        qualifyInGrid.addRow(4, dndLabel, dndCombo);
+
+        Separator sqlSubSep = new Separator();
+        sqlSubSep.setStyle("-fx-opacity: 0.35;");
+
+        // JOIN clauses:
+        Label joinClausesLabel = new Label("JOIN clauses:");
+        joinClausesLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+
+        CheckBox joinUseAliasesCheck = new CheckBox("Use aliases in completion for JOIN");
+        joinUseAliasesCheck.setSelected(settings.isJoinUseAliases());
+        joinUseAliasesCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("codeCompletion_joinUseAliases", joinUseAliasesCheck);
+
+        CheckBox joinInvertOperandsCheck = new CheckBox("Invert order of operands in auto-generated ON clause");
+        joinInvertOperandsCheck.setSelected(settings.isJoinInvertOperands());
+        joinInvertOperandsCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("codeCompletion_joinInvertOperands", joinInvertOperandsCheck);
+
+        CheckBox joinSuggestNonStrictFkCheck = new CheckBox("Suggest non-strict foreign keys based on the name matching");
+        joinSuggestNonStrictFkCheck.setSelected(settings.isJoinSuggestNonStrictFk());
+        joinSuggestNonStrictFkCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("codeCompletion_joinSuggestNonStrictFk", joinSuggestNonStrictFkCheck);
+
+        VBox joinClausesSubBox = new VBox(6, joinUseAliasesCheck, joinInvertOperandsCheck, joinSuggestNonStrictFkCheck);
+        joinClausesSubBox.setPadding(new Insets(0, 0, 0, 20));
+        VBox joinClausesBox = new VBox(6, joinClausesLabel, joinClausesSubBox);
+
+        // Table aliases:
+        Label tableAliasesLabel = new Label("Table aliases:");
+        tableAliasesLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+
+        CheckBox tableAliasesAutoAddCheck = new CheckBox("Automatically add aliases when completing table names");
+        tableAliasesAutoAddCheck.setSelected(settings.isTableAliasesAutoAdd());
+        tableAliasesAutoAddCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("codeCompletion_tableAliasesAutoAdd", tableAliasesAutoAddCheck);
+
+        CheckBox tableAliasesSuggestCheck = new CheckBox("Suggest alias names in completion after table names");
+        tableAliasesSuggestCheck.setSelected(settings.isTableAliasesSuggest());
+        tableAliasesSuggestCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("codeCompletion_tableAliasesSuggest", tableAliasesSuggestCheck);
+
+        // Custom aliases table
+        ObservableList<AppSettingsStore.TableAliasConfig> aliasItems = FXCollections.observableArrayList();
+        if (settings.getCustomTableAliases() != null) {
+            for (AppSettingsStore.TableAliasConfig tac : settings.getCustomTableAliases()) {
+                aliasItems.add(tac.copy());
+            }
+        }
+        inputs.put("codeCompletion_customTableAliases", aliasItems);
+
+        TableView<AppSettingsStore.TableAliasConfig> aliasTable = new TableView<>(aliasItems);
+        aliasTable.setEditable(true);
+        aliasTable.setPrefHeight(150);
+        aliasTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+
+        TableColumn<AppSettingsStore.TableAliasConfig, String> colTableName = new TableColumn<>("Table name");
+        colTableName.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getTableName()));
+        colTableName.setCellFactory(TextFieldTableCell.forTableColumn());
+        colTableName.setOnEditCommit(e -> {
+            AppSettingsStore.TableAliasConfig row = e.getRowValue();
+            if (row != null) {
+                row.setTableName(e.getNewValue() != null ? e.getNewValue().trim() : "");
+            }
+        });
+        colTableName.setPrefWidth(220);
+
+        TableColumn<AppSettingsStore.TableAliasConfig, String> colCustomAlias = new TableColumn<>("Custom alias");
+        colCustomAlias.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getCustomAlias()));
+        colCustomAlias.setCellFactory(TextFieldTableCell.forTableColumn());
+        colCustomAlias.setOnEditCommit(e -> {
+            AppSettingsStore.TableAliasConfig row = e.getRowValue();
+            if (row != null) {
+                row.setCustomAlias(e.getNewValue() != null ? e.getNewValue().trim() : "");
+            }
+        });
+        colCustomAlias.setPrefWidth(220);
+
+        aliasTable.getColumns().addAll(colTableName, colCustomAlias);
+
+        // Placeholder when empty
+        Label noAliasLabel = new Label("No custom aliases");
+        noAliasLabel.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 13px;");
+        Hyperlink addAliasLink = new Hyperlink("Add alias");
+        addAliasLink.setStyle("-fx-text-fill: #3574F0; -fx-font-size: 13px; -fx-padding: 0; -fx-border-width: 0;");
+        VBox placeholderBox = new VBox(4, noAliasLabel, addAliasLink);
+        placeholderBox.setAlignment(Pos.CENTER);
+        aliasTable.setPlaceholder(placeholderBox);
+
+        // Table toolbar: + and —
+        Button addAliasBtn = new Button("+");
+        addAliasBtn.setPrefWidth(28);
+        addAliasBtn.setStyle("-fx-font-size: 12px;");
+
+        Button removeAliasBtn = new Button("—");
+        removeAliasBtn.setPrefWidth(28);
+        removeAliasBtn.setStyle("-fx-font-size: 12px;");
+        removeAliasBtn.disableProperty().bind(aliasTable.getSelectionModel().selectedItemProperty().isNull());
+
+        Runnable addAliasAction = () -> {
+            AppSettingsStore.TableAliasConfig newItem = new AppSettingsStore.TableAliasConfig("", "");
+            aliasItems.add(newItem);
+            aliasTable.getSelectionModel().select(newItem);
+            aliasTable.scrollTo(newItem);
+        };
+        addAliasBtn.setOnAction(e -> addAliasAction.run());
+        addAliasLink.setOnAction(e -> addAliasAction.run());
+
+        removeAliasBtn.setOnAction(e -> {
+            AppSettingsStore.TableAliasConfig sel = aliasTable.getSelectionModel().getSelectedItem();
+            if (sel != null) {
+                aliasItems.remove(sel);
+            }
+        });
+
+        HBox tableToolbar = new HBox(4, addAliasBtn, removeAliasBtn);
+        tableToolbar.setAlignment(Pos.CENTER_LEFT);
+
+        VBox aliasTableContainer = new VBox(4, tableToolbar, aliasTable);
+        aliasTableContainer.setPadding(new Insets(0, 0, 0, 20));
+
+        VBox tableAliasesSubBox = new VBox(6, tableAliasesAutoAddCheck, tableAliasesSuggestCheck);
+        tableAliasesSubBox.setPadding(new Insets(0, 0, 0, 20));
+        VBox tableAliasesBox = new VBox(6, tableAliasesLabel, tableAliasesSubBox, aliasTableContainer);
+
+        // Additional characters to accept completion:
+        Label addAcceptLabel = new Label("Additional characters to accept completion:");
+        addAcceptLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+
+        TextField addAcceptField = new TextField(settings.getAdditionalAcceptCharacters());
+        addAcceptField.setPrefWidth(200);
+        addAcceptField.setStyle("-fx-font-size: 12px;");
+        inputs.put("codeCompletion_additionalAcceptCharacters", addAcceptField);
+
+        HBox addAcceptRow = new HBox(12, addAcceptLabel, addAcceptField);
+        addAcceptRow.setAlignment(Pos.CENTER_LEFT);
+        addAcceptRow.setPadding(new Insets(8, 0, 0, 0));
+
+        // Assemble SQL section
+        VBox sqlBox = new VBox(10,
+                sqlHeader,
+                suggestBox,
+                qualifyWithLabel,
+                qualifyWithGrid,
+                qualifyInLabel,
+                qualifyInGrid,
+                sqlSubSep,
+                joinClausesBox,
+                tableAliasesBox,
+                addAcceptRow
+        );
+
+        // Put everything together
+        panel.getChildren().addAll(
+                matchCaseRow,
+                sortAlphaCheck,
+                showAsYouTypeCheck,
+                insertSelectedKeysCheck,
+                docRow,
+                insertParensCheck,
+                mlHeader,
+                mlIntroRow,
+                mlSortRow,
+                mlSqlCheck,
+                mlMarkPosCheck,
+                mlMarkRelevantCheck,
+                htmlHeader,
+                htmlTagCheck,
+                paramHeader,
+                paramRow,
+                showFullSignaturesCheck,
+                sqlBox
+        );
+
         return panel;
     }
 
@@ -6169,6 +6651,162 @@ public final class SettingsDialog {
         if (inputs.containsKey("editor_appearance_tagTreeOpacity")) {
             Spinner<Double> sp = (Spinner<Double>) inputs.get("editor_appearance_tagTreeOpacity");
             if (sp.getValue() != null) settings.setTagTreeOpacity(sp.getValue());
+        }
+
+        // Editor > General > Code Completion
+        if (inputs.containsKey("codeCompletion_matchCase")) {
+            CheckBox cb = (CheckBox) inputs.get("codeCompletion_matchCase");
+            settings.setMatchCase(cb.isSelected());
+        }
+        if (inputs.containsKey("codeCompletion_firstLetterRadio")) {
+            RadioButton rb = (RadioButton) inputs.get("codeCompletion_firstLetterRadio");
+            settings.setMatchCaseMode(rb.isSelected() ? "First letter only" : "All letters");
+        }
+        if (inputs.containsKey("codeCompletion_sortAlphabetically")) {
+            CheckBox cb = (CheckBox) inputs.get("codeCompletion_sortAlphabetically");
+            settings.setSortSuggestionsAlphabetically(cb.isSelected());
+        }
+        if (inputs.containsKey("codeCompletion_showSuggestionsAsYouType")) {
+            CheckBox cb = (CheckBox) inputs.get("codeCompletion_showSuggestionsAsYouType");
+            settings.setShowSuggestionsAsYouType(cb.isSelected());
+        }
+        if (inputs.containsKey("codeCompletion_insertSelectedByContextKeys")) {
+            CheckBox cb = (CheckBox) inputs.get("codeCompletion_insertSelectedByContextKeys");
+            settings.setInsertSelectedSuggestionByContextKeys(cb.isSelected());
+        }
+        if (inputs.containsKey("codeCompletion_showDocPopup")) {
+            CheckBox cb = (CheckBox) inputs.get("codeCompletion_showDocPopup");
+            settings.setShowDocPopup(cb.isSelected());
+        }
+        if (inputs.containsKey("codeCompletion_docPopupDelay")) {
+            TextField tf = (TextField) inputs.get("codeCompletion_docPopupDelay");
+            try {
+                settings.setDocPopupDelayMs(Integer.parseInt(tf.getText().trim()));
+            } catch (Exception ignored) {}
+        }
+        if (inputs.containsKey("codeCompletion_insertParentheses")) {
+            CheckBox cb = (CheckBox) inputs.get("codeCompletion_insertParentheses");
+            settings.setInsertParenthesesAutomatically(cb.isSelected());
+        }
+        if (inputs.containsKey("codeCompletion_mlSortSuggestions")) {
+            CheckBox cb = (CheckBox) inputs.get("codeCompletion_mlSortSuggestions");
+            settings.setMlSortSuggestions(cb.isSelected());
+        }
+        if (inputs.containsKey("codeCompletion_mlSortSql")) {
+            CheckBox cb = (CheckBox) inputs.get("codeCompletion_mlSortSql");
+            settings.setMlSortSql(cb.isSelected());
+        }
+        if (inputs.containsKey("codeCompletion_mlMarkPositionChanges")) {
+            CheckBox cb = (CheckBox) inputs.get("codeCompletion_mlMarkPositionChanges");
+            settings.setMlMarkPositionChanges(cb.isSelected());
+        }
+        if (inputs.containsKey("codeCompletion_mlMarkMostRelevant")) {
+            CheckBox cb = (CheckBox) inputs.get("codeCompletion_mlMarkMostRelevant");
+            settings.setMlMarkMostRelevant(cb.isSelected());
+        }
+        if (inputs.containsKey("codeCompletion_htmlAutoPopupTagCompletion")) {
+            CheckBox cb = (CheckBox) inputs.get("codeCompletion_htmlAutoPopupTagCompletion");
+            settings.setHtmlAutoPopupTagCompletion(cb.isSelected());
+        }
+        if (inputs.containsKey("codeCompletion_showParameterInfoPopup")) {
+            CheckBox cb = (CheckBox) inputs.get("codeCompletion_showParameterInfoPopup");
+            settings.setShowParameterInfoPopup(cb.isSelected());
+        }
+        if (inputs.containsKey("codeCompletion_parameterInfoDelay")) {
+            TextField tf = (TextField) inputs.get("codeCompletion_parameterInfoDelay");
+            try {
+                settings.setParameterInfoDelayMs(Integer.parseInt(tf.getText().trim()));
+            } catch (Exception ignored) {}
+        }
+        if (inputs.containsKey("codeCompletion_showFullMethodSignatures")) {
+            CheckBox cb = (CheckBox) inputs.get("codeCompletion_showFullMethodSignatures");
+            settings.setShowFullMethodSignatures(cb.isSelected());
+        }
+        if (inputs.containsKey("codeCompletion_suggestSearchPathRadio")) {
+            RadioButton sp = (RadioButton) inputs.get("codeCompletion_suggestSearchPathRadio");
+            RadioButton sc = (RadioButton) inputs.get("codeCompletion_suggestScopeRadio");
+            RadioButton as = (RadioButton) inputs.get("codeCompletion_suggestAllSchemasRadio");
+            if (sp.isSelected()) {
+                settings.setSqlSuggestObjectsFrom("The current search path only");
+            } else if (as.isSelected()) {
+                settings.setSqlSuggestObjectsFrom("All available schemas");
+            } else {
+                settings.setSqlSuggestObjectsFrom("The current scope");
+            }
+        }
+        if (inputs.containsKey("codeCompletion_qualifyWithDatabase")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("codeCompletion_qualifyWithDatabase");
+            if (cb.getValue() != null) settings.setQualifyWithDatabase(cb.getValue());
+        }
+        if (inputs.containsKey("codeCompletion_qualifyWithSchema")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("codeCompletion_qualifyWithSchema");
+            if (cb.getValue() != null) settings.setQualifyWithSchema(cb.getValue());
+        }
+        if (inputs.containsKey("codeCompletion_qualifyWithTableView")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("codeCompletion_qualifyWithTableView");
+            if (cb.getValue() != null) settings.setQualifyWithTableView(cb.getValue());
+        }
+        if (inputs.containsKey("codeCompletion_qualifyWithTableAlias")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("codeCompletion_qualifyWithTableAlias");
+            if (cb.getValue() != null) settings.setQualifyWithTableAlias(cb.getValue());
+        }
+        if (inputs.containsKey("codeCompletion_qualifyInBasic")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("codeCompletion_qualifyInBasic");
+            if (cb.getValue() != null) settings.setQualifyInBasicCompletion(cb.getValue());
+        }
+        if (inputs.containsKey("codeCompletion_qualifyInJoin")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("codeCompletion_qualifyInJoin");
+            if (cb.getValue() != null) settings.setQualifyInJoinCompletion(cb.getValue());
+        }
+        if (inputs.containsKey("codeCompletion_qualifyInRefactoring")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("codeCompletion_qualifyInRefactoring");
+            if (cb.getValue() != null) settings.setQualifyInRefactoring(cb.getValue());
+        }
+        if (inputs.containsKey("codeCompletion_qualifyInLiveTemplates")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("codeCompletion_qualifyInLiveTemplates");
+            if (cb.getValue() != null) settings.setQualifyInLiveTemplates(cb.getValue());
+        }
+        if (inputs.containsKey("codeCompletion_qualifyInDragDrop")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("codeCompletion_qualifyInDragDrop");
+            if (cb.getValue() != null) settings.setQualifyInDragDrop(cb.getValue());
+        }
+        if (inputs.containsKey("codeCompletion_joinUseAliases")) {
+            CheckBox cb = (CheckBox) inputs.get("codeCompletion_joinUseAliases");
+            settings.setJoinUseAliases(cb.isSelected());
+        }
+        if (inputs.containsKey("codeCompletion_joinInvertOperands")) {
+            CheckBox cb = (CheckBox) inputs.get("codeCompletion_joinInvertOperands");
+            settings.setJoinInvertOperands(cb.isSelected());
+        }
+        if (inputs.containsKey("codeCompletion_joinSuggestNonStrictFk")) {
+            CheckBox cb = (CheckBox) inputs.get("codeCompletion_joinSuggestNonStrictFk");
+            settings.setJoinSuggestNonStrictFk(cb.isSelected());
+        }
+        if (inputs.containsKey("codeCompletion_tableAliasesAutoAdd")) {
+            CheckBox cb = (CheckBox) inputs.get("codeCompletion_tableAliasesAutoAdd");
+            settings.setTableAliasesAutoAdd(cb.isSelected());
+        }
+        if (inputs.containsKey("codeCompletion_tableAliasesSuggest")) {
+            CheckBox cb = (CheckBox) inputs.get("codeCompletion_tableAliasesSuggest");
+            settings.setTableAliasesSuggest(cb.isSelected());
+        }
+        if (inputs.containsKey("codeCompletion_customTableAliases")) {
+            Object obj = inputs.get("codeCompletion_customTableAliases");
+            if (obj instanceof List<?> list) {
+                List<AppSettingsStore.TableAliasConfig> out = new ArrayList<>();
+                for (Object item : list) {
+                    if (item instanceof AppSettingsStore.TableAliasConfig tac) {
+                        if (tac.getTableName() != null && !tac.getTableName().trim().isEmpty()) {
+                            out.add(tac.copy());
+                        }
+                    }
+                }
+                settings.setCustomTableAliases(out);
+            }
+        }
+        if (inputs.containsKey("codeCompletion_additionalAcceptCharacters")) {
+            TextField tf = (TextField) inputs.get("codeCompletion_additionalAcceptCharacters");
+            settings.setAdditionalAcceptCharacters(tf.getText());
         }
 
         // Persist

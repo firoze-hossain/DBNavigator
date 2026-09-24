@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * App-wide preferences (theme, editor font, etc.), persisted to
@@ -258,6 +259,41 @@ public final class AppSettingsStore {
         public boolean enableTagTreeHighlighting = true;
         public int tagTreeLevelsToHighlight = 6;
         public double tagTreeOpacity = 0.1;
+
+        // Editor > General > Code Completion (DataGrip Alignment)
+        public boolean matchCase = true;
+        public String matchCaseMode = "First letter only";
+        public boolean sortSuggestionsAlphabetically = false;
+        public boolean showSuggestionsAsYouType = true;
+        public boolean insertSelectedSuggestionByContextKeys = false;
+        public boolean showDocPopup = false;
+        public int docPopupDelayMs = 500;
+        public boolean insertParenthesesAutomatically = true;
+        public boolean mlSortSuggestions = true;
+        public boolean mlSortSql = true;
+        public boolean mlMarkPositionChanges = true;
+        public boolean mlMarkMostRelevant = true;
+        public boolean htmlAutoPopupTagCompletion = true;
+        public boolean showParameterInfoPopup = true;
+        public int parameterInfoDelayMs = 1000;
+        public boolean showFullMethodSignatures = false;
+        public String sqlSuggestObjectsFrom = "The current scope";
+        public String qualifyWithDatabase = "Always";
+        public String qualifyWithSchema = "Always";
+        public String qualifyWithTableView = "Always";
+        public String qualifyWithTableAlias = "Always";
+        public String qualifyInBasicCompletion = "On collisions";
+        public String qualifyInJoinCompletion = "Always";
+        public String qualifyInRefactoring = "On collisions";
+        public String qualifyInLiveTemplates = "On collisions";
+        public String qualifyInDragDrop = "On collisions";
+        public boolean joinUseAliases = true;
+        public boolean joinInvertOperands = false;
+        public boolean joinSuggestNonStrictFk = true;
+        public boolean tableAliasesAutoAdd = false;
+        public boolean tableAliasesSuggest = true;
+        public List<TableAliasConfig> customTableAliases = new ArrayList<>();
+        public String additionalAcceptCharacters = "";
 
         public static List<String> defaultUiThemes() {
             return List.of(
@@ -1040,6 +1076,73 @@ public final class AppSettingsStore {
         public void setTagTreeLevelsToHighlight(int tagTreeLevelsToHighlight) { this.tagTreeLevelsToHighlight = tagTreeLevelsToHighlight > 0 ? tagTreeLevelsToHighlight : 6; }
         public double getTagTreeOpacity() { return tagTreeOpacity; }
         public void setTagTreeOpacity(double tagTreeOpacity) { this.tagTreeOpacity = (tagTreeOpacity >= 0.0 && tagTreeOpacity <= 1.0) ? tagTreeOpacity : 0.1; }
+
+        public boolean isMatchCase() { return matchCase; }
+        public void setMatchCase(boolean matchCase) { this.matchCase = matchCase; }
+        public String getMatchCaseMode() { return matchCaseMode; }
+        public void setMatchCaseMode(String matchCaseMode) { this.matchCaseMode = matchCaseMode != null ? matchCaseMode : "First letter only"; }
+        public boolean isSortSuggestionsAlphabetically() { return sortSuggestionsAlphabetically; }
+        public void setSortSuggestionsAlphabetically(boolean sortSuggestionsAlphabetically) { this.sortSuggestionsAlphabetically = sortSuggestionsAlphabetically; }
+        public boolean isShowSuggestionsAsYouType() { return showSuggestionsAsYouType; }
+        public void setShowSuggestionsAsYouType(boolean showSuggestionsAsYouType) { this.showSuggestionsAsYouType = showSuggestionsAsYouType; }
+        public boolean isInsertSelectedSuggestionByContextKeys() { return insertSelectedSuggestionByContextKeys; }
+        public void setInsertSelectedSuggestionByContextKeys(boolean insertSelectedSuggestionByContextKeys) { this.insertSelectedSuggestionByContextKeys = insertSelectedSuggestionByContextKeys; }
+        public boolean isShowDocPopup() { return showDocPopup; }
+        public void setShowDocPopup(boolean showDocPopup) { this.showDocPopup = showDocPopup; }
+        public int getDocPopupDelayMs() { return docPopupDelayMs; }
+        public void setDocPopupDelayMs(int docPopupDelayMs) { this.docPopupDelayMs = docPopupDelayMs >= 0 ? docPopupDelayMs : 500; }
+        public boolean isInsertParenthesesAutomatically() { return insertParenthesesAutomatically; }
+        public void setInsertParenthesesAutomatically(boolean insertParenthesesAutomatically) { this.insertParenthesesAutomatically = insertParenthesesAutomatically; }
+        public boolean isMlSortSuggestions() { return mlSortSuggestions; }
+        public void setMlSortSuggestions(boolean mlSortSuggestions) { this.mlSortSuggestions = mlSortSuggestions; }
+        public boolean isMlSortSql() { return mlSortSql; }
+        public void setMlSortSql(boolean mlSortSql) { this.mlSortSql = mlSortSql; }
+        public boolean isMlMarkPositionChanges() { return mlMarkPositionChanges; }
+        public void setMlMarkPositionChanges(boolean mlMarkPositionChanges) { this.mlMarkPositionChanges = mlMarkPositionChanges; }
+        public boolean isMlMarkMostRelevant() { return mlMarkMostRelevant; }
+        public void setMlMarkMostRelevant(boolean mlMarkMostRelevant) { this.mlMarkMostRelevant = mlMarkMostRelevant; }
+        public boolean isHtmlAutoPopupTagCompletion() { return htmlAutoPopupTagCompletion; }
+        public void setHtmlAutoPopupTagCompletion(boolean htmlAutoPopupTagCompletion) { this.htmlAutoPopupTagCompletion = htmlAutoPopupTagCompletion; }
+        public boolean isShowParameterInfoPopup() { return showParameterInfoPopup; }
+        public void setShowParameterInfoPopup(boolean showParameterInfoPopup) { this.showParameterInfoPopup = showParameterInfoPopup; }
+        public int getParameterInfoDelayMs() { return parameterInfoDelayMs; }
+        public void setParameterInfoDelayMs(int parameterInfoDelayMs) { this.parameterInfoDelayMs = parameterInfoDelayMs >= 0 ? parameterInfoDelayMs : 1000; }
+        public boolean isShowFullMethodSignatures() { return showFullMethodSignatures; }
+        public void setShowFullMethodSignatures(boolean showFullMethodSignatures) { this.showFullMethodSignatures = showFullMethodSignatures; }
+        public String getSqlSuggestObjectsFrom() { return sqlSuggestObjectsFrom; }
+        public void setSqlSuggestObjectsFrom(String sqlSuggestObjectsFrom) { this.sqlSuggestObjectsFrom = sqlSuggestObjectsFrom != null ? sqlSuggestObjectsFrom : "The current scope"; }
+        public String getQualifyWithDatabase() { return qualifyWithDatabase; }
+        public void setQualifyWithDatabase(String qualifyWithDatabase) { this.qualifyWithDatabase = qualifyWithDatabase != null ? qualifyWithDatabase : "Always"; }
+        public String getQualifyWithSchema() { return qualifyWithSchema; }
+        public void setQualifyWithSchema(String qualifyWithSchema) { this.qualifyWithSchema = qualifyWithSchema != null ? qualifyWithSchema : "Always"; }
+        public String getQualifyWithTableView() { return qualifyWithTableView; }
+        public void setQualifyWithTableView(String qualifyWithTableView) { this.qualifyWithTableView = qualifyWithTableView != null ? qualifyWithTableView : "Always"; }
+        public String getQualifyWithTableAlias() { return qualifyWithTableAlias; }
+        public void setQualifyWithTableAlias(String qualifyWithTableAlias) { this.qualifyWithTableAlias = qualifyWithTableAlias != null ? qualifyWithTableAlias : "Always"; }
+        public String getQualifyInBasicCompletion() { return qualifyInBasicCompletion; }
+        public void setQualifyInBasicCompletion(String qualifyInBasicCompletion) { this.qualifyInBasicCompletion = qualifyInBasicCompletion != null ? qualifyInBasicCompletion : "On collisions"; }
+        public String getQualifyInJoinCompletion() { return qualifyInJoinCompletion; }
+        public void setQualifyInJoinCompletion(String qualifyInJoinCompletion) { this.qualifyInJoinCompletion = qualifyInJoinCompletion != null ? qualifyInJoinCompletion : "Always"; }
+        public String getQualifyInRefactoring() { return qualifyInRefactoring; }
+        public void setQualifyInRefactoring(String qualifyInRefactoring) { this.qualifyInRefactoring = qualifyInRefactoring != null ? qualifyInRefactoring : "On collisions"; }
+        public String getQualifyInLiveTemplates() { return qualifyInLiveTemplates; }
+        public void setQualifyInLiveTemplates(String qualifyInLiveTemplates) { this.qualifyInLiveTemplates = qualifyInLiveTemplates != null ? qualifyInLiveTemplates : "On collisions"; }
+        public String getQualifyInDragDrop() { return qualifyInDragDrop; }
+        public void setQualifyInDragDrop(String qualifyInDragDrop) { this.qualifyInDragDrop = qualifyInDragDrop != null ? qualifyInDragDrop : "On collisions"; }
+        public boolean isJoinUseAliases() { return joinUseAliases; }
+        public void setJoinUseAliases(boolean joinUseAliases) { this.joinUseAliases = joinUseAliases; }
+        public boolean isJoinInvertOperands() { return joinInvertOperands; }
+        public void setJoinInvertOperands(boolean joinInvertOperands) { this.joinInvertOperands = joinInvertOperands; }
+        public boolean isJoinSuggestNonStrictFk() { return joinSuggestNonStrictFk; }
+        public void setJoinSuggestNonStrictFk(boolean joinSuggestNonStrictFk) { this.joinSuggestNonStrictFk = joinSuggestNonStrictFk; }
+        public boolean isTableAliasesAutoAdd() { return tableAliasesAutoAdd; }
+        public void setTableAliasesAutoAdd(boolean tableAliasesAutoAdd) { this.tableAliasesAutoAdd = tableAliasesAutoAdd; }
+        public boolean isTableAliasesSuggest() { return tableAliasesSuggest; }
+        public void setTableAliasesSuggest(boolean tableAliasesSuggest) { this.tableAliasesSuggest = tableAliasesSuggest; }
+        public List<TableAliasConfig> getCustomTableAliases() { return customTableAliases; }
+        public void setCustomTableAliases(List<TableAliasConfig> customTableAliases) { this.customTableAliases = customTableAliases != null ? customTableAliases : new ArrayList<>(); }
+        public String getAdditionalAcceptCharacters() { return additionalAcceptCharacters; }
+        public void setAdditionalAcceptCharacters(String additionalAcceptCharacters) { this.additionalAcceptCharacters = additionalAcceptCharacters != null ? additionalAcceptCharacters : ""; }
     }
 
     public static class UserParameterPattern {
@@ -1316,6 +1419,46 @@ public final class AppSettingsStore {
         @Override
         public String toString() {
             return columnPattern + " -> " + targetColumnPattern;
+        }
+    }
+
+    public static class TableAliasConfig {
+        private String tableName = "";
+        private String customAlias = "";
+
+        public TableAliasConfig() {}
+
+        public TableAliasConfig(String tableName, String customAlias) {
+            this.tableName = tableName != null ? tableName : "";
+            this.customAlias = customAlias != null ? customAlias : "";
+        }
+
+        public TableAliasConfig copy() {
+            return new TableAliasConfig(tableName, customAlias);
+        }
+
+        public String getTableName() { return tableName; }
+        public void setTableName(String tableName) { this.tableName = tableName != null ? tableName : ""; }
+
+        public String getCustomAlias() { return customAlias; }
+        public void setCustomAlias(String customAlias) { this.customAlias = customAlias != null ? customAlias : ""; }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            TableAliasConfig that = (TableAliasConfig) o;
+            return Objects.equals(tableName, that.tableName) && Objects.equals(customAlias, that.customAlias);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(tableName, customAlias);
+        }
+
+        @Override
+        public String toString() {
+            return tableName + " -> " + customAlias;
         }
     }
 
