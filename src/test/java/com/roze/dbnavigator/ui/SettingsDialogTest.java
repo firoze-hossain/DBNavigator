@@ -1563,4 +1563,159 @@ public class SettingsDialogTest {
         assertFalse(loaded.isInlineMultilineSuggestions());
         assertTrue(loaded.isInlineSyncWithPopup());
     }
+
+    @Test
+    public void testSmartKeysSettings() throws Exception {
+        AppSettingsStore.Settings settings = new AppSettingsStore.Settings();
+
+        // 1. Verify default values match DataGrip screenshots
+        assertTrue(settings.isSmartKeysHomeMovesCaret());
+        assertTrue(settings.isSmartKeysEndBlankLineMovesCaret());
+        assertTrue(settings.isSmartKeysInsertPairedBrackets());
+        assertTrue(settings.isSmartKeysInsertPairQuote());
+        assertTrue(settings.isSmartKeysReformatBlockOnBrace());
+        assertFalse(settings.isSmartKeysUseCamelHumps());
+        assertTrue(settings.isSmartKeysHonorCamelHumpsOnDoubleClick());
+        assertTrue(settings.isSmartKeysSurroundSelectionOnQuoteOrBrace());
+        assertTrue(settings.isSmartKeysMultiCaretsOnDoubleModifier());
+        assertTrue(settings.isSmartKeysJumpOutsideBracketWithTab());
+        assertTrue(settings.isSmartKeysEnterSmartIndent());
+        assertTrue(settings.isSmartKeysEnterInsertPairBrace());
+        assertTrue(settings.isSmartKeysEnterCloseBlockComment());
+        assertEquals("To proper indent position", settings.getSmartKeysUnindentOnBackspace());
+        assertEquals("None", settings.getSmartKeysReformatOnPaste());
+        assertFalse(settings.isSmartKeysReformatRemoveCustomLineBreaks());
+
+        // 2. Verify options lists
+        List<String> unindentOpts = AppSettingsStore.Settings.defaultSmartKeysUnindentOptions();
+        assertEquals(3, unindentOpts.size());
+        assertTrue(unindentOpts.contains("Disabled"));
+        assertTrue(unindentOpts.contains("To proper indent position"));
+        assertTrue(unindentOpts.contains("To nearest indent position"));
+
+        List<String> reformatOpts = AppSettingsStore.Settings.defaultSmartKeysReformatOnPasteOptions();
+        assertEquals(4, reformatOpts.size());
+        assertTrue(reformatOpts.contains("None"));
+        assertTrue(reformatOpts.contains("Indent block"));
+        assertTrue(reformatOpts.contains("Indent each line"));
+        assertTrue(reformatOpts.contains("Reformat block"));
+
+        // 3. Mutate settings
+        settings.setSmartKeysHomeMovesCaret(false);
+        settings.setSmartKeysEndBlankLineMovesCaret(false);
+        settings.setSmartKeysInsertPairedBrackets(false);
+        settings.setSmartKeysInsertPairQuote(false);
+        settings.setSmartKeysReformatBlockOnBrace(false);
+        settings.setSmartKeysUseCamelHumps(true);
+        settings.setSmartKeysHonorCamelHumpsOnDoubleClick(false);
+        settings.setSmartKeysSurroundSelectionOnQuoteOrBrace(false);
+        settings.setSmartKeysMultiCaretsOnDoubleModifier(false);
+        settings.setSmartKeysJumpOutsideBracketWithTab(false);
+        settings.setSmartKeysEnterSmartIndent(false);
+        settings.setSmartKeysEnterInsertPairBrace(false);
+        settings.setSmartKeysEnterCloseBlockComment(false);
+        settings.setSmartKeysUnindentOnBackspace("Disabled");
+        settings.setSmartKeysReformatOnPaste("Reformat block");
+        settings.setSmartKeysReformatRemoveCustomLineBreaks(true);
+
+        // 4. Jackson JSON Roundtrip Serialization
+        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        String json = mapper.writeValueAsString(settings);
+        AppSettingsStore.Settings loaded = mapper.readValue(json, AppSettingsStore.Settings.class);
+
+        // 5. Verify deserialized values
+        assertFalse(loaded.isSmartKeysHomeMovesCaret());
+        assertFalse(loaded.isSmartKeysEndBlankLineMovesCaret());
+        assertFalse(loaded.isSmartKeysInsertPairedBrackets());
+        assertFalse(loaded.isSmartKeysInsertPairQuote());
+        assertFalse(loaded.isSmartKeysReformatBlockOnBrace());
+        assertTrue(loaded.isSmartKeysUseCamelHumps());
+        assertFalse(loaded.isSmartKeysHonorCamelHumpsOnDoubleClick());
+        assertFalse(loaded.isSmartKeysSurroundSelectionOnQuoteOrBrace());
+        assertFalse(loaded.isSmartKeysMultiCaretsOnDoubleModifier());
+        assertFalse(loaded.isSmartKeysJumpOutsideBracketWithTab());
+        assertFalse(loaded.isSmartKeysEnterSmartIndent());
+        assertFalse(loaded.isSmartKeysEnterInsertPairBrace());
+        assertFalse(loaded.isSmartKeysEnterCloseBlockComment());
+        assertEquals("Disabled", loaded.getSmartKeysUnindentOnBackspace());
+        assertEquals("Reformat block", loaded.getSmartKeysReformatOnPaste());
+        assertTrue(loaded.isSmartKeysReformatRemoveCustomLineBreaks());
+    }
+
+    @Test
+    public void testPostfixCompletionSettings() throws Exception {
+        AppSettingsStore.Settings settings = new AppSettingsStore.Settings();
+
+        // 1. Verify default values match DataGrip screenshots
+        assertTrue(settings.isPostfixCompletionEnabled());
+        assertEquals("Tab", settings.getPostfixCompletionExpandWith());
+        assertNotNull(settings.getPostfixTemplates());
+        assertEquals(5, settings.getPostfixTemplates().size(), "DataGrip provides 5 built-in SQL postfix templates");
+
+        AppSettingsStore.PostfixTemplateConfig afrom = settings.getPostfixTemplates().get(0);
+        assertEquals("afrom", afrom.getKey());
+        assertEquals("SQL", afrom.getLanguage());
+        assertTrue(afrom.isEnabled());
+
+        AppSettingsStore.PostfixTemplateConfig cast = settings.getPostfixTemplates().get(1);
+        assertEquals("cast", cast.getKey());
+        assertTrue(cast.isEnabled());
+
+        AppSettingsStore.PostfixTemplateConfig cfrom = settings.getPostfixTemplates().get(2);
+        assertEquals("cfrom", cfrom.getKey());
+        assertTrue(cfrom.isEnabled());
+
+        AppSettingsStore.PostfixTemplateConfig from = settings.getPostfixTemplates().get(3);
+        assertEquals("from", from.getKey());
+        assertTrue(from.isEnabled());
+
+        AppSettingsStore.PostfixTemplateConfig join = settings.getPostfixTemplates().get(4);
+        assertEquals("join", join.getKey());
+        assertTrue(join.isEnabled());
+
+        // 2. Verify expand with options
+        List<String> expandOpts = AppSettingsStore.Settings.defaultPostfixExpandWithOptions();
+        assertEquals(3, expandOpts.size());
+        assertTrue(expandOpts.contains("Tab"));
+        assertTrue(expandOpts.contains("Space"));
+        assertTrue(expandOpts.contains("Enter"));
+
+        // 3. Mutate settings
+        settings.setPostfixCompletionEnabled(false);
+        settings.setPostfixCompletionExpandWith("Space");
+        settings.getPostfixTemplates().get(0).setEnabled(false);
+        settings.getPostfixTemplates().add(new AppSettingsStore.PostfixTemplateConfig(
+                "cnt", "SQL", "select count(*) from $EXPR$", "count rows", true, "authors.cnt", "select count(*) from authors"
+        ));
+
+        // 4. Jackson JSON Roundtrip Serialization
+        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        String json = mapper.writeValueAsString(settings);
+        AppSettingsStore.Settings loaded = mapper.readValue(json, AppSettingsStore.Settings.class);
+
+        // 5. Verify deserialized values
+        assertFalse(loaded.isPostfixCompletionEnabled());
+        assertEquals("Space", loaded.getPostfixCompletionExpandWith());
+        assertEquals(6, loaded.getPostfixTemplates().size());
+        assertFalse(loaded.getPostfixTemplates().get(0).isEnabled());
+        AppSettingsStore.PostfixTemplateConfig custom = loaded.getPostfixTemplates().get(5);
+        assertEquals("cnt", custom.getKey());
+        assertEquals("SQL", custom.getLanguage());
+        assertEquals("select count(*) from $EXPR$", custom.getExpression());
+        assertEquals("count rows", custom.getDescription());
+        assertTrue(custom.isEnabled());
+        assertEquals("authors.cnt", custom.getExampleBefore());
+        assertEquals("select count(*) from authors", custom.getExampleAfter());
+    }
+
+    @Test
+    public void testSmartKeysAndPostfixCategoryDescriptions() {
+        String skDesc = SettingsDialog.getCategoryDescription("Editor / General / Smart Keys");
+        assertNotNull(skDesc);
+        assertEquals("Configure smart typing, auto-closing quotes/brackets, and indent behavior.", skDesc);
+
+        String pcDesc = SettingsDialog.getCategoryDescription("Editor / General / Postfix Completion");
+        assertNotNull(pcDesc);
+        assertEquals("Configure postfix completion templates and expansions.", pcDesc);
+    }
 }

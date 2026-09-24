@@ -882,6 +882,10 @@ public final class SettingsDialog {
             return buildInlineCompletionPanel(settings, inputs, navigateTo);
         } else if ("Editor / General / Output Console".equals(fullPath) || "Output Console".equals(fullPath)) {
             return buildOutputConsolePanel(settings, inputs);
+        } else if ("Editor / General / Postfix Completion".equals(fullPath) || "Postfix Completion".equals(fullPath)) {
+            return buildPostfixCompletionPanel(settings, inputs);
+        } else if ("Editor / General / Smart Keys".equals(fullPath) || "Smart Keys".equals(fullPath)) {
+            return buildSmartKeysPanel(settings, inputs, navigateTo);
         } else if ("Editor / General".equals(fullPath)) {
             return buildGeneralEditorPanel(settings, inputs);
         } else if ("Editor / General / Font".equals(fullPath) || "Editor / Font".equals(fullPath) || "Font".equals(fullPath)) {
@@ -934,8 +938,6 @@ public final class SettingsDialog {
             return buildDiagramsPanel(cat);
         } else if ("Tools / MCP Server".equals(fullPath) || "MCP Server".equals(fullPath)) {
             return buildMcpServerPanel(cat);
-        } else if ("Editor / General / Smart Keys".equals(fullPath) || "Smart Keys".equals(fullPath)) {
-            return buildSmartKeysPanel(cat, navigateTo);
         } else if ("Editor / Color Scheme".equals(fullPath) || "Color Scheme".equals(fullPath)) {
             return buildColorSchemeLandingPanel(cat, navigateTo);
         } else if ("Editor / Code Style / SQL".equals(fullPath)) {
@@ -1856,87 +1858,516 @@ public final class SettingsDialog {
         return panel;
     }
 
-    private static VBox buildSmartKeysPanel(CategoryDef cat, java.util.function.Consumer<String> navigateTo) {
-        Label title = new Label("Smart Keys");
-        title.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: -text;");
+    private static VBox buildSmartKeysPanel(AppSettingsStore.Settings settings, Map<String, Object> inputs,
+                                            java.util.function.Consumer<String> navigateTo) {
+        VBox panel = new VBox(10);
+        panel.setPadding(new Insets(10, 16, 16, 16));
 
-        CheckBox homeNonWhitespace = new CheckBox("Home moves caret to first non-whitespace character");
-        homeNonWhitespace.setSelected(true);
+        // 1. Home moves caret to first non-whitespace character
+        CheckBox homeNonWhitespaceCheck = new CheckBox("Home moves caret to first non-whitespace character");
+        homeNonWhitespaceCheck.setSelected(settings.isSmartKeysHomeMovesCaret());
+        homeNonWhitespaceCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("smartKeys_homeMovesCaret", homeNonWhitespaceCheck);
 
-        CheckBox endIndentPos = new CheckBox("End on blank line moves caret to indent position");
-        endIndentPos.setSelected(true);
+        // 2. End on blank line moves caret to indent position
+        CheckBox endIndentPosCheck = new CheckBox("End on blank line moves caret to indent position");
+        endIndentPosCheck.setSelected(settings.isSmartKeysEndBlankLineMovesCaret());
+        endIndentPosCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("smartKeys_endBlankLineMovesCaret", endIndentPosCheck);
 
-        CheckBox insertPairedBrackets = new CheckBox("Insert paired brackets (), [], {}, <>");
-        insertPairedBrackets.setSelected(true);
+        // 3. Insert paired brackets (), [], {}, <>
+        CheckBox insertPairedBracketsCheck = new CheckBox("Insert paired brackets (), [], {}, <>");
+        insertPairedBracketsCheck.setSelected(settings.isSmartKeysInsertPairedBrackets());
+        insertPairedBracketsCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("smartKeys_insertPairedBrackets", insertPairedBracketsCheck);
 
-        CheckBox insertPairQuote = new CheckBox("Insert pair quote");
-        insertPairQuote.setSelected(true);
+        // 4. Insert pair quote
+        CheckBox insertPairQuoteCheck = new CheckBox("Insert pair quote");
+        insertPairQuoteCheck.setSelected(settings.isSmartKeysInsertPairQuote());
+        insertPairQuoteCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("smartKeys_insertPairQuote", insertPairQuoteCheck);
 
-        CheckBox reformatOnCloseBrace = new CheckBox("Reformat block on typing '}'");
-        reformatOnCloseBrace.setSelected(true);
+        // 5. Reformat block on typing '}'
+        CheckBox reformatBlockOnBraceCheck = new CheckBox("Reformat block on typing '}'");
+        reformatBlockOnBraceCheck.setSelected(settings.isSmartKeysReformatBlockOnBrace());
+        reformatBlockOnBraceCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("smartKeys_reformatBlockOnBrace", reformatBlockOnBraceCheck);
 
-        CheckBox useCamelHumps = new CheckBox("Use \"CamelHumps\" words");
-        useCamelHumps.setSelected(false);
+        // 6. Use \"CamelHumps\" words
+        CheckBox useCamelHumpsCheck = new CheckBox("Use \"CamelHumps\" words");
+        useCamelHumpsCheck.setSelected(settings.isSmartKeysUseCamelHumps());
+        useCamelHumpsCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("smartKeys_useCamelHumps", useCamelHumpsCheck);
 
-        CheckBox honorCamelHumps = new CheckBox("Honor \"CamelHumps\" words settings when selecting on double click");
-        honorCamelHumps.setSelected(true);
+        // 7. Honor \"CamelHumps\" words settings when selecting on double click
+        CheckBox honorCamelHumpsCheck = new CheckBox("Honor \"CamelHumps\" words settings when selecting on double click");
+        honorCamelHumpsCheck.setSelected(settings.isSmartKeysHonorCamelHumpsOnDoubleClick());
+        honorCamelHumpsCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("smartKeys_honorCamelHumpsOnDoubleClick", honorCamelHumpsCheck);
 
-        CheckBox surroundSelection = new CheckBox("Surround selection on typing quote or brace");
-        surroundSelection.setSelected(true);
+        // 8. Surround selection on typing quote or brace
+        CheckBox surroundSelectionCheck = new CheckBox("Surround selection on typing quote or brace");
+        surroundSelectionCheck.setSelected(settings.isSmartKeysSurroundSelectionOnQuoteOrBrace());
+        surroundSelectionCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("smartKeys_surroundSelectionOnQuoteOrBrace", surroundSelectionCheck);
 
-        CheckBox multiCarets = new CheckBox("Add multiple carets on double Ctrl with arrow keys");
-        multiCarets.setSelected(true);
+        // 9. Add multiple carets on double modifier with arrow keys
+        boolean isMac = System.getProperty("os.name", "").toLowerCase().contains("mac");
+        String modLabel = isMac ? "\u2325" : "Ctrl";
+        CheckBox multiCaretsCheck = new CheckBox("Add multiple carets on double " + modLabel + " with arrow keys");
+        multiCaretsCheck.setSelected(settings.isSmartKeysMultiCaretsOnDoubleModifier());
+        multiCaretsCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("smartKeys_multiCaretsOnDoubleModifier", multiCaretsCheck);
 
-        CheckBox jumpOutsideBracket = new CheckBox("Jump outside closing bracket/quote with Tab when typing");
-        jumpOutsideBracket.setSelected(true);
+        // 10. Jump outside closing bracket/quote with Tab when typing
+        CheckBox jumpOutsideBracketCheck = new CheckBox("Jump outside closing bracket/quote with Tab when typing");
+        jumpOutsideBracketCheck.setSelected(settings.isSmartKeysJumpOutsideBracketWithTab());
+        jumpOutsideBracketCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("smartKeys_jumpOutsideBracketWithTab", jumpOutsideBracketCheck);
 
-        Label enterSection = new Label("Enter");
-        enterSection.setStyle("-fx-font-weight: bold; -fx-text-fill: -text;");
+        // Enter Section
+        HBox enterHeader = createSectionHeader("Enter");
 
-        CheckBox smartIndent = new CheckBox("Smart indent");
-        smartIndent.setSelected(true);
+        CheckBox smartIndentCheck = new CheckBox("Smart indent");
+        smartIndentCheck.setSelected(settings.isSmartKeysEnterSmartIndent());
+        smartIndentCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("smartKeys_enterSmartIndent", smartIndentCheck);
 
-        CheckBox insertPairBraceEnter = new CheckBox("Insert pair '}'");
-        insertPairBraceEnter.setSelected(true);
+        CheckBox insertPairBraceCheck = new CheckBox("Insert pair '}'");
+        insertPairBraceCheck.setSelected(settings.isSmartKeysEnterInsertPairBrace());
+        insertPairBraceCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("smartKeys_enterInsertPairBrace", insertPairBraceCheck);
 
-        CheckBox closeBlockComment = new CheckBox("Close block comment");
-        closeBlockComment.setSelected(true);
+        CheckBox closeBlockCommentCheck = new CheckBox("Close block comment");
+        closeBlockCommentCheck.setSelected(settings.isSmartKeysEnterCloseBlockComment());
+        closeBlockCommentCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("smartKeys_enterCloseBlockComment", closeBlockCommentCheck);
 
-        VBox enterBox = new VBox(6, enterSection, smartIndent, insertPairBraceEnter, closeBlockComment);
+        VBox enterBox = new VBox(6, smartIndentCheck, insertPairBraceCheck, closeBlockCommentCheck);
+        enterBox.setPadding(new Insets(2, 0, 4, 18));
 
+        // Unindent on Backspace
         Label unindentLabel = new Label("Unindent on Backspace:");
+        unindentLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        unindentLabel.setMinWidth(160);
+
         ComboBox<String> unindentCombo = new ComboBox<>();
-        unindentCombo.getItems().addAll("To proper indent position", "To nearest indent boundary", "Disabled");
-        unindentCombo.getSelectionModel().select(0);
-        unindentCombo.setPrefWidth(220);
+        unindentCombo.getItems().addAll(AppSettingsStore.Settings.defaultSmartKeysUnindentOptions());
+        unindentCombo.setValue(settings.getSmartKeysUnindentOnBackspace());
+        unindentCombo.setPrefWidth(200);
+        unindentCombo.setStyle("-fx-font-size: 12px;");
+        inputs.put("smartKeys_unindentOnBackspace", unindentCombo);
 
+        HBox unindentRow = new HBox(8, unindentLabel, unindentCombo);
+        unindentRow.setAlignment(Pos.CENTER_LEFT);
+
+        // Reformat on paste
         Label reformatPasteLabel = new Label("Reformat on paste:");
+        reformatPasteLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        reformatPasteLabel.setMinWidth(160);
+
         ComboBox<String> reformatPasteCombo = new ComboBox<>();
-        reformatPasteCombo.getItems().addAll("None", "Indent each line", "Reformat block");
-        reformatPasteCombo.getSelectionModel().select(0);
-        reformatPasteCombo.setPrefWidth(160);
+        reformatPasteCombo.getItems().addAll(AppSettingsStore.Settings.defaultSmartKeysReformatOnPasteOptions());
+        reformatPasteCombo.setValue(settings.getSmartKeysReformatOnPaste());
+        reformatPasteCombo.setPrefWidth(140);
+        reformatPasteCombo.setStyle("-fx-font-size: 12px;");
+        inputs.put("smartKeys_reformatOnPaste", reformatPasteCombo);
 
-        CheckBox reformatLineBreaks = new CheckBox("Reformat again to remove custom line breaks");
-        reformatLineBreaks.setSelected(false);
+        HBox reformatPasteRow = new HBox(8, reformatPasteLabel, reformatPasteCombo);
+        reformatPasteRow.setAlignment(Pos.CENTER_LEFT);
 
-        GridPane dropdownsGrid = new GridPane();
-        dropdownsGrid.setHgap(12);
-        dropdownsGrid.setVgap(8);
-        dropdownsGrid.add(unindentLabel, 0, 0);
-        dropdownsGrid.add(unindentCombo, 1, 0);
-        dropdownsGrid.add(reformatPasteLabel, 0, 1);
-        dropdownsGrid.add(reformatPasteCombo, 1, 1);
+        // Reformat again to remove custom line breaks
+        CheckBox reformatLineBreaksCheck = new CheckBox("Reformat again to remove custom line breaks");
+        reformatLineBreaksCheck.setSelected(settings.isSmartKeysReformatRemoveCustomLineBreaks());
+        reformatLineBreaksCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        reformatLineBreaksCheck.disableProperty().bind(reformatPasteCombo.valueProperty().isEqualTo("None"));
+        inputs.put("smartKeys_reformatRemoveCustomLineBreaks", reformatLineBreaksCheck);
 
-        VBox panel = new VBox(10, title,
-                homeNonWhitespace, endIndentPos, insertPairedBrackets, insertPairQuote,
-                reformatOnCloseBrace, useCamelHumps, honorCamelHumps, surroundSelection,
-                multiCarets, jumpOutsideBracket,
-                new Separator(),
+        panel.getChildren().addAll(
+                homeNonWhitespaceCheck,
+                endIndentPosCheck,
+                insertPairedBracketsCheck,
+                insertPairQuoteCheck,
+                reformatBlockOnBraceCheck,
+                useCamelHumpsCheck,
+                honorCamelHumpsCheck,
+                surroundSelectionCheck,
+                multiCaretsCheck,
+                jumpOutsideBracketCheck,
+                enterHeader,
                 enterBox,
-                new Separator(),
-                dropdownsGrid, reformatLineBreaks);
-        panel.setPadding(new Insets(4, 8, 16, 8));
+                unindentRow,
+                reformatPasteRow,
+                reformatLineBreaksCheck
+        );
         return panel;
+    }
+
+    private static final class PostfixTreeItemData {
+        final boolean isGroup;
+        final String language;
+        final AppSettingsStore.PostfixTemplateConfig config;
+
+        PostfixTreeItemData(String language) {
+            this.isGroup = true;
+            this.language = language;
+            this.config = null;
+        }
+
+        PostfixTreeItemData(AppSettingsStore.PostfixTemplateConfig config) {
+            this.isGroup = false;
+            this.language = config != null ? config.getLanguage() : "SQL";
+            this.config = config;
+        }
+    }
+
+    private static VBox buildPostfixCompletionPanel(AppSettingsStore.Settings settings, Map<String, Object> inputs) {
+        VBox panel = new VBox(10);
+        panel.setPadding(new Insets(10, 16, 16, 16));
+
+        // 1. Enable postfix completion
+        CheckBox enableCheck = new CheckBox("Enable postfix completion");
+        enableCheck.setSelected(settings.isPostfixCompletionEnabled());
+        enableCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px; -fx-font-weight: bold;");
+        inputs.put("postfixCompletion_enabled", enableCheck);
+
+        // 2. Expand templates with
+        Label expandWithLabel = new Label("Expand templates with");
+        expandWithLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+
+        ComboBox<String> expandWithCombo = new ComboBox<>();
+        expandWithCombo.getItems().addAll(AppSettingsStore.Settings.defaultPostfixExpandWithOptions());
+        expandWithCombo.setValue(settings.getPostfixCompletionExpandWith());
+        expandWithCombo.setPrefWidth(90);
+        expandWithCombo.setStyle("-fx-font-size: 12px;");
+        inputs.put("postfixCompletion_expandWith", expandWithCombo);
+
+        HBox expandRow = new HBox(8, expandWithLabel, expandWithCombo);
+        expandRow.setAlignment(Pos.CENTER_LEFT);
+        expandRow.disableProperty().bind(enableCheck.selectedProperty().not());
+
+        // Working copy of templates list
+        List<AppSettingsStore.PostfixTemplateConfig> templateList = new ArrayList<>();
+        for (AppSettingsStore.PostfixTemplateConfig t : settings.getPostfixTemplates()) {
+            templateList.add(t.copy());
+        }
+        inputs.put("postfixCompletion_templates", templateList);
+
+        // TreeView with CheckBox items
+        CheckBoxTreeItem<PostfixTreeItemData> rootItem = new CheckBoxTreeItem<>(new PostfixTreeItemData("Root"));
+        rootItem.setExpanded(true);
+
+        CheckBoxTreeItem<PostfixTreeItemData> sqlGroupItem = new CheckBoxTreeItem<>(new PostfixTreeItemData("SQL"));
+        sqlGroupItem.setExpanded(true);
+        rootItem.getChildren().add(sqlGroupItem);
+
+        for (AppSettingsStore.PostfixTemplateConfig t : templateList) {
+            CheckBoxTreeItem<PostfixTreeItemData> item = new CheckBoxTreeItem<>(new PostfixTreeItemData(t));
+            item.setSelected(t.isEnabled());
+            sqlGroupItem.getChildren().add(item);
+        }
+
+        boolean allEnabled = templateList.stream().allMatch(AppSettingsStore.PostfixTemplateConfig::isEnabled);
+        sqlGroupItem.setSelected(allEnabled);
+
+        TreeView<PostfixTreeItemData> treeView = new TreeView<>(rootItem);
+        treeView.setShowRoot(false);
+        treeView.setStyle("-fx-background-color: -surface; -fx-border-color: -border; -fx-border-width: 1px;");
+        VBox.setVgrow(treeView, Priority.ALWAYS);
+
+        treeView.setCellFactory(tv -> new TreeCell<>() {
+            private final CheckBox cb = new CheckBox();
+            private final Label keyLbl = new Label();
+            private final Label descLbl = new Label();
+            private final HBox cellContent = new HBox(6, cb, keyLbl, descLbl);
+
+            {
+                cellContent.setAlignment(Pos.CENTER_LEFT);
+                keyLbl.setStyle("-fx-font-weight: bold; -fx-text-fill: -text; -fx-font-size: 12px;");
+                descLbl.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 12px;");
+
+                cb.setOnAction(e -> {
+                    TreeItem<PostfixTreeItemData> ti = getTreeItem();
+                    if (ti instanceof CheckBoxTreeItem<PostfixTreeItemData> cti) {
+                        cti.setSelected(cb.isSelected());
+                        PostfixTreeItemData data = ti.getValue();
+                        if (data != null) {
+                            if (data.isGroup) {
+                                for (TreeItem<PostfixTreeItemData> ch : ti.getChildren()) {
+                                    if (ch instanceof CheckBoxTreeItem<PostfixTreeItemData> chCti) {
+                                        chCti.setSelected(cb.isSelected());
+                                        if (ch.getValue() != null && ch.getValue().config != null) {
+                                            ch.getValue().config.setEnabled(cb.isSelected());
+                                        }
+                                    }
+                                }
+                            } else if (data.config != null) {
+                                data.config.setEnabled(cb.isSelected());
+                            }
+                        }
+                    }
+                });
+            }
+
+            @Override
+            protected void updateItem(PostfixTreeItemData data, boolean empty) {
+                super.updateItem(data, empty);
+                if (empty || data == null) {
+                    setGraphic(null);
+                    setText(null);
+                } else {
+                    TreeItem<PostfixTreeItemData> ti = getTreeItem();
+                    if (ti instanceof CheckBoxTreeItem<PostfixTreeItemData> cti) {
+                        cb.setSelected(cti.isSelected());
+                    }
+                    if (data.isGroup) {
+                        keyLbl.setText(data.language);
+                        descLbl.setText("");
+                    } else {
+                        keyLbl.setText(data.config.getKey());
+                        descLbl.setText(data.config.getDescription());
+                    }
+                    setGraphic(cellContent);
+                    setText(null);
+                }
+            }
+        });
+
+        // Toolbar above TreeView
+        Button addBtn = new Button("+");
+        addBtn.setTooltip(new Tooltip("Add postfix template"));
+        addBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: -text; -fx-font-weight: bold; -fx-font-size: 14px; -fx-cursor: hand; -fx-padding: 2 8;");
+
+        Button removeBtn = new Button("—");
+        removeBtn.setTooltip(new Tooltip("Remove template"));
+        removeBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: -text; -fx-font-size: 13px; -fx-cursor: hand; -fx-padding: 2 8;");
+
+        Button editBtn = new Button("✎");
+        editBtn.setTooltip(new Tooltip("Edit template"));
+        editBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: -text; -fx-font-size: 13px; -fx-cursor: hand; -fx-padding: 2 8;");
+
+        Button dupBtn = new Button("⧉");
+        dupBtn.setTooltip(new Tooltip("Duplicate template"));
+        dupBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: -text; -fx-font-size: 13px; -fx-cursor: hand; -fx-padding: 2 8;");
+
+        HBox toolbar = new HBox(2, addBtn, removeBtn, editBtn, dupBtn);
+        toolbar.setAlignment(Pos.CENTER_LEFT);
+        toolbar.setStyle("-fx-background-color: #2b2d30; -fx-border-color: -border; -fx-border-width: 1px 1px 0 1px; -fx-border-radius: 4px 4px 0 0;");
+
+        VBox leftColumn = new VBox(0, toolbar, treeView);
+        leftColumn.setPrefWidth(340);
+        leftColumn.setMinWidth(300);
+
+        // Right column: instructions & Before/After preview
+        Label infoLabel = new Label("You have selected the postfix completion language.\nBy clicking the checkbox, you can enable/disable all postfix templates for the language.\nTo enable/disable a postfix template select it inside the group.");
+        infoLabel.setWrapText(true);
+        infoLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 12px;");
+        infoLabel.setMinHeight(46);
+
+        Label beforeLabel = new Label("Before:");
+        beforeLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: -text; -fx-font-size: 12px;");
+
+        TextArea beforeLineNums = createLineNumArea(2);
+        TextArea beforeTextArea = createPreviewTextArea(110);
+        beforeLineNums.setText("1\n2");
+        beforeTextArea.setText("The sample code featuring selected template will be shown here.\n[Flashing rectangle] shows the place where the intention is applicable.");
+        HBox beforeBox = new HBox(0, beforeLineNums, beforeTextArea);
+        HBox.setHgrow(beforeTextArea, Priority.ALWAYS);
+        beforeBox.setStyle("-fx-border-color: -border; -fx-border-width: 1px; -fx-border-radius: 4px;");
+
+        Label afterLabel = new Label("After:");
+        afterLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: -text; -fx-font-size: 12px;");
+
+        TextArea afterLineNums = createLineNumArea(1);
+        TextArea afterTextArea = createPreviewTextArea(110);
+        afterLineNums.setText("1");
+        afterTextArea.setText("Postfix completion invocation result will be shown here.");
+        HBox afterBox = new HBox(0, afterLineNums, afterTextArea);
+        HBox.setHgrow(afterTextArea, Priority.ALWAYS);
+        afterBox.setStyle("-fx-border-color: -border; -fx-border-width: 1px; -fx-border-radius: 4px;");
+
+        VBox rightColumn = new VBox(8, infoLabel, beforeLabel, beforeBox, afterLabel, afterBox);
+        HBox.setHgrow(rightColumn, Priority.ALWAYS);
+
+        // Update preview based on tree selection
+        treeView.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal == null || newVal.getValue() == null || newVal.getValue().isGroup) {
+                infoLabel.setText("You have selected the postfix completion language.\nBy clicking the checkbox, you can enable/disable all postfix templates for the language.\nTo enable/disable a postfix template select it inside the group.");
+                beforeLineNums.setText("1\n2");
+                beforeTextArea.setText("The sample code featuring selected template will be shown here.\n[Flashing rectangle] shows the place where the intention is applicable.");
+                afterLineNums.setText("1");
+                afterTextArea.setText("Postfix completion invocation result will be shown here.");
+            } else {
+                AppSettingsStore.PostfixTemplateConfig cfg = newVal.getValue().config;
+                infoLabel.setText("Expression: " + cfg.getExpression() + "\n" + (cfg.getDescription().isEmpty() ? "" : cfg.getDescription()));
+                String beforeSample = (cfg.getExampleBefore() != null && !cfg.getExampleBefore().isEmpty())
+                        ? cfg.getExampleBefore() : "authors." + cfg.getKey();
+                String afterSample = (cfg.getExampleAfter() != null && !cfg.getExampleAfter().isEmpty())
+                        ? cfg.getExampleAfter() : cfg.getExpression().replace("$EXPR$", "authors");
+                int bLines = beforeSample.split("\n", -1).length;
+                StringBuilder bNum = new StringBuilder();
+                for (int i = 1; i <= bLines; i++) { if (i > 1) bNum.append("\n"); bNum.append(i); }
+                beforeLineNums.setText(bNum.toString());
+                beforeTextArea.setText(beforeSample);
+
+                int aLines = afterSample.split("\n", -1).length;
+                StringBuilder aNum = new StringBuilder();
+                for (int i = 1; i <= aLines; i++) { if (i > 1) aNum.append("\n"); aNum.append(i); }
+                afterLineNums.setText(aNum.toString());
+                afterTextArea.setText(afterSample);
+            }
+        });
+
+        // Add action
+        addBtn.setOnAction(e -> {
+            showEditPostfixTemplateDialog(panel.getScene() != null ? panel.getScene().getWindow() : null, null, newCfg -> {
+                templateList.add(newCfg);
+                CheckBoxTreeItem<PostfixTreeItemData> newItem = new CheckBoxTreeItem<>(new PostfixTreeItemData(newCfg));
+                newItem.setSelected(newCfg.isEnabled());
+                sqlGroupItem.getChildren().add(newItem);
+                treeView.getSelectionModel().select(newItem);
+            });
+        });
+
+        // Remove action
+        removeBtn.setOnAction(e -> {
+            TreeItem<PostfixTreeItemData> sel = treeView.getSelectionModel().getSelectedItem();
+            if (sel != null && sel.getValue() != null && !sel.getValue().isGroup) {
+                templateList.remove(sel.getValue().config);
+                sqlGroupItem.getChildren().remove(sel);
+            }
+        });
+
+        // Edit action
+        editBtn.setOnAction(e -> {
+            TreeItem<PostfixTreeItemData> sel = treeView.getSelectionModel().getSelectedItem();
+            if (sel != null && sel.getValue() != null && !sel.getValue().isGroup) {
+                AppSettingsStore.PostfixTemplateConfig target = sel.getValue().config;
+                showEditPostfixTemplateDialog(panel.getScene() != null ? panel.getScene().getWindow() : null, target, updated -> {
+                    target.setKey(updated.getKey());
+                    target.setExpression(updated.getExpression());
+                    target.setDescription(updated.getDescription());
+                    target.setExampleBefore(updated.getExampleBefore());
+                    target.setExampleAfter(updated.getExampleAfter());
+                    treeView.refresh();
+                });
+            }
+        });
+
+        // Duplicate action
+        dupBtn.setOnAction(e -> {
+            TreeItem<PostfixTreeItemData> sel = treeView.getSelectionModel().getSelectedItem();
+            if (sel != null && sel.getValue() != null && !sel.getValue().isGroup) {
+                AppSettingsStore.PostfixTemplateConfig copy = sel.getValue().config.copy();
+                copy.setKey(copy.getKey() + "-copy");
+                templateList.add(copy);
+                CheckBoxTreeItem<PostfixTreeItemData> newItem = new CheckBoxTreeItem<>(new PostfixTreeItemData(copy));
+                newItem.setSelected(copy.isEnabled());
+                sqlGroupItem.getChildren().add(newItem);
+                treeView.getSelectionModel().select(newItem);
+            }
+        });
+
+        // Initial selection: select the sqlGroupItem or first template
+        treeView.getSelectionModel().select(sqlGroupItem);
+
+        HBox splitBox = new HBox(14, leftColumn, rightColumn);
+        VBox.setVgrow(splitBox, Priority.ALWAYS);
+        splitBox.disableProperty().bind(enableCheck.selectedProperty().not());
+
+        panel.getChildren().addAll(enableCheck, expandRow, splitBox);
+        return panel;
+    }
+
+    private static void showEditPostfixTemplateDialog(Window owner, AppSettingsStore.PostfixTemplateConfig initial,
+                                                      java.util.function.Consumer<AppSettingsStore.PostfixTemplateConfig> onSave) {
+        Stage dialog = new Stage();
+        dialog.initModality(Modality.APPLICATION_MODAL);
+        if (owner != null) dialog.initOwner(owner);
+        dialog.setTitle(initial == null ? "Add Postfix Template" : "Edit Postfix Template");
+
+        TextField keyField = new TextField(initial != null ? initial.getKey() : "");
+        keyField.setPromptText("Template key, e.g. from");
+
+        TextField exprField = new TextField(initial != null ? initial.getExpression() : "");
+        exprField.setPromptText("Expansion expression, e.g. select * from $EXPR$");
+
+        TextField descField = new TextField(initial != null ? initial.getDescription() : "");
+        descField.setPromptText("Description, e.g. select | from authors");
+
+        TextField beforeField = new TextField(initial != null ? initial.getExampleBefore() : "");
+        beforeField.setPromptText("Example before, e.g. authors.from");
+
+        TextField afterField = new TextField(initial != null ? initial.getExampleAfter() : "");
+        afterField.setPromptText("Example after, e.g. select * from authors");
+
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(8);
+        grid.addRow(0, new Label("Key:"), keyField);
+        grid.addRow(1, new Label("Expression:"), exprField);
+        grid.addRow(2, new Label("Description:"), descField);
+        grid.addRow(3, new Label("Before:"), beforeField);
+        grid.addRow(4, new Label("After:"), afterField);
+        GridPane.setHgrow(keyField, Priority.ALWAYS);
+        GridPane.setHgrow(exprField, Priority.ALWAYS);
+        GridPane.setHgrow(descField, Priority.ALWAYS);
+        GridPane.setHgrow(beforeField, Priority.ALWAYS);
+        GridPane.setHgrow(afterField, Priority.ALWAYS);
+
+        Button okBtn = new Button("OK");
+        okBtn.setDefaultButton(true);
+        okBtn.setStyle("-fx-background-color: -accent; -fx-text-fill: white; -fx-padding: 5 16;");
+        Button cancelBtn = new Button("Cancel");
+        cancelBtn.setCancelButton(true);
+        cancelBtn.setStyle("-fx-padding: 5 16;");
+
+        okBtn.setOnAction(e -> {
+            String k = keyField.getText().trim();
+            if (k.isEmpty()) return;
+            AppSettingsStore.PostfixTemplateConfig res = new AppSettingsStore.PostfixTemplateConfig(
+                    k, "SQL", exprField.getText().trim(), descField.getText().trim(),
+                    true, beforeField.getText().trim(), afterField.getText().trim()
+            );
+            onSave.accept(res);
+            dialog.close();
+        });
+        cancelBtn.setOnAction(e -> dialog.close());
+
+        HBox btnBox = new HBox(8, okBtn, cancelBtn);
+        btnBox.setAlignment(Pos.CENTER_RIGHT);
+
+        VBox root = new VBox(12, grid, btnBox);
+        root.setPadding(new Insets(16));
+        dialog.setScene(new Scene(root, 440, 260));
+        dialog.getScene().getStylesheets().add(ThemeManager.stylesheetUrl(ThemeManager.getCurrent()));
+        dialog.showAndWait();
+    }
+
+    private static TextArea createLineNumArea(int lines) {
+        TextArea area = new TextArea();
+        area.setEditable(false);
+        area.setFocusTraversable(false);
+        area.setPrefWidth(34);
+        area.setMinWidth(34);
+        area.setMaxWidth(34);
+        area.setStyle("-fx-font-family: 'JetBrains Mono', 'Consolas', monospace; -fx-font-size: 11px; -fx-control-inner-background: #1e1f22; -fx-text-fill: #565861; -fx-text-alignment: right;");
+        StringBuilder sb = new StringBuilder();
+        for (int i = 1; i <= lines; i++) {
+            if (i > 1) sb.append("\n");
+            sb.append(i);
+        }
+        area.setText(sb.toString());
+        return area;
+    }
+
+    private static TextArea createPreviewTextArea(int prefHeight) {
+        TextArea area = new TextArea();
+        area.setEditable(false);
+        area.setFocusTraversable(false);
+        area.setStyle("-fx-font-family: 'JetBrains Mono', 'Consolas', monospace; -fx-font-size: 11px; -fx-control-inner-background: #1e1f22; -fx-text-fill: #bcbec4;");
+        area.setPrefHeight(prefHeight);
+        return area;
     }
 
     private static VBox buildAutoImportPanel(AppSettingsStore.Settings settings, Map<String, Object> inputs) {
@@ -7935,6 +8366,92 @@ public final class SettingsDialog {
         if (inputs.containsKey("inlineCompletion_syncWithPopup")) {
             CheckBox cb = (CheckBox) inputs.get("inlineCompletion_syncWithPopup");
             settings.setInlineSyncWithPopup(cb.isSelected());
+        }
+
+        // Editor > General > Smart Keys
+        if (inputs.containsKey("smartKeys_homeMovesCaret")) {
+            CheckBox cb = (CheckBox) inputs.get("smartKeys_homeMovesCaret");
+            settings.setSmartKeysHomeMovesCaret(cb.isSelected());
+        }
+        if (inputs.containsKey("smartKeys_endBlankLineMovesCaret")) {
+            CheckBox cb = (CheckBox) inputs.get("smartKeys_endBlankLineMovesCaret");
+            settings.setSmartKeysEndBlankLineMovesCaret(cb.isSelected());
+        }
+        if (inputs.containsKey("smartKeys_insertPairedBrackets")) {
+            CheckBox cb = (CheckBox) inputs.get("smartKeys_insertPairedBrackets");
+            settings.setSmartKeysInsertPairedBrackets(cb.isSelected());
+        }
+        if (inputs.containsKey("smartKeys_insertPairQuote")) {
+            CheckBox cb = (CheckBox) inputs.get("smartKeys_insertPairQuote");
+            settings.setSmartKeysInsertPairQuote(cb.isSelected());
+        }
+        if (inputs.containsKey("smartKeys_reformatBlockOnBrace")) {
+            CheckBox cb = (CheckBox) inputs.get("smartKeys_reformatBlockOnBrace");
+            settings.setSmartKeysReformatBlockOnBrace(cb.isSelected());
+        }
+        if (inputs.containsKey("smartKeys_useCamelHumps")) {
+            CheckBox cb = (CheckBox) inputs.get("smartKeys_useCamelHumps");
+            settings.setSmartKeysUseCamelHumps(cb.isSelected());
+        }
+        if (inputs.containsKey("smartKeys_honorCamelHumpsOnDoubleClick")) {
+            CheckBox cb = (CheckBox) inputs.get("smartKeys_honorCamelHumpsOnDoubleClick");
+            settings.setSmartKeysHonorCamelHumpsOnDoubleClick(cb.isSelected());
+        }
+        if (inputs.containsKey("smartKeys_surroundSelectionOnQuoteOrBrace")) {
+            CheckBox cb = (CheckBox) inputs.get("smartKeys_surroundSelectionOnQuoteOrBrace");
+            settings.setSmartKeysSurroundSelectionOnQuoteOrBrace(cb.isSelected());
+        }
+        if (inputs.containsKey("smartKeys_multiCaretsOnDoubleModifier")) {
+            CheckBox cb = (CheckBox) inputs.get("smartKeys_multiCaretsOnDoubleModifier");
+            settings.setSmartKeysMultiCaretsOnDoubleModifier(cb.isSelected());
+        }
+        if (inputs.containsKey("smartKeys_jumpOutsideBracketWithTab")) {
+            CheckBox cb = (CheckBox) inputs.get("smartKeys_jumpOutsideBracketWithTab");
+            settings.setSmartKeysJumpOutsideBracketWithTab(cb.isSelected());
+        }
+        if (inputs.containsKey("smartKeys_enterSmartIndent")) {
+            CheckBox cb = (CheckBox) inputs.get("smartKeys_enterSmartIndent");
+            settings.setSmartKeysEnterSmartIndent(cb.isSelected());
+        }
+        if (inputs.containsKey("smartKeys_enterInsertPairBrace")) {
+            CheckBox cb = (CheckBox) inputs.get("smartKeys_enterInsertPairBrace");
+            settings.setSmartKeysEnterInsertPairBrace(cb.isSelected());
+        }
+        if (inputs.containsKey("smartKeys_enterCloseBlockComment")) {
+            CheckBox cb = (CheckBox) inputs.get("smartKeys_enterCloseBlockComment");
+            settings.setSmartKeysEnterCloseBlockComment(cb.isSelected());
+        }
+        if (inputs.containsKey("smartKeys_unindentOnBackspace")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("smartKeys_unindentOnBackspace");
+            if (cb.getValue() != null) settings.setSmartKeysUnindentOnBackspace(cb.getValue());
+        }
+        if (inputs.containsKey("smartKeys_reformatOnPaste")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("smartKeys_reformatOnPaste");
+            if (cb.getValue() != null) settings.setSmartKeysReformatOnPaste(cb.getValue());
+        }
+        if (inputs.containsKey("smartKeys_reformatRemoveCustomLineBreaks")) {
+            CheckBox cb = (CheckBox) inputs.get("smartKeys_reformatRemoveCustomLineBreaks");
+            settings.setSmartKeysReformatRemoveCustomLineBreaks(cb.isSelected());
+        }
+
+        // Editor > General > Postfix Completion
+        if (inputs.containsKey("postfixCompletion_enabled")) {
+            CheckBox cb = (CheckBox) inputs.get("postfixCompletion_enabled");
+            settings.setPostfixCompletionEnabled(cb.isSelected());
+        }
+        if (inputs.containsKey("postfixCompletion_expandWith")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("postfixCompletion_expandWith");
+            if (cb.getValue() != null) settings.setPostfixCompletionExpandWith(cb.getValue());
+        }
+        if (inputs.containsKey("postfixCompletion_templates")) {
+            List<AppSettingsStore.PostfixTemplateConfig> list = (List<AppSettingsStore.PostfixTemplateConfig>) inputs.get("postfixCompletion_templates");
+            if (list != null) {
+                List<AppSettingsStore.PostfixTemplateConfig> copies = new ArrayList<>();
+                for (AppSettingsStore.PostfixTemplateConfig t : list) {
+                    copies.add(t.copy());
+                }
+                settings.setPostfixTemplates(copies);
+            }
         }
 
         // Persist

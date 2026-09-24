@@ -349,7 +349,57 @@ public class QueryTab extends Tab {
                 e.consume();
                 return;
             }
-            if (!completionPopup.isShowing()) return;
+            if (!completionPopup.isShowing()) {
+                if (tryExpandPostfixCompletion(e.getCode())) {
+                    e.consume();
+                    return;
+                }
+
+                AppSettingsStore.Settings st = AppSettingsStore.load();
+                // Smart Keys: Jump outside bracket/quote on Tab
+                if (e.getCode() == KeyCode.TAB && !e.isShiftDown() && !e.isControlDown() && !e.isAltDown() && !e.isMetaDown()) {
+                    if (st.isSmartKeysJumpOutsideBracketWithTab()) {
+                        int caret = editor.getCaretPosition();
+                        if (caret < editor.getLength()) {
+                            char next = editor.getText().charAt(caret);
+                            if (next == ')' || next == ']' || next == '}' || next == '>' || next == '\'' || next == '"') {
+                                editor.moveTo(caret + 1);
+                                e.consume();
+                                return;
+                            }
+                        }
+                    }
+                }
+
+                // Smart Keys: Smart indent on Enter
+                if (e.getCode() == KeyCode.ENTER && !e.isShiftDown() && !e.isControlDown() && !e.isAltDown() && !e.isMetaDown()) {
+                    if (st.isSmartKeysEnterSmartIndent()) {
+                        int caret = editor.getCaretPosition();
+                        String text = editor.getText();
+                        int lineStart = text.lastIndexOf('\n', caret - 1);
+                        lineStart = lineStart == -1 ? 0 : lineStart + 1;
+                        String lineBefore = text.substring(lineStart, caret);
+                        StringBuilder indent = new StringBuilder();
+                        for (int i = 0; i < lineBefore.length(); i++) {
+                            char ch = lineBefore.charAt(i);
+                            if (ch == ' ' || ch == '\t') indent.append(ch);
+                            else break;
+                        }
+                        if (st.isSmartKeysEnterInsertPairBrace() && lineBefore.trim().endsWith("{")) {
+                            editor.insertText(caret, "\n" + indent + "    \n" + indent + "}");
+                            editor.moveTo(caret + 1 + indent.length() + 4);
+                            e.consume();
+                            return;
+                        } else if (indent.length() > 0) {
+                            editor.insertText(caret, "\n" + indent);
+                            editor.moveTo(caret + 1 + indent.length());
+                            e.consume();
+                            return;
+                        }
+                    }
+                }
+                return;
+            }
 
             AppSettingsStore.Settings s = AppSettingsStore.load();
             boolean acceptByKey = false;
@@ -376,6 +426,73 @@ public class QueryTab extends Tab {
                 case ENTER, TAB -> { insertSelectedCompletion(); e.consume(); }
                 case ESCAPE -> { completionPopup.hide(); e.consume(); }
                 default -> {}
+            }
+        });
+
+        editor.addEventFilter(KeyEvent.KEY_TYPED, e -> {
+            String typed = e.getCharacter();
+            if (typed == null || typed.isEmpty()) return;
+            char c = typed.charAt(0);
+            AppSettingsStore.Settings s = AppSettingsStore.load();
+
+            IndexRange sel = editor.getSelection();
+            boolean hasSel = sel != null && sel.getLength() > 0;
+
+            if (s.isSmartKeysSurroundSelectionOnQuoteOrBrace() && hasSel) {
+                if (c == '(' || c == '[' || c == '{' || c == '<' || c == '\'' || c == '"') {
+                    char close = c == '(' ? ')' : (c == '[' ? ']' : (c == '{' ? '}' : (c == '<' ? '>' : c)));
+                    String selText = editor.getSelectedText();
+                    int start = sel.getStart();
+                    editor.replaceText(start, sel.getEnd(), c + selText + close);
+                    editor.selectRange(start + 1, start + 1 + selText.length());
+                    e.consume();
+                    return;
+                }
+            }
+
+            if (s.isSmartKeysInsertPairedBrackets()) {
+                if (c == '(') {
+                    int caret = editor.getCaretPosition();
+                    editor.insertText(caret, "()");
+                    editor.moveTo(caret + 1);
+                    e.consume();
+                    return;
+                } else if (c == '[') {
+                    int caret = editor.getCaretPosition();
+                    editor.insertText(caret, "[]");
+                    editor.moveTo(caret + 1);
+                    e.consume();
+                    return;
+                } else if (c == '{') {
+                    int caret = editor.getCaretPosition();
+                    editor.insertText(caret, "{}");
+                    editor.moveTo(caret + 1);
+                    e.consume();
+                    return;
+                }
+                if (c == ')' || c == ']' || c == '}') {
+                    int caret = editor.getCaretPosition();
+                    if (caret < editor.getLength() && editor.getText().charAt(caret) == c) {
+                        editor.moveTo(caret + 1);
+                        e.consume();
+                        return;
+                    }
+                }
+            }
+
+            if (s.isSmartKeysInsertPairQuote()) {
+                if (c == '\'' || c == '"') {
+                    int caret = editor.getCaretPosition();
+                    if (caret < editor.getLength() && editor.getText().charAt(caret) == c) {
+                        editor.moveTo(caret + 1);
+                        e.consume();
+                        return;
+                    }
+                    editor.insertText(caret, "" + c + c);
+                    editor.moveTo(caret + 1);
+                    e.consume();
+                    return;
+                }
             }
         });
 
@@ -525,6 +642,81 @@ public class QueryTab extends Tab {
         suppressCompletion = false;
         completionPopup.hide();
         editor.requestFocus();
+    }
+
+    private boolean tryExpandPostfixCompletion(KeyCode code) {
+        AppSettingsStore.Settings s = AppSettingsStore.load();
+        if (!s.isPostfixCompletionEnabled()) return false;
+
+        String expandWith = s.getPostfixCompletionExpandWith();
+        boolean matchesKey = false;
+        if ("Tab".equalsIgnoreCase(expandWith) && code == KeyCode.TAB) matchesKey = true;
+        else if ("Space".equalsIgnoreCase(expandWith) && code == KeyCode.SPACE) matchesKey = true;
+        else if ("Enter".equalsIgnoreCase(expandWith) && code == KeyCode.ENTER) matchesKey = true;
+        if (!matchesKey) return false;
+
+        int caret = editor.getCaretPosition();
+        if (caret <= 0) return false;
+        String text = editor.getText();
+        if (caret > text.length()) caret = text.length();
+
+        int lineStart = text.lastIndexOf('\n', caret - 1);
+        lineStart = lineStart == -1 ? 0 : lineStart + 1;
+        String line = text.substring(lineStart, caret);
+
+        int dotIndex = line.lastIndexOf('.');
+        if (dotIndex <= 0) return false;
+
+        String key = line.substring(dotIndex + 1).trim();
+        if (key.isEmpty()) return false;
+
+        int exprEnd = dotIndex;
+        int exprStart = exprEnd;
+        while (exprStart > 0) {
+            char ch = line.charAt(exprStart - 1);
+            if (Character.isWhitespace(ch) || ch == '(' || ch == ',' || ch == ';') {
+                break;
+            }
+            exprStart--;
+        }
+        String expr = line.substring(exprStart, exprEnd).trim();
+        if (expr.isEmpty()) return false;
+
+        List<AppSettingsStore.PostfixTemplateConfig> templates = s.getPostfixTemplates();
+        if (templates == null) return false;
+
+        for (AppSettingsStore.PostfixTemplateConfig t : templates) {
+            if (t.isEnabled() && key.equalsIgnoreCase(t.getKey())) {
+                int absoluteStart = lineStart + exprStart;
+                int absoluteEnd = caret;
+
+                String templateExpr = t.getExpression();
+                if (templateExpr == null || templateExpr.isEmpty()) {
+                    templateExpr = t.getDescription();
+                }
+
+                String expanded;
+                if (templateExpr.contains("$EXPR$")) {
+                    expanded = templateExpr.replace("$EXPR$", expr);
+                } else if (templateExpr.toLowerCase().contains("authors")) {
+                    expanded = templateExpr.replaceAll("(?i)\\bauthors\\b", expr);
+                } else {
+                    expanded = templateExpr + " " + expr;
+                }
+
+                if (expanded.contains("|")) {
+                    int pipeIdx = expanded.indexOf('|');
+                    expanded = expanded.replaceFirst("\\|", "");
+                    editor.replaceText(absoluteStart, absoluteEnd, expanded);
+                    editor.moveTo(absoluteStart + pipeIdx);
+                } else {
+                    editor.replaceText(absoluteStart, absoluteEnd, expanded);
+                    editor.moveTo(absoluteStart + expanded.length());
+                }
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Pre-filled console text accessor (used by File → Save Console As…). */
