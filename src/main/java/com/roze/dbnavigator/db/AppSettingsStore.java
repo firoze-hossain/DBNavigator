@@ -221,6 +221,44 @@ public final class AppSettingsStore {
         public String ideAntialiasing = "Subpixel";
         public String editorAntialiasing = "Subpixel";
 
+        // Editor > General > Auto Import (DataGrip Alignment)
+        public boolean showXmlAutoImportTooltip = true;
+
+        // Editor > General > Breadcrumbs (DataGrip Alignment)
+        public boolean showBreadcrumbs = true;
+        public String breadcrumbsPlacement = "Bottom";
+        public boolean breadcrumbsHtml = false;
+        public boolean breadcrumbsMarkdown = false;
+        public boolean breadcrumbsXhtml = false;
+        public boolean breadcrumbsJson = false;
+        public boolean breadcrumbsSql = false;
+        public boolean breadcrumbsXml = false;
+
+        // Editor > General > Appearance (DataGrip Alignment)
+        public boolean caretBlinking = true;
+        public int caretBlinkingMs = 500;
+        public boolean useBlockCaret = false;
+        public boolean useFullLineHeightCaret = false;
+        public boolean highlightOccurrences = true;
+        public boolean showHardWrapAndVisualGuides = true;
+        public boolean showLineNumbers = true;
+        public String lineNumbersMode = "Absolute";
+        public boolean showLinesBetweenStatements = false;
+        public boolean showWhitespaces = false;
+        public boolean showWhitespacesLeading = true;
+        public boolean showWhitespacesInner = true;
+        public boolean showWhitespacesTrailing = true;
+        public boolean showWhitespacesSelection = true;
+        public boolean showEditorIndentGuides = true;
+        public boolean showIntentionBulb = true;
+        public boolean showPreviewForIntentionActions = true;
+        public boolean renderDocComments = false;
+        public boolean showCodeLensOnScrollbarHover = true;
+        public boolean useEditorFontForInlayHints = false;
+        public boolean enableTagTreeHighlighting = true;
+        public int tagTreeLevelsToHighlight = 6;
+        public double tagTreeOpacity = 0.1;
+
         public static List<String> defaultUiThemes() {
             return List.of(
                     "Islands Dark",
@@ -926,6 +964,82 @@ public final class AppSettingsStore {
         public void setEditorAntialiasing(String editorAntialiasing) {
             this.editorAntialiasing = (editorAntialiasing != null && !editorAntialiasing.isBlank()) ? editorAntialiasing : "Subpixel";
         }
+
+        // Editor > General > Auto Import Getters and Setters
+        public boolean isShowXmlAutoImportTooltip() { return showXmlAutoImportTooltip; }
+        public void setShowXmlAutoImportTooltip(boolean showXmlAutoImportTooltip) { this.showXmlAutoImportTooltip = showXmlAutoImportTooltip; }
+
+        // Editor > General > Breadcrumbs Getters and Setters
+        public boolean isShowBreadcrumbs() { return showBreadcrumbs; }
+        public void setShowBreadcrumbs(boolean showBreadcrumbs) { this.showBreadcrumbs = showBreadcrumbs; }
+        public String getBreadcrumbsPlacement() { return breadcrumbsPlacement; }
+        public void setBreadcrumbsPlacement(String breadcrumbsPlacement) {
+            this.breadcrumbsPlacement = (breadcrumbsPlacement != null && !breadcrumbsPlacement.isBlank()) ? breadcrumbsPlacement : "Bottom";
+        }
+        public boolean isBreadcrumbsHtml() { return breadcrumbsHtml; }
+        public void setBreadcrumbsHtml(boolean breadcrumbsHtml) { this.breadcrumbsHtml = breadcrumbsHtml; }
+        public boolean isBreadcrumbsMarkdown() { return breadcrumbsMarkdown; }
+        public void setBreadcrumbsMarkdown(boolean breadcrumbsMarkdown) { this.breadcrumbsMarkdown = breadcrumbsMarkdown; }
+        public boolean isBreadcrumbsXhtml() { return breadcrumbsXhtml; }
+        public void setBreadcrumbsXhtml(boolean breadcrumbsXhtml) { this.breadcrumbsXhtml = breadcrumbsXhtml; }
+        public boolean isBreadcrumbsJson() { return breadcrumbsJson; }
+        public void setBreadcrumbsJson(boolean breadcrumbsJson) { this.breadcrumbsJson = breadcrumbsJson; }
+        public boolean isBreadcrumbsSql() { return breadcrumbsSql; }
+        public void setBreadcrumbsSql(boolean breadcrumbsSql) { this.breadcrumbsSql = breadcrumbsSql; }
+        public boolean isBreadcrumbsXml() { return breadcrumbsXml; }
+        public void setBreadcrumbsXml(boolean breadcrumbsXml) { this.breadcrumbsXml = breadcrumbsXml; }
+
+        // Editor > General > Appearance Getters and Setters
+        public boolean isCaretBlinking() { return caretBlinking; }
+        public void setCaretBlinking(boolean caretBlinking) { this.caretBlinking = caretBlinking; }
+        public int getCaretBlinkingMs() { return caretBlinkingMs; }
+        public void setCaretBlinkingMs(int caretBlinkingMs) { this.caretBlinkingMs = caretBlinkingMs > 0 ? caretBlinkingMs : 500; }
+        public boolean isUseBlockCaret() { return useBlockCaret; }
+        public void setUseBlockCaret(boolean useBlockCaret) { this.useBlockCaret = useBlockCaret; }
+        public boolean isUseFullLineHeightCaret() { return useFullLineHeightCaret; }
+        public void setUseFullLineHeightCaret(boolean useFullLineHeightCaret) { this.useFullLineHeightCaret = useFullLineHeightCaret; }
+        public boolean isHighlightOccurrences() { return highlightOccurrences; }
+        public void setHighlightOccurrences(boolean highlightOccurrences) { this.highlightOccurrences = highlightOccurrences; }
+        public boolean isShowHardWrapAndVisualGuides() { return showHardWrapAndVisualGuides; }
+        public void setShowHardWrapAndVisualGuides(boolean showHardWrapAndVisualGuides) { this.showHardWrapAndVisualGuides = showHardWrapAndVisualGuides; }
+        public boolean isShowLineNumbers() { return showLineNumbers; }
+        public void setShowLineNumbers(boolean showLineNumbers) { this.showLineNumbers = showLineNumbers; }
+        public String getLineNumbersMode() { return lineNumbersMode; }
+        public void setLineNumbersMode(String lineNumbersMode) {
+            this.lineNumbersMode = (lineNumbersMode != null && !lineNumbersMode.isBlank()) ? lineNumbersMode : "Absolute";
+        }
+        public boolean isShowLinesBetweenStatements() { return showLinesBetweenStatements; }
+        public void setShowLinesBetweenStatements(boolean showLinesBetweenStatements) { this.showLinesBetweenStatements = showLinesBetweenStatements; }
+        public boolean isShowWhitespaces() { return showWhitespaces; }
+        public void setShowWhitespaces(boolean showWhitespaces) { this.showWhitespaces = showWhitespaces; }
+        public boolean isShowWhitespacesLeading() { return showWhitespacesLeading; }
+        public void setShowWhitespacesLeading(boolean showWhitespacesLeading) { this.showWhitespacesLeading = showWhitespacesLeading; }
+        public boolean isShowWhitespacesInner() { return showWhitespacesInner; }
+        public void setShowWhitespacesInner(boolean showWhitespacesInner) { this.showWhitespacesInner = showWhitespacesInner; }
+        public boolean isShowWhitespacesTrailing() { return showWhitespacesTrailing; }
+        public void setShowWhitespacesTrailing(boolean showWhitespacesTrailing) { this.showWhitespacesTrailing = showWhitespacesTrailing; }
+        public boolean isShowWhitespacesSelection() { return showWhitespacesSelection; }
+        public void setShowWhitespacesSelection(boolean showWhitespacesSelection) { this.showWhitespacesSelection = showWhitespacesSelection; }
+        public boolean showEditorIndentGuides() { return showEditorIndentGuides; }
+        public boolean isShowEditorIndentGuides() { return showEditorIndentGuides; }
+        public void setShowEditorIndentGuides(boolean showEditorIndentGuides) { this.showEditorIndentGuides = showEditorIndentGuides; }
+        public boolean showIntentionBulb() { return showIntentionBulb; }
+        public boolean isShowIntentionBulb() { return showIntentionBulb; }
+        public void setShowIntentionBulb(boolean showIntentionBulb) { this.showIntentionBulb = showIntentionBulb; }
+        public boolean isShowPreviewForIntentionActions() { return showPreviewForIntentionActions; }
+        public void setShowPreviewForIntentionActions(boolean showPreviewForIntentionActions) { this.showPreviewForIntentionActions = showPreviewForIntentionActions; }
+        public boolean isRenderDocComments() { return renderDocComments; }
+        public void setRenderDocComments(boolean renderDocComments) { this.renderDocComments = renderDocComments; }
+        public boolean isShowCodeLensOnScrollbarHover() { return showCodeLensOnScrollbarHover; }
+        public void setShowCodeLensOnScrollbarHover(boolean showCodeLensOnScrollbarHover) { this.showCodeLensOnScrollbarHover = showCodeLensOnScrollbarHover; }
+        public boolean isUseEditorFontForInlayHints() { return useEditorFontForInlayHints; }
+        public void setUseEditorFontForInlayHints(boolean useEditorFontForInlayHints) { this.useEditorFontForInlayHints = useEditorFontForInlayHints; }
+        public boolean isEnableTagTreeHighlighting() { return enableTagTreeHighlighting; }
+        public void setEnableTagTreeHighlighting(boolean enableTagTreeHighlighting) { this.enableTagTreeHighlighting = enableTagTreeHighlighting; }
+        public int getTagTreeLevelsToHighlight() { return tagTreeLevelsToHighlight; }
+        public void setTagTreeLevelsToHighlight(int tagTreeLevelsToHighlight) { this.tagTreeLevelsToHighlight = tagTreeLevelsToHighlight > 0 ? tagTreeLevelsToHighlight : 6; }
+        public double getTagTreeOpacity() { return tagTreeOpacity; }
+        public void setTagTreeOpacity(double tagTreeOpacity) { this.tagTreeOpacity = (tagTreeOpacity >= 0.0 && tagTreeOpacity <= 1.0) ? tagTreeOpacity : 0.1; }
     }
 
     public static class UserParameterPattern {
