@@ -867,6 +867,10 @@ public final class SettingsDialog {
         } else if ("Editor / General / Code Completion".equals(fullPath) || "Code Completion".equals(fullPath)
                 || "Editor / General / Code Completion / Popup".equals(fullPath) || "Popup".equals(fullPath)) {
             return buildCodeCompletionPanel(settings, inputs, navigateTo);
+        } else if ("Editor / General / Code Folding".equals(fullPath) || "Code Folding".equals(fullPath)) {
+            return buildCodeFoldingPanel(settings, inputs);
+        } else if ("Editor / General / Editor Tabs".equals(fullPath) || "Editor Tabs".equals(fullPath)) {
+            return buildEditorTabsPanel(settings, inputs);
         } else if ("Editor / General".equals(fullPath)) {
             return buildGeneralEditorPanel(settings, inputs);
         } else if ("Editor / General / Font".equals(fullPath) || "Editor / Font".equals(fullPath) || "Font".equals(fullPath)) {
@@ -2721,6 +2725,419 @@ public final class SettingsDialog {
                 sqlBox
         );
 
+        return panel;
+    }
+
+    private static VBox buildCodeFoldingPanel(AppSettingsStore.Settings settings, Map<String, Object> inputs) {
+        VBox panel = new VBox(10);
+        panel.setPadding(new Insets(10, 16, 20, 16));
+
+        // Top Row: Show code folding arrows + mode combo
+        CheckBox showArrowsCheck = new CheckBox("Show code folding arrows");
+        showArrowsCheck.setSelected(settings.isShowCodeFoldingArrows());
+        showArrowsCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("codeFolding_showArrows", showArrowsCheck);
+
+        ComboBox<String> arrowsModeCombo = new ComboBox<>();
+        arrowsModeCombo.getItems().addAll("Always", "On mouse hover");
+        arrowsModeCombo.getSelectionModel().select(settings.getShowCodeFoldingArrowsMode());
+        arrowsModeCombo.setPrefWidth(140);
+        arrowsModeCombo.setStyle("-fx-font-size: 12px;");
+        arrowsModeCombo.disableProperty().bind(showArrowsCheck.selectedProperty().not());
+        inputs.put("codeFolding_showArrowsMode", arrowsModeCombo);
+
+        HBox topRow = new HBox(10, showArrowsCheck, arrowsModeCombo);
+        topRow.setAlignment(Pos.CENTER_LEFT);
+
+        CheckBox showBottomArrowsCheck = new CheckBox("Show bottom arrows");
+        showBottomArrowsCheck.setSelected(settings.isShowBottomArrows());
+        showBottomArrowsCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        showBottomArrowsCheck.setPadding(new Insets(0, 0, 0, 24));
+        showBottomArrowsCheck.disableProperty().bind(showArrowsCheck.selectedProperty().not());
+        inputs.put("codeFolding_showBottomArrows", showBottomArrowsCheck);
+
+        Label foldByDefaultLabel = new Label("Fold by default:");
+        foldByDefaultLabel.setStyle("-fx-font-size: 13px; -fx-text-fill: -text; -fx-padding: 8 0 0 0;");
+
+        // 1. General Section
+        HBox genHeader = createSectionHeader("General");
+
+        CheckBox foldFileHeaderCheck = new CheckBox("File header");
+        foldFileHeaderCheck.setSelected(settings.isFoldFileHeader());
+        foldFileHeaderCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("codeFolding_foldFileHeader", foldFileHeaderCheck);
+
+        CheckBox foldImportsCheck = new CheckBox("Imports");
+        foldImportsCheck.setSelected(settings.isFoldImports());
+        foldImportsCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("codeFolding_foldImports", foldImportsCheck);
+
+        CheckBox foldDocCommentsCheck = new CheckBox("Documentation comments");
+        foldDocCommentsCheck.setSelected(settings.isFoldDocComments());
+        foldDocCommentsCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("codeFolding_foldDocComments", foldDocCommentsCheck);
+
+        CheckBox foldMethodBodiesCheck = new CheckBox("Method bodies");
+        foldMethodBodiesCheck.setSelected(settings.isFoldMethodBodies());
+        foldMethodBodiesCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("codeFolding_foldMethodBodies", foldMethodBodiesCheck);
+
+        CheckBox foldCustomRegionsCheck = new CheckBox("Custom folding regions");
+        foldCustomRegionsCheck.setSelected(settings.isFoldCustomRegions());
+        foldCustomRegionsCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("codeFolding_foldCustomRegions", foldCustomRegionsCheck);
+
+        VBox genBox = new VBox(6, foldFileHeaderCheck, foldImportsCheck, foldDocCommentsCheck, foldMethodBodiesCheck, foldCustomRegionsCheck);
+        genBox.setPadding(new Insets(0, 0, 0, 20));
+
+        // 2. Markdown Section
+        HBox mdHeader = createSectionHeader("Markdown");
+
+        CheckBox foldMdFrontMatterCheck = new CheckBox("Collapse front matter");
+        foldMdFrontMatterCheck.setSelected(settings.isFoldMarkdownFrontMatter());
+        foldMdFrontMatterCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("codeFolding_foldMarkdownFrontMatter", foldMdFrontMatterCheck);
+
+        CheckBox foldMdLinksCheck = new CheckBox("Collapse links");
+        foldMdLinksCheck.setSelected(settings.isFoldMarkdownLinks());
+        foldMdLinksCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("codeFolding_foldMarkdownLinks", foldMdLinksCheck);
+
+        CheckBox foldMdTablesCheck = new CheckBox("Collapse tables");
+        foldMdTablesCheck.setSelected(settings.isFoldMarkdownTables());
+        foldMdTablesCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("codeFolding_foldMarkdownTables", foldMdTablesCheck);
+
+        CheckBox foldMdCodeFencesCheck = new CheckBox("Collapse code fences");
+        foldMdCodeFencesCheck.setSelected(settings.isFoldMarkdownCodeFences());
+        foldMdCodeFencesCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("codeFolding_foldMarkdownCodeFences", foldMdCodeFencesCheck);
+
+        CheckBox foldMdTocCheck = new CheckBox("Collapse table of contents");
+        foldMdTocCheck.setSelected(settings.isFoldMarkdownTableOfContents());
+        foldMdTocCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("codeFolding_foldMarkdownTableOfContents", foldMdTocCheck);
+
+        VBox mdBox = new VBox(6, foldMdFrontMatterCheck, foldMdLinksCheck, foldMdTablesCheck, foldMdCodeFencesCheck, foldMdTocCheck);
+        mdBox.setPadding(new Insets(0, 0, 0, 20));
+
+        // 3. SQL Section
+        HBox sqlHeader = createSectionHeader("SQL");
+
+        CheckBox foldSqlUnderscoresCheck = new CheckBox("Put underscores inside numeric literals (6-digit or longer)");
+        foldSqlUnderscoresCheck.setSelected(settings.isFoldSqlUnderscoresInNumericLiterals());
+        foldSqlUnderscoresCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("codeFolding_foldSqlUnderscores", foldSqlUnderscoresCheck);
+
+        VBox sqlBox = new VBox(6, foldSqlUnderscoresCheck);
+        sqlBox.setPadding(new Insets(0, 0, 0, 20));
+
+        // 4. XML Section
+        HBox xmlHeader = createSectionHeader("XML");
+
+        CheckBox foldXmlTagsCheck = new CheckBox("XML tags");
+        foldXmlTagsCheck.setSelected(settings.isFoldXmlTags());
+        foldXmlTagsCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("codeFolding_foldXmlTags", foldXmlTagsCheck);
+
+        CheckBox foldHtmlStyleCheck = new CheckBox("HTML 'style' attribute");
+        foldHtmlStyleCheck.setSelected(settings.isFoldHtmlStyleAttribute());
+        foldHtmlStyleCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("codeFolding_foldHtmlStyle", foldHtmlStyleCheck);
+
+        CheckBox foldXmlEntitiesCheck = new CheckBox("XML entities");
+        foldXmlEntitiesCheck.setSelected(settings.isFoldXmlEntities());
+        foldXmlEntitiesCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("codeFolding_foldXmlEntities", foldXmlEntitiesCheck);
+
+        CheckBox foldDataUrisCheck = new CheckBox("Data URIs");
+        foldDataUrisCheck.setSelected(settings.isFoldDataUris());
+        foldDataUrisCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("codeFolding_foldDataUris", foldDataUrisCheck);
+
+        VBox xmlBox = new VBox(6, foldXmlTagsCheck, foldHtmlStyleCheck, foldXmlEntitiesCheck, foldDataUrisCheck);
+        xmlBox.setPadding(new Insets(0, 0, 0, 20));
+
+        panel.getChildren().addAll(
+                topRow,
+                showBottomArrowsCheck,
+                foldByDefaultLabel,
+                genHeader,
+                genBox,
+                mdHeader,
+                mdBox,
+                sqlHeader,
+                sqlBox,
+                xmlHeader,
+                xmlBox
+        );
+        return panel;
+    }
+
+    private static VBox buildEditorTabsPanel(AppSettingsStore.Settings settings, Map<String, Object> inputs) {
+        VBox panel = new VBox(10);
+        panel.setPadding(new Insets(10, 16, 20, 16));
+
+        // -------------------------------------------------------------
+        // Appearance Section
+        // -------------------------------------------------------------
+        HBox appHeader = createSectionHeader("Appearance");
+
+        Label placementLabel = new Label("Tab placement:");
+        placementLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        placementLabel.setMinWidth(130);
+
+        ComboBox<String> placementCombo = new ComboBox<>();
+        placementCombo.getItems().addAll("Top", "Left", "Bottom", "Right", "None");
+        placementCombo.getSelectionModel().select(settings.getEditorTabPlacement());
+        placementCombo.setPrefWidth(120);
+        placementCombo.setStyle("-fx-font-size: 12px;");
+        inputs.put("editorTabs_placement", placementCombo);
+
+        HBox placementRow = new HBox(12, placementLabel, placementCombo);
+        placementRow.setAlignment(Pos.CENTER_LEFT);
+
+        Label showTabsLabel = new Label("Show tabs in:");
+        showTabsLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+
+        ToggleGroup showModeGroup = new ToggleGroup();
+        RadioButton oneRowRadio = new RadioButton("One row, and if tabs don't fit:");
+        oneRowRadio.setToggleGroup(showModeGroup);
+        oneRowRadio.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+
+        ToggleGroup overflowGroup = new ToggleGroup();
+        RadioButton scrollRadio = new RadioButton("Scroll the tabs panel");
+        scrollRadio.setToggleGroup(overflowGroup);
+        scrollRadio.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+
+        RadioButton squeezeRadio = new RadioButton("Squeeze tabs");
+        squeezeRadio.setToggleGroup(overflowGroup);
+        squeezeRadio.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+
+        if ("Squeeze tabs".equalsIgnoreCase(settings.getEditorTabsOverflowMode())) {
+            squeezeRadio.setSelected(true);
+        } else {
+            scrollRadio.setSelected(true);
+        }
+
+        VBox overflowBox = new VBox(6, scrollRadio, squeezeRadio);
+        overflowBox.setPadding(new Insets(0, 0, 0, 24));
+        overflowBox.disableProperty().bind(oneRowRadio.selectedProperty().not());
+
+        RadioButton multiRowRadio = new RadioButton("Multiple rows");
+        multiRowRadio.setToggleGroup(showModeGroup);
+        multiRowRadio.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+
+        if ("Multiple rows".equalsIgnoreCase(settings.getEditorTabsShowMode())) {
+            multiRowRadio.setSelected(true);
+        } else {
+            oneRowRadio.setSelected(true);
+        }
+
+        inputs.put("editorTabs_oneRowRadio", oneRowRadio);
+        inputs.put("editorTabs_multiRowRadio", multiRowRadio);
+        inputs.put("editorTabs_scrollRadio", scrollRadio);
+        inputs.put("editorTabs_squeezeRadio", squeezeRadio);
+
+        VBox showTabsSubBox = new VBox(6, oneRowRadio, overflowBox, multiRowRadio);
+        showTabsSubBox.setPadding(new Insets(0, 0, 0, 20));
+        VBox showTabsBox = new VBox(6, showTabsLabel, showTabsSubBox);
+
+        CheckBox showPinnedTabsCheck = new CheckBox("Show pinned tabs in a separate row");
+        showPinnedTabsCheck.setSelected(settings.isShowPinnedTabsInSeparateRow());
+        showPinnedTabsCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("editorTabs_showPinnedTabs", showPinnedTabsCheck);
+
+        CheckBox showFileIconCheck = new CheckBox("Show file icon");
+        showFileIconCheck.setSelected(settings.isEditorTabsShowFileIcon());
+        showFileIconCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("editorTabs_showFileIcon", showFileIconCheck);
+
+        CheckBox showFileExtCheck = new CheckBox("Show file extension");
+        showFileExtCheck.setSelected(settings.isEditorTabsShowFileExtension());
+        showFileExtCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("editorTabs_showFileExtension", showFileExtCheck);
+
+        CheckBox showDirNonUniqueCheck = new CheckBox("Show directory for non-unique file names");
+        showDirNonUniqueCheck.setSelected(settings.isEditorTabsShowDirectoryForNonUnique());
+        showDirNonUniqueCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("editorTabs_showDirNonUnique", showDirNonUniqueCheck);
+
+        CheckBox markModifiedCheck = new CheckBox("Mark modified");
+        markModifiedCheck.setSelected(settings.isEditorTabsMarkModified());
+        markModifiedCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("editorTabs_markModified", markModifiedCheck);
+
+        CheckBox showFullPathHoverCheck = new CheckBox("Show full path on mouse hover");
+        showFullPathHoverCheck.setSelected(settings.isEditorTabsShowFullPathOnHover());
+        showFullPathHoverCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("editorTabs_showFullPathHover", showFullPathHoverCheck);
+
+        Label closePosLabel = new Label("Close button position:");
+        closePosLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        closePosLabel.setMinWidth(150);
+
+        ComboBox<String> closePosCombo = new ComboBox<>();
+        closePosCombo.getItems().addAll("Right", "Left", "None");
+        closePosCombo.getSelectionModel().select(settings.getEditorTabsCloseButtonPosition());
+        closePosCombo.setPrefWidth(100);
+        closePosCombo.setStyle("-fx-font-size: 12px;");
+        inputs.put("editorTabs_closeButtonPosition", closePosCombo);
+
+        HBox closePosRow = new HBox(12, closePosLabel, closePosCombo);
+        closePosRow.setAlignment(Pos.CENTER_LEFT);
+
+        // -------------------------------------------------------------
+        // Tab Order Section
+        // -------------------------------------------------------------
+        HBox orderHeader = createSectionHeader("Tab Order");
+
+        CheckBox sortAlphabeticalCheck = new CheckBox("Sort tabs alphabetically");
+        sortAlphabeticalCheck.setSelected(settings.isEditorTabsSortAlphabetically());
+        sortAlphabeticalCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("editorTabs_sortAlphabetically", sortAlphabeticalCheck);
+
+        CheckBox openNewAtEndCheck = new CheckBox("Open new tabs at the end");
+        openNewAtEndCheck.setSelected(settings.isEditorTabsOpenNewAtEnd());
+        openNewAtEndCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("editorTabs_openNewAtEnd", openNewAtEndCheck);
+
+        VBox orderBox = new VBox(6, sortAlphabeticalCheck, openNewAtEndCheck);
+        orderBox.setPadding(new Insets(0, 0, 0, 20));
+
+        // -------------------------------------------------------------
+        // Opening Policy Section
+        // -------------------------------------------------------------
+        HBox openPolicyHeader = createSectionHeader("Opening Policy");
+
+        CheckBox enablePreviewCheck = new CheckBox("Enable preview tab");
+        enablePreviewCheck.setSelected(settings.isEditorTabsEnablePreviewTab());
+        enablePreviewCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("editorTabs_enablePreviewTab", enablePreviewCheck);
+
+        Label previewSubtext = new Label("The preview tab is reused to show files selected with a single click in the Project tool window, and files opened during debugging.");
+        previewSubtext.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 11px;");
+        previewSubtext.setWrapText(true);
+        previewSubtext.setPadding(new Insets(0, 0, 0, 24));
+
+        VBox openPolicyBox = new VBox(4, enablePreviewCheck, previewSubtext);
+        openPolicyBox.setPadding(new Insets(0, 0, 0, 20));
+
+        // -------------------------------------------------------------
+        // Closing Policy Section
+        // -------------------------------------------------------------
+        HBox closePolicyHeader = createSectionHeader("Closing Policy");
+
+        Label limitLabel = new Label("Tab limit:");
+        limitLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        limitLabel.setMinWidth(70);
+
+        TextField limitField = new TextField(String.valueOf(settings.getEditorTabsLimit()));
+        limitField.setPrefWidth(55);
+        limitField.setStyle("-fx-font-size: 12px;");
+        inputs.put("editorTabs_limit", limitField);
+
+        HBox limitRow = new HBox(8, limitLabel, limitField);
+        limitRow.setAlignment(Pos.CENTER_LEFT);
+
+        Label exceedLabel = new Label("When tabs exceed the limit:");
+        exceedLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+
+        ToggleGroup exceedGroup = new ToggleGroup();
+        RadioButton closeUnchangedRadio = new RadioButton("Close unchanged");
+        closeUnchangedRadio.setToggleGroup(exceedGroup);
+        closeUnchangedRadio.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+
+        RadioButton closeUnusedRadio = new RadioButton("Close unused");
+        closeUnusedRadio.setToggleGroup(exceedGroup);
+        closeUnusedRadio.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+
+        if ("Close unchanged".equalsIgnoreCase(settings.getEditorTabsExceedLimitPolicy())) {
+            closeUnchangedRadio.setSelected(true);
+        } else {
+            closeUnusedRadio.setSelected(true);
+        }
+        inputs.put("editorTabs_closeUnchangedRadio", closeUnchangedRadio);
+        inputs.put("editorTabs_closeUnusedRadio", closeUnusedRadio);
+
+        VBox exceedRadioBox = new VBox(6, closeUnchangedRadio, closeUnusedRadio);
+        exceedRadioBox.setPadding(new Insets(0, 0, 0, 20));
+        VBox exceedBox = new VBox(6, exceedLabel, exceedRadioBox);
+
+        Label activateLabel = new Label("When the current tab is closed, activate:");
+        activateLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+
+        ToggleGroup activateGroup = new ToggleGroup();
+        RadioButton activateLeftRadio = new RadioButton("The tab on the left");
+        activateLeftRadio.setToggleGroup(activateGroup);
+        activateLeftRadio.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+
+        RadioButton activateRightRadio = new RadioButton("The tab on the right");
+        activateRightRadio.setToggleGroup(activateGroup);
+        activateRightRadio.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+
+        RadioButton activateRecentRadio = new RadioButton("Most recently opened tab");
+        activateRecentRadio.setToggleGroup(activateGroup);
+        activateRecentRadio.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+
+        String currentActivate = settings.getEditorTabsCloseActivatePolicy();
+        if ("The tab on the right".equalsIgnoreCase(currentActivate)) {
+            activateRightRadio.setSelected(true);
+        } else if ("Most recently opened tab".equalsIgnoreCase(currentActivate)) {
+            activateRecentRadio.setSelected(true);
+        } else {
+            activateLeftRadio.setSelected(true);
+        }
+        inputs.put("editorTabs_activateLeftRadio", activateLeftRadio);
+        inputs.put("editorTabs_activateRightRadio", activateRightRadio);
+        inputs.put("editorTabs_activateRecentRadio", activateRecentRadio);
+
+        VBox activateRadioBox = new VBox(6, activateLeftRadio, activateRightRadio, activateRecentRadio);
+        activateRadioBox.setPadding(new Insets(0, 0, 0, 20));
+        VBox activateBox = new VBox(6, activateLabel, activateRadioBox);
+
+        VBox closePolicyBox = new VBox(10, limitRow, exceedBox, activateBox);
+        closePolicyBox.setPadding(new Insets(0, 0, 0, 20));
+
+        // -------------------------------------------------------------
+        // Database Section
+        // -------------------------------------------------------------
+        HBox dbHeader = createSectionHeader("Database");
+
+        CheckBox alwaysQualifiedCheck = new CheckBox("Always show qualified names for database objects in tab titles");
+        alwaysQualifiedCheck.setSelected(settings.isEditorTabsAlwaysShowQualifiedNames());
+        alwaysQualifiedCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("editorTabs_alwaysQualified", alwaysQualifiedCheck);
+
+        CheckBox shortenNamesCheck = new CheckBox("Shorten datasource and object names in tab titles");
+        shortenNamesCheck.setSelected(settings.isEditorTabsShortenNames());
+        shortenNamesCheck.setStyle("-fx-text-fill: -text; -fx-font-size: 13px;");
+        inputs.put("editorTabs_shortenNames", shortenNamesCheck);
+
+        VBox dbBox = new VBox(6, alwaysQualifiedCheck, shortenNamesCheck);
+        dbBox.setPadding(new Insets(0, 0, 0, 20));
+
+        // Assemble panel
+        panel.getChildren().addAll(
+                appHeader,
+                placementRow,
+                showTabsBox,
+                showPinnedTabsCheck,
+                showFileIconCheck,
+                showFileExtCheck,
+                showDirNonUniqueCheck,
+                markModifiedCheck,
+                showFullPathHoverCheck,
+                closePosRow,
+                orderHeader,
+                orderBox,
+                openPolicyHeader,
+                openPolicyBox,
+                closePolicyHeader,
+                closePolicyBox,
+                dbHeader,
+                dbBox
+        );
         return panel;
     }
 
@@ -6807,6 +7224,163 @@ public final class SettingsDialog {
         if (inputs.containsKey("codeCompletion_additionalAcceptCharacters")) {
             TextField tf = (TextField) inputs.get("codeCompletion_additionalAcceptCharacters");
             settings.setAdditionalAcceptCharacters(tf.getText());
+        }
+
+        // Editor > General > Code Folding
+        if (inputs.containsKey("codeFolding_showArrows")) {
+            CheckBox cb = (CheckBox) inputs.get("codeFolding_showArrows");
+            settings.setShowCodeFoldingArrows(cb.isSelected());
+        }
+        if (inputs.containsKey("codeFolding_showArrowsMode")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("codeFolding_showArrowsMode");
+            if (cb.getValue() != null) settings.setShowCodeFoldingArrowsMode(cb.getValue());
+        }
+        if (inputs.containsKey("codeFolding_showBottomArrows")) {
+            CheckBox cb = (CheckBox) inputs.get("codeFolding_showBottomArrows");
+            settings.setShowBottomArrows(cb.isSelected());
+        }
+        if (inputs.containsKey("codeFolding_foldFileHeader")) {
+            CheckBox cb = (CheckBox) inputs.get("codeFolding_foldFileHeader");
+            settings.setFoldFileHeader(cb.isSelected());
+        }
+        if (inputs.containsKey("codeFolding_foldImports")) {
+            CheckBox cb = (CheckBox) inputs.get("codeFolding_foldImports");
+            settings.setFoldImports(cb.isSelected());
+        }
+        if (inputs.containsKey("codeFolding_foldDocComments")) {
+            CheckBox cb = (CheckBox) inputs.get("codeFolding_foldDocComments");
+            settings.setFoldDocComments(cb.isSelected());
+        }
+        if (inputs.containsKey("codeFolding_foldMethodBodies")) {
+            CheckBox cb = (CheckBox) inputs.get("codeFolding_foldMethodBodies");
+            settings.setFoldMethodBodies(cb.isSelected());
+        }
+        if (inputs.containsKey("codeFolding_foldCustomRegions")) {
+            CheckBox cb = (CheckBox) inputs.get("codeFolding_foldCustomRegions");
+            settings.setFoldCustomRegions(cb.isSelected());
+        }
+        if (inputs.containsKey("codeFolding_foldMarkdownFrontMatter")) {
+            CheckBox cb = (CheckBox) inputs.get("codeFolding_foldMarkdownFrontMatter");
+            settings.setFoldMarkdownFrontMatter(cb.isSelected());
+        }
+        if (inputs.containsKey("codeFolding_foldMarkdownLinks")) {
+            CheckBox cb = (CheckBox) inputs.get("codeFolding_foldMarkdownLinks");
+            settings.setFoldMarkdownLinks(cb.isSelected());
+        }
+        if (inputs.containsKey("codeFolding_foldMarkdownTables")) {
+            CheckBox cb = (CheckBox) inputs.get("codeFolding_foldMarkdownTables");
+            settings.setFoldMarkdownTables(cb.isSelected());
+        }
+        if (inputs.containsKey("codeFolding_foldMarkdownCodeFences")) {
+            CheckBox cb = (CheckBox) inputs.get("codeFolding_foldMarkdownCodeFences");
+            settings.setFoldMarkdownCodeFences(cb.isSelected());
+        }
+        if (inputs.containsKey("codeFolding_foldMarkdownTableOfContents")) {
+            CheckBox cb = (CheckBox) inputs.get("codeFolding_foldMarkdownTableOfContents");
+            settings.setFoldMarkdownTableOfContents(cb.isSelected());
+        }
+        if (inputs.containsKey("codeFolding_foldSqlUnderscores")) {
+            CheckBox cb = (CheckBox) inputs.get("codeFolding_foldSqlUnderscores");
+            settings.setFoldSqlUnderscoresInNumericLiterals(cb.isSelected());
+        }
+        if (inputs.containsKey("codeFolding_foldXmlTags")) {
+            CheckBox cb = (CheckBox) inputs.get("codeFolding_foldXmlTags");
+            settings.setFoldXmlTags(cb.isSelected());
+        }
+        if (inputs.containsKey("codeFolding_foldHtmlStyle")) {
+            CheckBox cb = (CheckBox) inputs.get("codeFolding_foldHtmlStyle");
+            settings.setFoldHtmlStyleAttribute(cb.isSelected());
+        }
+        if (inputs.containsKey("codeFolding_foldXmlEntities")) {
+            CheckBox cb = (CheckBox) inputs.get("codeFolding_foldXmlEntities");
+            settings.setFoldXmlEntities(cb.isSelected());
+        }
+        if (inputs.containsKey("codeFolding_foldDataUris")) {
+            CheckBox cb = (CheckBox) inputs.get("codeFolding_foldDataUris");
+            settings.setFoldDataUris(cb.isSelected());
+        }
+
+        // Editor > General > Editor Tabs
+        if (inputs.containsKey("editorTabs_placement")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("editorTabs_placement");
+            if (cb.getValue() != null) settings.setEditorTabPlacement(cb.getValue());
+        }
+        if (inputs.containsKey("editorTabs_oneRowRadio")) {
+            RadioButton rb = (RadioButton) inputs.get("editorTabs_oneRowRadio");
+            settings.setEditorTabsShowMode(rb.isSelected() ? "One row" : "Multiple rows");
+        }
+        if (inputs.containsKey("editorTabs_squeezeRadio")) {
+            RadioButton rb = (RadioButton) inputs.get("editorTabs_squeezeRadio");
+            settings.setEditorTabsOverflowMode(rb.isSelected() ? "Squeeze tabs" : "Scroll the tabs panel");
+        }
+        if (inputs.containsKey("editorTabs_showPinnedTabs")) {
+            CheckBox cb = (CheckBox) inputs.get("editorTabs_showPinnedTabs");
+            settings.setShowPinnedTabsInSeparateRow(cb.isSelected());
+        }
+        if (inputs.containsKey("editorTabs_showFileIcon")) {
+            CheckBox cb = (CheckBox) inputs.get("editorTabs_showFileIcon");
+            settings.setEditorTabsShowFileIcon(cb.isSelected());
+        }
+        if (inputs.containsKey("editorTabs_showFileExtension")) {
+            CheckBox cb = (CheckBox) inputs.get("editorTabs_showFileExtension");
+            settings.setEditorTabsShowFileExtension(cb.isSelected());
+        }
+        if (inputs.containsKey("editorTabs_showDirNonUnique")) {
+            CheckBox cb = (CheckBox) inputs.get("editorTabs_showDirNonUnique");
+            settings.setEditorTabsShowDirectoryForNonUnique(cb.isSelected());
+        }
+        if (inputs.containsKey("editorTabs_markModified")) {
+            CheckBox cb = (CheckBox) inputs.get("editorTabs_markModified");
+            settings.setEditorTabsMarkModified(cb.isSelected());
+        }
+        if (inputs.containsKey("editorTabs_showFullPathHover")) {
+            CheckBox cb = (CheckBox) inputs.get("editorTabs_showFullPathHover");
+            settings.setEditorTabsShowFullPathOnHover(cb.isSelected());
+        }
+        if (inputs.containsKey("editorTabs_closeButtonPosition")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("editorTabs_closeButtonPosition");
+            if (cb.getValue() != null) settings.setEditorTabsCloseButtonPosition(cb.getValue());
+        }
+        if (inputs.containsKey("editorTabs_sortAlphabetically")) {
+            CheckBox cb = (CheckBox) inputs.get("editorTabs_sortAlphabetically");
+            settings.setEditorTabsSortAlphabetically(cb.isSelected());
+        }
+        if (inputs.containsKey("editorTabs_openNewAtEnd")) {
+            CheckBox cb = (CheckBox) inputs.get("editorTabs_openNewAtEnd");
+            settings.setEditorTabsOpenNewAtEnd(cb.isSelected());
+        }
+        if (inputs.containsKey("editorTabs_enablePreviewTab")) {
+            CheckBox cb = (CheckBox) inputs.get("editorTabs_enablePreviewTab");
+            settings.setEditorTabsEnablePreviewTab(cb.isSelected());
+        }
+        if (inputs.containsKey("editorTabs_limit")) {
+            TextField tf = (TextField) inputs.get("editorTabs_limit");
+            try {
+                settings.setEditorTabsLimit(Integer.parseInt(tf.getText().trim()));
+            } catch (Exception ignored) {}
+        }
+        if (inputs.containsKey("editorTabs_closeUnchangedRadio")) {
+            RadioButton rb = (RadioButton) inputs.get("editorTabs_closeUnchangedRadio");
+            settings.setEditorTabsExceedLimitPolicy(rb.isSelected() ? "Close unchanged" : "Close unused");
+        }
+        if (inputs.containsKey("editorTabs_activateLeftRadio")) {
+            RadioButton right = (RadioButton) inputs.get("editorTabs_activateRightRadio");
+            RadioButton recent = (RadioButton) inputs.get("editorTabs_activateRecentRadio");
+            if (right != null && right.isSelected()) {
+                settings.setEditorTabsCloseActivatePolicy("The tab on the right");
+            } else if (recent != null && recent.isSelected()) {
+                settings.setEditorTabsCloseActivatePolicy("Most recently opened tab");
+            } else {
+                settings.setEditorTabsCloseActivatePolicy("The tab on the left");
+            }
+        }
+        if (inputs.containsKey("editorTabs_alwaysQualified")) {
+            CheckBox cb = (CheckBox) inputs.get("editorTabs_alwaysQualified");
+            settings.setEditorTabsAlwaysShowQualifiedNames(cb.isSelected());
+        }
+        if (inputs.containsKey("editorTabs_shortenNames")) {
+            CheckBox cb = (CheckBox) inputs.get("editorTabs_shortenNames");
+            settings.setEditorTabsShortenNames(cb.isSelected());
         }
 
         // Persist

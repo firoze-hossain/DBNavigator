@@ -295,6 +295,46 @@ public final class AppSettingsStore {
         public List<TableAliasConfig> customTableAliases = new ArrayList<>();
         public String additionalAcceptCharacters = "";
 
+        // Editor > General > Code Folding (DataGrip Alignment)
+        public boolean showCodeFoldingArrows = true;
+        public String showCodeFoldingArrowsMode = "On mouse hover";
+        public boolean showBottomArrows = false;
+        public boolean foldFileHeader = true;
+        public boolean foldImports = true;
+        public boolean foldDocComments = false;
+        public boolean foldMethodBodies = false;
+        public boolean foldCustomRegions = false;
+        public boolean foldMarkdownFrontMatter = true;
+        public boolean foldMarkdownLinks = true;
+        public boolean foldMarkdownTables = false;
+        public boolean foldMarkdownCodeFences = false;
+        public boolean foldMarkdownTableOfContents = true;
+        public boolean foldSqlUnderscoresInNumericLiterals = false;
+        public boolean foldXmlTags = false;
+        public boolean foldHtmlStyleAttribute = true;
+        public boolean foldXmlEntities = true;
+        public boolean foldDataUris = true;
+
+        // Editor > General > Editor Tabs (DataGrip Alignment)
+        public String editorTabPlacement = "Top";
+        public String editorTabsShowMode = "One row";
+        public String editorTabsOverflowMode = "Scroll the tabs panel";
+        public boolean showPinnedTabsInSeparateRow = false;
+        public boolean editorTabsShowFileIcon = true;
+        public boolean editorTabsShowFileExtension = true;
+        public boolean editorTabsShowDirectoryForNonUnique = true;
+        public boolean editorTabsMarkModified = false;
+        public boolean editorTabsShowFullPathOnHover = true;
+        public String editorTabsCloseButtonPosition = "Right";
+        public boolean editorTabsSortAlphabetically = false;
+        public boolean editorTabsOpenNewAtEnd = false;
+        public boolean editorTabsEnablePreviewTab = false;
+        public int editorTabsLimit = 30;
+        public String editorTabsExceedLimitPolicy = "Close unused";
+        public String editorTabsCloseActivatePolicy = "The tab on the left";
+        public boolean editorTabsAlwaysShowQualifiedNames = false;
+        public boolean editorTabsShortenNames = true;
+
         public static List<String> defaultUiThemes() {
             return List.of(
                     "Islands Dark",
@@ -1143,6 +1183,82 @@ public final class AppSettingsStore {
         public void setCustomTableAliases(List<TableAliasConfig> customTableAliases) { this.customTableAliases = customTableAliases != null ? customTableAliases : new ArrayList<>(); }
         public String getAdditionalAcceptCharacters() { return additionalAcceptCharacters; }
         public void setAdditionalAcceptCharacters(String additionalAcceptCharacters) { this.additionalAcceptCharacters = additionalAcceptCharacters != null ? additionalAcceptCharacters : ""; }
+
+        // Code Folding getters & setters
+        public boolean isShowCodeFoldingArrows() { return showCodeFoldingArrows; }
+        public void setShowCodeFoldingArrows(boolean showCodeFoldingArrows) { this.showCodeFoldingArrows = showCodeFoldingArrows; }
+        public String getShowCodeFoldingArrowsMode() { return showCodeFoldingArrowsMode; }
+        public void setShowCodeFoldingArrowsMode(String showCodeFoldingArrowsMode) { this.showCodeFoldingArrowsMode = showCodeFoldingArrowsMode != null ? showCodeFoldingArrowsMode : "On mouse hover"; }
+        public boolean isShowBottomArrows() { return showBottomArrows; }
+        public void setShowBottomArrows(boolean showBottomArrows) { this.showBottomArrows = showBottomArrows; }
+        public boolean isFoldFileHeader() { return foldFileHeader; }
+        public void setFoldFileHeader(boolean foldFileHeader) { this.foldFileHeader = foldFileHeader; }
+        public boolean isFoldImports() { return foldImports; }
+        public void setFoldImports(boolean foldImports) { this.foldImports = foldImports; }
+        public boolean isFoldDocComments() { return foldDocComments; }
+        public void setFoldDocComments(boolean foldDocComments) { this.foldDocComments = foldDocComments; }
+        public boolean isFoldMethodBodies() { return foldMethodBodies; }
+        public void setFoldMethodBodies(boolean foldMethodBodies) { this.foldMethodBodies = foldMethodBodies; }
+        public boolean isFoldCustomRegions() { return foldCustomRegions; }
+        public void setFoldCustomRegions(boolean foldCustomRegions) { this.foldCustomRegions = foldCustomRegions; }
+        public boolean isFoldMarkdownFrontMatter() { return foldMarkdownFrontMatter; }
+        public void setFoldMarkdownFrontMatter(boolean foldMarkdownFrontMatter) { this.foldMarkdownFrontMatter = foldMarkdownFrontMatter; }
+        public boolean isFoldMarkdownLinks() { return foldMarkdownLinks; }
+        public void setFoldMarkdownLinks(boolean foldMarkdownLinks) { this.foldMarkdownLinks = foldMarkdownLinks; }
+        public boolean isFoldMarkdownTables() { return foldMarkdownTables; }
+        public void setFoldMarkdownTables(boolean foldMarkdownTables) { this.foldMarkdownTables = foldMarkdownTables; }
+        public boolean isFoldMarkdownCodeFences() { return foldMarkdownCodeFences; }
+        public void setFoldMarkdownCodeFences(boolean foldMarkdownCodeFences) { this.foldMarkdownCodeFences = foldMarkdownCodeFences; }
+        public boolean isFoldMarkdownTableOfContents() { return foldMarkdownTableOfContents; }
+        public void setFoldMarkdownTableOfContents(boolean foldMarkdownTableOfContents) { this.foldMarkdownTableOfContents = foldMarkdownTableOfContents; }
+        public boolean isFoldSqlUnderscoresInNumericLiterals() { return foldSqlUnderscoresInNumericLiterals; }
+        public void setFoldSqlUnderscoresInNumericLiterals(boolean foldSqlUnderscoresInNumericLiterals) { this.foldSqlUnderscoresInNumericLiterals = foldSqlUnderscoresInNumericLiterals; }
+        public boolean isFoldXmlTags() { return foldXmlTags; }
+        public void setFoldXmlTags(boolean foldXmlTags) { this.foldXmlTags = foldXmlTags; }
+        public boolean isFoldHtmlStyleAttribute() { return foldHtmlStyleAttribute; }
+        public void setFoldHtmlStyleAttribute(boolean foldHtmlStyleAttribute) { this.foldHtmlStyleAttribute = foldHtmlStyleAttribute; }
+        public boolean isFoldXmlEntities() { return foldXmlEntities; }
+        public void setFoldXmlEntities(boolean foldXmlEntities) { this.foldXmlEntities = foldXmlEntities; }
+        public boolean isFoldDataUris() { return foldDataUris; }
+        public void setFoldDataUris(boolean foldDataUris) { this.foldDataUris = foldDataUris; }
+
+        // Editor Tabs getters & setters
+        public String getEditorTabPlacement() { return editorTabPlacement; }
+        public void setEditorTabPlacement(String editorTabPlacement) { this.editorTabPlacement = editorTabPlacement != null ? editorTabPlacement : "Top"; }
+        public String getEditorTabsShowMode() { return editorTabsShowMode; }
+        public void setEditorTabsShowMode(String editorTabsShowMode) { this.editorTabsShowMode = editorTabsShowMode != null ? editorTabsShowMode : "One row"; }
+        public String getEditorTabsOverflowMode() { return editorTabsOverflowMode; }
+        public void setEditorTabsOverflowMode(String editorTabsOverflowMode) { this.editorTabsOverflowMode = editorTabsOverflowMode != null ? editorTabsOverflowMode : "Scroll the tabs panel"; }
+        public boolean isShowPinnedTabsInSeparateRow() { return showPinnedTabsInSeparateRow; }
+        public void setShowPinnedTabsInSeparateRow(boolean showPinnedTabsInSeparateRow) { this.showPinnedTabsInSeparateRow = showPinnedTabsInSeparateRow; }
+        public boolean isEditorTabsShowFileIcon() { return editorTabsShowFileIcon; }
+        public void setEditorTabsShowFileIcon(boolean editorTabsShowFileIcon) { this.editorTabsShowFileIcon = editorTabsShowFileIcon; }
+        public boolean isEditorTabsShowFileExtension() { return editorTabsShowFileExtension; }
+        public void setEditorTabsShowFileExtension(boolean editorTabsShowFileExtension) { this.editorTabsShowFileExtension = editorTabsShowFileExtension; }
+        public boolean isEditorTabsShowDirectoryForNonUnique() { return editorTabsShowDirectoryForNonUnique; }
+        public void setEditorTabsShowDirectoryForNonUnique(boolean editorTabsShowDirectoryForNonUnique) { this.editorTabsShowDirectoryForNonUnique = editorTabsShowDirectoryForNonUnique; }
+        public boolean isEditorTabsMarkModified() { return editorTabsMarkModified; }
+        public void setEditorTabsMarkModified(boolean editorTabsMarkModified) { this.editorTabsMarkModified = editorTabsMarkModified; }
+        public boolean isEditorTabsShowFullPathOnHover() { return editorTabsShowFullPathOnHover; }
+        public void setEditorTabsShowFullPathOnHover(boolean editorTabsShowFullPathOnHover) { this.editorTabsShowFullPathOnHover = editorTabsShowFullPathOnHover; }
+        public String getEditorTabsCloseButtonPosition() { return editorTabsCloseButtonPosition; }
+        public void setEditorTabsCloseButtonPosition(String editorTabsCloseButtonPosition) { this.editorTabsCloseButtonPosition = editorTabsCloseButtonPosition != null ? editorTabsCloseButtonPosition : "Right"; }
+        public boolean isEditorTabsSortAlphabetically() { return editorTabsSortAlphabetically; }
+        public void setEditorTabsSortAlphabetically(boolean editorTabsSortAlphabetically) { this.editorTabsSortAlphabetically = editorTabsSortAlphabetically; }
+        public boolean isEditorTabsOpenNewAtEnd() { return editorTabsOpenNewAtEnd; }
+        public void setEditorTabsOpenNewAtEnd(boolean editorTabsOpenNewAtEnd) { this.editorTabsOpenNewAtEnd = editorTabsOpenNewAtEnd; }
+        public boolean isEditorTabsEnablePreviewTab() { return editorTabsEnablePreviewTab; }
+        public void setEditorTabsEnablePreviewTab(boolean editorTabsEnablePreviewTab) { this.editorTabsEnablePreviewTab = editorTabsEnablePreviewTab; }
+        public int getEditorTabsLimit() { return editorTabsLimit; }
+        public void setEditorTabsLimit(int editorTabsLimit) { this.editorTabsLimit = editorTabsLimit > 0 ? editorTabsLimit : 30; }
+        public String getEditorTabsExceedLimitPolicy() { return editorTabsExceedLimitPolicy; }
+        public void setEditorTabsExceedLimitPolicy(String editorTabsExceedLimitPolicy) { this.editorTabsExceedLimitPolicy = editorTabsExceedLimitPolicy != null ? editorTabsExceedLimitPolicy : "Close unused"; }
+        public String getEditorTabsCloseActivatePolicy() { return editorTabsCloseActivatePolicy; }
+        public void setEditorTabsCloseActivatePolicy(String editorTabsCloseActivatePolicy) { this.editorTabsCloseActivatePolicy = editorTabsCloseActivatePolicy != null ? editorTabsCloseActivatePolicy : "The tab on the left"; }
+        public boolean isEditorTabsAlwaysShowQualifiedNames() { return editorTabsAlwaysShowQualifiedNames; }
+        public void setEditorTabsAlwaysShowQualifiedNames(boolean editorTabsAlwaysShowQualifiedNames) { this.editorTabsAlwaysShowQualifiedNames = editorTabsAlwaysShowQualifiedNames; }
+        public boolean isEditorTabsShortenNames() { return editorTabsShortenNames; }
+        public void setEditorTabsShortenNames(boolean editorTabsShortenNames) { this.editorTabsShortenNames = editorTabsShortenNames; }
     }
 
     public static class UserParameterPattern {

@@ -1263,4 +1263,177 @@ public class SettingsDialogTest {
         assertEquals("cust", loaded.getCustomTableAliases().get(1).getCustomAlias());
         assertEquals(";,. ", loaded.getAdditionalAcceptCharacters());
     }
+
+    @Test
+    public void testCodeFoldingAndEditorTabsDescriptions() {
+        String cfDesc = SettingsDialog.getCategoryDescription("Editor / General / Code Folding");
+        assertEquals("Configure code folding for statements, comments, and subqueries.", cfDesc);
+
+        String etDesc = SettingsDialog.getCategoryDescription("Editor / General / Editor Tabs");
+        assertEquals("Configure tab placement, tab closing policy, and multi-row tabs.", etDesc);
+    }
+
+    @Test
+    public void testCodeFoldingSettings() throws Exception {
+        AppSettingsStore.Settings settings = new AppSettingsStore.Settings();
+
+        // 1. Verify default values match DataGrip screenshots
+        assertTrue(settings.isShowCodeFoldingArrows());
+        assertEquals("On mouse hover", settings.getShowCodeFoldingArrowsMode());
+        assertFalse(settings.isShowBottomArrows());
+
+        assertTrue(settings.isFoldFileHeader());
+        assertTrue(settings.isFoldImports());
+        assertFalse(settings.isFoldDocComments());
+        assertFalse(settings.isFoldMethodBodies());
+        assertFalse(settings.isFoldCustomRegions());
+
+        assertTrue(settings.isFoldMarkdownFrontMatter());
+        assertTrue(settings.isFoldMarkdownLinks());
+        assertFalse(settings.isFoldMarkdownTables());
+        assertFalse(settings.isFoldMarkdownCodeFences());
+        assertTrue(settings.isFoldMarkdownTableOfContents());
+
+        assertFalse(settings.isFoldSqlUnderscoresInNumericLiterals());
+
+        assertFalse(settings.isFoldXmlTags());
+        assertTrue(settings.isFoldHtmlStyleAttribute());
+        assertTrue(settings.isFoldXmlEntities());
+        assertTrue(settings.isFoldDataUris());
+
+        // 2. Mutate settings
+        settings.setShowCodeFoldingArrows(false);
+        settings.setShowCodeFoldingArrowsMode("Always");
+        settings.setShowBottomArrows(true);
+
+        settings.setFoldFileHeader(false);
+        settings.setFoldImports(false);
+        settings.setFoldDocComments(true);
+        settings.setFoldMethodBodies(true);
+        settings.setFoldCustomRegions(true);
+
+        settings.setFoldMarkdownFrontMatter(false);
+        settings.setFoldMarkdownLinks(false);
+        settings.setFoldMarkdownTables(true);
+        settings.setFoldMarkdownCodeFences(true);
+        settings.setFoldMarkdownTableOfContents(false);
+
+        settings.setFoldSqlUnderscoresInNumericLiterals(true);
+
+        settings.setFoldXmlTags(true);
+        settings.setFoldHtmlStyleAttribute(false);
+        settings.setFoldXmlEntities(false);
+        settings.setFoldDataUris(false);
+
+        // 3. Jackson JSON Roundtrip Serialization
+        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        String json = mapper.writeValueAsString(settings);
+        AppSettingsStore.Settings loaded = mapper.readValue(json, AppSettingsStore.Settings.class);
+
+        // 4. Verify deserialized values
+        assertFalse(loaded.isShowCodeFoldingArrows());
+        assertEquals("Always", loaded.getShowCodeFoldingArrowsMode());
+        assertTrue(loaded.isShowBottomArrows());
+
+        assertFalse(loaded.isFoldFileHeader());
+        assertFalse(loaded.isFoldImports());
+        assertTrue(loaded.isFoldDocComments());
+        assertTrue(loaded.isFoldMethodBodies());
+        assertTrue(loaded.isFoldCustomRegions());
+
+        assertFalse(loaded.isFoldMarkdownFrontMatter());
+        assertFalse(loaded.isFoldMarkdownLinks());
+        assertTrue(loaded.isFoldMarkdownTables());
+        assertTrue(loaded.isFoldMarkdownCodeFences());
+        assertFalse(loaded.isFoldMarkdownTableOfContents());
+
+        assertTrue(loaded.isFoldSqlUnderscoresInNumericLiterals());
+
+        assertTrue(loaded.isFoldXmlTags());
+        assertFalse(loaded.isFoldHtmlStyleAttribute());
+        assertFalse(loaded.isFoldXmlEntities());
+        assertFalse(loaded.isFoldDataUris());
+    }
+
+    @Test
+    public void testEditorTabsSettings() throws Exception {
+        AppSettingsStore.Settings settings = new AppSettingsStore.Settings();
+
+        // 1. Verify default values match DataGrip screenshots
+        assertEquals("Top", settings.getEditorTabPlacement());
+        assertEquals("One row", settings.getEditorTabsShowMode());
+        assertEquals("Scroll the tabs panel", settings.getEditorTabsOverflowMode());
+        assertFalse(settings.isShowPinnedTabsInSeparateRow());
+        assertTrue(settings.isEditorTabsShowFileIcon());
+        assertTrue(settings.isEditorTabsShowFileExtension());
+        assertTrue(settings.isEditorTabsShowDirectoryForNonUnique());
+        assertFalse(settings.isEditorTabsMarkModified());
+        assertTrue(settings.isEditorTabsShowFullPathOnHover());
+        assertEquals("Right", settings.getEditorTabsCloseButtonPosition());
+
+        assertFalse(settings.isEditorTabsSortAlphabetically());
+        assertFalse(settings.isEditorTabsOpenNewAtEnd());
+
+        assertFalse(settings.isEditorTabsEnablePreviewTab());
+
+        assertEquals(30, settings.getEditorTabsLimit());
+        assertEquals("Close unused", settings.getEditorTabsExceedLimitPolicy());
+        assertEquals("The tab on the left", settings.getEditorTabsCloseActivatePolicy());
+
+        assertFalse(settings.isEditorTabsAlwaysShowQualifiedNames());
+        assertTrue(settings.isEditorTabsShortenNames());
+
+        // 2. Mutate settings
+        settings.setEditorTabPlacement("Bottom");
+        settings.setEditorTabsShowMode("Multiple rows");
+        settings.setEditorTabsOverflowMode("Squeeze tabs");
+        settings.setShowPinnedTabsInSeparateRow(true);
+        settings.setEditorTabsShowFileIcon(false);
+        settings.setEditorTabsShowFileExtension(false);
+        settings.setEditorTabsShowDirectoryForNonUnique(false);
+        settings.setEditorTabsMarkModified(true);
+        settings.setEditorTabsShowFullPathOnHover(false);
+        settings.setEditorTabsCloseButtonPosition("None");
+
+        settings.setEditorTabsSortAlphabetically(true);
+        settings.setEditorTabsOpenNewAtEnd(true);
+
+        settings.setEditorTabsEnablePreviewTab(true);
+
+        settings.setEditorTabsLimit(50);
+        settings.setEditorTabsExceedLimitPolicy("Close unchanged");
+        settings.setEditorTabsCloseActivatePolicy("Most recently opened tab");
+
+        settings.setEditorTabsAlwaysShowQualifiedNames(true);
+        settings.setEditorTabsShortenNames(false);
+
+        // 3. Jackson JSON Roundtrip Serialization
+        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        String json = mapper.writeValueAsString(settings);
+        AppSettingsStore.Settings loaded = mapper.readValue(json, AppSettingsStore.Settings.class);
+
+        // 4. Verify deserialized values
+        assertEquals("Bottom", loaded.getEditorTabPlacement());
+        assertEquals("Multiple rows", loaded.getEditorTabsShowMode());
+        assertEquals("Squeeze tabs", loaded.getEditorTabsOverflowMode());
+        assertTrue(loaded.isShowPinnedTabsInSeparateRow());
+        assertFalse(loaded.isEditorTabsShowFileIcon());
+        assertFalse(loaded.isEditorTabsShowFileExtension());
+        assertFalse(loaded.isEditorTabsShowDirectoryForNonUnique());
+        assertTrue(loaded.isEditorTabsMarkModified());
+        assertFalse(loaded.isEditorTabsShowFullPathOnHover());
+        assertEquals("None", loaded.getEditorTabsCloseButtonPosition());
+
+        assertTrue(loaded.isEditorTabsSortAlphabetically());
+        assertTrue(loaded.isEditorTabsOpenNewAtEnd());
+
+        assertTrue(loaded.isEditorTabsEnablePreviewTab());
+
+        assertEquals(50, loaded.getEditorTabsLimit());
+        assertEquals("Close unchanged", loaded.getEditorTabsExceedLimitPolicy());
+        assertEquals("Most recently opened tab", loaded.getEditorTabsCloseActivatePolicy());
+
+        assertTrue(loaded.isEditorTabsAlwaysShowQualifiedNames());
+        assertFalse(loaded.isEditorTabsShortenNames());
+    }
 }
