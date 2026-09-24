@@ -131,12 +131,11 @@ public class SettingsDialogTest {
 
         // Subtree under Smart Keys
         List<String> skChildren = SettingsDialog.getChildCategoryNames("Editor / General / Smart Keys");
-        assertEquals(5, skChildren.size());
-        assertEquals("YAML", skChildren.get(0));
+        assertEquals(4, skChildren.size());
+        assertEquals("HTML/CSS", skChildren.get(0));
         assertEquals("JSON", skChildren.get(1));
         assertEquals("Markdown", skChildren.get(2));
-        assertEquals("HTML/CSS", skChildren.get(3));
-        assertEquals("SQL", skChildren.get(4));
+        assertEquals("SQL", skChildren.get(3));
     }
 
     @Test
@@ -1717,5 +1716,129 @@ public class SettingsDialogTest {
         String pcDesc = SettingsDialog.getCategoryDescription("Editor / General / Postfix Completion");
         assertNotNull(pcDesc);
         assertEquals("Configure postfix completion templates and expansions.", pcDesc);
+
+        // Subcategory descriptions
+        assertEquals("Configure tag auto-closing, attribute completion, and CSS identifier selection.",
+                SettingsDialog.getCategoryDescription("Editor / General / Smart Keys / HTML/CSS"));
+        assertEquals("Configure quote escaping, comma insertion, and property colon handling in JSON.",
+                SettingsDialog.getCategoryDescription("Editor / General / Smart Keys / JSON"));
+        assertEquals("Configure table formatting, list numbering, and link handling in Markdown.",
+                SettingsDialog.getCategoryDescription("Editor / General / Smart Keys / Markdown"));
+        assertEquals("Configure string concatenation and code block closing on Enter in SQL.",
+                SettingsDialog.getCategoryDescription("Editor / General / Smart Keys / SQL"));
+    }
+
+    @Test
+    public void testSmartKeysSubcategoriesDefaultsAndSerialization() throws Exception {
+        AppSettingsStore.Settings settings = new AppSettingsStore.Settings();
+
+        // 1. Verify SQL Smart Keys defaults
+        assertTrue(settings.isSmartKeysSqlInsertStringConcatOnEnter());
+        assertTrue(settings.isSmartKeysSqlCloseCodeBlocksOnEnter());
+
+        // 2. Verify Markdown Smart Keys defaults
+        assertTrue(settings.isSmartKeysMarkdownReformatTable());
+        assertTrue(settings.isSmartKeysMarkdownInsertHtmlLineBreakInTable());
+        assertTrue(settings.isSmartKeysMarkdownShiftEnterNewTableRow());
+        assertTrue(settings.isSmartKeysMarkdownTabNavigateTable());
+        assertTrue(settings.isSmartKeysMarkdownAdjustListIndent());
+        assertTrue(settings.isSmartKeysMarkdownSmartEnterBackspace());
+        assertFalse(settings.isSmartKeysMarkdownRenumberList());
+        assertEquals("Sequentially", settings.getSmartKeysMarkdownListNumerating());
+        assertTrue(settings.isSmartKeysMarkdownInsertLinksOnDrop());
+        List<String> listOptions = AppSettingsStore.Settings.defaultMarkdownListNumeratingOptions();
+        assertEquals(3, listOptions.size());
+        assertTrue(listOptions.contains("Sequentially"));
+        assertTrue(listOptions.contains("With '1.'"));
+        assertTrue(listOptions.contains("With previous number"));
+
+        // 3. Verify JSON Smart Keys defaults
+        assertTrue(settings.isSmartKeysJsonInsertMissingCommaOnEnter());
+        assertTrue(settings.isSmartKeysJsonInsertMissingCommaAfterMatching());
+        assertTrue(settings.isSmartKeysJsonManageCommasOnPaste());
+        assertTrue(settings.isSmartKeysJsonEscapeTextOnPaste());
+        assertTrue(settings.isSmartKeysJsonAddQuotesToPropertyNames());
+        assertTrue(settings.isSmartKeysJsonAddWhitespaceAfterColon());
+        assertFalse(settings.isSmartKeysJsonMoveColonAfterPropertyName());
+        assertFalse(settings.isSmartKeysJsonMoveCommaAfterPropertyValue());
+
+        // 4. Verify HTML/CSS Smart Keys defaults
+        assertTrue(settings.isSmartKeysHtmlInsertClosingTag());
+        assertTrue(settings.isSmartKeysHtmlInsertRequiredAttributes());
+        assertTrue(settings.isSmartKeysHtmlInsertRequiredSubtags());
+        assertTrue(settings.isSmartKeysHtmlStartAttribute());
+        assertTrue(settings.isSmartKeysHtmlAddQuotesForAttribute());
+        assertTrue(settings.isSmartKeysHtmlAutoCloseTag());
+        assertTrue(settings.isSmartKeysHtmlSimultaneousTagEditing());
+        assertTrue(settings.isSmartKeysCssSelectWholeCssIdentifiers());
+
+        // 5. Mutate all Smart Keys subcategory settings
+        settings.setSmartKeysSqlInsertStringConcatOnEnter(false);
+        settings.setSmartKeysSqlCloseCodeBlocksOnEnter(false);
+
+        settings.setSmartKeysMarkdownReformatTable(false);
+        settings.setSmartKeysMarkdownInsertHtmlLineBreakInTable(false);
+        settings.setSmartKeysMarkdownShiftEnterNewTableRow(false);
+        settings.setSmartKeysMarkdownTabNavigateTable(false);
+        settings.setSmartKeysMarkdownAdjustListIndent(false);
+        settings.setSmartKeysMarkdownSmartEnterBackspace(false);
+        settings.setSmartKeysMarkdownRenumberList(true);
+        settings.setSmartKeysMarkdownListNumerating("With '1.'");
+        settings.setSmartKeysMarkdownInsertLinksOnDrop(false);
+
+        settings.setSmartKeysJsonInsertMissingCommaOnEnter(false);
+        settings.setSmartKeysJsonInsertMissingCommaAfterMatching(false);
+        settings.setSmartKeysJsonManageCommasOnPaste(false);
+        settings.setSmartKeysJsonEscapeTextOnPaste(false);
+        settings.setSmartKeysJsonAddQuotesToPropertyNames(false);
+        settings.setSmartKeysJsonAddWhitespaceAfterColon(false);
+        settings.setSmartKeysJsonMoveColonAfterPropertyName(true);
+        settings.setSmartKeysJsonMoveCommaAfterPropertyValue(true);
+
+        settings.setSmartKeysHtmlInsertClosingTag(false);
+        settings.setSmartKeysHtmlInsertRequiredAttributes(false);
+        settings.setSmartKeysHtmlInsertRequiredSubtags(false);
+        settings.setSmartKeysHtmlStartAttribute(false);
+        settings.setSmartKeysHtmlAddQuotesForAttribute(false);
+        settings.setSmartKeysHtmlAutoCloseTag(false);
+        settings.setSmartKeysHtmlSimultaneousTagEditing(false);
+        settings.setSmartKeysCssSelectWholeCssIdentifiers(false);
+
+        // 6. Jackson JSON Roundtrip Serialization
+        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        String json = mapper.writeValueAsString(settings);
+        AppSettingsStore.Settings loaded = mapper.readValue(json, AppSettingsStore.Settings.class);
+
+        // 7. Verify deserialized values
+        assertFalse(loaded.isSmartKeysSqlInsertStringConcatOnEnter());
+        assertFalse(loaded.isSmartKeysSqlCloseCodeBlocksOnEnter());
+
+        assertFalse(loaded.isSmartKeysMarkdownReformatTable());
+        assertFalse(loaded.isSmartKeysMarkdownInsertHtmlLineBreakInTable());
+        assertFalse(loaded.isSmartKeysMarkdownShiftEnterNewTableRow());
+        assertFalse(loaded.isSmartKeysMarkdownTabNavigateTable());
+        assertFalse(loaded.isSmartKeysMarkdownAdjustListIndent());
+        assertFalse(loaded.isSmartKeysMarkdownSmartEnterBackspace());
+        assertTrue(loaded.isSmartKeysMarkdownRenumberList());
+        assertEquals("With '1.'", loaded.getSmartKeysMarkdownListNumerating());
+        assertFalse(loaded.isSmartKeysMarkdownInsertLinksOnDrop());
+
+        assertFalse(loaded.isSmartKeysJsonInsertMissingCommaOnEnter());
+        assertFalse(loaded.isSmartKeysJsonInsertMissingCommaAfterMatching());
+        assertFalse(loaded.isSmartKeysJsonManageCommasOnPaste());
+        assertFalse(loaded.isSmartKeysJsonEscapeTextOnPaste());
+        assertFalse(loaded.isSmartKeysJsonAddQuotesToPropertyNames());
+        assertFalse(loaded.isSmartKeysJsonAddWhitespaceAfterColon());
+        assertTrue(loaded.isSmartKeysJsonMoveColonAfterPropertyName());
+        assertTrue(loaded.isSmartKeysJsonMoveCommaAfterPropertyValue());
+
+        assertFalse(loaded.isSmartKeysHtmlInsertClosingTag());
+        assertFalse(loaded.isSmartKeysHtmlInsertRequiredAttributes());
+        assertFalse(loaded.isSmartKeysHtmlInsertRequiredSubtags());
+        assertFalse(loaded.isSmartKeysHtmlStartAttribute());
+        assertFalse(loaded.isSmartKeysHtmlAddQuotesForAttribute());
+        assertFalse(loaded.isSmartKeysHtmlAutoCloseTag());
+        assertFalse(loaded.isSmartKeysHtmlSimultaneousTagEditing());
+        assertFalse(loaded.isSmartKeysCssSelectWholeCssIdentifiers());
     }
 }
