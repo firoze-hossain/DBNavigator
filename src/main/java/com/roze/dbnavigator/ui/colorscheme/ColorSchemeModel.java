@@ -39,9 +39,16 @@ public final class ColorSchemeModel {
         public ColorSchemeElement(String id, String name, List<String> categoryPath,
                                   ColorSchemeAttribute defaultAttr,
                                   String inheritFromKey, String inheritFromDisplay) {
+            this(id, name, categoryPath, defaultAttr, inheritFromKey, inheritFromDisplay, "Language Defaults");
+        }
+
+        public ColorSchemeElement(String id, String name, List<String> categoryPath,
+                                  ColorSchemeAttribute defaultAttr,
+                                  String inheritFromKey, String inheritFromDisplay,
+                                  String page) {
             this.id = id;
             this.name = name;
-            this.page = "Language Defaults";
+            this.page = page != null ? page : "General";
             this.categoryPath = categoryPath != null ? List.copyOf(categoryPath) : List.of(name);
             this.category = !this.categoryPath.isEmpty() ? this.categoryPath.get(0) : "";
             this.subCategory = this.categoryPath.size() > 2 ? this.categoryPath.get(1) : null;
@@ -494,6 +501,206 @@ public final class ColorSchemeModel {
         register(new ColorSchemeElement("lang.template_language", "Template language",
                 List.of("Template language"),
                 new ColorSchemeAttribute(false, false, "E09553", true, null, false, null, false, null, false, "Bordered", false, null), null, null));
+
+        // =========================================================================
+        // CONSOLE COLORS (DataGrip Alignment)
+        // =========================================================================
+        // 1. ANSI colors
+        register(new ColorSchemeElement("console.ansi.black", "Black",
+                List.of("ANSI colors", "Black"),
+                new ColorSchemeAttribute(false, false, "000000", true, "000000", true, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.ansi.blue", "Blue",
+                List.of("ANSI colors", "Blue"),
+                new ColorSchemeAttribute(false, false, "3574F0", true, "244B9E", true, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.ansi.bright_black", "Bright Black",
+                List.of("ANSI colors", "Bright Black"),
+                new ColorSchemeAttribute(false, false, "6C707E", true, "4E5157", true, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.ansi.bright_blue", "Bright Blue",
+                List.of("ANSI colors", "Bright Blue"),
+                new ColorSchemeAttribute(false, false, "589DF6", true, "3574F0", true, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.ansi.bright_cyan", "Bright Cyan",
+                List.of("ANSI colors", "Bright Cyan"),
+                new ColorSchemeAttribute(false, false, "46B8DF", true, "288DB3", true, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.ansi.bright_green", "Bright Green",
+                List.of("ANSI colors", "Bright Green"),
+                new ColorSchemeAttribute(false, false, "4FC414", false, "458500", false, null, false, null, false, "Underscored", true, "console.ansi.green"),
+                "console.ansi.green", "ANSI colors → Green (Console Colors)", "Console Colors"));
+        register(new ColorSchemeElement("console.ansi.bright_magenta", "Bright Magenta",
+                List.of("ANSI colors", "Bright Magenta"),
+                new ColorSchemeAttribute(false, false, "C77DBB", true, "8E5283", true, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.ansi.bright_red", "Bright Red",
+                List.of("ANSI colors", "Bright Red"),
+                new ColorSchemeAttribute(false, false, "F75464", true, "B33644", true, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.ansi.bright_white", "Bright White",
+                List.of("ANSI colors", "Bright White"),
+                new ColorSchemeAttribute(false, false, "FFFFFF", true, "DFE1E5", true, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.ansi.bright_yellow", "Bright Yellow",
+                List.of("ANSI colors", "Bright Yellow"),
+                new ColorSchemeAttribute(false, false, "E5B842", true, "A68326", true, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.ansi.cyan", "Cyan",
+                List.of("ANSI colors", "Cyan"),
+                new ColorSchemeAttribute(false, false, "2BBAC5", true, "1B7C84", true, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.ansi.green", "Green",
+                List.of("ANSI colors", "Green"),
+                new ColorSchemeAttribute(false, false, "57965C", true, "32593D", true, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.ansi.magenta", "Magenta",
+                List.of("ANSI colors", "Magenta"),
+                new ColorSchemeAttribute(false, false, "AE67A0", true, "743F6A", true, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.ansi.red", "Red",
+                List.of("ANSI colors", "Red"),
+                new ColorSchemeAttribute(false, false, "BC3F3C", true, "7A2826", true, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.ansi.white", "White (Gray)",
+                List.of("ANSI colors", "White (Gray)"),
+                new ColorSchemeAttribute(false, false, "A9B7C6", true, "5A5D60", true, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.ansi.yellow", "Yellow",
+                List.of("ANSI colors", "Yellow"),
+                new ColorSchemeAttribute(false, false, "C19C00", true, "806700", true, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+
+        // 2. Console
+        register(new ColorSchemeElement("console.background", "Background",
+                List.of("Console", "Background"),
+                new ColorSchemeAttribute(false, false, null, false, "1E1F22", true, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.error_output", "Error output",
+                List.of("Console", "Error output"),
+                new ColorSchemeAttribute(false, false, "F75464", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.standard_output", "Standard output",
+                List.of("Console", "Standard output"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.system_output", "System output",
+                List.of("Console", "System output"),
+                new ColorSchemeAttribute(false, false, "A9B7C6", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.user_input", "User input",
+                List.of("Console", "User input"),
+                new ColorSchemeAttribute(false, true, "6AAB73", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+
+        // 3. Log console
+        register(new ColorSchemeElement("console.log.error", "Error",
+                List.of("Log console", "Error"),
+                new ColorSchemeAttribute(false, false, "F75464", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.log.warning", "Warning",
+                List.of("Log console", "Warning"),
+                new ColorSchemeAttribute(false, false, "E5B842", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.log.info", "Info",
+                List.of("Log console", "Info"),
+                new ColorSchemeAttribute(false, false, "E5B842", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.log.verbose", "Verbose",
+                List.of("Log console", "Verbose"),
+                new ColorSchemeAttribute(false, false, "589DF6", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.log.debug", "Debug",
+                List.of("Log console", "Debug"),
+                new ColorSchemeAttribute(false, false, "2BBAC5", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.log.expired", "Expired entry",
+                List.of("Log console", "Expired entry"),
+                new ColorSchemeAttribute(false, false, "6C707E", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+
+        // 4. Reworked terminal (all 34 items in DataGrip alphabetical order)
+        register(new ColorSchemeElement("console.reworked_terminal.black", "Black",
+                List.of("Reworked terminal", "Black"),
+                new ColorSchemeAttribute(false, false, "000000", true, "000000", true, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.reworked_terminal.blue", "Blue",
+                List.of("Reworked terminal", "Blue"),
+                new ColorSchemeAttribute(false, false, "5594FA", true, "134EBF", true, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.reworked_terminal.bright_black", "Bright Black",
+                List.of("Reworked terminal", "Bright Black"),
+                new ColorSchemeAttribute(false, false, "6C707E", true, "4E5157", true, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.reworked_terminal.bright_blue", "Bright Blue",
+                List.of("Reworked terminal", "Bright Blue"),
+                new ColorSchemeAttribute(false, false, "589DF6", true, "3574F0", true, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.reworked_terminal.bright_cyan", "Bright Cyan",
+                List.of("Reworked terminal", "Bright Cyan"),
+                new ColorSchemeAttribute(false, false, "46B8DF", true, "288DB3", true, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.reworked_terminal.bright_green", "Bright Green",
+                List.of("Reworked terminal", "Bright Green"),
+                new ColorSchemeAttribute(false, false, "4FC414", true, "458500", true, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.reworked_terminal.bright_magenta", "Bright Magenta",
+                List.of("Reworked terminal", "Bright Magenta"),
+                new ColorSchemeAttribute(false, false, "C77DBB", true, "8E5283", true, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.reworked_terminal.bright_red", "Bright Red",
+                List.of("Reworked terminal", "Bright Red"),
+                new ColorSchemeAttribute(false, false, "F75464", true, "B33644", true, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.reworked_terminal.bright_white", "Bright White",
+                List.of("Reworked terminal", "Bright White"),
+                new ColorSchemeAttribute(false, false, "FFFFFF", true, "DFE1E5", true, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.reworked_terminal.bright_yellow", "Bright Yellow",
+                List.of("Reworked terminal", "Bright Yellow"),
+                new ColorSchemeAttribute(false, false, "E5B842", true, "A68326", true, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.reworked_terminal.command", "Command",
+                List.of("Reworked terminal", "Command"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.reworked_terminal.current_search_entry", "Current search entry",
+                List.of("Reworked terminal", "Current search entry"),
+                new ColorSchemeAttribute(false, false, null, false, "214283", true, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.reworked_terminal.cyan", "Cyan",
+                List.of("Reworked terminal", "Cyan"),
+                new ColorSchemeAttribute(false, false, "2BBAC5", true, "1B7C84", true, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.reworked_terminal.default_background", "Default background",
+                List.of("Reworked terminal", "Default background"),
+                new ColorSchemeAttribute(false, false, null, false, "1E1F22", true, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.reworked_terminal.default_foreground", "Default foreground",
+                List.of("Reworked terminal", "Default foreground"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.reworked_terminal.error_block_border", "Error block border",
+                List.of("Reworked terminal", "Error block border"),
+                new ColorSchemeAttribute(false, false, null, false, null, false, null, false, "F75464", true, "Bordered", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.reworked_terminal.generate_command_caret_color", "Generate command caret color",
+                List.of("Reworked terminal", "Generate command caret color"),
+                new ColorSchemeAttribute(false, false, "DFE1E5", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.reworked_terminal.generate_command_placeholder_foreground", "Generate command placeholder foreground",
+                List.of("Reworked terminal", "Generate command placeholder foreground"),
+                new ColorSchemeAttribute(false, false, "6C707E", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.reworked_terminal.generate_command_prompt_text", "Generate command prompt text",
+                List.of("Reworked terminal", "Generate command prompt text"),
+                new ColorSchemeAttribute(false, true, "7A7E85", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.reworked_terminal.green", "Green",
+                List.of("Reworked terminal", "Green"),
+                new ColorSchemeAttribute(false, false, "57965C", true, "32593D", true, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.reworked_terminal.inactive_selected_block_background", "Inactive selected block background",
+                List.of("Reworked terminal", "Inactive selected block background"),
+                new ColorSchemeAttribute(false, false, null, false, "2B2D30", true, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.reworked_terminal.inactive_selected_block_border", "Inactive selected block border",
+                List.of("Reworked terminal", "Inactive selected block border"),
+                new ColorSchemeAttribute(false, false, null, false, null, false, null, false, "393B40", true, "Bordered", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.reworked_terminal.magenta", "Magenta",
+                List.of("Reworked terminal", "Magenta"),
+                new ColorSchemeAttribute(false, false, "AE67A0", true, "743F6A", true, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.reworked_terminal.prompt_separator_color", "Prompt separator color",
+                List.of("Reworked terminal", "Prompt separator color"),
+                new ColorSchemeAttribute(false, false, "43454A", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.reworked_terminal.red", "Red",
+                List.of("Reworked terminal", "Red"),
+                new ColorSchemeAttribute(false, false, "BC3F3C", true, "7A2826", true, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.reworked_terminal.reworked_background_gradient_end", "Reworked background gradient end",
+                List.of("Reworked terminal", "Reworked background gradient end"),
+                new ColorSchemeAttribute(false, false, null, false, "1E1F22", true, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.reworked_terminal.reworked_background_gradient_start", "Reworked background gradient start",
+                List.of("Reworked terminal", "Reworked background gradient start"),
+                new ColorSchemeAttribute(false, false, null, false, "25262A", true, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.reworked_terminal.reworked_hovered_background_gradient_end", "Reworked hovered background gradient end",
+                List.of("Reworked terminal", "Reworked hovered background gradient end"),
+                new ColorSchemeAttribute(false, false, null, false, "2B2D30", true, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.reworked_terminal.reworked_hovered_background_gradient_start", "Reworked hovered background gradient start",
+                List.of("Reworked terminal", "Reworked hovered background gradient start"),
+                new ColorSchemeAttribute(false, false, null, false, "323438", true, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.reworked_terminal.search_entry", "Search entry",
+                List.of("Reworked terminal", "Search entry"),
+                new ColorSchemeAttribute(false, false, null, false, "32593D", true, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.reworked_terminal.selected_block_background", "Selected block background",
+                List.of("Reworked terminal", "Selected block background"),
+                new ColorSchemeAttribute(false, false, null, false, "2E436E", true, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.reworked_terminal.selected_block_border", "Selected block border",
+                List.of("Reworked terminal", "Selected block border"),
+                new ColorSchemeAttribute(false, false, null, false, null, false, null, false, "3574F0", true, "Bordered", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.reworked_terminal.white", "White",
+                List.of("Reworked terminal", "White"),
+                new ColorSchemeAttribute(false, false, "CED0D6", true, "CED0D6", true, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+        register(new ColorSchemeElement("console.reworked_terminal.yellow", "Yellow",
+                List.of("Reworked terminal", "Yellow"),
+                new ColorSchemeAttribute(false, false, "C19C00", true, "806700", true, null, false, null, false, "Underscored", false, null), null, null, "Console Colors"));
+
+        // 5. Terminal (Exact DataGrip item)
+        register(new ColorSchemeElement("console.terminal.command_to_run_using_ide", "Command to run using IDE",
+                List.of("Terminal", "Command to run using IDE"),
+                new ColorSchemeAttribute(false, false, null, false, "40503C", true, null, false, null, false, "Bordered", false, null), null, null, "Console Colors"));
     }
 
     private static void register(ColorSchemeElement element) {
@@ -519,6 +726,16 @@ public final class ColorSchemeModel {
         List<ColorSchemeElement> list = new ArrayList<>();
         for (ColorSchemeElement el : ALL_ELEMENTS) {
             if ("Language Defaults".equals(el.getPage())) {
+                list.add(el);
+            }
+        }
+        return Collections.unmodifiableList(list);
+    }
+
+    public static List<ColorSchemeElement> getConsoleColorElements() {
+        List<ColorSchemeElement> list = new ArrayList<>();
+        for (ColorSchemeElement el : ALL_ELEMENTS) {
+            if ("Console Colors".equals(el.getPage())) {
                 list.add(el);
             }
         }
@@ -551,6 +768,14 @@ public final class ColorSchemeModel {
         if ("instance_field".equals(id)) return ELEMENT_MAP.get("lang.classes.instance_field");
         if ("doc_link".equals(id)) return ELEMENT_MAP.get("lang.comments.doc.link");
         if ("template_language".equals(id)) return ELEMENT_MAP.get("lang.template_language");
+        if ("console.error".equals(id)) return ELEMENT_MAP.get("console.error_output");
+        if ("console.standard".equals(id)) return ELEMENT_MAP.get("console.standard_output");
+        if ("console.system".equals(id)) return ELEMENT_MAP.get("console.system_output");
+        if ("console.user".equals(id)) return ELEMENT_MAP.get("console.user_input");
+        if ("console.reworked_terminal.cursor".equals(id)) return ELEMENT_MAP.get("console.reworked_terminal.generate_command_caret_color");
+        if ("console.reworked_terminal.selection".equals(id)) return ELEMENT_MAP.get("console.reworked_terminal.selected_block_background");
+        if ("console.terminal.cursor".equals(id)) return ELEMENT_MAP.get("console.terminal.command_to_run_using_ide");
+        if ("console.terminal.selection".equals(id)) return ELEMENT_MAP.get("console.terminal.command_to_run_using_ide");
         return null;
     }
 
@@ -568,6 +793,16 @@ public final class ColorSchemeModel {
         Set<String> set = new LinkedHashSet<>();
         for (ColorSchemeElement el : ALL_ELEMENTS) {
             if ("Language Defaults".equals(el.getPage())) {
+                set.add(el.getCategory());
+            }
+        }
+        return new ArrayList<>(set);
+    }
+
+    public static List<String> getConsoleColorCategories() {
+        Set<String> set = new LinkedHashSet<>();
+        for (ColorSchemeElement el : ALL_ELEMENTS) {
+            if ("Console Colors".equals(el.getPage())) {
                 set.add(el.getCategory());
             }
         }
