@@ -44,6 +44,11 @@ import com.roze.dbnavigator.ui.colorscheme.HtmlColorSchemePanel;
 import com.roze.dbnavigator.ui.colorscheme.JsonColorSchemePanel;
 import com.roze.dbnavigator.ui.colorscheme.RegExpColorSchemePanel;
 import com.roze.dbnavigator.ui.colorscheme.MarkdownColorSchemePanel;
+import com.roze.dbnavigator.ui.colorscheme.SqlColorSchemePanel;
+import com.roze.dbnavigator.ui.colorscheme.TableDiffColorSchemePanel;
+import com.roze.dbnavigator.ui.colorscheme.XmlColorSchemePanel;
+import com.roze.dbnavigator.ui.colorscheme.XPathColorSchemePanel;
+import com.roze.dbnavigator.ui.colorscheme.XsltColorSchemePanel;
 
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
@@ -1024,6 +1029,16 @@ public final class SettingsDialog {
             return MarkdownColorSchemePanel.build(settings, inputs, navigateTo);
         } else if ("Editor / Color Scheme / RegExp".equals(fullPath) || (cat != null && "cs.regexp".equals(cat.getId()))) {
             return RegExpColorSchemePanel.build(settings, inputs, navigateTo);
+        } else if ("Editor / Color Scheme / SQL".equals(fullPath) || (cat != null && "cs.sql".equals(cat.getId()))) {
+            return SqlColorSchemePanel.build(settings, inputs, navigateTo);
+        } else if ("Editor / Color Scheme / Table Diff".equals(fullPath) || (cat != null && "cs.table_diff".equals(cat.getId()))) {
+            return TableDiffColorSchemePanel.build(settings, inputs, navigateTo);
+        } else if ("Editor / Color Scheme / XML".equals(fullPath) || (cat != null && "cs.xml".equals(cat.getId()))) {
+            return XmlColorSchemePanel.build(settings, inputs, navigateTo);
+        } else if ("Editor / Color Scheme / XPath".equals(fullPath) || (cat != null && "cs.xpath".equals(cat.getId()))) {
+            return XPathColorSchemePanel.build(settings, inputs, navigateTo);
+        } else if ("Editor / Color Scheme / XSLT".equals(fullPath) || (cat != null && "cs.xslt".equals(cat.getId()))) {
+            return XsltColorSchemePanel.build(settings, inputs, navigateTo);
         } else if ("Editor / Color Scheme".equals(fullPath) || "Color Scheme".equals(fullPath)) {
             return buildColorSchemeLandingPanel(cat, navigateTo);
         } else if ("Editor / Code Style / SQL".equals(fullPath)) {

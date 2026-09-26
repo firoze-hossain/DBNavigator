@@ -1270,6 +1270,176 @@ public final class ColorSchemeModel {
         register(new ColorSchemeElement("markdown.text", "Text",
                 List.of("Text"),
                 new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Markdown"));
+
+        // =========================================================================
+        // SQL (21 items, Alphabetical matching Screenshot 1)
+        // =========================================================================
+        register(new ColorSchemeElement("sql.bad_token", "Bad token",
+                List.of("Bad token"),
+                new ColorSchemeAttribute(false, false, "FA6675", true, null, false, null, false, "FA6675", true, "Underwaved", false, null), null, null, "SQL"));
+        register(new ColorSchemeElement("sql.braces", "Braces",
+                List.of("Braces"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "SQL"));
+        register(new ColorSchemeElement("sql.brackets", "Brackets",
+                List.of("Brackets"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "SQL"));
+        register(new ColorSchemeElement("sql.column", "Column",
+                List.of("Column"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "SQL"));
+        register(new ColorSchemeElement("sql.comma", "Comma",
+                List.of("Comma"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "SQL"));
+        register(new ColorSchemeElement("sql.comment", "Comment",
+                List.of("Comment"),
+                new ColorSchemeAttribute(false, false, "7A7E85", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "SQL"));
+        register(new ColorSchemeElement("sql.database_object", "Database object",
+                List.of("Database object"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "SQL"));
+        register(new ColorSchemeElement("sql.dot", "Dot",
+                List.of("Dot"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "SQL"));
+        register(new ColorSchemeElement("sql.external_command", "External command",
+                List.of("External command"),
+                new ColorSchemeAttribute(false, false, "2AACB8", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "SQL"));
+        register(new ColorSchemeElement("sql.keyword", "Keyword",
+                List.of("Keyword"),
+                new ColorSchemeAttribute(false, false, "CF8E6D", true, null, false, null, false, null, false, "Bordered", true, "lang.keyword"),
+                "lang.keyword", "Keyword\n(Language Defaults)", "SQL"));
+        register(new ColorSchemeElement("sql.label", "Label",
+                List.of("Label"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "SQL"));
+        register(new ColorSchemeElement("sql.number_token", "Number token",
+                List.of("Number token"),
+                new ColorSchemeAttribute(false, false, "2AACB8", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "SQL"));
+        register(new ColorSchemeElement("sql.outer_query_column", "Outer query column",
+                List.of("Outer query column"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "SQL"));
+        register(new ColorSchemeElement("sql.parameter", "Parameter",
+                List.of("Parameter"),
+                new ColorSchemeAttribute(false, false, "3D7A49", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "SQL"));
+        register(new ColorSchemeElement("sql.parentheses", "Parentheses",
+                List.of("Parentheses"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "SQL"));
+        register(new ColorSchemeElement("sql.procedure", "Procedure",
+                List.of("Procedure"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "SQL"));
+        register(new ColorSchemeElement("sql.quoted_identifier", "Quoted identifier",
+                List.of("Quoted identifier"),
+                new ColorSchemeAttribute(false, false, "6A8759", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "SQL"));
+        register(new ColorSchemeElement("sql.semicolon", "Semicolon",
+                List.of("Semicolon"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "SQL"));
+        register(new ColorSchemeElement("sql.string", "String",
+                List.of("String"),
+                new ColorSchemeAttribute(false, false, "6A8759", true, null, false, null, false, null, false, "Bordered", true, "lang.string"),
+                "lang.string", "String\n(Language Defaults)", "SQL"));
+        register(new ColorSchemeElement("sql.type", "Type",
+                List.of("Type"),
+                new ColorSchemeAttribute(false, false, "CF8E6D", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "SQL"));
+        register(new ColorSchemeElement("sql.variable", "Variable",
+                List.of("Variable"),
+                new ColorSchemeAttribute(false, false, "C792EA", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "SQL"));
+
+        // =========================================================================
+        // TABLE DIFF (3 items matching Screenshot 4)
+        // =========================================================================
+        register(new ColorSchemeElement("table_diff.excluded", "Excluded from diff",
+                List.of("Excluded from diff"),
+                new ColorSchemeAttribute(false, false, null, false, "2E3A3B", true, null, false, null, false, "Underscored", false, null), null, null, "Table Diff"));
+        register(new ColorSchemeElement("table_diff.fuzzy_matched", "Fuzzy match - matched",
+                List.of("Fuzzy match - matched"),
+                new ColorSchemeAttribute(false, false, null, false, "1E3A4B", true, null, false, null, false, "Underscored", false, null), null, null, "Table Diff"));
+        register(new ColorSchemeElement("table_diff.fuzzy_mismatched", "Fuzzy match - mismatched",
+                List.of("Fuzzy match - mismatched"),
+                new ColorSchemeAttribute(false, false, null, false, "114957", true, "72D6D6", true, "165E70", true, "Bordered", true, "gen.search_result"),
+                "gen.search_result", "Search Results\u2192Text search result\n(General)", "Table Diff"));
+
+        // =========================================================================
+        // XML (12 items, Alphabetical matching Screenshot 3)
+        // =========================================================================
+        register(new ColorSchemeElement("xml.attribute_name", "Attribute Name",
+                List.of("Attribute Name"),
+                new ColorSchemeAttribute(false, false, "BABABA", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "XML"));
+        register(new ColorSchemeElement("xml.attribute_value", "Attribute Value",
+                List.of("Attribute Value"),
+                new ColorSchemeAttribute(false, false, "6A8759", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "XML"));
+        register(new ColorSchemeElement("xml.comment", "Comment",
+                List.of("Comment"),
+                new ColorSchemeAttribute(false, false, "808080", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "XML"));
+        register(new ColorSchemeElement("xml.custom_tag_name", "Custom Tag Name",
+                List.of("Custom Tag Name"),
+                new ColorSchemeAttribute(false, false, "2FBAA3", true, null, false, null, false, "2FBAA3", true, "Bordered", false, null), null, null, "XML"));
+        register(new ColorSchemeElement("xml.entity_reference", "Entity Reference",
+                List.of("Entity Reference"),
+                new ColorSchemeAttribute(false, false, "56A8F5", true, null, false, null, false, null, false, "Underscored", false, null),
+                "lang.markup.entity", "Markup\u2192Entity\n(Language Defaults)", "XML"));
+        register(new ColorSchemeElement("xml.injected_language", "Injected Language Fragment",
+                List.of("Injected Language Fragment"),
+                new ColorSchemeAttribute(false, false, null, false, "363636", true, null, false, null, false, "Underscored", false, null), null, null, "XML"));
+        register(new ColorSchemeElement("xml.matched_tag", "Matched Tag",
+                List.of("Matched Tag"),
+                new ColorSchemeAttribute(false, false, null, false, "3B514D", true, null, false, null, false, "Underscored", false, null), null, null, "XML"));
+        register(new ColorSchemeElement("xml.namespace_prefix", "Namespace Prefix",
+                List.of("Namespace Prefix"),
+                new ColorSchemeAttribute(false, false, "E8BF6A", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "XML"));
+        register(new ColorSchemeElement("xml.prologue", "Prologue",
+                List.of("Prologue"),
+                new ColorSchemeAttribute(false, false, "E8BF6A", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "XML"));
+        register(new ColorSchemeElement("xml.tag", "Tag",
+                List.of("Tag"),
+                new ColorSchemeAttribute(false, false, "E8BF6A", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "XML"));
+        register(new ColorSchemeElement("xml.tag_data", "Tag Data",
+                List.of("Tag Data"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "XML"));
+        register(new ColorSchemeElement("xml.tag_name", "Tag Name",
+                List.of("Tag Name"),
+                new ColorSchemeAttribute(false, false, "E8BF6A", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "XML"));
+
+        // =========================================================================
+        // XPATH (11 items, Alphabetical matching Screenshot 2)
+        // =========================================================================
+        register(new ColorSchemeElement("xpath.brackets", "Brackets",
+                List.of("Brackets"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "XPath"));
+        register(new ColorSchemeElement("xpath.extension_prefix", "Extension Prefix",
+                List.of("Extension Prefix"),
+                new ColorSchemeAttribute(false, false, "E8BF6A", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "XPath"));
+        register(new ColorSchemeElement("xpath.function", "Function",
+                List.of("Function"),
+                new ColorSchemeAttribute(false, false, "56A8F5", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "XPath"));
+        register(new ColorSchemeElement("xpath.keyword", "Keyword",
+                List.of("Keyword"),
+                new ColorSchemeAttribute(false, false, "CF8E6D", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "XPath"));
+        register(new ColorSchemeElement("xpath.name", "Name",
+                List.of("Name"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "XPath"));
+        register(new ColorSchemeElement("xpath.number", "Number",
+                List.of("Number"),
+                new ColorSchemeAttribute(false, false, "2AACB8", true, null, false, null, false, null, false, "Underscored", true, "lang.number"),
+                "lang.number", "Number\n(Language Defaults)", "XPath"));
+        register(new ColorSchemeElement("xpath.operator", "Operator",
+                List.of("Operator"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "XPath"));
+        register(new ColorSchemeElement("xpath.other", "Other",
+                List.of("Other"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "XPath"));
+        register(new ColorSchemeElement("xpath.parentheses", "Parentheses",
+                List.of("Parentheses"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "XPath"));
+        register(new ColorSchemeElement("xpath.string", "String",
+                List.of("String"),
+                new ColorSchemeAttribute(false, false, "6A8759", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "XPath"));
+        register(new ColorSchemeElement("xpath.variable", "Variable",
+                List.of("Variable"),
+                new ColorSchemeAttribute(false, false, "C792EA", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "XPath"));
+
+        // =========================================================================
+        // XSLT (1 item matching Screenshot 5)
+        // =========================================================================
+        register(new ColorSchemeElement("xslt.directive", "XSLT Directive",
+                List.of("XSLT Directive"),
+                new ColorSchemeAttribute(false, false, null, false, "2B2D30", true, null, false, null, false, "Underscored", true, "lang.template"),
+                "lang.template", "Template language\n(Language Defaults)", "XSLT"));
     }
 
     private static void register(ColorSchemeElement element) {
@@ -1461,6 +1631,56 @@ public final class ColorSchemeModel {
         return new ArrayList<>(set);
     }
 
+    public static List<ColorSchemeElement> getSqlElements() {
+        List<ColorSchemeElement> list = new ArrayList<>();
+        for (ColorSchemeElement el : ALL_ELEMENTS) {
+            if ("SQL".equals(el.getPage())) {
+                list.add(el);
+            }
+        }
+        return Collections.unmodifiableList(list);
+    }
+
+    public static List<ColorSchemeElement> getTableDiffElements() {
+        List<ColorSchemeElement> list = new ArrayList<>();
+        for (ColorSchemeElement el : ALL_ELEMENTS) {
+            if ("Table Diff".equals(el.getPage())) {
+                list.add(el);
+            }
+        }
+        return Collections.unmodifiableList(list);
+    }
+
+    public static List<ColorSchemeElement> getXmlElements() {
+        List<ColorSchemeElement> list = new ArrayList<>();
+        for (ColorSchemeElement el : ALL_ELEMENTS) {
+            if ("XML".equals(el.getPage())) {
+                list.add(el);
+            }
+        }
+        return Collections.unmodifiableList(list);
+    }
+
+    public static List<ColorSchemeElement> getXPathElements() {
+        List<ColorSchemeElement> list = new ArrayList<>();
+        for (ColorSchemeElement el : ALL_ELEMENTS) {
+            if ("XPath".equals(el.getPage())) {
+                list.add(el);
+            }
+        }
+        return Collections.unmodifiableList(list);
+    }
+
+    public static List<ColorSchemeElement> getXsltElements() {
+        List<ColorSchemeElement> list = new ArrayList<>();
+        for (ColorSchemeElement el : ALL_ELEMENTS) {
+            if ("XSLT".equals(el.getPage())) {
+                list.add(el);
+            }
+        }
+        return Collections.unmodifiableList(list);
+    }
+
     public static ColorSchemeElement getElement(String id) {
         if (id == null) return null;
         ColorSchemeElement el = ELEMENT_MAP.get(id);
@@ -1503,6 +1723,11 @@ public final class ColorSchemeModel {
         if ("regexp.escaped".equals(id)) return ELEMENT_MAP.get("regexp.escaped_character");
         if ("markdown.bold_marker".equals(id)) return ELEMENT_MAP.get("markdown.style.bold_marker");
         if ("markdown.italic_marker".equals(id)) return ELEMENT_MAP.get("markdown.style.italic_marker");
+        if ("sql.keyword".equals(id)) return ELEMENT_MAP.get("sql.keyword");
+        if ("table_diff.fuzzy_mismatched".equals(id)) return ELEMENT_MAP.get("table_diff.fuzzy_mismatched");
+        if ("xml.entity".equals(id)) return ELEMENT_MAP.get("xml.entity_reference");
+        if ("xpath.number".equals(id)) return ELEMENT_MAP.get("xpath.number");
+        if ("xslt.directive".equals(id)) return ELEMENT_MAP.get("xslt.directive");
         return null;
     }
 

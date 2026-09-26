@@ -2818,5 +2818,20 @@ public class SettingsDialogTest {
 
         javafx.scene.Node regexNode = SettingsDialog.buildPanelForPath("Editor / Color Scheme / RegExp", settings, inputs, null);
         assertNotNull(regexNode);
+
+        javafx.scene.Node sqlNode = SettingsDialog.buildPanelForPath("Editor / Color Scheme / SQL", settings, inputs, null);
+        assertNotNull(sqlNode);
+
+        javafx.scene.Node tableDiffNode = SettingsDialog.buildPanelForPath("Editor / Color Scheme / Table Diff", settings, inputs, null);
+        assertNotNull(tableDiffNode);
+
+        javafx.scene.Node xmlNode = SettingsDialog.buildPanelForPath("Editor / Color Scheme / XML", settings, inputs, null);
+        assertNotNull(xmlNode);
+
+        javafx.scene.Node xpathNode = SettingsDialog.buildPanelForPath("Editor / Color Scheme / XPath", settings, inputs, null);
+        assertNotNull(xpathNode);
+
+        javafx.scene.Node xsltNode = SettingsDialog.buildPanelForPath("Editor / Color Scheme / XSLT", settings, inputs, null);
+        assertNotNull(xsltNode);
     }
 }
