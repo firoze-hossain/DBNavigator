@@ -7,7 +7,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -15,6 +17,14 @@ import java.util.Objects;
  * ~/.dbnavigator/settings.json — separate from per-connection state.
  */
 public final class AppSettingsStore {
+
+    public static String defaultKeymapPreset() {
+        return Settings.defaultKeymapPreset();
+    }
+
+    public static List<String> defaultKeymapPresets() {
+        return Settings.defaultKeymapPresets();
+    }
 
     public enum Theme { DARK, LIGHT }
 
@@ -40,7 +50,10 @@ public final class AppSettingsStore {
         public boolean showEmptySchemas = false;
         public String csvDelimiter = ",";
         public String csvQuoteChar = "\"";
-        public String keymapPreset = "DataGrip Default";
+        public String keymapPreset = defaultKeymapPreset();
+        public List<String> customKeymapPresets = new ArrayList<>();
+        public Map<String, List<String>> customKeymapShortcuts = new LinkedHashMap<>();
+        public Map<String, List<String>> removedKeymapShortcuts = new LinkedHashMap<>();
         public List<ExecuteActionConfig> executeActions = defaultExecuteActions();
         public String scriptSplitting = "Into valid ANSI SQL statements or by separator";
         public boolean reviewParametersBeforeExecution = true;
@@ -657,8 +670,73 @@ public final class AppSettingsStore {
         public void setCsvDelimiter(String csvDelimiter) { this.csvDelimiter = csvDelimiter; }
         public String getCsvQuoteChar() { return csvQuoteChar; }
         public void setCsvQuoteChar(String csvQuoteChar) { this.csvQuoteChar = csvQuoteChar; }
-        public String getKeymapPreset() { return keymapPreset; }
+        public static boolean isMac() {
+            return System.getProperty("os.name", "").toLowerCase().contains("mac");
+        }
+
+        public static String defaultKeymapPreset() {
+            return isMac() ? "macOS" : "Windows";
+        }
+
+        public static List<String> defaultKeymapPresets() {
+            if (isMac()) {
+                return new ArrayList<>(List.of(
+                        "macOS",
+                        "Emacs",
+                        "IntelliJ IDEA Classic",
+                        "macOS System Shortcuts",
+                        "Sublime Text",
+                        "Sublime Text (macOS)"
+                ));
+            } else {
+                return new ArrayList<>(List.of(
+                        "Windows",
+                        "IntelliJ IDEA Classic",
+                        "Emacs",
+                        "Eclipse",
+                        "Visual Studio",
+                        "Sublime Text"
+                ));
+            }
+        }
+
+        public String getKeymapPreset() {
+            if (keymapPreset == null || keymapPreset.isBlank() || "DataGrip Default".equals(keymapPreset)) {
+                keymapPreset = defaultKeymapPreset();
+            }
+            return keymapPreset;
+        }
         public void setKeymapPreset(String keymapPreset) { this.keymapPreset = keymapPreset; }
+
+        public List<String> getCustomKeymapPresets() {
+            if (customKeymapPresets == null) {
+                customKeymapPresets = new ArrayList<>();
+            }
+            return customKeymapPresets;
+        }
+        public void setCustomKeymapPresets(List<String> customKeymapPresets) {
+            this.customKeymapPresets = customKeymapPresets != null ? customKeymapPresets : new ArrayList<>();
+        }
+
+        public Map<String, List<String>> getCustomKeymapShortcuts() {
+            if (customKeymapShortcuts == null) {
+                customKeymapShortcuts = new LinkedHashMap<>();
+            }
+            return customKeymapShortcuts;
+        }
+        public void setCustomKeymapShortcuts(Map<String, List<String>> customKeymapShortcuts) {
+            this.customKeymapShortcuts = customKeymapShortcuts != null ? customKeymapShortcuts : new LinkedHashMap<>();
+        }
+
+        public Map<String, List<String>> getRemovedKeymapShortcuts() {
+            if (removedKeymapShortcuts == null) {
+                removedKeymapShortcuts = new LinkedHashMap<>();
+            }
+            return removedKeymapShortcuts;
+        }
+        public void setRemovedKeymapShortcuts(Map<String, List<String>> removedKeymapShortcuts) {
+            this.removedKeymapShortcuts = removedKeymapShortcuts != null ? removedKeymapShortcuts : new LinkedHashMap<>();
+        }
         public List<ExecuteActionConfig> getExecuteActions() {
             if (executeActions == null || executeActions.isEmpty()) {
                 executeActions = defaultExecuteActions();

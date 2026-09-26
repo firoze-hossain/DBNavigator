@@ -11,6 +11,7 @@ import javafx.scene.layout.HBox;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -61,6 +62,14 @@ public class ActionManager {
 
     public ActionGroup getGroup(String id) {
         return groupMap.get(id);
+    }
+
+    public Map<String, AnAction> getActionMap() {
+        return Collections.unmodifiableMap(actionMap);
+    }
+
+    public Map<String, ActionGroup> getGroupMap() {
+        return Collections.unmodifiableMap(groupMap);
     }
 
     /**

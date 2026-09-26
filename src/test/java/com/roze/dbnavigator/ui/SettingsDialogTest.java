@@ -1,15 +1,31 @@
 package com.roze.dbnavigator.ui;
 
 import com.roze.dbnavigator.db.AppSettingsStore;
+import com.roze.dbnavigator.ui.action.KeyStrokeFormatter;
 import javafx.scene.control.TreeItem;
 import org.junit.jupiter.api.Test;
 
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+
+import org.junit.jupiter.api.BeforeAll;
+import javafx.application.Platform;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 public class SettingsDialogTest {
+
+    @BeforeAll
+    public static void initJfx() {
+        try {
+            Platform.startup(() -> {});
+        } catch (IllegalStateException ignored) {
+            // Already initialized
+        }
+    }
 
     @Test
     public void testRootCategoriesMatchDataGripScreenshots() {
@@ -201,7 +217,7 @@ public class SettingsDialogTest {
         assertEquals(100, settings.getPageSize());
         assertEquals(",", settings.getCsvDelimiter());
         assertEquals("\"", settings.getCsvQuoteChar());
-        assertEquals("DataGrip Default", settings.getKeymapPreset());
+        assertEquals(AppSettingsStore.defaultKeymapPreset(), settings.getKeymapPreset());
 
         settings.setQueryTimeoutSeconds(60);
         settings.setMaxResultRows(1000);
@@ -1963,5 +1979,123 @@ public class SettingsDialogTest {
         assertEquals("Medium", loaded.getEditorFontMainWeight());
         assertEquals("ExtraBold", loaded.getEditorFontBoldWeight());
         assertEquals("Courier New", loaded.getEditorFallbackFont());
+    }
+
+    @Test
+    public void testKeymapPresetsInitialization() {
+        List<String> presets = AppSettingsStore.defaultKeymapPresets();
+        assertNotNull(presets);
+        assertFalse(presets.isEmpty());
+        if (AppSettingsStore.Settings.isMac()) {
+            assertTrue(presets.contains("macOS"));
+            assertTrue(presets.contains("Emacs"));
+            assertTrue(presets.contains("IntelliJ IDEA Classic"));
+            assertTrue(presets.contains("macOS System Shortcuts"));
+            assertTrue(presets.contains("Sublime Text"));
+            assertTrue(presets.contains("Sublime Text (macOS)"));
+            assertEquals("macOS", AppSettingsStore.defaultKeymapPreset());
+        } else {
+            assertTrue(presets.contains("Windows"));
+            assertTrue(presets.contains("IntelliJ IDEA Classic"));
+            assertTrue(presets.contains("Emacs"));
+            assertTrue(presets.contains("Eclipse"));
+            assertTrue(presets.contains("Visual Studio"));
+            assertTrue(presets.contains("Sublime Text"));
+            assertEquals("Windows", AppSettingsStore.defaultKeymapPreset());
+        }
+    }
+
+    @Test
+    public void testKeymapActionItemShortcutsResolution() {
+        SettingsDialog.KeymapActionItem item = new SettingsDialog.KeymapActionItem(
+                "help.find.action", "Find Action…", "Find any action or settings entry",
+                "Main Menu | Help", false, null, null, List.of("⇧⌘A"));
+
+        // Preset resolution
+        assertEquals(List.of("⇧⌘A"), item.resolvePresetShortcuts("macOS"));
+        assertEquals(List.of("Ctrl+Shift+A"), item.resolvePresetShortcuts("Windows"));
+        assertEquals(List.of("Alt+X"), item.resolvePresetShortcuts("Emacs"));
+        assertTrue(item.resolvePresetShortcuts("Sublime Text (macOS)").contains("⇧⌘P"));
+
+        // Effective shortcuts without overrides
+        Map<String, List<String>> custom = new HashMap<>();
+        Map<String, List<String>> removed = new HashMap<>();
+        assertEquals(List.of("⇧⌘A"), item.getEffectiveShortcuts("macOS", custom, removed));
+        assertFalse(item.isModified("macOS", custom, removed));
+
+        // Custom override
+        custom.put("help.find.action", List.of("⇧⌘F"));
+        assertEquals(List.of("⇧⌘F"), item.getEffectiveShortcuts("macOS", custom, removed));
+        assertTrue(item.isModified("macOS", custom, removed));
+
+        // Removal
+        custom.remove("help.find.action");
+        removed.put("help.find.action", List.of("⇧⌘A"));
+        assertTrue(item.getEffectiveShortcuts("macOS", custom, removed).isEmpty());
+        assertTrue(item.isModified("macOS", custom, removed));
+    }
+
+    @Test
+    public void testKeymapConflictDetection() {
+        // macOS system conflict detection matching DataGrip
+        assertEquals("Search man Page Index in Terminal in macOS shortcuts",
+                KeyStrokeFormatter.checkMacConflict("⇧⌘A"));
+        assertEquals("Spotlight Search in macOS shortcuts",
+                KeyStrokeFormatter.checkMacConflict("⌘Space"));
+        assertEquals("Minimize in macOS shortcuts",
+                KeyStrokeFormatter.checkMacConflict("⌘M"));
+        assertNull(KeyStrokeFormatter.checkMacConflict("Ctrl+Alt+Shift+Z"));
+    }
+
+    @Test
+    public void testKeymapSettingsSerializationRoundTrip() throws Exception {
+        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+
+        AppSettingsStore.Settings original = new AppSettingsStore.Settings();
+        original.setKeymapPreset("macOS copy");
+        original.setCustomKeymapPresets(List.of("macOS copy", "Custom Keymap"));
+
+        Map<String, List<String>> customShortcuts = new LinkedHashMap<>();
+        customShortcuts.put("help.find.action", List.of("⇧⌘F"));
+        customShortcuts.put("db.execute", List.of("⌥↵"));
+        original.setCustomKeymapShortcuts(customShortcuts);
+
+        Map<String, List<String>> removedShortcuts = new LinkedHashMap<>();
+        removedShortcuts.put("file.new.scratch", List.of("⇧⌘N"));
+        original.setRemovedKeymapShortcuts(removedShortcuts);
+
+        String json = mapper.writeValueAsString(original);
+        assertNotNull(json);
+        assertTrue(json.contains("macOS copy"));
+        assertTrue(json.contains("help.find.action"));
+        assertTrue(json.contains("⇧⌘F"));
+
+        AppSettingsStore.Settings loaded = mapper.readValue(json, AppSettingsStore.Settings.class);
+        assertEquals("macOS copy", loaded.getKeymapPreset());
+        assertEquals(2, loaded.getCustomKeymapPresets().size());
+        assertTrue(loaded.getCustomKeymapPresets().contains("Custom Keymap"));
+        assertEquals(List.of("⇧⌘F"), loaded.getCustomKeymapShortcuts().get("help.find.action"));
+        assertEquals(List.of("⇧⌘N"), loaded.getRemovedKeymapShortcuts().get("file.new.scratch"));
+    }
+
+    @Test
+    public void testKeymapPanelConstructionAndInputsRegistration() {
+        AppSettingsStore.Settings settings = new AppSettingsStore.Settings();
+        settings.getCustomKeymapPresets().add("My Custom Keymap");
+        settings.getCustomKeymapShortcuts().put("help.find.action", List.of("Ctrl+Shift+P"));
+
+        Map<String, Object> inputs = new HashMap<>();
+        javafx.scene.layout.VBox panel = SettingsDialog.buildKeymapPanel(settings, inputs, target -> {});
+
+        assertNotNull(panel);
+        assertTrue(inputs.containsKey("keymapCombo"));
+        assertTrue(inputs.containsKey("customKeymapPresets"));
+        assertTrue(inputs.containsKey("customKeymapShortcuts"));
+        assertTrue(inputs.containsKey("removedKeymapShortcuts"));
+
+        @SuppressWarnings("unchecked")
+        javafx.scene.control.ComboBox<String> combo = (javafx.scene.control.ComboBox<String>) inputs.get("keymapCombo");
+        assertNotNull(combo);
+        assertTrue(combo.getItems().contains("My Custom Keymap"));
     }
 }
