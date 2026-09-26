@@ -247,6 +247,24 @@ public final class AppSettingsStore {
         public Map<String, Map<String, ColorSchemeAttribute>> colorSchemeOverrides = new LinkedHashMap<>();
         public boolean differentToolWindowBackground = false;
 
+        // Editor > Color Scheme > Color Scheme Font
+        public boolean useColorSchemeFontInsteadOfDefault = false;
+        public String colorSchemeFontFamily = "JetBrains Mono";
+        public String colorSchemeFontFallbackFamily = "<None>";
+        public double colorSchemeFontSize = 13.0;
+        public double colorSchemeFontLineHeight = 1.2;
+        public boolean colorSchemeFontEnableLigatures = false;
+        public boolean colorSchemeFontShowOnlyMonospaced = true;
+
+        // Editor > Color Scheme > Console Font
+        public boolean useConsoleFontInsteadOfDefault = false;
+        public String consoleFontFamily = "JetBrains Mono";
+        public String consoleFontFallbackFamily = "<None>";
+        public double consoleFontSize = 13.0;
+        public double consoleFontLineHeight = 1.2;
+        public boolean consoleFontEnableLigatures = false;
+        public boolean consoleFontShowOnlyMonospaced = true;
+
         // Appearance: Accessibility (DataGrip Alignment)
         public String ideZoom = "100%";
         public boolean useCustomIdeFont = false;
@@ -1235,6 +1253,66 @@ public final class AppSettingsStore {
 
         public boolean isDifferentToolWindowBackground() { return differentToolWindowBackground; }
         public void setDifferentToolWindowBackground(boolean differentToolWindowBackground) { this.differentToolWindowBackground = differentToolWindowBackground; }
+
+        // Color Scheme Font Getters and Setters
+        public boolean isUseColorSchemeFontInsteadOfDefault() { return useColorSchemeFontInsteadOfDefault; }
+        public void setUseColorSchemeFontInsteadOfDefault(boolean val) { this.useColorSchemeFontInsteadOfDefault = val; }
+
+        public String getColorSchemeFontFamily() {
+            return (colorSchemeFontFamily != null && !colorSchemeFontFamily.isBlank()) ? colorSchemeFontFamily : "JetBrains Mono";
+        }
+        public void setColorSchemeFontFamily(String family) {
+            this.colorSchemeFontFamily = (family != null && !family.isBlank()) ? family : "JetBrains Mono";
+        }
+
+        public String getColorSchemeFontFallbackFamily() {
+            return (colorSchemeFontFallbackFamily != null && !colorSchemeFontFallbackFamily.isBlank()) ? colorSchemeFontFallbackFamily : "<None>";
+        }
+        public void setColorSchemeFontFallbackFamily(String family) {
+            this.colorSchemeFontFallbackFamily = (family != null && !family.isBlank()) ? family : "<None>";
+        }
+
+        public double getColorSchemeFontSize() { return colorSchemeFontSize > 0 ? colorSchemeFontSize : 13.0; }
+        public void setColorSchemeFontSize(double size) { this.colorSchemeFontSize = size > 0 ? size : 13.0; }
+
+        public double getColorSchemeFontLineHeight() { return colorSchemeFontLineHeight > 0 ? colorSchemeFontLineHeight : 1.2; }
+        public void setColorSchemeFontLineHeight(double lh) { this.colorSchemeFontLineHeight = lh > 0 ? lh : 1.2; }
+
+        public boolean isColorSchemeFontEnableLigatures() { return colorSchemeFontEnableLigatures; }
+        public void setColorSchemeFontEnableLigatures(boolean val) { this.colorSchemeFontEnableLigatures = val; }
+
+        public boolean isColorSchemeFontShowOnlyMonospaced() { return colorSchemeFontShowOnlyMonospaced; }
+        public void setColorSchemeFontShowOnlyMonospaced(boolean val) { this.colorSchemeFontShowOnlyMonospaced = val; }
+
+        // Console Font Getters and Setters
+        public boolean isUseConsoleFontInsteadOfDefault() { return useConsoleFontInsteadOfDefault; }
+        public void setUseConsoleFontInsteadOfDefault(boolean val) { this.useConsoleFontInsteadOfDefault = val; }
+
+        public String getConsoleFontFamily() {
+            return (consoleFontFamily != null && !consoleFontFamily.isBlank()) ? consoleFontFamily : "JetBrains Mono";
+        }
+        public void setConsoleFontFamily(String family) {
+            this.consoleFontFamily = (family != null && !family.isBlank()) ? family : "JetBrains Mono";
+        }
+
+        public String getConsoleFontFallbackFamily() {
+            return (consoleFontFallbackFamily != null && !consoleFontFallbackFamily.isBlank()) ? consoleFontFallbackFamily : "<None>";
+        }
+        public void setConsoleFontFallbackFamily(String family) {
+            this.consoleFontFallbackFamily = (family != null && !family.isBlank()) ? family : "<None>";
+        }
+
+        public double getConsoleFontSize() { return consoleFontSize > 0 ? consoleFontSize : 13.0; }
+        public void setConsoleFontSize(double size) { this.consoleFontSize = size > 0 ? size : 13.0; }
+
+        public double getConsoleFontLineHeight() { return consoleFontLineHeight > 0 ? consoleFontLineHeight : 1.2; }
+        public void setConsoleFontLineHeight(double lh) { this.consoleFontLineHeight = lh > 0 ? lh : 1.2; }
+
+        public boolean isConsoleFontEnableLigatures() { return consoleFontEnableLigatures; }
+        public void setConsoleFontEnableLigatures(boolean val) { this.consoleFontEnableLigatures = val; }
+
+        public boolean isConsoleFontShowOnlyMonospaced() { return consoleFontShowOnlyMonospaced; }
+        public void setConsoleFontShowOnlyMonospaced(boolean val) { this.consoleFontShowOnlyMonospaced = val; }
 
         // Appearance: Accessibility Getters and Setters
         public String getIdeZoom() { return ideZoom; }

@@ -2687,4 +2687,97 @@ public class SettingsDialogTest {
         assertTrue(loadedInstField.italic);
         assertEquals("D080C0", loadedInstField.foreground);
     }
+
+    @Test
+    public void testBuildColorSchemeFontPanelRouting() {
+        AppSettingsStore.Settings settings = new AppSettingsStore.Settings();
+        Map<String, Object> inputs = new HashMap<>();
+
+        javafx.scene.Node panel = SettingsDialog.buildPanelForPath("Editor / Color Scheme / Color Scheme Font", settings, inputs, target -> {});
+        assertNotNull(panel, "Should build Color Scheme Font panel");
+        assertTrue(inputs.containsKey("csFont_useInsteadOfDefault"));
+        assertTrue(inputs.containsKey("csFont_fontFamily"));
+        assertTrue(inputs.containsKey("csFont_fontSize"));
+        assertTrue(inputs.containsKey("csFont_lineHeight"));
+    }
+
+    @Test
+    public void testBuildConsoleFontPanelRouting() {
+        AppSettingsStore.Settings settings = new AppSettingsStore.Settings();
+        Map<String, Object> inputs = new HashMap<>();
+
+        javafx.scene.Node panel = SettingsDialog.buildPanelForPath("Editor / Color Scheme / Console Font", settings, inputs, target -> {});
+        assertNotNull(panel, "Should build Console Font panel");
+        assertTrue(inputs.containsKey("consoleFont_useInsteadOfDefault"));
+        assertTrue(inputs.containsKey("consoleFont_fontFamily"));
+        assertTrue(inputs.containsKey("consoleFont_fontSize"));
+        assertTrue(inputs.containsKey("consoleFont_lineHeight"));
+    }
+
+    @Test
+    public void testBuildConsoleColorsPanelRouting() {
+        AppSettingsStore.Settings settings = new AppSettingsStore.Settings();
+        Map<String, Object> inputs = new HashMap<>();
+
+        javafx.scene.Node panel = SettingsDialog.buildPanelForPath("Editor / Color Scheme / Console Colors", settings, inputs, target -> {});
+        assertNotNull(panel, "Should build Console Colors panel");
+        assertTrue(inputs.containsKey("editorColorSchemeCombo"));
+        assertTrue(inputs.containsKey("colorSchemeOverrides"));
+    }
+
+    @Test
+    public void testApplySettingsTransfersFontProperties() {
+        AppSettingsStore.Settings settings = new AppSettingsStore.Settings();
+        Map<String, Object> inputs = new HashMap<>();
+
+        javafx.scene.control.CheckBox csCheck = new javafx.scene.control.CheckBox();
+        csCheck.setSelected(true);
+        inputs.put("csFont_useInsteadOfDefault", csCheck);
+
+        javafx.scene.control.ComboBox<String> csFont = new javafx.scene.control.ComboBox<>();
+        csFont.setValue("Fira Code");
+        inputs.put("csFont_fontFamily", csFont);
+
+        javafx.scene.control.Spinner<Double> csSize = new javafx.scene.control.Spinner<>(8.0, 36.0, 15.0);
+        inputs.put("csFont_fontSize", csSize);
+
+        javafx.scene.control.Spinner<Double> csLh = new javafx.scene.control.Spinner<>(0.6, 3.0, 1.35);
+        inputs.put("csFont_lineHeight", csLh);
+
+        javafx.scene.control.CheckBox csLig = new javafx.scene.control.CheckBox();
+        csLig.setSelected(true);
+        inputs.put("csFont_enableLigatures", csLig);
+
+        javafx.scene.control.CheckBox conCheck = new javafx.scene.control.CheckBox();
+        conCheck.setSelected(true);
+        inputs.put("consoleFont_useInsteadOfDefault", conCheck);
+
+        javafx.scene.control.ComboBox<String> conFont = new javafx.scene.control.ComboBox<>();
+        conFont.setValue("Source Code Pro");
+        inputs.put("consoleFont_fontFamily", conFont);
+
+        javafx.scene.control.Spinner<Double> conSize = new javafx.scene.control.Spinner<>(8.0, 36.0, 12.0);
+        inputs.put("consoleFont_fontSize", conSize);
+
+        javafx.scene.control.Spinner<Double> conLh = new javafx.scene.control.Spinner<>(0.6, 3.0, 1.15);
+        inputs.put("consoleFont_lineHeight", conLh);
+
+        javafx.scene.control.CheckBox conLig = new javafx.scene.control.CheckBox();
+        conLig.setSelected(true);
+        inputs.put("consoleFont_enableLigatures", conLig);
+
+        SettingsDialog.applySettings(null, settings, inputs);
+
+        assertTrue(settings.isUseColorSchemeFontInsteadOfDefault());
+        assertEquals("Fira Code", settings.getColorSchemeFontFamily());
+        assertEquals(15.0, settings.getColorSchemeFontSize());
+        assertEquals(1.35, settings.getColorSchemeFontLineHeight());
+        assertTrue(settings.isColorSchemeFontEnableLigatures());
+
+        assertTrue(settings.isUseConsoleFontInsteadOfDefault());
+        assertEquals("Source Code Pro", settings.getConsoleFontFamily());
+        assertEquals(12.0, settings.getConsoleFontSize());
+        assertEquals(1.15, settings.getConsoleFontLineHeight());
+        assertTrue(settings.isConsoleFontEnableLigatures());
+    }
 }

@@ -30,6 +30,9 @@ import javafx.stage.Window;
 import com.roze.dbnavigator.ui.action.*;
 import com.roze.dbnavigator.ui.colorscheme.ColorSchemeModel;
 import com.roze.dbnavigator.ui.colorscheme.ColorSchemeModel.ColorSchemeElement;
+import com.roze.dbnavigator.ui.colorscheme.ColorSchemeFontPanel;
+import com.roze.dbnavigator.ui.colorscheme.ConsoleFontPanel;
+import com.roze.dbnavigator.ui.colorscheme.ConsoleColorsPanel;
 
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
@@ -877,8 +880,8 @@ public final class SettingsDialog {
     // Panel Builders
     // =========================================================================
 
-    private static Node buildPanelForPath(String fullPath, AppSettingsStore.Settings settings,
-                                          Map<String, Object> inputs, java.util.function.Consumer<String> navigateTo) {
+    static Node buildPanelForPath(String fullPath, AppSettingsStore.Settings settings,
+                                  Map<String, Object> inputs, java.util.function.Consumer<String> navigateTo) {
         CategoryDef cat = findCategoryByPath(fullPath, CATEGORIES);
         if (cat == null) {
             String leaf = fullPath.contains(" / ") ? fullPath.substring(fullPath.lastIndexOf(" / ") + 3) : fullPath;
@@ -982,6 +985,12 @@ public final class SettingsDialog {
             return buildColorSchemeGeneralPanel(settings, inputs, navigateTo);
         } else if ("Editor / Color Scheme / Language Defaults".equals(fullPath) || (cat != null && "cs.lang_defaults".equals(cat.getId()))) {
             return buildColorSchemeLanguageDefaultsPanel(settings, inputs, navigateTo);
+        } else if ("Editor / Color Scheme / Color Scheme Font".equals(fullPath) || (cat != null && "cs.font".equals(cat.getId()))) {
+            return ColorSchemeFontPanel.build(settings, inputs, navigateTo);
+        } else if ("Editor / Color Scheme / Console Font".equals(fullPath) || (cat != null && "cs.console_font".equals(cat.getId()))) {
+            return ConsoleFontPanel.build(settings, inputs, navigateTo);
+        } else if ("Editor / Color Scheme / Console Colors".equals(fullPath) || (cat != null && "cs.console_colors".equals(cat.getId()))) {
+            return ConsoleColorsPanel.build(settings, inputs, navigateTo);
         } else if ("Editor / Color Scheme".equals(fullPath) || "Color Scheme".equals(fullPath)) {
             return buildColorSchemeLandingPanel(cat, navigateTo);
         } else if ("Editor / Code Style / SQL".equals(fullPath)) {
@@ -10790,7 +10799,7 @@ public final class SettingsDialog {
     // =========================================================================
 
     @SuppressWarnings("unchecked")
-    private static void applySettings(MainWindow mainWindow, AppSettingsStore.Settings settings, Map<String, Object> inputs) {
+    static void applySettings(MainWindow mainWindow, AppSettingsStore.Settings settings, Map<String, Object> inputs) {
         // Theme & UI Appearance
         if (inputs.containsKey("appearance_uiTheme")) {
             Object obj = inputs.get("appearance_uiTheme");
@@ -10840,6 +10849,66 @@ public final class SettingsDialog {
             Map<String, Map<String, AppSettingsStore.ColorSchemeAttribute>> map =
                     (Map<String, Map<String, AppSettingsStore.ColorSchemeAttribute>>) inputs.get("colorSchemeOverrides");
             settings.setColorSchemeOverrides(new LinkedHashMap<>(map));
+        }
+
+        // Color Scheme Font
+        if (inputs.containsKey("csFont_useInsteadOfDefault")) {
+            CheckBox cb = (CheckBox) inputs.get("csFont_useInsteadOfDefault");
+            settings.setUseColorSchemeFontInsteadOfDefault(cb.isSelected());
+        }
+        if (inputs.containsKey("csFont_fontFamily")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("csFont_fontFamily");
+            if (cb.getValue() != null) settings.setColorSchemeFontFamily(cb.getValue());
+        }
+        if (inputs.containsKey("csFont_fallbackFont")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("csFont_fallbackFont");
+            if (cb.getValue() != null) settings.setColorSchemeFontFallbackFamily(cb.getValue());
+        }
+        if (inputs.containsKey("csFont_fontSize")) {
+            Spinner<Double> sp = (Spinner<Double>) inputs.get("csFont_fontSize");
+            if (sp.getValue() != null) settings.setColorSchemeFontSize(sp.getValue());
+        }
+        if (inputs.containsKey("csFont_lineHeight")) {
+            Spinner<Double> sp = (Spinner<Double>) inputs.get("csFont_lineHeight");
+            if (sp.getValue() != null) settings.setColorSchemeFontLineHeight(sp.getValue());
+        }
+        if (inputs.containsKey("csFont_enableLigatures")) {
+            CheckBox cb = (CheckBox) inputs.get("csFont_enableLigatures");
+            settings.setColorSchemeFontEnableLigatures(cb.isSelected());
+        }
+        if (inputs.containsKey("csFont_showOnlyMonospaced")) {
+            CheckBox cb = (CheckBox) inputs.get("csFont_showOnlyMonospaced");
+            settings.setColorSchemeFontShowOnlyMonospaced(cb.isSelected());
+        }
+
+        // Console Font
+        if (inputs.containsKey("consoleFont_useInsteadOfDefault")) {
+            CheckBox cb = (CheckBox) inputs.get("consoleFont_useInsteadOfDefault");
+            settings.setUseConsoleFontInsteadOfDefault(cb.isSelected());
+        }
+        if (inputs.containsKey("consoleFont_fontFamily")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("consoleFont_fontFamily");
+            if (cb.getValue() != null) settings.setConsoleFontFamily(cb.getValue());
+        }
+        if (inputs.containsKey("consoleFont_fallbackFont")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("consoleFont_fallbackFont");
+            if (cb.getValue() != null) settings.setConsoleFontFallbackFamily(cb.getValue());
+        }
+        if (inputs.containsKey("consoleFont_fontSize")) {
+            Spinner<Double> sp = (Spinner<Double>) inputs.get("consoleFont_fontSize");
+            if (sp.getValue() != null) settings.setConsoleFontSize(sp.getValue());
+        }
+        if (inputs.containsKey("consoleFont_lineHeight")) {
+            Spinner<Double> sp = (Spinner<Double>) inputs.get("consoleFont_lineHeight");
+            if (sp.getValue() != null) settings.setConsoleFontLineHeight(sp.getValue());
+        }
+        if (inputs.containsKey("consoleFont_enableLigatures")) {
+            CheckBox cb = (CheckBox) inputs.get("consoleFont_enableLigatures");
+            settings.setConsoleFontEnableLigatures(cb.isSelected());
+        }
+        if (inputs.containsKey("consoleFont_showOnlyMonospaced")) {
+            CheckBox cb = (CheckBox) inputs.get("consoleFont_showOnlyMonospaced");
+            settings.setConsoleFontShowOnlyMonospaced(cb.isSelected());
         }
         if (inputs.containsKey("appearance_differentToolWindowBackground")) {
             CheckBox cb = (CheckBox) inputs.get("appearance_differentToolWindowBackground");
