@@ -25,8 +25,10 @@
     -fx-font-family: "Segoe UI", "SF Pro Text", "Ubuntu", sans-serif;
     -fx-font-size: 13px;
     -fx-accent: -accent;
-    -fx-focus-color: -accent;
+    -fx-focus-color: transparent;
     -fx-faint-focus-color: transparent;
+    -fx-selection-bar: #3574f0;
+    -fx-selection-bar-non-focused: #dce8ff;
 }
 
 .app-root { -fx-background-color: -bg-dark; }

@@ -28,6 +28,8 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 import com.roze.dbnavigator.ui.action.*;
+import com.roze.dbnavigator.ui.colorscheme.ColorSchemeModel;
+import com.roze.dbnavigator.ui.colorscheme.ColorSchemeModel.ColorSchemeElement;
 
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
@@ -573,6 +575,7 @@ public final class SettingsDialog {
         TreeView<String> tree = new TreeView<>(rootItem);
         tree.setShowRoot(false);
         tree.setPrefWidth(240);
+        tree.setStyle("-fx-background-color: #1e1f22; -fx-border-color: #393b40; -fx-border-radius: 4; -fx-background-radius: 4; -fx-focus-color: transparent; -fx-faint-focus-color: transparent;");
         VBox.setVgrow(tree, Priority.ALWAYS);
 
         tree.setCellFactory(tv -> new TreeCell<>() {
@@ -583,6 +586,25 @@ public final class SettingsDialog {
             {
                 HBox.setHgrow(spacer, Priority.ALWAYS);
                 container.setAlignment(Pos.CENTER_LEFT);
+                selectedProperty().addListener((obs, wasSel, isSel) -> updateCellStyle());
+                hoverProperty().addListener((obs, wasHov, isHov) -> updateCellStyle());
+            }
+
+            private void updateCellStyle() {
+                if (isEmpty() || getItem() == null) {
+                    setStyle("-fx-background-color: transparent;");
+                    return;
+                }
+                if (isSelected()) {
+                    setStyle("-fx-background-color: #2e436e; -fx-background-radius: 3; -fx-text-fill: #ffffff;");
+                    nameLabel.setStyle("-fx-text-fill: #ffffff;");
+                } else if (isHover()) {
+                    setStyle("-fx-background-color: #2a2b2d; -fx-background-radius: 3; -fx-text-fill: #dfe1e5;");
+                    nameLabel.setStyle("-fx-text-fill: #dfe1e5;");
+                } else {
+                    setStyle("-fx-background-color: transparent; -fx-text-fill: #dfe1e5;");
+                    nameLabel.setStyle("-fx-text-fill: #dfe1e5;");
+                }
             }
 
             @Override
@@ -591,9 +613,10 @@ public final class SettingsDialog {
                 if (empty || item == null) {
                     setText(null);
                     setGraphic(null);
+                    setStyle("-fx-background-color: transparent;");
                 } else {
                     nameLabel.setText(item);
-                    nameLabel.setStyle("-fx-text-fill: inherit;");
+                    updateCellStyle();
                     if ("Plugins".equals(item)) {
                         badge.setText("1");
                         badge.setStyle("-fx-background-color: #3574F0; -fx-text-fill: white; -fx-font-size: 10px; -fx-font-weight: bold; -fx-padding: 0 5; -fx-background-radius: 8;");
@@ -955,6 +978,8 @@ public final class SettingsDialog {
             return buildDiagramsPanel(cat);
         } else if ("Tools / MCP Server".equals(fullPath) || "MCP Server".equals(fullPath)) {
             return buildMcpServerPanel(cat);
+        } else if ("Editor / Color Scheme / General".equals(fullPath) || (cat != null && "cs.general".equals(cat.getId()))) {
+            return buildColorSchemeGeneralPanel(settings, inputs, navigateTo);
         } else if ("Editor / Color Scheme".equals(fullPath) || "Color Scheme".equals(fullPath)) {
             return buildColorSchemeLandingPanel(cat, navigateTo);
         } else if ("Editor / Code Style / SQL".equals(fullPath)) {
@@ -7237,7 +7262,7 @@ public final class SettingsDialog {
 
         TreeView<KeymapActionItem> treeView = new TreeView<>(rootItem);
         treeView.setShowRoot(false);
-        treeView.setStyle("-fx-background-color: #1e1f22; -fx-border-color: #393b40; -fx-border-radius: 4; -fx-background-radius: 4;");
+        treeView.setStyle("-fx-background-color: #1e1f22; -fx-border-color: #393b40; -fx-border-radius: 4; -fx-background-radius: 4; -fx-focus-color: transparent; -fx-faint-focus-color: transparent;");
         VBox.setVgrow(treeView, Priority.ALWAYS);
 
         // 4. Toolbar above TreeView
@@ -7411,6 +7436,25 @@ public final class SettingsDialog {
 
         // Cell Factory for custom display
         treeView.setCellFactory(tv -> new TreeCell<>() {
+            {
+                selectedProperty().addListener((obs, wasSel, isSel) -> updateCellStyle());
+                hoverProperty().addListener((obs, wasHov, isHov) -> updateCellStyle());
+            }
+
+            private void updateCellStyle() {
+                if (isEmpty() || getItem() == null) {
+                    setStyle("-fx-background-color: transparent;");
+                    return;
+                }
+                if (isSelected()) {
+                    setStyle("-fx-background-color: #2e436e; -fx-background-radius: 3; -fx-text-fill: #ffffff;");
+                } else if (isHover()) {
+                    setStyle("-fx-background-color: #2a2b2d; -fx-background-radius: 3; -fx-text-fill: #dfe1e5;");
+                } else {
+                    setStyle("-fx-background-color: transparent; -fx-text-fill: #dfe1e5;");
+                }
+            }
+
             @Override
             protected void updateItem(KeymapActionItem item, boolean empty) {
                 super.updateItem(item, empty);
@@ -7421,6 +7465,7 @@ public final class SettingsDialog {
                     setStyle("-fx-background-color: transparent;");
                 } else if (item.isCategory()) {
                     setText(null);
+                    updateCellStyle();
                     HBox box = new HBox(6);
                     box.setAlignment(Pos.CENTER_LEFT);
                     box.getChildren().add(Icons.of(FontAwesomeSolid.FOLDER, "#e0a44c", 13));
@@ -7431,6 +7476,7 @@ public final class SettingsDialog {
                     setContextMenu(null);
                 } else {
                     setText(null);
+                    updateCellStyle();
                     HBox row = new HBox(6);
                     row.setAlignment(Pos.CENTER_LEFT);
 
@@ -8501,6 +8547,990 @@ public final class SettingsDialog {
         return panel;
     }
 
+    public static VBox buildColorSchemeGeneralPanel(AppSettingsStore.Settings settings,
+                                                   Map<String, Object> inputs,
+                                                   java.util.function.Consumer<String> navigateTo) {
+        // Working state
+        String currentScheme = settings.getEditorColorScheme();
+        List<String> workingCustomSchemes = new ArrayList<>(settings.getCustomColorSchemes());
+        Map<String, Map<String, AppSettingsStore.ColorSchemeAttribute>> workingOverrides = new LinkedHashMap<>();
+
+        if (settings.getColorSchemeOverrides() != null) {
+            for (Map.Entry<String, Map<String, AppSettingsStore.ColorSchemeAttribute>> entry : settings.getColorSchemeOverrides().entrySet()) {
+                Map<String, AppSettingsStore.ColorSchemeAttribute> inner = new LinkedHashMap<>();
+                for (Map.Entry<String, AppSettingsStore.ColorSchemeAttribute> attrEntry : entry.getValue().entrySet()) {
+                    inner.put(attrEntry.getKey(), attrEntry.getValue().copy());
+                }
+                workingOverrides.put(entry.getKey(), inner);
+            }
+        }
+
+        inputs.put("customColorSchemes", workingCustomSchemes);
+        inputs.put("colorSchemeOverrides", workingOverrides);
+
+        // 1. Top Section: Scheme Selector + Gear ⚙ Menu + Change IDE Theme...
+        Label schemeLabel = new Label("Scheme:");
+        schemeLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: -text;");
+
+        ComboBox<String> schemeCombo = new ComboBox<>();
+        schemeCombo.setPrefWidth(210);
+        schemeCombo.setStyle("-fx-background-color: #2b2d30; -fx-text-fill: -text; -fx-border-color: #393b40; -fx-border-radius: 4; -fx-background-radius: 4;");
+
+        Runnable refreshSchemesList = () -> {
+            String current = schemeCombo.getValue();
+            schemeCombo.getItems().clear();
+            schemeCombo.getItems().addAll(AppSettingsStore.defaultEditorColorSchemes());
+            for (String custom : workingCustomSchemes) {
+                if (!schemeCombo.getItems().contains(custom)) {
+                    schemeCombo.getItems().add(custom);
+                }
+            }
+            if (current != null && schemeCombo.getItems().contains(current)) {
+                schemeCombo.getSelectionModel().select(current);
+            } else if (schemeCombo.getItems().contains(settings.getEditorColorScheme())) {
+                schemeCombo.getSelectionModel().select(settings.getEditorColorScheme());
+            } else if (!schemeCombo.getItems().isEmpty()) {
+                schemeCombo.getSelectionModel().select(0);
+            }
+        };
+        refreshSchemesList.run();
+        inputs.put("editorColorSchemeCombo", schemeCombo);
+
+        Button gearBtn = new Button();
+        gearBtn.setGraphic(Icons.of(FontAwesomeSolid.COG, "#a9b7c6", 13));
+        gearBtn.setStyle("-fx-background-color: transparent; -fx-cursor: hand; -fx-padding: 4 6;");
+
+        ContextMenu gearMenu = new ContextMenu();
+        MenuItem miDuplicate = new MenuItem("Duplicate…");
+        MenuItem miRestore = new MenuItem("Restore Defaults");
+        MenuItem miExport = new MenuItem("Export…");
+        MenuItem miRename = new MenuItem("Rename…");
+        MenuItem miDelete = new MenuItem("Delete");
+        gearMenu.getItems().addAll(miDuplicate, miRestore, miExport, miRename, miDelete);
+
+        gearBtn.setOnAction(e -> {
+            String active = schemeCombo.getValue();
+            boolean isCustom = workingCustomSchemes.contains(active);
+            miRename.setDisable(!isCustom);
+            miDelete.setDisable(!isCustom);
+            gearMenu.show(gearBtn, Side.BOTTOM, 0, 0);
+        });
+
+        Hyperlink changeThemeLink = new Hyperlink("Change IDE Theme...");
+        changeThemeLink.setStyle("-fx-text-fill: #589df6; -fx-font-size: 13px; -fx-padding: 2 0; -fx-border-color: transparent; -fx-underline: false;");
+        changeThemeLink.setOnMouseEntered(ev -> changeThemeLink.setStyle("-fx-text-fill: #70aeff; -fx-font-size: 13px; -fx-padding: 2 0; -fx-border-color: transparent; -fx-underline: true;"));
+        changeThemeLink.setOnMouseExited(ev -> changeThemeLink.setStyle("-fx-text-fill: #589df6; -fx-font-size: 13px; -fx-padding: 2 0; -fx-border-color: transparent; -fx-underline: false;"));
+        changeThemeLink.setOnAction(e -> {
+            if (navigateTo != null) {
+                navigateTo.accept("Appearance & Behavior / Appearance");
+            }
+        });
+
+        Label helpIcon = new Label(" (?)");
+        helpIcon.setStyle("-fx-text-fill: #868a91; -fx-font-size: 12px; -fx-cursor: hand;");
+        helpIcon.setTooltip(new Tooltip("Click to configure IDE theme colors"));
+
+        HBox topBar = new HBox(10, schemeLabel, schemeCombo, gearBtn, changeThemeLink, helpIcon);
+        topBar.setAlignment(Pos.CENTER_LEFT);
+
+        // 2. TreeView of Color Scheme Elements (Left Pane)
+        TreeItem<ColorSchemeElement> rootItem = new TreeItem<>(new ColorSchemeElement("root", "Root", "", null, null, null, null));
+        rootItem.setExpanded(true);
+
+        populateColorSchemeTree(rootItem);
+
+        TreeView<ColorSchemeElement> treeView = new TreeView<>(rootItem);
+        treeView.setShowRoot(false);
+        treeView.setStyle("-fx-background-color: #1e1f22; -fx-border-color: #393b40; -fx-border-radius: 4; -fx-background-radius: 4; -fx-focus-color: transparent; -fx-faint-focus-color: transparent;");
+        treeView.setPrefWidth(360);
+        treeView.setPrefHeight(260);
+
+        treeView.setCellFactory(tv -> new TreeCell<>() {
+            {
+                selectedProperty().addListener((obs, wasSel, isSel) -> updateCellStyle());
+                hoverProperty().addListener((obs, wasHov, isHov) -> updateCellStyle());
+            }
+
+            private void updateCellStyle() {
+                if (isEmpty() || getItem() == null) {
+                    setStyle("-fx-background-color: transparent;");
+                    return;
+                }
+                if (isSelected()) {
+                    setStyle("-fx-background-color: #2e436e; -fx-background-radius: 3; -fx-text-fill: #ffffff;");
+                } else if (isHover()) {
+                    setStyle("-fx-background-color: #2a2b2d; -fx-background-radius: 3; -fx-text-fill: #dfe1e5;");
+                } else {
+                    setStyle("-fx-background-color: transparent; -fx-text-fill: #dfe1e5;");
+                }
+            }
+
+            @Override
+            protected void updateItem(ColorSchemeElement item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                    setGraphic(null);
+                    setStyle("-fx-background-color: transparent;");
+                } else {
+                    setText(item.getName());
+                    updateCellStyle();
+                }
+            }
+        });
+
+        // 3. Attribute Editor (Right Pane)
+        VBox attrEditor = new VBox(10);
+        attrEditor.setPadding(new Insets(10, 14, 10, 14));
+        attrEditor.setStyle("-fx-background-color: #2b2d30; -fx-border-color: #393b40; -fx-border-radius: 4; -fx-background-radius: 4;");
+        attrEditor.setPrefWidth(360);
+        attrEditor.setPrefHeight(260);
+
+        CheckBox boldCheck = new CheckBox("Bold");
+        boldCheck.setStyle("-fx-text-fill: -text;");
+        CheckBox italicCheck = new CheckBox("Italic");
+        italicCheck.setStyle("-fx-text-fill: -text;");
+        Region fontSpacer = new Region();
+        HBox.setHgrow(fontSpacer, Priority.ALWAYS);
+        HBox fontStyleRow = new HBox(16, fontSpacer, boldCheck, italicCheck);
+        fontStyleRow.setAlignment(Pos.CENTER_RIGHT);
+
+        final Runnable[] commitAttrChangesRef = new Runnable[1];
+
+        // Attribute rows helper
+        class AttrRow {
+            final CheckBox check;
+            final Button colorBtn;
+            final HBox row;
+            String colorHex;
+
+            AttrRow(String labelText) {
+                check = new CheckBox(labelText);
+                check.setStyle("-fx-text-fill: -text;");
+                check.setPrefWidth(140);
+
+                colorBtn = new Button();
+                colorBtn.setPrefWidth(90);
+                colorBtn.setPrefHeight(24);
+                colorBtn.setStyle("-fx-background-color: #2b2d30; -fx-background-radius: 3; -fx-border-radius: 3; -fx-border-color: #393b40; -fx-font-size: 11px; -fx-font-weight: bold; -fx-cursor: hand;");
+
+                Region spacer = new Region();
+                HBox.setHgrow(spacer, Priority.ALWAYS);
+                row = new HBox(8, check, spacer, colorBtn);
+                row.setAlignment(Pos.CENTER_LEFT);
+
+                colorBtn.setOnAction(e -> {
+                    if (check.isSelected()) {
+                        showColorPickerDialog(colorHex, colorBtn, newHex -> {
+                            setColor(newHex);
+                            if (commitAttrChangesRef[0] != null) commitAttrChangesRef[0].run();
+                        });
+                    }
+                });
+
+                check.selectedProperty().addListener((obs, oldV, newV) -> {
+                    updateButtonState();
+                });
+            }
+
+            void updateButtonState() {
+                boolean sel = check.isSelected();
+                colorBtn.setDisable(!sel);
+                if (!sel) {
+                    colorBtn.setText("");
+                    colorBtn.setStyle("-fx-background-color: #2b2d30; -fx-border-color: #393b40; -fx-background-radius: 3; -fx-border-radius: 3; -fx-cursor: default;");
+                } else {
+                    setColor(colorHex != null && !colorHex.isBlank() ? colorHex : "FFFFFF");
+                }
+            }
+
+            void setColor(String hex) {
+                this.colorHex = hex != null ? hex.replace("#", "").toUpperCase() : null;
+                if (check.isSelected() && this.colorHex != null && !this.colorHex.isBlank()) {
+                    colorBtn.setText(this.colorHex);
+                    colorBtn.setStyle("-fx-background-color: #" + this.colorHex + "; -fx-text-fill: " +
+                            (isColorDark(this.colorHex) ? "#ffffff" : "#000000") +
+                            "; -fx-border-color: #393b40; -fx-background-radius: 3; -fx-border-radius: 3; -fx-font-size: 11px; -fx-font-weight: bold; -fx-cursor: hand;");
+                } else {
+                    colorBtn.setText("");
+                    colorBtn.setStyle("-fx-background-color: #2b2d30; -fx-border-color: #393b40; -fx-background-radius: 3; -fx-border-radius: 3; -fx-cursor: default;");
+                }
+            }
+        }
+
+        AttrRow fgRow = new AttrRow("Foreground");
+        AttrRow bgRow = new AttrRow("Background");
+        AttrRow errorStripeRow = new AttrRow("Error stripe mark");
+        AttrRow effectsRow = new AttrRow("Effects");
+
+        ComboBox<String> effectTypeCombo = new ComboBox<>();
+        effectTypeCombo.getItems().addAll("Underscored", "Bold Underscored", "Underwaved", "Strikeout", "Bordered", "Dotted line");
+        effectTypeCombo.getSelectionModel().select("Underscored");
+        effectTypeCombo.setPrefWidth(125);
+        effectTypeCombo.setStyle("-fx-background-color: #1e1f22; -fx-text-fill: -text; -fx-border-color: #393b40; -fx-border-radius: 4; -fx-background-radius: 4; -fx-font-size: 12px;");
+
+        Region effectSpacer = new Region();
+        HBox.setHgrow(effectSpacer, Priority.ALWAYS);
+        HBox effectComboRow = new HBox(effectSpacer, effectTypeCombo);
+        effectComboRow.setAlignment(Pos.CENTER_RIGHT);
+        VBox effectsContainer = new VBox(6, effectsRow.row, effectComboRow);
+
+        effectsRow.check.selectedProperty().addListener((obs, oldV, newV) -> {
+            effectTypeCombo.setDisable(!newV);
+        });
+
+        // Inheritance row
+        CheckBox inheritCheck = new CheckBox("Inherit values from:");
+        inheritCheck.setStyle("-fx-text-fill: -text;");
+
+        Hyperlink inheritLink = new Hyperlink();
+        inheritLink.setStyle("-fx-text-fill: #589df6; -fx-font-size: 12px; -fx-padding: 0; -fx-border-color: transparent;");
+
+        VBox inheritBox = new VBox(4, inheritCheck, inheritLink);
+        inheritBox.setPadding(new Insets(6, 0, 0, 0));
+
+        inheritCheck.selectedProperty().addListener((obs, oldV, newV) -> {
+            boolean inh = Boolean.TRUE.equals(newV);
+            boldCheck.setDisable(inh);
+            italicCheck.setDisable(inh);
+            fgRow.check.setDisable(inh);
+            fgRow.colorBtn.setDisable(inh || !fgRow.check.isSelected());
+            bgRow.check.setDisable(inh);
+            bgRow.colorBtn.setDisable(inh || !bgRow.check.isSelected());
+            errorStripeRow.check.setDisable(inh);
+            errorStripeRow.colorBtn.setDisable(inh || !errorStripeRow.check.isSelected());
+            effectsRow.check.setDisable(inh);
+            effectsRow.colorBtn.setDisable(inh || !effectsRow.check.isSelected());
+            effectTypeCombo.setDisable(inh || !effectsRow.check.isSelected());
+        });
+
+        attrEditor.getChildren().addAll(fontStyleRow, fgRow.row, bgRow.row, errorStripeRow.row, effectsContainer, inheritBox);
+
+        final String[] currentSelectedElementId = new String[]{"code.line_number"};
+
+        // 4. Live Code Preview (Bottom Pane)
+        VBox previewPane = new VBox();
+        previewPane.setStyle("-fx-background-color: #1e1f22; -fx-padding: 8 0 8 0;");
+
+        HBox splitTop = new HBox(10, treeView, attrEditor);
+        HBox.setHgrow(treeView, Priority.ALWAYS);
+        HBox.setHgrow(attrEditor, Priority.ALWAYS);
+
+        ScrollPane previewScroll = new ScrollPane(previewPane);
+        previewScroll.setFitToWidth(true);
+        previewScroll.setStyle("-fx-background: #1e1f22; -fx-background-color: #1e1f22; -fx-border-color: #393b40; -fx-border-radius: 4; -fx-background-radius: 4;");
+        previewScroll.setPrefHeight(230);
+        VBox.setVgrow(previewScroll, Priority.ALWAYS);
+
+        // Live preview builder and interactive token clicks
+        Runnable refreshPreview = () -> {
+            previewPane.getChildren().clear();
+            String activeScheme = schemeCombo.getValue();
+
+            // Resolve attributes for key preview elements
+            AppSettingsStore.ColorSchemeAttribute lineNumAttr =
+                    ColorSchemeModel.resolveAttribute(activeScheme, "code.line_number", workingOverrides);
+            AppSettingsStore.ColorSchemeAttribute todoAttr =
+                    ColorSchemeModel.resolveAttribute(activeScheme, "code.todo", workingOverrides);
+            AppSettingsStore.ColorSchemeAttribute linkAttr =
+                    ColorSchemeModel.resolveAttribute(activeScheme, "hyperlinks.unfollowed", workingOverrides);
+            AppSettingsStore.ColorSchemeAttribute refLinkAttr =
+                    ColorSchemeModel.resolveAttribute(activeScheme, "hyperlinks.reference", workingOverrides);
+            AppSettingsStore.ColorSchemeAttribute inactiveLinkAttr =
+                    ColorSchemeModel.resolveAttribute(activeScheme, "hyperlinks.inactive", workingOverrides);
+            AppSettingsStore.ColorSchemeAttribute searchResultAttr =
+                    ColorSchemeModel.resolveAttribute(activeScheme, "search.result", workingOverrides);
+            AppSettingsStore.ColorSchemeAttribute reassignedAttr =
+                    ColorSchemeModel.resolveAttribute(activeScheme, "identifiers.reassigned_local_variable", workingOverrides);
+            AppSettingsStore.ColorSchemeAttribute foldedAttr =
+                    ColorSchemeModel.resolveAttribute(activeScheme, "text.folded", workingOverrides);
+            AppSettingsStore.ColorSchemeAttribute foldedHighAttr =
+                    ColorSchemeModel.resolveAttribute(activeScheme, "text.folded_highlighted", workingOverrides);
+            AppSettingsStore.ColorSchemeAttribute deletedAttr =
+                    ColorSchemeModel.resolveAttribute(activeScheme, "text.deleted", workingOverrides);
+            AppSettingsStore.ColorSchemeAttribute activeTemplateAttr =
+                    ColorSchemeModel.resolveAttribute(activeScheme, "templates.active", workingOverrides);
+            AppSettingsStore.ColorSchemeAttribute inactiveTemplateAttr =
+                    ColorSchemeModel.resolveAttribute(activeScheme, "templates.inactive", workingOverrides);
+            AppSettingsStore.ColorSchemeAttribute varTemplateAttr =
+                    ColorSchemeModel.resolveAttribute(activeScheme, "templates.variable", workingOverrides);
+            AppSettingsStore.ColorSchemeAttribute injectedAttr =
+                    ColorSchemeModel.resolveAttribute(activeScheme, "code.injected_fragment", workingOverrides);
+
+            String lineNumColor = (lineNumAttr.foregroundEnabled && lineNumAttr.foreground != null)
+                    ? "#" + lineNumAttr.foreground : "#4B5059";
+
+            // Helper to render preview row with line number, content, and right error stripe
+            class PreviewRowBuilder {
+                HBox build(int lineNum, Node content, String stripeColorHex, String elementId) {
+                    HBox lineRow = new HBox(8);
+                    lineRow.setAlignment(Pos.CENTER_LEFT);
+                    lineRow.setPadding(new Insets(1, 10, 1, 10));
+
+                    boolean isCurrent = currentSelectedElementId[0] != null && currentSelectedElementId[0].equals(elementId);
+                    if (isCurrent) {
+                        lineRow.setStyle("-fx-background-color: #26282E;");
+                    } else {
+                        lineRow.setStyle("-fx-background-color: transparent;");
+                    }
+
+                    // Gutter line number
+                    Label numLabel = new Label(String.format("%2d", lineNum));
+                    numLabel.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: " + lineNumColor + "; -fx-cursor: hand;");
+                    numLabel.setOnMouseClicked(e -> selectColorSchemeElement(treeView, rootItem, "code.line_number", currentSelectedElementId, previewScroll));
+                    numLabel.setPrefWidth(26);
+
+                    // Content spacer
+                    HBox.setHgrow(content, Priority.ALWAYS);
+
+                    // Error stripe
+                    Region stripe = new Region();
+                    stripe.setPrefWidth(4);
+                    stripe.setPrefHeight(14);
+                    if (stripeColorHex != null && !stripeColorHex.isBlank()) {
+                        stripe.setStyle("-fx-background-color: #" + stripeColorHex.replace("#", "") + "; -fx-background-radius: 2;");
+                    } else {
+                        stripe.setStyle("-fx-background-color: transparent;");
+                    }
+
+                    lineRow.getChildren().addAll(numLabel, content, stripe);
+                    return lineRow;
+                }
+            }
+
+            PreviewRowBuilder pb = new PreviewRowBuilder();
+
+            // Line 1: //TODO: Visit JB Web resources:
+            Label todoLbl = new Label("//TODO: Visit JB Web resources:");
+            String todoFg = (todoAttr.foregroundEnabled && todoAttr.foreground != null) ? "#" + todoAttr.foreground : "#A8C023";
+            todoLbl.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: " + todoFg +
+                    "; -fx-font-style: italic; -fx-cursor: hand;");
+            todoLbl.setOnMouseClicked(e -> selectColorSchemeElement(treeView, rootItem, "code.todo", currentSelectedElementId, previewScroll));
+            previewPane.getChildren().add(pb.build(1, todoLbl, todoAttr.errorStripeEnabled ? todoAttr.errorStripe : "73AD2B", "code.todo"));
+
+            // Line 2: JetBrains Home Page: http://www.jetbrains.com
+            Label jbHome = new Label("JetBrains Home Page: ");
+            jbHome.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
+            Label link1 = new Label("http://www.jetbrains.com");
+            String linkFg = (linkAttr.foregroundEnabled && linkAttr.foreground != null) ? "#" + linkAttr.foreground : "#287BDE";
+            link1.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: " + linkFg + "; -fx-underline: true; -fx-cursor: hand;");
+            link1.setOnMouseClicked(e -> selectColorSchemeElement(treeView, rootItem, "hyperlinks.unfollowed", currentSelectedElementId, previewScroll));
+            HBox l2 = new HBox(jbHome, link1);
+            l2.setAlignment(Pos.CENTER_LEFT);
+            previewPane.getChildren().add(pb.build(2, l2, "287BDE", "hyperlinks.unfollowed"));
+
+            // Line 3: JetBrains Developer Community: https://www.jetbrains.com/devnet
+            Label jbDev = new Label("JetBrains Developer Community: ");
+            jbDev.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
+            Label link2 = new Label("https://www.jetbrains.com/devnet");
+            link2.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: " + linkFg + "; -fx-underline: true; -fx-cursor: hand;");
+            link2.setOnMouseClicked(e -> selectColorSchemeElement(treeView, rootItem, "hyperlinks.unfollowed", currentSelectedElementId, previewScroll));
+            HBox l3 = new HBox(jbDev, link2);
+            l3.setAlignment(Pos.CENTER_LEFT);
+            previewPane.getChildren().add(pb.build(3, l3, "287BDE", "hyperlinks.unfollowed"));
+
+            // Line 4: ReferenceHyperlink
+            Label refLink = new Label("ReferenceHyperlink");
+            String refLinkFg = (refLinkAttr.foregroundEnabled && refLinkAttr.foreground != null) ? "#" + refLinkAttr.foreground : "#589DF6";
+            refLink.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: " + refLinkFg + "; -fx-font-weight: bold; -fx-underline: true; -fx-cursor: hand;");
+            refLink.setOnMouseClicked(e -> selectColorSchemeElement(treeView, rootItem, "hyperlinks.reference", currentSelectedElementId, previewScroll));
+            previewPane.getChildren().add(pb.build(4, refLink, "589DF6", "hyperlinks.reference"));
+
+            // Line 5: Inactive hyperlink in code: "http://jetbrains.com"
+            Label inactPrefix = new Label("Inactive hyperlink in code: ");
+            inactPrefix.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
+            Label inactLink = new Label("\"http://jetbrains.com\"");
+            String inactEff = (inactiveLinkAttr.effectEnabled && inactiveLinkAttr.effectColor != null)
+                    ? "#" + inactiveLinkAttr.effectColor : "#6B6C73";
+            inactLink.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #868A91; -fx-border-color: transparent transparent " + inactEff + " transparent; -fx-border-width: 0 0 1 0; -fx-cursor: hand;");
+            inactLink.setOnMouseClicked(e -> selectColorSchemeElement(treeView, rootItem, "hyperlinks.inactive", currentSelectedElementId, previewScroll));
+            HBox l5 = new HBox(inactPrefix, inactLink);
+            l5.setAlignment(Pos.CENTER_LEFT);
+            previewPane.getChildren().add(pb.build(5, l5, null, "hyperlinks.inactive"));
+
+            // Line 6: Blank
+            previewPane.getChildren().add(pb.build(6, new Label(""), null, null));
+
+            // Line 7: Search:
+            Label searchLbl = new Label("Search:");
+            searchLbl.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
+            previewPane.getChildren().add(pb.build(7, searchLbl, null, null));
+
+            // Line 8:   result = "text, text, text";
+            Label resIndent = new Label("  ");
+            Label resToken = new Label("result");
+            String searchBg = (searchResultAttr.backgroundEnabled && searchResultAttr.background != null) ? "#" + searchResultAttr.background : "#32593D";
+            resToken.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-background-color: " + searchBg +
+                    "; -fx-text-fill: #dfe1e5; -fx-padding: 0 2; -fx-background-radius: 2; -fx-cursor: hand;");
+            resToken.setOnMouseClicked(e -> selectColorSchemeElement(treeView, rootItem, "search.result", currentSelectedElementId, previewScroll));
+            Label eqToken = new Label(" = \"");
+            eqToken.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
+
+            Label t1 = new Label("text");
+            t1.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-background-color: #2e596b; -fx-text-fill: #ffffff; -fx-padding: 0 2; -fx-background-radius: 2;");
+            Label comma1 = new Label(", ");
+            comma1.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
+            Label t2 = new Label("text");
+            t2.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-background-color: #2e596b; -fx-text-fill: #ffffff; -fx-padding: 0 2; -fx-background-radius: 2;");
+            Label comma2 = new Label(", ");
+            comma2.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
+            Label t3 = new Label("text");
+            t3.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-background-color: #2e596b; -fx-text-fill: #ffffff; -fx-padding: 0 2; -fx-background-radius: 2;");
+            Label endQuote = new Label("\";");
+            endQuote.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
+
+            HBox l8 = new HBox(resIndent, resToken, eqToken, t1, comma1, t2, comma2, t3, endQuote);
+            l8.setAlignment(Pos.CENTER_LEFT);
+            previewPane.getChildren().add(pb.build(8, l8, searchResultAttr.errorStripeEnabled ? searchResultAttr.errorStripe : "57965C", "search.result"));
+
+            // Line 9:   i = result
+            Label l9Indent = new Label("  ");
+            Label iToken = new Label("i");
+            if (reassignedAttr.effectEnabled && "Bordered".equals(reassignedAttr.effectType)) {
+                iToken.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #dfe1e5; -fx-border-color: #3574F0; -fx-border-radius: 2; -fx-padding: 0 2; -fx-cursor: hand;");
+            } else {
+                iToken.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #dfe1e5; -fx-cursor: hand;");
+            }
+            iToken.setOnMouseClicked(e -> selectColorSchemeElement(treeView, rootItem, "identifiers.reassigned_local_variable", currentSelectedElementId, previewScroll));
+
+            Label l9Eq = new Label(" = ");
+            l9Eq.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
+            Label resToken2 = new Label("result");
+            resToken2.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-background-color: " + searchBg +
+                    "; -fx-text-fill: #dfe1e5; -fx-padding: 0 2; -fx-background-radius: 2; -fx-cursor: hand;");
+            resToken2.setOnMouseClicked(e -> selectColorSchemeElement(treeView, rootItem, "search.result", currentSelectedElementId, previewScroll));
+            HBox l9 = new HBox(l9Indent, iToken, l9Eq, resToken2);
+            l9.setAlignment(Pos.CENTER_LEFT);
+            previewPane.getChildren().add(pb.build(9, l9, null, "identifiers.reassigned_local_variable"));
+
+            // Line 10:   return i;
+            Label l10 = new Label("  return i;");
+            l10.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
+            previewPane.getChildren().add(pb.build(10, l10, null, null));
+
+            // Line 11: Blank
+            previewPane.getChildren().add(pb.build(11, new Label(""), null, null));
+
+            // Line 12: Folded text
+            Label foldedLbl = new Label("Folded text");
+            String foldBg = (foldedAttr.backgroundEnabled && foldedAttr.background != null) ? "#" + foldedAttr.background : "#3A3A3A";
+            foldedLbl.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-background-color: " + foldBg +
+                    "; -fx-text-fill: #8c8c8c; -fx-padding: 0 6; -fx-background-radius: 3; -fx-cursor: hand;");
+            foldedLbl.setOnMouseClicked(e -> selectColorSchemeElement(treeView, rootItem, "text.folded", currentSelectedElementId, previewScroll));
+            previewPane.getChildren().add(pb.build(12, foldedLbl, "8C8C8C", "text.folded"));
+
+            // Line 13: Folded text with highlighting
+            Label foldedHighLbl = new Label("Folded text with highlighting");
+            foldedHighLbl.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-background-color: " + foldBg +
+                    "; -fx-text-fill: #8c8c8c; -fx-border-color: #3574F0; -fx-border-radius: 3; -fx-padding: 0 6; -fx-background-radius: 3; -fx-cursor: hand;");
+            foldedHighLbl.setOnMouseClicked(e -> selectColorSchemeElement(treeView, rootItem, "text.folded_highlighted", currentSelectedElementId, previewScroll));
+            previewPane.getChildren().add(pb.build(13, foldedHighLbl, null, "text.folded_highlighted"));
+
+            // Line 14: Deleted text
+            Label delLbl = new Label("Deleted text");
+            String delFg = (deletedAttr.foregroundEnabled && deletedAttr.foreground != null) ? "#" + deletedAttr.foreground : "#CC666E";
+            delLbl.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: " + delFg +
+                    "; -fx-border-color: " + delFg + " transparent transparent transparent; -fx-border-style: dashed; -fx-cursor: hand;");
+            delLbl.setOnMouseClicked(e -> selectColorSchemeElement(treeView, rootItem, "text.deleted", currentSelectedElementId, previewScroll));
+            previewPane.getChildren().add(pb.build(14, delLbl, "CC666E", "text.deleted"));
+
+            // Line 15: Live template: active inactive $VARIABLE$
+            Label tmplPrefix = new Label("Live template: ");
+            tmplPrefix.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
+            Label tmplActive = new Label("active");
+            tmplActive.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #dfe1e5; -fx-border-color: #3574F0; -fx-border-radius: 2; -fx-padding: 0 4; -fx-cursor: hand;");
+            tmplActive.setOnMouseClicked(e -> selectColorSchemeElement(treeView, rootItem, "templates.active", currentSelectedElementId, previewScroll));
+            Label tmplSpace = new Label(" ");
+            Label tmplInactive = new Label("inactive");
+            tmplInactive.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #dfe1e5; -fx-border-color: #4E5157; -fx-border-radius: 2; -fx-padding: 0 4; -fx-cursor: hand;");
+            tmplInactive.setOnMouseClicked(e -> selectColorSchemeElement(treeView, rootItem, "templates.inactive", currentSelectedElementId, previewScroll));
+            Label tmplVar = new Label(" $VARIABLE$");
+            String varFg = (varTemplateAttr.foregroundEnabled && varTemplateAttr.foreground != null) ? "#" + varTemplateAttr.foreground : "#9876AA";
+            tmplVar.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: " + varFg + "; -fx-font-style: italic; -fx-cursor: hand;");
+            tmplVar.setOnMouseClicked(e -> selectColorSchemeElement(treeView, rootItem, "templates.variable", currentSelectedElementId, previewScroll));
+
+            HBox l15 = new HBox(tmplPrefix, tmplActive, tmplSpace, tmplInactive, tmplVar);
+            l15.setAlignment(Pos.CENTER_LEFT);
+            previewPane.getChildren().add(pb.build(15, l15, null, "templates.active"));
+
+            // Line 16: Injected language: \.(gif|jpg|png)$
+            Label injPrefix = new Label("Injected language: ");
+            injPrefix.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
+            Label injContent = new Label("\\.(gif|jpg|png)$");
+            String injBg = (injectedAttr.backgroundEnabled && injectedAttr.background != null) ? "#" + injectedAttr.background : "#363636";
+            injContent.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-background-color: " + injBg + "; -fx-text-fill: #dfe1e5; -fx-padding: 0 4; -fx-background-radius: 2; -fx-cursor: hand;");
+            injContent.setOnMouseClicked(e -> selectColorSchemeElement(treeView, rootItem, "code.injected_fragment", currentSelectedElementId, previewScroll));
+            HBox l16 = new HBox(injPrefix, injContent);
+            l16.setAlignment(Pos.CENTER_LEFT);
+            previewPane.getChildren().add(pb.build(16, l16, null, "code.injected_fragment"));
+
+            // Line 17: Blank
+            previewPane.getChildren().add(pb.build(17, new Label(""), null, null));
+
+            // Line 18: Code Inspections:
+            Label inspectLbl = new Label("Code Inspections:");
+            inspectLbl.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
+            previewPane.getChildren().add(pb.build(18, inspectLbl, null, null));
+
+            // Line 19:   Warning
+            AppSettingsStore.ColorSchemeAttribute warnAttr =
+                    ColorSchemeModel.resolveAttribute(activeScheme, "errors.warning", workingOverrides);
+            Label warnLbl = new Label("  Warning");
+            String warnEff = (warnAttr.effectColor != null) ? "#" + warnAttr.effectColor : "#F4AF3D";
+            warnLbl.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;" +
+                    (warnAttr.effectEnabled ? " -fx-border-color: transparent transparent " + warnEff + " transparent; -fx-border-width: 0 0 1.5 0; -fx-border-style: dashed;" : "") +
+                    "; -fx-cursor: hand;");
+            warnLbl.setOnMouseClicked(e -> selectColorSchemeElement(treeView, rootItem, "errors.warning", currentSelectedElementId, previewScroll));
+            previewPane.getChildren().add(pb.build(19, warnLbl, warnAttr.errorStripeEnabled ? warnAttr.errorStripe : "F4AF3D", "errors.warning"));
+
+            // Line 20:   Weak warning
+            AppSettingsStore.ColorSchemeAttribute weakWarnAttr =
+                    ColorSchemeModel.resolveAttribute(activeScheme, "errors.weak_warning", workingOverrides);
+            Label weakWarnLbl = new Label("  Weak warning");
+            String weakEff = (weakWarnAttr.effectColor != null) ? "#" + weakWarnAttr.effectColor : "#756D56";
+            weakWarnLbl.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;" +
+                    (weakWarnAttr.effectEnabled ? " -fx-border-color: transparent transparent " + weakEff + " transparent; -fx-border-width: 0 0 1 0; -fx-border-style: dashed;" : "") +
+                    "; -fx-cursor: hand;");
+            weakWarnLbl.setOnMouseClicked(e -> selectColorSchemeElement(treeView, rootItem, "errors.weak_warning", currentSelectedElementId, previewScroll));
+            previewPane.getChildren().add(pb.build(20, weakWarnLbl, weakWarnAttr.errorStripeEnabled ? weakWarnAttr.errorStripe : "756D56", "errors.weak_warning"));
+
+            // Line 21:   Deprecated symbol
+            AppSettingsStore.ColorSchemeAttribute depAttr =
+                    ColorSchemeModel.resolveAttribute(activeScheme, "errors.deprecated", workingOverrides);
+            Text depText = new Text("  Deprecated symbol");
+            depText.setFont(Font.font("JetBrains Mono", 12));
+            depText.setFill(javafx.scene.paint.Color.web("#868A91"));
+            depText.setStrikethrough(depAttr.effectEnabled && "Strikeout".equals(depAttr.effectType));
+            HBox depBox = new HBox(depText);
+            depBox.setAlignment(Pos.CENTER_LEFT);
+            depBox.setStyle("-fx-cursor: hand;");
+            depBox.setOnMouseClicked(e -> selectColorSchemeElement(treeView, rootItem, "errors.deprecated", currentSelectedElementId, previewScroll));
+            previewPane.getChildren().add(pb.build(21, depBox, "868A91", "errors.deprecated"));
+
+            // Line 22:   Deprecated symbol marked for removal
+            AppSettingsStore.ColorSchemeAttribute depRemAttr =
+                    ColorSchemeModel.resolveAttribute(activeScheme, "errors.deprecated_marked_for_removal", workingOverrides);
+            Text depRemText = new Text("  Deprecated symbol marked for removal");
+            depRemText.setFont(Font.font("JetBrains Mono", 12));
+            String depRemColor = (depRemAttr.effectColor != null) ? "#" + depRemAttr.effectColor : "#F75464";
+            depRemText.setFill(javafx.scene.paint.Color.web(depRemColor));
+            depRemText.setStrikethrough(depRemAttr.effectEnabled && "Strikeout".equals(depRemAttr.effectType));
+            HBox depRemBox = new HBox(depRemText);
+            depRemBox.setAlignment(Pos.CENTER_LEFT);
+            depRemBox.setStyle("-fx-cursor: hand;");
+            depRemBox.setOnMouseClicked(e -> selectColorSchemeElement(treeView, rootItem, "errors.deprecated_marked_for_removal", currentSelectedElementId, previewScroll));
+            previewPane.getChildren().add(pb.build(22, depRemBox, depRemAttr.effectEnabled ? depRemAttr.effectColor : "F75464", "errors.deprecated_marked_for_removal"));
+
+            // Line 23:   Unused symbol
+            AppSettingsStore.ColorSchemeAttribute unusedAttr =
+                    ColorSchemeModel.resolveAttribute(activeScheme, "errors.unused", workingOverrides);
+            String unusedFg = (unusedAttr.foregroundEnabled && unusedAttr.foreground != null) ? "#" + unusedAttr.foreground : "#72737A";
+            Label unusedLbl = new Label("  Unused symbol");
+            unusedLbl.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: " + unusedFg + "; -fx-cursor: hand;");
+            unusedLbl.setOnMouseClicked(e -> selectColorSchemeElement(treeView, rootItem, "errors.unused", currentSelectedElementId, previewScroll));
+            previewPane.getChildren().add(pb.build(23, unusedLbl, null, "errors.unused"));
+
+            // Line 24:   Unknown symbol
+            AppSettingsStore.ColorSchemeAttribute unkAttr =
+                    ColorSchemeModel.resolveAttribute(activeScheme, "errors.unknown_symbol", workingOverrides);
+            String unkFg = (unkAttr.foregroundEnabled && unkAttr.foreground != null) ? "#" + unkAttr.foreground : "#BC3F3C";
+            Label unkLbl = new Label("  Unknown symbol");
+            unkLbl.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: " + unkFg +
+                    "; -fx-border-color: transparent transparent #BC3F3C transparent; -fx-border-width: 0 0 1.5 0; -fx-border-style: dashed; -fx-cursor: hand;");
+            unkLbl.setOnMouseClicked(e -> selectColorSchemeElement(treeView, rootItem, "errors.unknown_symbol", currentSelectedElementId, previewScroll));
+            previewPane.getChildren().add(pb.build(24, unkLbl, unkAttr.errorStripeEnabled ? unkAttr.errorStripe : "BC3F3C", "errors.unknown_symbol"));
+
+            // Line 25:   Runtime problem
+            AppSettingsStore.ColorSchemeAttribute rtAttr =
+                    ColorSchemeModel.resolveAttribute(activeScheme, "errors.runtime_problem", workingOverrides);
+            Label rtLbl = new Label("  Runtime problem");
+            rtLbl.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6; -fx-border-color: transparent transparent #E05555 transparent; -fx-border-width: 0 0 1.5 0; -fx-border-style: dashed; -fx-cursor: hand;");
+            rtLbl.setOnMouseClicked(e -> selectColorSchemeElement(treeView, rootItem, "errors.runtime_problem", currentSelectedElementId, previewScroll));
+            previewPane.getChildren().add(pb.build(25, rtLbl, rtAttr.errorStripeEnabled ? rtAttr.errorStripe : "E05555", "errors.runtime_problem"));
+
+            // Line 26:   Problem from server
+            AppSettingsStore.ColorSchemeAttribute probAttr =
+                    ColorSchemeModel.resolveAttribute(activeScheme, "errors.problem_from_server", workingOverrides);
+            Label probLbl = new Label("  Problem from server");
+            probLbl.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6; -fx-border-color: transparent transparent #F4AF3D transparent; -fx-border-width: 0 0 1 0; -fx-cursor: hand;");
+            probLbl.setOnMouseClicked(e -> selectColorSchemeElement(treeView, rootItem, "errors.problem_from_server", currentSelectedElementId, previewScroll));
+            previewPane.getChildren().add(pb.build(26, probLbl, probAttr.errorStripeEnabled ? probAttr.errorStripe : null, "errors.problem_from_server"));
+
+            // Line 27:   Duplicate from server
+            AppSettingsStore.ColorSchemeAttribute dupAttr =
+                    ColorSchemeModel.resolveAttribute(activeScheme, "errors.duplicate_from_server", workingOverrides);
+            String dupBg = (dupAttr.backgroundEnabled && dupAttr.background != null) ? "#" + dupAttr.background : "#544630";
+            Label dupLbl = new Label("  Duplicate from server");
+            dupLbl.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-background-color: " + dupBg + "; -fx-text-fill: #dfe1e5; -fx-padding: 0 4; -fx-background-radius: 2; -fx-cursor: hand;");
+            dupLbl.setOnMouseClicked(e -> selectColorSchemeElement(treeView, rootItem, "errors.duplicate_from_server", currentSelectedElementId, previewScroll));
+            previewPane.getChildren().add(pb.build(27, dupLbl, null, "errors.duplicate_from_server"));
+        };
+
+        // TreeView selection listener updating the Attribute Editor
+        treeView.getSelectionModel().selectedItemProperty().addListener((obs, oldV, newV) -> {
+            if (newV == null || newV.getValue() == null || newV.getValue().getDefaultAttr() == null) {
+                attrEditor.setDisable(true);
+                return;
+            }
+            attrEditor.setDisable(false);
+            ColorSchemeElement el = newV.getValue();
+            currentSelectedElementId[0] = el.getId();
+            String activeScheme = schemeCombo.getValue();
+
+            AppSettingsStore.ColorSchemeAttribute currentAttr =
+                    ColorSchemeModel.resolveAttribute(activeScheme, el.getId(), workingOverrides);
+
+            boldCheck.setSelected(currentAttr.bold);
+            italicCheck.setSelected(currentAttr.italic);
+
+            fgRow.check.setSelected(currentAttr.foregroundEnabled);
+            fgRow.setColor(currentAttr.foreground);
+
+            bgRow.check.setSelected(currentAttr.backgroundEnabled);
+            bgRow.setColor(currentAttr.background);
+
+            errorStripeRow.check.setSelected(currentAttr.errorStripeEnabled);
+            errorStripeRow.setColor(currentAttr.errorStripe);
+
+            effectsRow.check.setSelected(currentAttr.effectEnabled);
+            effectsRow.setColor(currentAttr.effectColor);
+            if (currentAttr.effectType != null) {
+                effectTypeCombo.getSelectionModel().select(currentAttr.effectType);
+            }
+            effectTypeCombo.setDisable(!currentAttr.effectEnabled);
+
+            if (el.hasInheritance()) {
+                inheritBox.setVisible(true);
+                inheritBox.setManaged(true);
+                inheritCheck.setSelected(currentAttr.inherit);
+                inheritLink.setText(el.getInheritFromDisplay());
+                inheritLink.setOnAction(ev -> selectColorSchemeElement(treeView, rootItem, el.getInheritFromKey(), currentSelectedElementId, previewScroll));
+            } else {
+                inheritBox.setVisible(false);
+                inheritBox.setManaged(false);
+            }
+
+            boolean inh = currentAttr.inherit && el.hasInheritance();
+            boldCheck.setDisable(inh);
+            italicCheck.setDisable(inh);
+            fgRow.check.setDisable(inh);
+            fgRow.colorBtn.setDisable(inh || !currentAttr.foregroundEnabled);
+            bgRow.check.setDisable(inh);
+            bgRow.colorBtn.setDisable(inh || !currentAttr.backgroundEnabled);
+            errorStripeRow.check.setDisable(inh);
+            errorStripeRow.colorBtn.setDisable(inh || !currentAttr.errorStripeEnabled);
+            effectsRow.check.setDisable(inh);
+            effectsRow.colorBtn.setDisable(inh || !currentAttr.effectEnabled);
+            effectTypeCombo.setDisable(inh || !currentAttr.effectEnabled);
+
+            refreshPreview.run();
+
+            if (el.getId().startsWith("errors.")) {
+                previewScroll.setVvalue(1.0);
+            } else if (el.getId().startsWith("code.") || el.getId().startsWith("hyperlinks.")) {
+                previewScroll.setVvalue(0.0);
+            }
+        });
+
+        // Attribute change listener that saves overrides and refreshes preview
+        commitAttrChangesRef[0] = () -> {
+            TreeItem<ColorSchemeElement> sel = treeView.getSelectionModel().getSelectedItem();
+            if (sel == null || sel.getValue() == null || sel.getValue().getDefaultAttr() == null) return;
+            ColorSchemeElement el = sel.getValue();
+            String activeScheme = schemeCombo.getValue();
+
+            AppSettingsStore.ColorSchemeAttribute updated = new AppSettingsStore.ColorSchemeAttribute(
+                    boldCheck.isSelected(),
+                    italicCheck.isSelected(),
+                    fgRow.colorHex,
+                    fgRow.check.isSelected(),
+                    bgRow.colorHex,
+                    bgRow.check.isSelected(),
+                    errorStripeRow.colorHex,
+                    errorStripeRow.check.isSelected(),
+                    effectsRow.colorHex,
+                    effectsRow.check.isSelected(),
+                    effectTypeCombo.getValue(),
+                    inheritCheck.isSelected(),
+                    el.getInheritFromKey()
+            );
+
+            workingOverrides.computeIfAbsent(activeScheme, k -> new LinkedHashMap<>()).put(el.getId(), updated);
+            refreshPreview.run();
+        };
+
+        boldCheck.setOnAction(e -> commitAttrChangesRef[0].run());
+        italicCheck.setOnAction(e -> commitAttrChangesRef[0].run());
+        fgRow.check.setOnAction(e -> commitAttrChangesRef[0].run());
+        bgRow.check.setOnAction(e -> commitAttrChangesRef[0].run());
+        errorStripeRow.check.setOnAction(e -> commitAttrChangesRef[0].run());
+        effectsRow.check.setOnAction(e -> commitAttrChangesRef[0].run());
+        effectTypeCombo.setOnAction(e -> commitAttrChangesRef[0].run());
+        inheritCheck.setOnAction(e -> {
+            commitAttrChangesRef[0].run();
+            TreeItem<ColorSchemeElement> sel = treeView.getSelectionModel().getSelectedItem();
+            if (sel != null && sel.getValue() != null && sel.getValue().hasInheritance()) {
+                ColorSchemeElement el = sel.getValue();
+                String activeScheme = schemeCombo.getValue();
+                AppSettingsStore.ColorSchemeAttribute resolved =
+                        ColorSchemeModel.resolveAttribute(activeScheme, el.getId(), workingOverrides);
+                boldCheck.setSelected(resolved.bold);
+                italicCheck.setSelected(resolved.italic);
+                fgRow.check.setSelected(resolved.foregroundEnabled);
+                fgRow.setColor(resolved.foreground);
+                bgRow.check.setSelected(resolved.backgroundEnabled);
+                bgRow.setColor(resolved.background);
+                errorStripeRow.check.setSelected(resolved.errorStripeEnabled);
+                errorStripeRow.setColor(resolved.errorStripe);
+                effectsRow.check.setSelected(resolved.effectEnabled);
+                effectsRow.setColor(resolved.effectColor);
+                if (resolved.effectType != null) {
+                    effectTypeCombo.getSelectionModel().select(resolved.effectType);
+                }
+            }
+        });
+
+        // Gear Menu Actions
+        miDuplicate.setOnAction(e -> {
+            TextInputDialog tid = new TextInputDialog(schemeCombo.getValue() + " copy");
+            tid.setTitle("Duplicate Color Scheme");
+            tid.setHeaderText("Create a copy of '" + schemeCombo.getValue() + "'");
+            tid.setContentText("Scheme name:");
+            tid.showAndWait().ifPresent(name -> {
+                String trimmed = name.trim();
+                if (!trimmed.isEmpty() && !workingCustomSchemes.contains(trimmed)) {
+                    workingCustomSchemes.add(trimmed);
+                    refreshSchemesList.run();
+                    schemeCombo.getSelectionModel().select(trimmed);
+                }
+            });
+        });
+
+        miRestore.setOnAction(e -> {
+            String active = schemeCombo.getValue();
+            workingOverrides.remove(active);
+            TreeItem<ColorSchemeElement> sel = treeView.getSelectionModel().getSelectedItem();
+            if (sel != null) {
+                treeView.getSelectionModel().clearSelection();
+                treeView.getSelectionModel().select(sel);
+            }
+            refreshPreview.run();
+        });
+
+        miDelete.setOnAction(e -> {
+            String active = schemeCombo.getValue();
+            if (workingCustomSchemes.contains(active)) {
+                workingCustomSchemes.remove(active);
+                workingOverrides.remove(active);
+                refreshSchemesList.run();
+            }
+        });
+
+        miRename.setOnAction(e -> {
+            String active = schemeCombo.getValue();
+            if (workingCustomSchemes.contains(active)) {
+                TextInputDialog tid = new TextInputDialog(active);
+                tid.setTitle("Rename Color Scheme");
+                tid.setHeaderText("Enter new name for '" + active + "'");
+                tid.setContentText("New name:");
+                tid.showAndWait().ifPresent(name -> {
+                    String trimmed = name.trim();
+                    if (!trimmed.isEmpty()) {
+                        int idx = workingCustomSchemes.indexOf(active);
+                        if (idx >= 0) workingCustomSchemes.set(idx, trimmed);
+                        Map<String, AppSettingsStore.ColorSchemeAttribute> moved = workingOverrides.remove(active);
+                        if (moved != null) workingOverrides.put(trimmed, moved);
+                        refreshSchemesList.run();
+                        schemeCombo.getSelectionModel().select(trimmed);
+                    }
+                });
+            }
+        });
+
+        schemeCombo.valueProperty().addListener((obs, oldV, newV) -> {
+            TreeItem<ColorSchemeElement> sel = treeView.getSelectionModel().getSelectedItem();
+            if (sel != null) {
+                treeView.getSelectionModel().clearSelection();
+                treeView.getSelectionModel().select(sel);
+            }
+            refreshPreview.run();
+        });
+
+        // Select first leaf item (Code > Line number)
+        selectColorSchemeElement(treeView, rootItem, "code.line_number", currentSelectedElementId, previewScroll);
+
+        // Initial preview render
+        refreshPreview.run();
+
+        VBox panel = new VBox(10, topBar, splitTop, previewScroll);
+        VBox.setVgrow(splitTop, Priority.NEVER);
+        VBox.setVgrow(previewScroll, Priority.ALWAYS);
+        panel.setPadding(new Insets(4, 8, 12, 8));
+        return panel;
+    }
+
+    private static void populateColorSchemeTree(TreeItem<ColorSchemeElement> root) {
+        List<String> categories = ColorSchemeModel.getCategories();
+        for (String cat : categories) {
+            TreeItem<ColorSchemeElement> catItem = new TreeItem<>(new ColorSchemeElement("cat." + cat, cat, cat, null, null, null, null));
+            List<ColorSchemeElement> elements = ColorSchemeModel.getElementsByCategory(cat);
+
+            Map<String, TreeItem<ColorSchemeElement>> subCatMap = new LinkedHashMap<>();
+
+            for (ColorSchemeElement el : elements) {
+                if (el.getSubCategory() != null) {
+                    TreeItem<ColorSchemeElement> subItem = subCatMap.computeIfAbsent(el.getSubCategory(),
+                            sc -> new TreeItem<>(new ColorSchemeElement("sub." + sc, sc, cat, sc, null, null, null)));
+                    subItem.getChildren().add(new TreeItem<>(el));
+                } else {
+                    catItem.getChildren().add(new TreeItem<>(el));
+                }
+            }
+
+            for (TreeItem<ColorSchemeElement> subItem : subCatMap.values()) {
+                catItem.getChildren().add(subItem);
+            }
+
+            root.getChildren().add(catItem);
+        }
+    }
+
+    private static void selectColorSchemeElement(TreeView<ColorSchemeElement> treeView,
+                                                 TreeItem<ColorSchemeElement> root,
+                                                 String elementId,
+                                                 String[] currentSelectedElementId,
+                                                 ScrollPane previewScroll) {
+        if (elementId == null || root == null) return;
+        if (currentSelectedElementId != null) {
+            currentSelectedElementId[0] = elementId;
+        }
+        TreeItem<ColorSchemeElement> target = findColorSchemeItem(root, elementId);
+        if (target != null) {
+            TreeItem<ColorSchemeElement> p = target.getParent();
+            while (p != null) {
+                p.setExpanded(true);
+                p = p.getParent();
+            }
+            treeView.getSelectionModel().select(target);
+            int row = treeView.getRow(target);
+            if (row >= 0) treeView.scrollTo(row);
+        }
+        if (previewScroll != null) {
+            if (elementId.startsWith("errors.")) {
+                previewScroll.setVvalue(1.0);
+            } else if (elementId.startsWith("code.") || elementId.startsWith("hyperlinks.")) {
+                previewScroll.setVvalue(0.0);
+            }
+        }
+    }
+
+    private static void selectColorSchemeElement(TreeView<ColorSchemeElement> treeView,
+                                                 TreeItem<ColorSchemeElement> root,
+                                                 String elementId) {
+        selectColorSchemeElement(treeView, root, elementId, null, null);
+    }
+
+    private static TreeItem<ColorSchemeElement> findColorSchemeItem(TreeItem<ColorSchemeElement> current, String id) {
+        if (current == null || id == null) return null;
+        ColorSchemeElement resolvedEl = ColorSchemeModel.getElement(id);
+        String targetId = resolvedEl != null ? resolvedEl.getId() : id;
+        if (current.getValue() != null && targetId.equals(current.getValue().getId())) {
+            return current;
+        }
+        for (TreeItem<ColorSchemeElement> child : current.getChildren()) {
+            TreeItem<ColorSchemeElement> found = findColorSchemeItem(child, targetId);
+            if (found != null) return found;
+        }
+        return null;
+    }
+
+    private static boolean isColorDark(String hex) {
+        if (hex == null || hex.length() < 6) return true;
+        try {
+            int r = Integer.parseInt(hex.substring(0, 2), 16);
+            int g = Integer.parseInt(hex.substring(2, 4), 16);
+            int b = Integer.parseInt(hex.substring(4, 6), 16);
+            double luminance = (0.299 * r + 0.587 * g + 0.114 * b);
+            return luminance < 128;
+        } catch (Exception e) {
+            return true;
+        }
+    }
+
+    private static void showColorPickerDialog(String currentHex, Node anchor, java.util.function.Consumer<String> onSelected) {
+        Dialog<String> dialog = new Dialog<>();
+        dialog.setTitle("Choose Color");
+        dialog.initModality(Modality.APPLICATION_MODAL);
+
+        DialogPane pane = dialog.getDialogPane();
+        pane.setStyle("-fx-background-color: #2b2d30; -fx-text-fill: -text;");
+        pane.setPrefWidth(300);
+
+        Label prompt = new Label("Enter Hex Color (e.g. 4B5059 or #4B5059):");
+        prompt.setStyle("-fx-text-fill: -text; -fx-font-size: 12px;");
+
+        TextField hexInput = new TextField(currentHex != null ? currentHex : "DFE1E5");
+        hexInput.setStyle("-fx-background-color: #1e1f22; -fx-text-fill: #dfe1e5; -fx-border-color: #3574f0; -fx-font-weight: bold;");
+
+        Region colorPreview = new Region();
+        colorPreview.setPrefWidth(36);
+        colorPreview.setPrefHeight(26);
+        colorPreview.setStyle("-fx-background-color: #" + hexInput.getText().replace("#", "") + "; -fx-border-color: #393b40; -fx-border-radius: 3; -fx-background-radius: 3;");
+
+        hexInput.textProperty().addListener((obs, oldV, newV) -> {
+            String clean = newV != null ? newV.replace("#", "").trim() : "";
+            if (clean.matches("[0-9a-fA-F]{6}")) {
+                colorPreview.setStyle("-fx-background-color: #" + clean + "; -fx-border-color: #393b40; -fx-border-radius: 3; -fx-background-radius: 3;");
+            }
+        });
+
+        HBox inputRow = new HBox(8, hexInput, colorPreview);
+        inputRow.setAlignment(Pos.CENTER_LEFT);
+
+        // Palette presets
+        Label paletteLabel = new Label("Standard Palette:");
+        paletteLabel.setStyle("-fx-text-fill: #868a91; -fx-font-size: 11px;");
+
+        FlowPane palette = new FlowPane(6, 6);
+        List<String> swatches = List.of(
+                "4B5059", "A4A3A3", "DFE1E5", "2B2D30", "1E1F22", "3574F0",
+                "4083C9", "57965C", "A8C023", "F4AF3D", "BC3F3C", "9876AA",
+                "FFC66D", "CC666E", "FFFFFF", "000000"
+        );
+        for (String sw : swatches) {
+            Button swBtn = new Button();
+            swBtn.setPrefSize(20, 20);
+            swBtn.setStyle("-fx-background-color: #" + sw + "; -fx-border-color: #393b40; -fx-border-radius: 2; -fx-background-radius: 2; -fx-cursor: hand;");
+            swBtn.setOnAction(ev -> {
+                hexInput.setText(sw);
+                colorPreview.setStyle("-fx-background-color: #" + sw + "; -fx-border-color: #393b40; -fx-border-radius: 3; -fx-background-radius: 3;");
+            });
+            palette.getChildren().add(swBtn);
+        }
+
+        VBox content = new VBox(10, prompt, inputRow, paletteLabel, palette);
+        content.setPadding(new Insets(14));
+        pane.setContent(content);
+
+        ButtonType btnOk = new ButtonType("Choose", ButtonBar.ButtonData.OK_DONE);
+        ButtonType btnCancel = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
+        pane.getButtonTypes().addAll(btnCancel, btnOk);
+
+        dialog.setResultConverter(bt -> {
+            if (bt == btnOk) {
+                String clean = hexInput.getText() != null ? hexInput.getText().replace("#", "").trim().toUpperCase() : "";
+                return clean;
+            }
+            return null;
+        });
+
+        dialog.showAndWait().ifPresent(hex -> {
+            if (hex != null && !hex.isBlank() && onSelected != null) {
+                onSelected.accept(hex);
+            }
+        });
+    }
+
     private static VBox buildColorSchemeLandingPanel(CategoryDef cat, java.util.function.Consumer<String> navigateTo) {
         // Scheme selector row
         Label schemeLabel = new Label("Scheme:");
@@ -8878,6 +9908,19 @@ public final class SettingsDialog {
         if (inputs.containsKey("appearance_editorColorScheme")) {
             ComboBox<String> cb = (ComboBox<String>) inputs.get("appearance_editorColorScheme");
             if (cb.getValue() != null) settings.setEditorColorScheme(cb.getValue());
+        }
+        if (inputs.containsKey("editorColorSchemeCombo")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("editorColorSchemeCombo");
+            if (cb.getValue() != null) settings.setEditorColorScheme(cb.getValue());
+        }
+        if (inputs.containsKey("customColorSchemes")) {
+            List<String> list = (List<String>) inputs.get("customColorSchemes");
+            settings.setCustomColorSchemes(new ArrayList<>(list));
+        }
+        if (inputs.containsKey("colorSchemeOverrides")) {
+            Map<String, Map<String, AppSettingsStore.ColorSchemeAttribute>> map =
+                    (Map<String, Map<String, AppSettingsStore.ColorSchemeAttribute>>) inputs.get("colorSchemeOverrides");
+            settings.setColorSchemeOverrides(new LinkedHashMap<>(map));
         }
         if (inputs.containsKey("appearance_differentToolWindowBackground")) {
             CheckBox cb = (CheckBox) inputs.get("appearance_differentToolWindowBackground");

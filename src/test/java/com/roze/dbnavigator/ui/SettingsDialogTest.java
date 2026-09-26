@@ -1,7 +1,10 @@
 package com.roze.dbnavigator.ui;
 
 import com.roze.dbnavigator.db.AppSettingsStore;
+import com.roze.dbnavigator.db.AppSettingsStore.ColorSchemeAttribute;
 import com.roze.dbnavigator.ui.action.KeyStrokeFormatter;
+import com.roze.dbnavigator.ui.colorscheme.ColorSchemeModel;
+import com.roze.dbnavigator.ui.colorscheme.ColorSchemeModel.ColorSchemeElement;
 import javafx.scene.control.TreeItem;
 import org.junit.jupiter.api.Test;
 
@@ -868,7 +871,7 @@ public class SettingsDialogTest {
         // Check defaults matching DataGrip screenshots
         assertEquals("Islands Dark", settings.getUiTheme());
         assertFalse(settings.isSyncThemeWithOs());
-        assertEquals("Islands Dark Theme default", settings.getEditorColorScheme());
+        assertEquals("Dark Theme default", settings.getEditorColorScheme());
         assertFalse(settings.isDifferentToolWindowBackground());
 
         assertEquals("100%", settings.getIdeZoom());
@@ -918,7 +921,7 @@ public class SettingsDialogTest {
         assertTrue(themes.contains("Darcula"));
 
         List<String> schemes = AppSettingsStore.Settings.defaultEditorColorSchemes();
-        assertTrue(schemes.contains("Islands Dark Theme default"));
+        assertTrue(schemes.contains("Dark Theme default"));
         assertTrue(schemes.contains("Classic Light"));
 
         List<String> menus = AppSettingsStore.Settings.defaultMainMenuOptions();
@@ -2097,5 +2100,399 @@ public class SettingsDialogTest {
         javafx.scene.control.ComboBox<String> combo = (javafx.scene.control.ComboBox<String>) inputs.get("keymapCombo");
         assertNotNull(combo);
         assertTrue(combo.getItems().contains("My Custom Keymap"));
+    }
+
+    @Test
+    public void testColorSchemeCategoriesAndElementsMatchDataGrip() {
+        List<String> categories = ColorSchemeModel.getCategories();
+        assertNotNull(categories);
+        assertEquals(11, categories.size(), "Should have exactly 11 color scheme categories");
+
+        List<String> expectedCategories = List.of(
+                "Code",
+                "Editor",
+                "Errors and Warnings",
+                "Hyperlinks",
+                "Identifiers",
+                "Line Coverage",
+                "Live Templates",
+                "Popups and Hints",
+                "Preview",
+                "Search Results",
+                "Text"
+        );
+        assertEquals(expectedCategories, categories);
+
+        // Check Code category elements
+        List<ColorSchemeElement> codeElements = ColorSchemeModel.getElementsByCategory("Code");
+        assertNotNull(codeElements);
+        assertTrue(codeElements.stream().anyMatch(e -> "code.line_number".equals(e.getId()) && "Line number".equals(e.getName())));
+        assertTrue(codeElements.stream().anyMatch(e -> "code.line_number_caret".equals(e.getId()) && "Line number on caret row".equals(e.getName())));
+        assertTrue(codeElements.stream().anyMatch(e -> "code.matched_brace".equals(e.getId()) && "Matched brace".equals(e.getName())));
+        assertTrue(codeElements.stream().anyMatch(e -> "code.unmatched_brace".equals(e.getId()) && "Unmatched brace".equals(e.getName())));
+        assertTrue(codeElements.stream().anyMatch(e -> "code.todo".equals(e.getId()) && "TODO defaults".equals(e.getName())));
+        assertTrue(codeElements.stream().anyMatch(e -> "code.identifier_caret".equals(e.getId()) && "Identifier under caret".equals(e.getName())));
+        assertTrue(codeElements.stream().anyMatch(e -> "code.injected_fragment".equals(e.getId()) && "Injected language fragment".equals(e.getName())));
+
+        // Check Editor subcategories
+        List<ColorSchemeElement> editorElements = ColorSchemeModel.getElementsByCategory("Editor");
+        assertNotNull(editorElements);
+        assertTrue(editorElements.stream().anyMatch(e -> "Breadcrumbs".equals(e.getSubCategory()) && "Current".equals(e.getName())));
+        assertTrue(editorElements.stream().anyMatch(e -> "Breadcrumbs".equals(e.getSubCategory()) && "Default".equals(e.getName())));
+        assertTrue(editorElements.stream().anyMatch(e -> "Guides".equals(e.getSubCategory()) && "Hard wrap guide".equals(e.getName())));
+        assertTrue(editorElements.stream().anyMatch(e -> "Sticky Lines".equals(e.getSubCategory()) && "Border".equals(e.getName())));
+        assertTrue(editorElements.stream().anyMatch(e -> "Tabs".equals(e.getSubCategory()) && "Modified icon color".equals(e.getName())));
+        assertTrue(editorElements.stream().anyMatch(e -> "Tabs".equals(e.getSubCategory()) && "Selected Tab".equals(e.getName())));
+        assertTrue(editorElements.stream().anyMatch(e -> "Vertical Scrollbar".equals(e.getSubCategory())));
+    }
+
+    @Test
+    public void testColorSchemeDefaultPalettesAndAttributes() {
+        ColorSchemeElement lineNum = ColorSchemeModel.getElement("code.line_number");
+        assertNotNull(lineNum);
+        assertEquals("4B5059", lineNum.getDefaultAttr().foreground);
+        assertTrue(lineNum.getDefaultAttr().foregroundEnabled);
+
+        ColorSchemeElement breadcrumbCurrent = ColorSchemeModel.getElement("editor.breadcrumbs.current");
+        assertNotNull(breadcrumbCurrent);
+        assertEquals("DFE1E5", breadcrumbCurrent.getDefaultAttr().foreground);
+        assertEquals("2B2D30", breadcrumbCurrent.getDefaultAttr().background);
+
+        ColorSchemeElement modifiedIcon = ColorSchemeModel.getElement("editor.tabs.modified_icon");
+        assertNotNull(modifiedIcon);
+        assertEquals("4083C9", modifiedIcon.getDefaultAttr().foreground);
+        assertTrue(modifiedIcon.getDefaultAttr().foregroundEnabled);
+
+        ColorSchemeElement todo = ColorSchemeModel.getElement("code.todo");
+        assertNotNull(todo);
+        assertEquals("A8C023", todo.getDefaultAttr().foreground);
+        assertTrue(todo.getDefaultAttr().italic);
+        assertEquals("73AD2B", todo.getDefaultAttr().errorStripe);
+
+        ColorSchemeElement matchedBrace = ColorSchemeModel.getElement("code.matched_brace");
+        assertNotNull(matchedBrace);
+        assertEquals("FFEF28", matchedBrace.getDefaultAttr().effectColor);
+        assertEquals("Bold Underscored", matchedBrace.getDefaultAttr().effectType);
+    }
+
+    @Test
+    public void testColorSchemeInheritanceResolution() {
+        ColorSchemeElement stickyBorder = ColorSchemeModel.getElement("editor.sticky_lines.border");
+        assertNotNull(stickyBorder);
+        assertTrue(stickyBorder.hasInheritance());
+        assertEquals("editor.guides.hard_wrap", stickyBorder.getInheritFromKey());
+        assertEquals("Editor → Guides → Hard wrap guide (General)", stickyBorder.getInheritFromDisplay());
+
+        // Default inheritance resolves to parent's default attributes
+        ColorSchemeAttribute resolvedDefault = ColorSchemeModel.resolveAttribute("Dark Theme default", "editor.sticky_lines.border", null);
+        assertNotNull(resolvedDefault);
+        ColorSchemeElement hardWrap = ColorSchemeModel.getElement("editor.guides.hard_wrap");
+        assertEquals(hardWrap.getDefaultAttr().foreground, resolvedDefault.foreground);
+
+        // Custom override with inherit=false
+        Map<String, Map<String, ColorSchemeAttribute>> overrides = new LinkedHashMap<>();
+        Map<String, ColorSchemeAttribute> schemeMap = new LinkedHashMap<>();
+        ColorSchemeAttribute customAttr = new ColorSchemeAttribute(
+                true, false, "FF00FF", true, "112233", true, null, false, null, false, "Underscored", false, null);
+        schemeMap.put("editor.sticky_lines.border", customAttr);
+        overrides.put("Dark Theme default", schemeMap);
+
+        ColorSchemeAttribute resolvedOverridden = ColorSchemeModel.resolveAttribute("Dark Theme default", "editor.sticky_lines.border", overrides);
+        assertEquals("FF00FF", resolvedOverridden.foreground);
+        assertEquals("112233", resolvedOverridden.background);
+        assertTrue(resolvedOverridden.bold);
+
+        // Parent overridden and child inherits
+        Map<String, Map<String, ColorSchemeAttribute>> parentOverrides = new LinkedHashMap<>();
+        Map<String, ColorSchemeAttribute> parentSchemeMap = new LinkedHashMap<>();
+        ColorSchemeAttribute parentAttr = new ColorSchemeAttribute(
+                false, false, "00FFEE", true, null, false, null, false, null, false, "Underscored", false, null);
+        parentSchemeMap.put("editor.guides.hard_wrap", parentAttr);
+        // Child explicitly inherits
+        ColorSchemeAttribute childInheritAttr = new ColorSchemeAttribute(
+                false, false, null, false, null, false, null, false, null, false, "Underscored", true, "editor.guides.hard_wrap");
+        parentSchemeMap.put("editor.sticky_lines.border", childInheritAttr);
+        parentOverrides.put("Dark Theme default", parentSchemeMap);
+
+        ColorSchemeAttribute resolvedFromParent = ColorSchemeModel.resolveAttribute("Dark Theme default", "editor.sticky_lines.border", parentOverrides);
+        assertEquals("00FFEE", resolvedFromParent.foreground);
+    }
+
+    @Test
+    public void testColorSchemeSerializationAndRoundTrip() throws Exception {
+        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+
+        AppSettingsStore.Settings original = new AppSettingsStore.Settings();
+        original.setEditorColorScheme("Custom Pro Dark");
+        original.getCustomColorSchemes().add("Custom Pro Dark");
+
+        Map<String, Map<String, ColorSchemeAttribute>> overrides = new LinkedHashMap<>();
+        Map<String, ColorSchemeAttribute> schemeOverrides = new LinkedHashMap<>();
+        schemeOverrides.put("code.line_number", new ColorSchemeAttribute(
+                true, false, "123456", true, "654321", true, "ABCDEF", true, "FEDCBA", true, "Dotted line", false, null));
+        schemeOverrides.put("preview.folded", new ColorSchemeAttribute(
+                false, true, "AABBCC", true, null, false, null, false, null, false, "Bordered", false, null));
+        overrides.put("Custom Pro Dark", schemeOverrides);
+        original.setColorSchemeOverrides(overrides);
+
+        String json = mapper.writeValueAsString(original);
+        assertNotNull(json);
+        assertTrue(json.contains("Custom Pro Dark"));
+        assertTrue(json.contains("code.line_number"));
+        assertTrue(json.contains("123456"));
+        assertTrue(json.contains("Dotted line"));
+
+        AppSettingsStore.Settings loaded = mapper.readValue(json, AppSettingsStore.Settings.class);
+        assertEquals("Custom Pro Dark", loaded.getEditorColorScheme());
+        assertTrue(loaded.getCustomColorSchemes().contains("Custom Pro Dark"));
+        assertNotNull(loaded.getColorSchemeOverrides().get("Custom Pro Dark"));
+
+        ColorSchemeAttribute loadedLineNum = loaded.getColorSchemeOverrides().get("Custom Pro Dark").get("code.line_number");
+        assertNotNull(loadedLineNum);
+        assertTrue(loadedLineNum.bold);
+        assertEquals("123456", loadedLineNum.foreground);
+        assertEquals("654321", loadedLineNum.background);
+        assertEquals("Dotted line", loadedLineNum.effectType);
+    }
+
+    @Test
+    public void testColorSchemeGeneralPanelConstructionAndInputs() {
+        AppSettingsStore.Settings settings = new AppSettingsStore.Settings();
+        settings.getCustomColorSchemes().add("Team Light Theme");
+        Map<String, Object> inputs = new HashMap<>();
+
+        javafx.scene.layout.VBox panel = SettingsDialog.buildColorSchemeGeneralPanel(settings, inputs, target -> {});
+
+        assertNotNull(panel);
+        assertTrue(inputs.containsKey("editorColorSchemeCombo"));
+        assertTrue(inputs.containsKey("customColorSchemes"));
+        assertTrue(inputs.containsKey("colorSchemeOverrides"));
+
+        @SuppressWarnings("unchecked")
+        javafx.scene.control.ComboBox<String> combo =
+                (javafx.scene.control.ComboBox<String>) inputs.get("editorColorSchemeCombo");
+        assertNotNull(combo);
+        assertTrue(combo.getItems().contains("Dark Theme default"));
+        assertTrue(combo.getItems().contains("Team Light Theme"));
+
+        @SuppressWarnings("unchecked")
+        List<String> customs = (List<String>) inputs.get("customColorSchemes");
+        assertTrue(customs.contains("Team Light Theme"));
+    }
+
+    @Test
+    public void testColorSchemeBatch2ElementsMatchDataGrip() {
+        // 1. Errors and Warnings 15 items in exact DataGrip order
+        List<ColorSchemeElement> errorElements = ColorSchemeModel.getElementsByCategory("Errors and Warnings");
+        assertNotNull(errorElements);
+        assertEquals(15, errorElements.size(), "Should have exactly 15 Errors and Warnings items");
+
+        List<String> expectedErrorNames = List.of(
+                "Deprecated symbol",
+                "Deprecated symbol marked for removal",
+                "Duplicate from server",
+                "Error",
+                "Grammar error",
+                "Problem from server",
+                "Runtime problem",
+                "Text style error",
+                "Text style suggestion",
+                "Text style warning",
+                "Typo",
+                "Unknown symbol",
+                "Unused code",
+                "Warning",
+                "Weak Warning"
+        );
+        List<String> actualErrorNames = errorElements.stream().map(ColorSchemeElement::getName).toList();
+        assertEquals(expectedErrorNames, actualErrorNames);
+
+        // Deprecated symbol marked for removal (coral strikeout #F75464)
+        ColorSchemeElement depRem = ColorSchemeModel.getElement("errors.deprecated_marked_for_removal");
+        assertNotNull(depRem);
+        assertTrue(depRem.getDefaultAttr().effectEnabled);
+        assertEquals("F75464", depRem.getDefaultAttr().effectColor);
+        assertEquals("Strikeout", depRem.getDefaultAttr().effectType);
+
+        // Deprecated symbol (strikeout #868A91)
+        ColorSchemeElement dep = ColorSchemeModel.getElement("errors.deprecated");
+        assertNotNull(dep);
+        assertTrue(dep.getDefaultAttr().effectEnabled);
+        assertEquals("868A91", dep.getDefaultAttr().effectColor);
+        assertEquals("Strikeout", dep.getDefaultAttr().effectType);
+
+        // 2. Hyperlinks 4 items
+        List<ColorSchemeElement> linkElements = ColorSchemeModel.getElementsByCategory("Hyperlinks");
+        assertNotNull(linkElements);
+        assertEquals(4, linkElements.size(), "Should have exactly 4 Hyperlinks items");
+
+        List<String> expectedLinkNames = List.of("Followed", "Inactive", "Reference", "Unfollowed");
+        List<String> actualLinkNames = linkElements.stream().map(ColorSchemeElement::getName).toList();
+        assertEquals(expectedLinkNames, actualLinkNames);
+
+        ColorSchemeElement inactiveLink = ColorSchemeModel.getElement("hyperlinks.inactive");
+        assertNotNull(inactiveLink);
+        assertTrue(inactiveLink.getDefaultAttr().effectEnabled);
+        assertEquals("6B6C73", inactiveLink.getDefaultAttr().effectColor);
+        assertEquals("Underscored", inactiveLink.getDefaultAttr().effectType);
+
+        ColorSchemeElement refLink = ColorSchemeModel.getElement("hyperlinks.reference");
+        assertNotNull(refLink);
+        assertEquals("589DF6", refLink.getDefaultAttr().foreground);
+        assertEquals("589DF6", refLink.getDefaultAttr().effectColor);
+
+        // 3. Editor > Vertical Scrollbar
+        ColorSchemeElement thumb = ColorSchemeModel.getElement("editor.scrollbar.thumb");
+        assertNotNull(thumb);
+        assertEquals("4E5157", thumb.getDefaultAttr().background);
+
+        ColorSchemeElement thumbScrolling = ColorSchemeModel.getElement("editor.scrollbar.thumb_scrolling");
+        assertNotNull(thumbScrolling);
+        assertEquals("FFFFFF", thumbScrolling.getDefaultAttr().background);
+
+        // 4. Editor > Guides
+        ColorSchemeElement indent = ColorSchemeModel.getElement("editor.guides.indent");
+        assertNotNull(indent);
+        assertEquals("313438", indent.getDefaultAttr().background);
+
+        ColorSchemeElement indentSel = ColorSchemeModel.getElement("editor.guides.indent_selected");
+        assertNotNull(indentSel);
+        assertEquals("4B5059", indentSel.getDefaultAttr().background);
+
+        ColorSchemeElement braceGuide = ColorSchemeModel.getElement("editor.guides.matched_brace");
+        assertNotNull(braceGuide);
+        assertEquals("3B514D", braceGuide.getDefaultAttr().background);
+
+        ColorSchemeElement visualGuide = ColorSchemeModel.getElement("editor.guides.visual");
+        assertNotNull(visualGuide);
+        assertEquals("323232", visualGuide.getDefaultAttr().foreground);
+
+        // 5. Identifiers > Reassigned local variable
+        ColorSchemeElement reassigned = ColorSchemeModel.getElement("identifiers.reassigned_local_variable");
+        assertNotNull(reassigned);
+        assertEquals("Identifiers", reassigned.getCategory());
+        assertEquals("Reassigned local variable", reassigned.getName());
+        assertEquals("Bordered", reassigned.getDefaultAttr().effectType);
+
+        // 6. Compatibility aliases
+        assertEquals(depRem, ColorSchemeModel.getElement("errors.marked_for_removal"));
+        assertEquals(ColorSchemeModel.getElement("hyperlinks.unfollowed"), ColorSchemeModel.getElement("hyperlink.link"));
+        assertEquals(inactiveLink, ColorSchemeModel.getElement("hyperlink.inactive"));
+        assertEquals(thumbScrolling, ColorSchemeModel.getElement("editor.scrollbar.track"));
+    }
+
+    @Test
+    public void testColorSchemeBatch3ElementsMatchDataGrip() {
+        // 1. Line Coverage: Full, Partial, Uncovered
+        List<ColorSchemeElement> covList = ColorSchemeModel.getElementsByCategory("Line Coverage");
+        assertNotNull(covList);
+        assertEquals(3, covList.size());
+        assertEquals(List.of("Full", "Partial", "Uncovered"), covList.stream().map(ColorSchemeElement::getName).toList());
+
+        ColorSchemeElement partial = ColorSchemeModel.getElement("coverage.partial");
+        assertNotNull(partial);
+        assertTrue(partial.getDefaultAttr().bold);
+        assertEquals("5E4D33", partial.getDefaultAttr().foreground);
+        assertTrue(partial.getDefaultAttr().foregroundEnabled);
+        assertEquals("Bordered", partial.getDefaultAttr().effectType);
+
+        // 2. Live Templates: Active Segment, Inactive Segment, Template Variable
+        List<ColorSchemeElement> tmplList = ColorSchemeModel.getElementsByCategory("Live Templates");
+        assertNotNull(tmplList);
+        assertEquals(3, tmplList.size());
+        assertEquals(List.of("Active Segment", "Inactive Segment", "Template Variable"), tmplList.stream().map(ColorSchemeElement::getName).toList());
+
+        ColorSchemeElement inactiveSegment = ColorSchemeModel.getElement("templates.inactive");
+        assertNotNull(inactiveSegment);
+        assertTrue(inactiveSegment.getDefaultAttr().effectEnabled);
+        assertEquals("9DA0A8", inactiveSegment.getDefaultAttr().effectColor);
+        assertEquals("Bordered", inactiveSegment.getDefaultAttr().effectType);
+
+        // 3. Search Results: Search result (write access)
+        ColorSchemeElement writeAccess = ColorSchemeModel.getElement("search.result_write");
+        assertNotNull(writeAccess);
+        assertEquals("Search result (write access)", writeAccess.getName());
+        assertTrue(writeAccess.getDefaultAttr().backgroundEnabled);
+        assertEquals("66313F", writeAccess.getDefaultAttr().background);
+        assertTrue(writeAccess.getDefaultAttr().errorStripeEnabled);
+        assertEquals("FA7DB1", writeAccess.getDefaultAttr().errorStripe);
+
+        // 4. Popups and Hints: all 11 items in exact DataGrip alphabetical order
+        List<ColorSchemeElement> popupsList = ColorSchemeModel.getElementsByCategory("Popups and Hints");
+        assertNotNull(popupsList);
+        assertEquals(11, popupsList.size());
+        List<String> expectedPopups = List.of(
+                "Code lens",
+                "Completion",
+                "Documentation",
+                "Error hint",
+                "Hint border",
+                "Information hint",
+                "Promotion pane",
+                "Question hint",
+                "Recent locations selection",
+                "Tooltip",
+                "Warning hint"
+        );
+        assertEquals(expectedPopups, popupsList.stream().map(ColorSchemeElement::getName).toList());
+
+        ColorSchemeElement completion = ColorSchemeModel.getElement("popups.completion");
+        assertNotNull(completion);
+        assertTrue(completion.getDefaultAttr().backgroundEnabled);
+        assertEquals("2B2D30", completion.getDefaultAttr().background);
+
+        // 5. Preview: exactly 2 items Background and Border, with Border inheriting from Indent guide
+        List<ColorSchemeElement> previewList = ColorSchemeModel.getElementsByCategory("Preview");
+        assertNotNull(previewList);
+        assertEquals(2, previewList.size());
+        assertEquals(List.of("Background", "Border"), previewList.stream().map(ColorSchemeElement::getName).toList());
+
+        ColorSchemeElement previewBorder = ColorSchemeModel.getElement("preview.border");
+        assertNotNull(previewBorder);
+        assertTrue(previewBorder.hasInheritance());
+        assertEquals("editor.guides.indent", previewBorder.getInheritFromKey());
+        assertEquals("Editor → Guides → Indent guide (General)", previewBorder.getInheritFromDisplay());
+
+        // Resolving preview.border inherits Indent guide's background 313438
+        ColorSchemeAttribute resolvedBorder = ColorSchemeModel.resolveAttribute("Dark Theme default", "preview.border", null);
+        assertNotNull(resolvedBorder);
+        assertTrue(resolvedBorder.backgroundEnabled);
+        assertEquals("313438", resolvedBorder.background);
+
+        // 6. Text: all 9 items in exact DataGrip alphabetical order
+        List<ColorSchemeElement> textList = ColorSchemeModel.getElementsByCategory("Text");
+        assertNotNull(textList);
+        assertEquals(9, textList.size());
+        List<String> expectedTextItems = List.of(
+                "Background in read-only files",
+                "Default text",
+                "Deleted text",
+                "Folded text",
+                "Folded text with highlighting",
+                "Read-only fragment background",
+                "Soft wrap sign",
+                "Tabs",
+                "Whitespaces"
+        );
+        assertEquals(expectedTextItems, textList.stream().map(ColorSchemeElement::getName).toList());
+
+        ColorSchemeElement foldedHighlighted = ColorSchemeModel.getElement("text.folded_highlighted");
+        assertNotNull(foldedHighlighted);
+        assertTrue(foldedHighlighted.getDefaultAttr().backgroundEnabled);
+        assertEquals("2B2D30", foldedHighlighted.getDefaultAttr().background);
+
+        ColorSchemeElement readonlyBg = ColorSchemeModel.getElement("text.readonly_bg");
+        assertNotNull(readonlyBg);
+        assertTrue(readonlyBg.getDefaultAttr().backgroundEnabled);
+        assertEquals("2B2D30", readonlyBg.getDefaultAttr().background);
+
+        // 7. Aliases and backward compatibility
+        assertEquals(ColorSchemeModel.getElement("text.folded"), ColorSchemeModel.getElement("preview.folded"));
+        assertEquals(ColorSchemeModel.getElement("text.folded_highlighted"), ColorSchemeModel.getElement("preview.folded_highlighted"));
+        assertEquals(ColorSchemeModel.getElement("text.deleted"), ColorSchemeModel.getElement("preview.deleted"));
+        assertEquals(readonlyBg, ColorSchemeModel.getElement("text.background_readonly"));
+        assertEquals(writeAccess, ColorSchemeModel.getElement("search.result_write_access"));
+        assertEquals(ColorSchemeModel.getElement("coverage.full"), ColorSchemeModel.getElement("coverage.full_coverage"));
+        assertEquals(partial, ColorSchemeModel.getElement("coverage.partial_coverage"));
     }
 }
