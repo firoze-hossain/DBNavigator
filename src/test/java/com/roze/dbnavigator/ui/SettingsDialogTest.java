@@ -2812,5 +2812,11 @@ public class SettingsDialogTest {
 
         javafx.scene.Node jsonNode = SettingsDialog.buildPanelForPath("Editor / Color Scheme / JSON", settings, inputs, null);
         assertNotNull(jsonNode);
+
+        javafx.scene.Node mdNode = SettingsDialog.buildPanelForPath("Editor / Color Scheme / Markdown", settings, inputs, null);
+        assertNotNull(mdNode);
+
+        javafx.scene.Node regexNode = SettingsDialog.buildPanelForPath("Editor / Color Scheme / RegExp", settings, inputs, null);
+        assertNotNull(regexNode);
     }
 }

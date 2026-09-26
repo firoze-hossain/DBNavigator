@@ -1064,6 +1064,212 @@ public final class ColorSchemeModel {
         register(new ColorSchemeElement("database.parameter_usage", "Parameter usage",
                 List.of("Parameters", "Parameter usage"),
                 new ColorSchemeAttribute(false, false, null, false, "264D3B", true, null, false, "3D7A49", true, "Bordered", false, null), null, null, "Database"));
+
+        // =========================================================================
+        // REGEXP (18 items, Alphabetical)
+        // =========================================================================
+        register(new ColorSchemeElement("regexp.bad_character", "Bad character",
+                List.of("Bad character"),
+                new ColorSchemeAttribute(false, false, "FA6675", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "RegExp"));
+        register(new ColorSchemeElement("regexp.brace", "Brace",
+                List.of("Brace"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "RegExp"));
+        register(new ColorSchemeElement("regexp.bracket", "Bracket",
+                List.of("Bracket"),
+                new ColorSchemeAttribute(false, false, "E8BF6A", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "RegExp"));
+        register(new ColorSchemeElement("regexp.character_class", "Character class",
+                List.of("Character class"),
+                new ColorSchemeAttribute(false, false, "299999", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "RegExp"));
+        register(new ColorSchemeElement("regexp.comma", "Comma",
+                List.of("Comma"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "RegExp"));
+        register(new ColorSchemeElement("regexp.comment", "Comment",
+                List.of("Comment"),
+                new ColorSchemeAttribute(false, false, "7A7E85", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "RegExp"));
+        register(new ColorSchemeElement("regexp.dot", "Dot",
+                List.of("Dot"),
+                new ColorSchemeAttribute(false, false, "CF8E6D", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "RegExp"));
+        register(new ColorSchemeElement("regexp.escaped_character", "Escaped character",
+                List.of("Escaped character"),
+                new ColorSchemeAttribute(false, false, "CF8E6D", true, null, false, null, false, null, false, "Bordered", true, "lang.string.valid_escape"),
+                "lang.string.valid_escape", "String->Escape sequence->Valid\n(Language Defaults)", "RegExp"));
+        register(new ColorSchemeElement("regexp.inline_option", "Inline option",
+                List.of("Inline option"),
+                new ColorSchemeAttribute(false, false, "C792EA", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "RegExp"));
+        register(new ColorSchemeElement("regexp.invalid_escape_sequence", "Invalid escape sequence",
+                List.of("Invalid escape sequence"),
+                new ColorSchemeAttribute(false, false, "FA6675", true, null, false, null, false, "FA6675", true, "Underwaved", false, null), null, null, "RegExp"));
+        register(new ColorSchemeElement("regexp.matched_groups", "Matched groups",
+                List.of("Matched groups"),
+                new ColorSchemeAttribute(false, false, "2AACB8", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "RegExp"));
+        register(new ColorSchemeElement("regexp.name", "Name",
+                List.of("Name"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "RegExp"));
+        register(new ColorSchemeElement("regexp.operator_character", "Operator character",
+                List.of("Operator character"),
+                new ColorSchemeAttribute(false, false, "CF8E6D", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "RegExp"));
+        register(new ColorSchemeElement("regexp.parenthesis", "Parenthesis",
+                List.of("Parenthesis"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "RegExp"));
+        register(new ColorSchemeElement("regexp.plain_character", "Plain character",
+                List.of("Plain character"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "RegExp"));
+        register(new ColorSchemeElement("regexp.quantifier", "Quantifier",
+                List.of("Quantifier"),
+                new ColorSchemeAttribute(false, false, "2AACB8", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "RegExp"));
+        register(new ColorSchemeElement("regexp.quote_escape", "Quote escape",
+                List.of("Quote escape"),
+                new ColorSchemeAttribute(false, false, "CF8E6D", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "RegExp"));
+        register(new ColorSchemeElement("regexp.redundant_escape_sequence", "Redundant escape sequence",
+                List.of("Redundant escape sequence"),
+                new ColorSchemeAttribute(false, false, "808080", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "RegExp"));
+
+        // =========================================================================
+        // MARKDOWN (40 items across categories and standalone)
+        // =========================================================================
+        // 1. Blockquote (2)
+        register(new ColorSchemeElement("markdown.blockquote.blockquote", "Blockquote",
+                List.of("Blockquote", "Blockquote"),
+                new ColorSchemeAttribute(false, false, "6AAB73", true, null, false, null, false, null, false, "Bordered", true, "lang.string"),
+                "lang.string", "String->String text\n(Language Defaults)", "Markdown"));
+        register(new ColorSchemeElement("markdown.blockquote.marker", "Blockquote marker",
+                List.of("Blockquote", "Blockquote marker"),
+                new ColorSchemeAttribute(false, false, "7A7E85", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Markdown"));
+
+        // 2. Code (4)
+        register(new ColorSchemeElement("markdown.code.code_block", "Code block",
+                List.of("Code", "Code block"),
+                new ColorSchemeAttribute(false, false, null, false, "2B2D30", true, null, false, null, false, "Underscored", false, null), null, null, "Markdown"));
+        register(new ColorSchemeElement("markdown.code.code_fence", "Code fence",
+                List.of("Code", "Code fence"),
+                new ColorSchemeAttribute(false, false, "7A7E85", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Markdown"));
+        register(new ColorSchemeElement("markdown.code.code_span", "Code span",
+                List.of("Code", "Code span"),
+                new ColorSchemeAttribute(false, false, "CF8E6D", true, "2B2D30", true, null, false, null, false, "Underscored", false, null), null, null, "Markdown"));
+        register(new ColorSchemeElement("markdown.code.code_span_marker", "Code span marker",
+                List.of("Code", "Code span marker"),
+                new ColorSchemeAttribute(false, false, "7A7E85", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Markdown"));
+
+        // 3. Definition list (4)
+        register(new ColorSchemeElement("markdown.definition_list.definition", "Definition",
+                List.of("Definition list", "Definition"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Markdown"));
+        register(new ColorSchemeElement("markdown.definition_list.definition_list", "Definition list",
+                List.of("Definition list", "Definition list"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Markdown"));
+        register(new ColorSchemeElement("markdown.definition_list.marker", "Definition marker",
+                List.of("Definition list", "Definition marker"),
+                new ColorSchemeAttribute(false, false, "7A7E85", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Markdown"));
+        register(new ColorSchemeElement("markdown.definition_list.term", "Term",
+                List.of("Definition list", "Term"),
+                new ColorSchemeAttribute(false, false, "56A8F5", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Markdown"));
+
+        // 4. Header (7)
+        register(new ColorSchemeElement("markdown.header.level_1", "1st level header",
+                List.of("Header", "1st level header"),
+                new ColorSchemeAttribute(true, false, "C77DBB", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Markdown"));
+        register(new ColorSchemeElement("markdown.header.level_2", "2nd level header",
+                List.of("Header", "2nd level header"),
+                new ColorSchemeAttribute(false, true, "C77DBB", true, null, false, null, false, null, false, "Bordered", true, "lang.constant"),
+                "lang.constant", "Identifiers->Constant\n(Language Defaults)", "Markdown"));
+        register(new ColorSchemeElement("markdown.header.level_3", "3rd level header",
+                List.of("Header", "3rd level header"),
+                new ColorSchemeAttribute(false, true, "C77DBB", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Markdown"));
+        register(new ColorSchemeElement("markdown.header.level_4", "4th level header",
+                List.of("Header", "4th level header"),
+                new ColorSchemeAttribute(false, false, "C77DBB", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Markdown"));
+        register(new ColorSchemeElement("markdown.header.level_5", "5th level header",
+                List.of("Header", "5th level header"),
+                new ColorSchemeAttribute(false, false, "C77DBB", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Markdown"));
+        register(new ColorSchemeElement("markdown.header.level_6", "6th level header",
+                List.of("Header", "6th level header"),
+                new ColorSchemeAttribute(false, false, "C77DBB", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Markdown"));
+        register(new ColorSchemeElement("markdown.header.marker", "Header marker",
+                List.of("Header", "Header marker"),
+                new ColorSchemeAttribute(false, false, "7A7E85", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Markdown"));
+
+        // 5. Horizontal rule (Standalone)
+        register(new ColorSchemeElement("markdown.horizontal_rule", "Horizontal rule",
+                List.of("Horizontal rule"),
+                new ColorSchemeAttribute(false, false, "7A7E85", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Markdown"));
+
+        // 6. HTML (2)
+        register(new ColorSchemeElement("markdown.html.html_block", "HTML block",
+                List.of("HTML", "HTML block"),
+                new ColorSchemeAttribute(false, false, "E8BF6A", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Markdown"));
+        register(new ColorSchemeElement("markdown.html.inline_html", "Inline HTML",
+                List.of("HTML", "Inline HTML"),
+                new ColorSchemeAttribute(false, false, "E8BF6A", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Markdown"));
+
+        // 7. Links (9)
+        register(new ColorSchemeElement("markdown.links.auto_link", "Auto link",
+                List.of("Links", "Auto link"),
+                new ColorSchemeAttribute(false, false, "56A8F5", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Markdown"));
+        register(new ColorSchemeElement("markdown.links.explicit_link", "Explicit link",
+                List.of("Links", "Explicit link"),
+                new ColorSchemeAttribute(false, false, "56A8F5", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Markdown"));
+        register(new ColorSchemeElement("markdown.links.image", "Image",
+                List.of("Links", "Image"),
+                new ColorSchemeAttribute(false, false, "2BBAC5", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Markdown"));
+        register(new ColorSchemeElement("markdown.links.link_definition", "Link definition",
+                List.of("Links", "Link definition"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Markdown"));
+        register(new ColorSchemeElement("markdown.links.link_destination", "Link destination",
+                List.of("Links", "Link destination"),
+                new ColorSchemeAttribute(false, false, "56A8F5", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Markdown"));
+        register(new ColorSchemeElement("markdown.links.link_label", "Link label",
+                List.of("Links", "Link label"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Markdown"));
+        register(new ColorSchemeElement("markdown.links.link_text", "Link text",
+                List.of("Links", "Link text"),
+                new ColorSchemeAttribute(false, false, "56A8F5", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Markdown"));
+        register(new ColorSchemeElement("markdown.links.link_title", "Link title",
+                List.of("Links", "Link title"),
+                new ColorSchemeAttribute(false, false, "6A8759", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Markdown"));
+        register(new ColorSchemeElement("markdown.links.reference_link", "Reference link",
+                List.of("Links", "Reference link"),
+                new ColorSchemeAttribute(false, false, "56A8F5", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Markdown"));
+
+        // 8. Lists (4)
+        register(new ColorSchemeElement("markdown.lists.list_item", "List item",
+                List.of("Lists", "List item"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Markdown"));
+        register(new ColorSchemeElement("markdown.lists.list_marker", "List marker",
+                List.of("Lists", "List marker"),
+                new ColorSchemeAttribute(false, false, "7A7E85", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Markdown"));
+        register(new ColorSchemeElement("markdown.lists.ordered_list", "Ordered list",
+                List.of("Lists", "Ordered list"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Markdown"));
+        register(new ColorSchemeElement("markdown.lists.unordered_list", "Unordered list",
+                List.of("Lists", "Unordered list"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Markdown"));
+
+        // 9. Style (5)
+        register(new ColorSchemeElement("markdown.style.bold_marker", "Bold marker",
+                List.of("Style", "Bold marker"),
+                new ColorSchemeAttribute(false, false, "CF8E6D", true, null, false, null, false, null, false, "Bordered", true, "lang.keyword"),
+                "lang.keyword", "Keyword\n(Language Defaults)", "Markdown"));
+        register(new ColorSchemeElement("markdown.style.bold_text", "Bold text",
+                List.of("Style", "Bold text"),
+                new ColorSchemeAttribute(true, false, "BCBEC4", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Markdown"));
+        register(new ColorSchemeElement("markdown.style.italic_marker", "Italic marker",
+                List.of("Style", "Italic marker"),
+                new ColorSchemeAttribute(false, false, "CF8E6D", true, null, false, null, false, null, false, "Bordered", true, "lang.keyword"),
+                "lang.keyword", "Keyword\n(Language Defaults)", "Markdown"));
+        register(new ColorSchemeElement("markdown.style.italic_text", "Italic text",
+                List.of("Style", "Italic text"),
+                new ColorSchemeAttribute(false, true, "BCBEC4", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Markdown"));
+        register(new ColorSchemeElement("markdown.style.strikethrough", "Strikethrough",
+                List.of("Style", "Strikethrough"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, "BCBEC4", true, "Strikeout", false, null), null, null, "Markdown"));
+
+        // 10. Standalone: Table separator & Text (2)
+        register(new ColorSchemeElement("markdown.table_separator", "Table separator",
+                List.of("Table separator"),
+                new ColorSchemeAttribute(false, false, "7A7E85", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Markdown"));
+        register(new ColorSchemeElement("markdown.text", "Text",
+                List.of("Text"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Markdown"));
     }
 
     private static void register(ColorSchemeElement element) {
@@ -1225,6 +1431,36 @@ public final class ColorSchemeModel {
         return new ArrayList<>(set);
     }
 
+    public static List<ColorSchemeElement> getRegExpElements() {
+        List<ColorSchemeElement> list = new ArrayList<>();
+        for (ColorSchemeElement el : ALL_ELEMENTS) {
+            if ("RegExp".equals(el.getPage())) {
+                list.add(el);
+            }
+        }
+        return Collections.unmodifiableList(list);
+    }
+
+    public static List<ColorSchemeElement> getMarkdownElements() {
+        List<ColorSchemeElement> list = new ArrayList<>();
+        for (ColorSchemeElement el : ALL_ELEMENTS) {
+            if ("Markdown".equals(el.getPage())) {
+                list.add(el);
+            }
+        }
+        return Collections.unmodifiableList(list);
+    }
+
+    public static List<String> getMarkdownCategories() {
+        Set<String> set = new LinkedHashSet<>();
+        for (ColorSchemeElement el : ALL_ELEMENTS) {
+            if ("Markdown".equals(el.getPage()) && el.getCategory() != null && !el.getCategory().isBlank()) {
+                set.add(el.getCategory());
+            }
+        }
+        return new ArrayList<>(set);
+    }
+
     public static ColorSchemeElement getElement(String id) {
         if (id == null) return null;
         ColorSchemeElement el = ELEMENT_MAP.get(id);
@@ -1264,6 +1500,9 @@ public final class ColorSchemeModel {
         if ("data_editor.null".equals(id)) return ELEMENT_MAP.get("data_editor.null_data");
         if ("json.property".equals(id)) return ELEMENT_MAP.get("json.property_key");
         if ("database.statement".equals(id)) return ELEMENT_MAP.get("database.statement_to_execute");
+        if ("regexp.escaped".equals(id)) return ELEMENT_MAP.get("regexp.escaped_character");
+        if ("markdown.bold_marker".equals(id)) return ELEMENT_MAP.get("markdown.style.bold_marker");
+        if ("markdown.italic_marker".equals(id)) return ELEMENT_MAP.get("markdown.style.italic_marker");
         return null;
     }
 
@@ -1320,7 +1559,7 @@ public final class ColorSchemeModel {
     public static List<ColorSchemeElement> getElementsByCategory(String category) {
         List<ColorSchemeElement> list = new ArrayList<>();
         for (ColorSchemeElement el : ALL_ELEMENTS) {
-            if (category.equals(el.getCategory())) {
+            if ("General".equals(el.getPage()) && category.equals(el.getCategory())) {
                 list.add(el);
             }
         }

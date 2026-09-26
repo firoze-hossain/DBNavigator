@@ -42,6 +42,8 @@ import com.roze.dbnavigator.ui.colorscheme.DatabaseColorSchemePanel;
 import com.roze.dbnavigator.ui.colorscheme.DiagramsColorSchemePanel;
 import com.roze.dbnavigator.ui.colorscheme.HtmlColorSchemePanel;
 import com.roze.dbnavigator.ui.colorscheme.JsonColorSchemePanel;
+import com.roze.dbnavigator.ui.colorscheme.RegExpColorSchemePanel;
+import com.roze.dbnavigator.ui.colorscheme.MarkdownColorSchemePanel;
 
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
@@ -1018,6 +1020,10 @@ public final class SettingsDialog {
             return HtmlColorSchemePanel.build(settings, inputs, navigateTo);
         } else if ("Editor / Color Scheme / JSON".equals(fullPath) || (cat != null && "cs.json".equals(cat.getId()))) {
             return JsonColorSchemePanel.build(settings, inputs, navigateTo);
+        } else if ("Editor / Color Scheme / Markdown".equals(fullPath) || (cat != null && "cs.markdown".equals(cat.getId()))) {
+            return MarkdownColorSchemePanel.build(settings, inputs, navigateTo);
+        } else if ("Editor / Color Scheme / RegExp".equals(fullPath) || (cat != null && "cs.regexp".equals(cat.getId()))) {
+            return RegExpColorSchemePanel.build(settings, inputs, navigateTo);
         } else if ("Editor / Color Scheme".equals(fullPath) || "Color Scheme".equals(fullPath)) {
             return buildColorSchemeLandingPanel(cat, navigateTo);
         } else if ("Editor / Code Style / SQL".equals(fullPath)) {
