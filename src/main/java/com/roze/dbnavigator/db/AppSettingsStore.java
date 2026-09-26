@@ -49,6 +49,9 @@ public final class AppSettingsStore {
         public String effectType = "Underscored";
         public boolean inherit;
         public String inheritFromKey;
+        public String ignoredColor;
+        public boolean ignoredEnabled;
+        public boolean inheritIgnored = true;
 
         public ColorSchemeAttribute() {}
 
@@ -73,10 +76,28 @@ public final class AppSettingsStore {
             this.inheritFromKey = inheritFromKey;
         }
 
+        public ColorSchemeAttribute(boolean bold, boolean italic,
+                                    String foreground, boolean foregroundEnabled,
+                                    String background, boolean backgroundEnabled,
+                                    String errorStripe, boolean errorStripeEnabled,
+                                    String effectColor, boolean effectEnabled, String effectType,
+                                    boolean inherit, String inheritFromKey,
+                                    String ignoredColor, boolean ignoredEnabled, boolean inheritIgnored) {
+            this(bold, italic, foreground, foregroundEnabled, background, backgroundEnabled,
+                    errorStripe, errorStripeEnabled, effectColor, effectEnabled, effectType, inherit, inheritFromKey);
+            this.ignoredColor = ignoredColor;
+            this.ignoredEnabled = ignoredEnabled;
+            this.inheritIgnored = inheritIgnored;
+        }
+
         public ColorSchemeAttribute copy() {
-            return new ColorSchemeAttribute(bold, italic, foreground, foregroundEnabled,
+            ColorSchemeAttribute c = new ColorSchemeAttribute(bold, italic, foreground, foregroundEnabled,
                     background, backgroundEnabled, errorStripe, errorStripeEnabled,
                     effectColor, effectEnabled, effectType, inherit, inheritFromKey);
+            c.ignoredColor = this.ignoredColor;
+            c.ignoredEnabled = this.ignoredEnabled;
+            c.inheritIgnored = this.inheritIgnored;
+            return c;
         }
     }
 
