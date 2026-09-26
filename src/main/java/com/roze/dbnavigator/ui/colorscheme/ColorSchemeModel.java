@@ -14,8 +14,10 @@ public final class ColorSchemeModel {
     public static class ColorSchemeElement {
         private final String id;
         private final String name;
+        private final String page;
         private final String category;
         private final String subCategory;
+        private final List<String> categoryPath;
         private final ColorSchemeAttribute defaultAttr;
         private final String inheritFromKey;
         private final String inheritFromDisplay;
@@ -25,8 +27,24 @@ public final class ColorSchemeModel {
                                   String inheritFromKey, String inheritFromDisplay) {
             this.id = id;
             this.name = name;
+            this.page = "General";
             this.category = category;
             this.subCategory = subCategory;
+            this.categoryPath = subCategory != null ? List.of(category, subCategory, name) : List.of(category, name);
+            this.defaultAttr = defaultAttr;
+            this.inheritFromKey = inheritFromKey;
+            this.inheritFromDisplay = inheritFromDisplay;
+        }
+
+        public ColorSchemeElement(String id, String name, List<String> categoryPath,
+                                  ColorSchemeAttribute defaultAttr,
+                                  String inheritFromKey, String inheritFromDisplay) {
+            this.id = id;
+            this.name = name;
+            this.page = "Language Defaults";
+            this.categoryPath = categoryPath != null ? List.copyOf(categoryPath) : List.of(name);
+            this.category = !this.categoryPath.isEmpty() ? this.categoryPath.get(0) : "";
+            this.subCategory = this.categoryPath.size() > 2 ? this.categoryPath.get(1) : null;
             this.defaultAttr = defaultAttr;
             this.inheritFromKey = inheritFromKey;
             this.inheritFromDisplay = inheritFromDisplay;
@@ -34,8 +52,10 @@ public final class ColorSchemeModel {
 
         public String getId() { return id; }
         public String getName() { return name; }
+        public String getPage() { return page; }
         public String getCategory() { return category; }
         public String getSubCategory() { return subCategory; }
+        public List<String> getCategoryPath() { return categoryPath; }
         public ColorSchemeAttribute getDefaultAttr() { return defaultAttr; }
         public String getInheritFromKey() { return inheritFromKey; }
         public String getInheritFromDisplay() { return inheritFromDisplay; }
@@ -286,6 +306,194 @@ public final class ColorSchemeModel {
                 new ColorSchemeAttribute(false, false, "4B5059", true, null, false, null, false, null, false, "Underscored", false, null), null, null));
         register(new ColorSchemeElement("text.whitespaces", "Whitespaces", "Text", null,
                 new ColorSchemeAttribute(false, false, "4B5059", true, null, false, null, false, null, false, "Underscored", false, null), null, null));
+
+        // =========================================================================
+        // LANGUAGE DEFAULTS (Exact DataGrip taxonomy and palettes)
+        // =========================================================================
+
+        // 1. Bad character
+        register(new ColorSchemeElement("lang.bad_character", "Bad character",
+                List.of("Bad character"),
+                new ColorSchemeAttribute(false, false, "F75464", true, null, false, null, false, null, false, "Underwaved", false, null), null, null));
+
+        // 2. Braces and Operators
+        register(new ColorSchemeElement("lang.braces_and_operators.braces", "Braces",
+                List.of("Braces and Operators", "Braces"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Bordered", false, null), null, null));
+        register(new ColorSchemeElement("lang.braces_and_operators.brackets", "Brackets",
+                List.of("Braces and Operators", "Brackets"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Bordered", false, null), null, null));
+        register(new ColorSchemeElement("lang.braces_and_operators.comma", "Comma",
+                List.of("Braces and Operators", "Comma"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Bordered", false, null), null, null));
+        register(new ColorSchemeElement("lang.braces_and_operators.dot", "Dot",
+                List.of("Braces and Operators", "Dot"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Bordered", false, null), null, null));
+        register(new ColorSchemeElement("lang.braces_and_operators.operation_sign", "Operation sign",
+                List.of("Braces and Operators", "Operation sign"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Bordered", false, null), null, null));
+        register(new ColorSchemeElement("lang.braces_and_operators.parentheses", "Parentheses",
+                List.of("Braces and Operators", "Parentheses"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Bordered", false, null), null, null));
+        register(new ColorSchemeElement("lang.braces_and_operators.semicolon", "Semicolon",
+                List.of("Braces and Operators", "Semicolon"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Bordered", false, null), null, null));
+
+        // 3. Classes
+        register(new ColorSchemeElement("lang.classes.class_name", "Class name",
+                List.of("Classes", "Class name"),
+                new ColorSchemeAttribute(false, false, "56A8F5", true, null, false, null, false, null, false, "Bordered", false, null), null, null));
+        register(new ColorSchemeElement("lang.classes.class_reference", "Class reference",
+                List.of("Classes", "Class reference"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Bordered", false, null), null, null));
+        register(new ColorSchemeElement("lang.classes.instance_field", "Instance field",
+                List.of("Classes", "Instance field"),
+                new ColorSchemeAttribute(false, false, "C77DBB", true, null, false, null, false, null, false, "Bordered", true, "lang.identifiers.default"),
+                "lang.identifiers.default", "Identifiers → Default (Language Defaults)"));
+        register(new ColorSchemeElement("lang.classes.instance_method", "Instance method",
+                List.of("Classes", "Instance method"),
+                new ColorSchemeAttribute(false, false, "56A8F5", true, null, false, null, false, null, false, "Bordered", false, null), null, null));
+        register(new ColorSchemeElement("lang.classes.interface_name", "Interface name",
+                List.of("Classes", "Interface name"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Bordered", false, null), null, null));
+        register(new ColorSchemeElement("lang.classes.static_field", "Static field",
+                List.of("Classes", "Static field"),
+                new ColorSchemeAttribute(false, true, "C77DBB", true, null, false, null, false, null, false, "Bordered", false, null), null, null));
+        register(new ColorSchemeElement("lang.classes.static_method", "Static method",
+                List.of("Classes", "Static method"),
+                new ColorSchemeAttribute(false, true, "56A8F5", true, null, false, null, false, null, false, "Bordered", false, null), null, null));
+
+        // 4. Comments
+        register(new ColorSchemeElement("lang.comments.block_comment", "Block comment",
+                List.of("Comments", "Block comment"),
+                new ColorSchemeAttribute(false, false, "7A7E85", true, null, false, null, false, null, false, "Bordered", false, null), null, null));
+        register(new ColorSchemeElement("lang.comments.doc.code_block", "Code block",
+                List.of("Comments", "Doc comment", "Code block"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Bordered", false, null), null, null));
+        register(new ColorSchemeElement("lang.comments.doc.inline_code", "Inline code fragment",
+                List.of("Comments", "Doc comment", "Inline code fragment"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Bordered", false, null), null, null));
+        register(new ColorSchemeElement("lang.comments.doc.link", "Link in rendered view",
+                List.of("Comments", "Doc comment", "Link in rendered view"),
+                new ColorSchemeAttribute(false, false, "3887A1", true, null, false, null, false, null, false, "Underscored", false, null), null, null));
+        register(new ColorSchemeElement("lang.comments.doc.markup", "Markup",
+                List.of("Comments", "Doc comment", "Markup"),
+                new ColorSchemeAttribute(false, false, "629755", true, null, false, null, false, null, false, "Bordered", false, null), null, null));
+        register(new ColorSchemeElement("lang.comments.doc.shortcut", "Shortcut",
+                List.of("Comments", "Doc comment", "Shortcut"),
+                new ColorSchemeAttribute(false, false, "7A7E85", true, null, false, null, false, null, false, "Bordered", false, null), null, null));
+        register(new ColorSchemeElement("lang.comments.doc.tag", "Tag",
+                List.of("Comments", "Doc comment", "Tag"),
+                new ColorSchemeAttribute(false, true, "629755", true, null, false, null, false, null, false, "Bordered", false, null), null, null));
+        register(new ColorSchemeElement("lang.comments.doc.tag_value", "Tag value",
+                List.of("Comments", "Doc comment", "Tag value"),
+                new ColorSchemeAttribute(false, false, "629755", true, null, false, null, false, null, false, "Bordered", false, null), null, null));
+        register(new ColorSchemeElement("lang.comments.doc.text", "Text",
+                List.of("Comments", "Doc comment", "Text"),
+                new ColorSchemeAttribute(false, true, "629755", true, null, false, null, false, null, false, "Bordered", false, null), null, null));
+        register(new ColorSchemeElement("lang.comments.doc.guide", "Vertical guide for rendered view",
+                List.of("Comments", "Doc comment", "Vertical guide for rendered view"),
+                new ColorSchemeAttribute(false, false, "393B40", true, null, false, null, false, null, false, "Bordered", false, null), null, null));
+        register(new ColorSchemeElement("lang.comments.line_comment", "Line comment",
+                List.of("Comments", "Line comment"),
+                new ColorSchemeAttribute(false, false, "7A7E85", true, null, false, null, false, null, false, "Bordered", false, null), null, null));
+
+        // 5. Identifiers
+        register(new ColorSchemeElement("lang.identifiers.constant", "Constant",
+                List.of("Identifiers", "Constant"),
+                new ColorSchemeAttribute(false, true, "C77DBB", true, null, false, null, false, null, false, "Bordered", false, null), null, null));
+        register(new ColorSchemeElement("lang.identifiers.default", "Default",
+                List.of("Identifiers", "Default"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Bordered", true, "text.default"),
+                "text.default", "Text → Default text (General)"));
+        register(new ColorSchemeElement("lang.identifiers.function_call", "Function call",
+                List.of("Identifiers", "Function call"),
+                new ColorSchemeAttribute(false, false, "56A8F5", true, null, false, null, false, null, false, "Bordered", false, null), null, null));
+        register(new ColorSchemeElement("lang.identifiers.function_declaration", "Function declaration",
+                List.of("Identifiers", "Function declaration"),
+                new ColorSchemeAttribute(false, false, "56A8F5", true, null, false, null, false, null, false, "Bordered", false, null), null, null));
+        register(new ColorSchemeElement("lang.identifiers.global_variable", "Global variable",
+                List.of("Identifiers", "Global variable"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Bordered", false, null), null, null));
+        register(new ColorSchemeElement("lang.identifiers.label", "Label",
+                List.of("Identifiers", "Label"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Bordered", false, null), null, null));
+        register(new ColorSchemeElement("lang.identifiers.local_variable", "Local variable",
+                List.of("Identifiers", "Local variable"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Bordered", false, null), null, null));
+        register(new ColorSchemeElement("lang.identifiers.parameter", "Parameter",
+                List.of("Identifiers", "Parameter"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Bordered", false, null), null, null));
+        register(new ColorSchemeElement("lang.identifiers.predefined_symbol", "Predefined symbol",
+                List.of("Identifiers", "Predefined symbol"),
+                new ColorSchemeAttribute(false, false, "56A8F5", true, null, false, null, false, null, false, "Bordered", false, null), null, null));
+        register(new ColorSchemeElement("lang.identifiers.reassigned_local_variable", "Reassigned local variable",
+                List.of("Identifiers", "Reassigned local variable"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, "3574F0", true, "Bordered", false, null), null, null));
+        register(new ColorSchemeElement("lang.identifiers.reassigned_parameter", "Reassigned parameter",
+                List.of("Identifiers", "Reassigned parameter"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, "3574F0", true, "Bordered", false, null), null, null));
+
+        // 6. Inline hints
+        register(new ColorSchemeElement("lang.inline_hints.code_vision", "Code vision group",
+                List.of("Inline hints", "Code vision group"),
+                new ColorSchemeAttribute(false, false, "868A91", true, null, false, null, false, null, false, "Bordered", false, null), null, null));
+        register(new ColorSchemeElement("lang.inline_hints.current_param", "Current parameter hint",
+                List.of("Inline hints", "Current parameter hint"),
+                new ColorSchemeAttribute(false, false, "DFE1E5", true, "2E436E", true, null, false, null, false, "Bordered", false, null), null, null));
+        register(new ColorSchemeElement("lang.inline_hints.default", "Default",
+                List.of("Inline hints", "Default"),
+                new ColorSchemeAttribute(false, false, "868A91", true, "393B40", true, null, false, null, false, "Bordered", false, null), null, null));
+        register(new ColorSchemeElement("lang.inline_hints.parameter_hint", "Parameter hint",
+                List.of("Inline hints", "Parameter hint"),
+                new ColorSchemeAttribute(false, false, "868A91", true, "393B40", true, null, false, null, false, "Bordered", false, null), null, null));
+
+        // 7. Keyword
+        register(new ColorSchemeElement("lang.keyword", "Keyword",
+                List.of("Keyword"),
+                new ColorSchemeAttribute(false, false, "CF8E6D", true, null, false, null, false, null, false, "Bordered", false, null), null, null));
+
+        // 8. Markup
+        register(new ColorSchemeElement("lang.markup.attribute", "Attribute",
+                List.of("Markup", "Attribute"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Bordered", false, null), null, null));
+        register(new ColorSchemeElement("lang.markup.entity", "Entity",
+                List.of("Markup", "Entity"),
+                new ColorSchemeAttribute(false, false, "2AACB8", true, null, false, null, false, null, false, "Bordered", false, null), null, null));
+        register(new ColorSchemeElement("lang.markup.tag", "Tag",
+                List.of("Markup", "Tag"),
+                new ColorSchemeAttribute(false, false, "CF8E6D", true, null, false, null, false, null, false, "Bordered", false, null), null, null));
+
+        // 9. Metadata
+        register(new ColorSchemeElement("lang.metadata", "Metadata",
+                List.of("Metadata"),
+                new ColorSchemeAttribute(false, false, "B3AE60", true, null, false, null, false, null, false, "Bordered", false, null), null, null));
+
+        // 10. Number
+        register(new ColorSchemeElement("lang.number", "Number",
+                List.of("Number"),
+                new ColorSchemeAttribute(false, false, "2AACB8", true, null, false, null, false, null, false, "Bordered", false, null), null, null));
+
+        // 11. Semantic highlighting
+        register(new ColorSchemeElement("lang.semantic_highlighting", "Semantic highlighting",
+                List.of("Semantic highlighting"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Bordered", false, null), null, null));
+
+        // 12. String
+        register(new ColorSchemeElement("lang.string.escape.invalid", "Invalid",
+                List.of("String", "Escape sequence", "Invalid"),
+                new ColorSchemeAttribute(false, false, "CF8E6D", true, null, false, null, false, "F75464", true, "Underwaved", false, null), null, null));
+        register(new ColorSchemeElement("lang.string.escape.valid", "Valid",
+                List.of("String", "Escape sequence", "Valid"),
+                new ColorSchemeAttribute(false, false, "CF8E6D", true, null, false, null, false, null, false, "Bordered", false, null), null, null));
+        register(new ColorSchemeElement("lang.string.text", "String text",
+                List.of("String", "String text"),
+                new ColorSchemeAttribute(false, false, "6AAB73", true, null, false, null, false, null, false, "Bordered", false, null), null, null));
+
+        // 13. Template language
+        register(new ColorSchemeElement("lang.template_language", "Template language",
+                List.of("Template language"),
+                new ColorSchemeAttribute(false, false, "E09553", true, null, false, null, false, null, false, "Bordered", false, null), null, null));
     }
 
     private static void register(ColorSchemeElement element) {
@@ -295,6 +503,26 @@ public final class ColorSchemeModel {
 
     public static List<ColorSchemeElement> getAllElements() {
         return Collections.unmodifiableList(ALL_ELEMENTS);
+    }
+
+    public static List<ColorSchemeElement> getGeneralElements() {
+        List<ColorSchemeElement> list = new ArrayList<>();
+        for (ColorSchemeElement el : ALL_ELEMENTS) {
+            if ("General".equals(el.getPage())) {
+                list.add(el);
+            }
+        }
+        return Collections.unmodifiableList(list);
+    }
+
+    public static List<ColorSchemeElement> getLanguageDefaultElements() {
+        List<ColorSchemeElement> list = new ArrayList<>();
+        for (ColorSchemeElement el : ALL_ELEMENTS) {
+            if ("Language Defaults".equals(el.getPage())) {
+                list.add(el);
+            }
+        }
+        return Collections.unmodifiableList(list);
     }
 
     public static ColorSchemeElement getElement(String id) {
@@ -317,13 +545,31 @@ public final class ColorSchemeModel {
         if ("coverage.partial_coverage".equals(id)) return ELEMENT_MAP.get("coverage.partial");
         if ("text.background_readonly".equals(id)) return ELEMENT_MAP.get("text.readonly_bg");
         if ("text.read_only_fragment_background".equals(id)) return ELEMENT_MAP.get("text.readonly_fragment_bg");
+        if ("bad_character".equals(id)) return ELEMENT_MAP.get("lang.bad_character");
+        if ("keyword".equals(id)) return ELEMENT_MAP.get("lang.keyword");
+        if ("brackets".equals(id)) return ELEMENT_MAP.get("lang.braces_and_operators.brackets");
+        if ("instance_field".equals(id)) return ELEMENT_MAP.get("lang.classes.instance_field");
+        if ("doc_link".equals(id)) return ELEMENT_MAP.get("lang.comments.doc.link");
+        if ("template_language".equals(id)) return ELEMENT_MAP.get("lang.template_language");
         return null;
     }
 
     public static List<String> getCategories() {
         Set<String> set = new LinkedHashSet<>();
         for (ColorSchemeElement el : ALL_ELEMENTS) {
-            set.add(el.getCategory());
+            if ("General".equals(el.getPage())) {
+                set.add(el.getCategory());
+            }
+        }
+        return new ArrayList<>(set);
+    }
+
+    public static List<String> getLanguageDefaultCategories() {
+        Set<String> set = new LinkedHashSet<>();
+        for (ColorSchemeElement el : ALL_ELEMENTS) {
+            if ("Language Defaults".equals(el.getPage())) {
+                set.add(el.getCategory());
+            }
         }
         return new ArrayList<>(set);
     }
@@ -344,6 +590,16 @@ public final class ColorSchemeModel {
     public static ColorSchemeAttribute resolveAttribute(String schemeName,
                                                         String elementId,
                                                         Map<String, Map<String, ColorSchemeAttribute>> overrides) {
+        return resolveAttributeInternal(schemeName, elementId, overrides, new HashSet<>());
+    }
+
+    private static ColorSchemeAttribute resolveAttributeInternal(String schemeName,
+                                                                 String elementId,
+                                                                 Map<String, Map<String, ColorSchemeAttribute>> overrides,
+                                                                 Set<String> visited) {
+        if (elementId == null || !visited.add(elementId)) {
+            return new ColorSchemeAttribute();
+        }
         ColorSchemeElement el = getElement(elementId);
         if (el == null) return new ColorSchemeAttribute();
         String canonicalId = el.getId();
@@ -358,7 +614,7 @@ public final class ColorSchemeModel {
                 }
                 if (override != null) {
                     if (override.inherit && el.hasInheritance()) {
-                        return resolveAttribute(schemeName, el.getInheritFromKey(), overrides);
+                        return resolveAttributeInternal(schemeName, el.getInheritFromKey(), overrides, visited);
                     }
                     return override.copy();
                 }
@@ -367,7 +623,7 @@ public final class ColorSchemeModel {
 
         // Check default inheritance
         if (el.getDefaultAttr().inherit && el.hasInheritance()) {
-            return resolveAttribute(schemeName, el.getInheritFromKey(), overrides);
+            return resolveAttributeInternal(schemeName, el.getInheritFromKey(), overrides, visited);
         }
 
         // Return base default

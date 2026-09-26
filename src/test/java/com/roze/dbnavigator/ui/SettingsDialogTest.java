@@ -2495,4 +2495,196 @@ public class SettingsDialogTest {
         assertEquals(ColorSchemeModel.getElement("coverage.full"), ColorSchemeModel.getElement("coverage.full_coverage"));
         assertEquals(partial, ColorSchemeModel.getElement("coverage.partial_coverage"));
     }
+
+    @Test
+    public void testLanguageDefaultsCategoriesAndElementsMatchDataGrip() {
+        List<String> categories = ColorSchemeModel.getLanguageDefaultCategories();
+        assertNotNull(categories);
+        assertEquals(13, categories.size(), "Should have exactly 13 top-level language default categories");
+
+        List<String> expectedCategories = List.of(
+                "Bad character",
+                "Braces and Operators",
+                "Classes",
+                "Comments",
+                "Identifiers",
+                "Inline hints",
+                "Keyword",
+                "Markup",
+                "Metadata",
+                "Number",
+                "Semantic highlighting",
+                "String",
+                "Template language"
+        );
+        assertEquals(expectedCategories, categories);
+
+        // Check Bad character leaf
+        ColorSchemeElement badChar = ColorSchemeModel.getElement("lang.bad_character");
+        assertNotNull(badChar);
+        assertEquals("Bad character", badChar.getName());
+        assertEquals("F75464", badChar.getDefaultAttr().foreground);
+        assertTrue(badChar.getDefaultAttr().foregroundEnabled);
+        assertEquals("Underwaved", badChar.getDefaultAttr().effectType);
+
+        // Check Braces and Operators
+        ColorSchemeElement brackets = ColorSchemeModel.getElement("lang.braces_and_operators.brackets");
+        assertNotNull(brackets);
+        assertEquals("Brackets", brackets.getName());
+        assertEquals("BCBEC4", brackets.getDefaultAttr().foreground);
+        assertTrue(brackets.getDefaultAttr().foregroundEnabled);
+
+        // Check Classes: Instance field
+        ColorSchemeElement instField = ColorSchemeModel.getElement("lang.classes.instance_field");
+        assertNotNull(instField);
+        assertEquals("Instance field", instField.getName());
+        assertEquals("C77DBB", instField.getDefaultAttr().foreground);
+        assertTrue(instField.hasInheritance());
+        assertEquals("lang.identifiers.default", instField.getInheritFromKey());
+        assertEquals("Identifiers → Default (Language Defaults)", instField.getInheritFromDisplay());
+
+        // Check Comments: Doc comment > Link in rendered view
+        ColorSchemeElement docLink = ColorSchemeModel.getElement("lang.comments.doc.link");
+        assertNotNull(docLink);
+        assertEquals("Link in rendered view", docLink.getName());
+        assertEquals("3887A1", docLink.getDefaultAttr().foreground);
+        assertTrue(docLink.getDefaultAttr().foregroundEnabled);
+        assertEquals(List.of("Comments", "Doc comment", "Link in rendered view"), docLink.getCategoryPath());
+
+        // Check Identifiers: Default inheriting from General
+        ColorSchemeElement idDefault = ColorSchemeModel.getElement("lang.identifiers.default");
+        assertNotNull(idDefault);
+        assertEquals("Default", idDefault.getName());
+        assertEquals("BCBEC4", idDefault.getDefaultAttr().foreground);
+        assertTrue(idDefault.hasInheritance());
+        assertEquals("text.default", idDefault.getInheritFromKey());
+        assertEquals("Text → Default text (General)", idDefault.getInheritFromDisplay());
+
+        // Check Keyword leaf
+        ColorSchemeElement keyword = ColorSchemeModel.getElement("lang.keyword");
+        assertNotNull(keyword);
+        assertEquals("Keyword", keyword.getName());
+        assertEquals("CF8E6D", keyword.getDefaultAttr().foreground);
+
+        // Check Number leaf
+        ColorSchemeElement number = ColorSchemeModel.getElement("lang.number");
+        assertNotNull(number);
+        assertEquals("Number", number.getName());
+        assertEquals("2AACB8", number.getDefaultAttr().foreground);
+
+        // Check String escape sequences
+        ColorSchemeElement escInvalid = ColorSchemeModel.getElement("lang.string.escape.invalid");
+        assertNotNull(escInvalid);
+        assertEquals("Invalid", escInvalid.getName());
+        assertEquals("Underwaved", escInvalid.getDefaultAttr().effectType);
+        assertEquals("F75464", escInvalid.getDefaultAttr().effectColor);
+        assertTrue(escInvalid.getDefaultAttr().effectEnabled);
+    }
+
+    @Test
+    public void testLanguageDefaultsCrossPageInheritance() {
+        // Base case: lang.classes.instance_field inherits from lang.identifiers.default
+        // which in turn inherits from text.default in General
+        Map<String, Map<String, ColorSchemeAttribute>> overrides = new LinkedHashMap<>();
+
+        ColorSchemeAttribute resolvedBase = ColorSchemeModel.resolveAttribute(
+                "Dark Theme default", "lang.classes.instance_field", overrides);
+        assertNotNull(resolvedBase);
+        // By default, text.default has foreground A9B7C6 and background 1E1F22
+        // lang.identifiers.default inherits from text.default
+        // lang.classes.instance_field inherits from lang.identifiers.default
+        assertEquals("A9B7C6", resolvedBase.foreground);
+        assertEquals("1E1F22", resolvedBase.background);
+
+        // When General's text.default is overridden, both child elements inherit the change
+        Map<String, ColorSchemeAttribute> schemeOverrides = new LinkedHashMap<>();
+        schemeOverrides.put("text.default", new ColorSchemeAttribute(
+                false, false, "E0E0E0", true, "101010", true, null, false, null, false, "Underscored", false, null));
+        overrides.put("Dark Theme default", schemeOverrides);
+
+        ColorSchemeAttribute resolvedFromGeneral = ColorSchemeModel.resolveAttribute(
+                "Dark Theme default", "lang.classes.instance_field", overrides);
+        assertEquals("E0E0E0", resolvedFromGeneral.foreground);
+        assertEquals("101010", resolvedFromGeneral.background);
+
+        // When lang.identifiers.default has an override that does NOT inherit:
+        schemeOverrides.put("lang.identifiers.default", new ColorSchemeAttribute(
+                true, false, "FFD700", true, null, false, null, false, null, false, "Bordered", false, null));
+
+        ColorSchemeAttribute resolvedFromIdDefault = ColorSchemeModel.resolveAttribute(
+                "Dark Theme default", "lang.classes.instance_field", overrides);
+        assertTrue(resolvedFromIdDefault.bold);
+        assertEquals("FFD700", resolvedFromIdDefault.foreground);
+
+        // When lang.classes.instance_field itself has an explicit override:
+        schemeOverrides.put("lang.classes.instance_field", new ColorSchemeAttribute(
+                false, true, "C77DBB", true, null, false, null, false, null, false, "Bordered", false, null));
+
+        ColorSchemeAttribute resolvedDirect = ColorSchemeModel.resolveAttribute(
+                "Dark Theme default", "lang.classes.instance_field", overrides);
+        assertFalse(resolvedDirect.bold);
+        assertTrue(resolvedDirect.italic);
+        assertEquals("C77DBB", resolvedDirect.foreground);
+    }
+
+    @Test
+    public void testColorSchemeLanguageDefaultsPanelConstruction() {
+        AppSettingsStore.Settings settings = new AppSettingsStore.Settings();
+        Map<String, Object> inputs = new LinkedHashMap<>();
+
+        javafx.scene.layout.VBox panel = SettingsDialog.buildColorSchemeLanguageDefaultsPanel(settings, inputs, target -> {});
+        assertNotNull(panel);
+
+        assertTrue(inputs.containsKey("editorColorSchemeCombo"));
+        assertTrue(inputs.containsKey("colorSchemeOverrides"));
+        assertTrue(inputs.containsKey("customColorSchemes"));
+
+        @SuppressWarnings("unchecked")
+        javafx.scene.control.ComboBox<String> combo =
+                (javafx.scene.control.ComboBox<String>) inputs.get("editorColorSchemeCombo");
+        assertNotNull(combo);
+        assertEquals("Dark Theme default", combo.getValue());
+
+        @SuppressWarnings("unchecked")
+        Map<String, Map<String, ColorSchemeAttribute>> overrides =
+                (Map<String, Map<String, ColorSchemeAttribute>>) inputs.get("colorSchemeOverrides");
+        assertNotNull(overrides);
+    }
+
+    @Test
+    public void testLanguageDefaultsOverridesPersistence() throws Exception {
+        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+
+        AppSettingsStore.Settings original = new AppSettingsStore.Settings();
+        original.setEditorColorScheme("Dark Theme default");
+
+        Map<String, Map<String, ColorSchemeAttribute>> overrides = new LinkedHashMap<>();
+        Map<String, ColorSchemeAttribute> schemeOverrides = new LinkedHashMap<>();
+        schemeOverrides.put("lang.bad_character", new ColorSchemeAttribute(
+                false, false, "FF0000", true, null, false, "FF0000", true, null, false, "Underwaved", false, null));
+        schemeOverrides.put("lang.classes.instance_field", new ColorSchemeAttribute(
+                true, true, "D080C0", true, null, false, null, false, null, false, "Bordered", false, null));
+        overrides.put("Dark Theme default", schemeOverrides);
+        original.setColorSchemeOverrides(overrides);
+
+        String json = mapper.writeValueAsString(original);
+        assertNotNull(json);
+        assertTrue(json.contains("lang.bad_character"));
+        assertTrue(json.contains("lang.classes.instance_field"));
+        assertTrue(json.contains("FF0000"));
+        assertTrue(json.contains("D080C0"));
+
+        AppSettingsStore.Settings loaded = mapper.readValue(json, AppSettingsStore.Settings.class);
+        assertNotNull(loaded);
+        assertNotNull(loaded.getColorSchemeOverrides().get("Dark Theme default"));
+        ColorSchemeAttribute loadedBadChar = loaded.getColorSchemeOverrides().get("Dark Theme default").get("lang.bad_character");
+        assertNotNull(loadedBadChar);
+        assertEquals("FF0000", loadedBadChar.foreground);
+
+        ColorSchemeAttribute loadedInstField = loaded.getColorSchemeOverrides().get("Dark Theme default").get("lang.classes.instance_field");
+        assertNotNull(loadedInstField);
+        assertTrue(loadedInstField.bold);
+        assertTrue(loadedInstField.italic);
+        assertEquals("D080C0", loadedInstField.foreground);
+    }
 }
