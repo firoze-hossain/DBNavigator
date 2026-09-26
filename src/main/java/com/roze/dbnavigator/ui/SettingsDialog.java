@@ -17,11 +17,17 @@ import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.layout.*;
+import javafx.geometry.Side;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.text.Font;
+import javafx.scene.text.Text;
+import javafx.scene.text.TextFlow;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.Window;
+import com.roze.dbnavigator.ui.action.*;
 
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
@@ -924,7 +930,7 @@ public final class SettingsDialog {
         } else if ("Database / Other".equals(fullPath) || "Other".equals(fullPath)) {
             return buildDatabaseOtherPanel(settings, inputs);
         } else if ("Keymap".equals(fullPath)) {
-            return buildKeymapPanel(settings, inputs);
+            return buildKeymapPanel(settings, inputs, navigateTo);
         } else if ("Plugins".equals(fullPath)) {
             return buildPluginsPanel();
         } else if ("Version Control / Git".equals(fullPath) || "Git".equals(fullPath)) {
@@ -6961,60 +6967,1104 @@ public final class SettingsDialog {
         return panel;
     }
 
-    private static VBox buildKeymapPanel(AppSettingsStore.Settings settings, Map<String, Object> inputs) {
+    public static class KeymapActionItem {
+        private final String id;
+        private final String name;
+        private final String description;
+        private final String categoryPath;
+        private final boolean isCategory;
+        private final FontAwesomeSolid icon;
+        private final String iconColor;
+        private final List<String> defaultShortcuts;
+
+        public KeymapActionItem(String id, String name, String description, String categoryPath,
+                                boolean isCategory, FontAwesomeSolid icon, String iconColor,
+                                List<String> defaultShortcuts) {
+            this.id = id;
+            this.name = name;
+            this.description = description;
+            this.categoryPath = categoryPath;
+            this.isCategory = isCategory;
+            this.icon = icon;
+            this.iconColor = iconColor != null ? iconColor : "#a9b7c6";
+            this.defaultShortcuts = defaultShortcuts != null ? defaultShortcuts : Collections.emptyList();
+        }
+
+        public String getId() { return id; }
+        public String getName() { return name; }
+        public String getDescription() { return description; }
+        public String getCategoryPath() { return categoryPath; }
+        public boolean isCategory() { return isCategory; }
+        public FontAwesomeSolid getIcon() { return icon; }
+        public String getIconColor() { return iconColor; }
+        public List<String> getDefaultShortcuts() { return defaultShortcuts; }
+
+        public List<String> getEffectiveShortcuts(String preset,
+                                                 Map<String, List<String>> customShortcuts,
+                                                 Map<String, List<String>> removedShortcuts) {
+            if (isCategory) return Collections.emptyList();
+            if (customShortcuts != null && customShortcuts.containsKey(id)) {
+                return customShortcuts.get(id);
+            }
+            List<String> list = new ArrayList<>(resolvePresetShortcuts(preset));
+            if (removedShortcuts != null && removedShortcuts.containsKey(id)) {
+                list.removeAll(removedShortcuts.get(id));
+            }
+            return list;
+        }
+
+        public List<String> resolvePresetShortcuts(String preset) {
+            if (preset == null) preset = KeyStrokeFormatter.isMac() ? "macOS" : "Windows";
+            boolean isMacPreset = preset.contains("macOS") || preset.contains("Mac");
+            boolean isEmacs = preset.equalsIgnoreCase("Emacs");
+            boolean isSublime = preset.toLowerCase().contains("sublime");
+
+            if (isEmacs) {
+                if ("help.find.action".equals(id)) return List.of("Alt+X");
+                if ("file.save".equals(id)) return List.of("Ctrl+X, Ctrl+S");
+                if ("file.open".equals(id)) return List.of("Ctrl+X, Ctrl+F");
+                if ("edit.undo".equals(id)) return List.of("Ctrl+_");
+                if ("edit.cut".equals(id)) return List.of("Ctrl+W");
+                if ("edit.copy".equals(id)) return List.of("Alt+W");
+                if ("edit.paste".equals(id)) return List.of("Ctrl+Y");
+                if ("db.execute".equals(id) || "run.execute.statement".equals(id)) return List.of("Ctrl+Enter");
+            }
+
+            if (isSublime) {
+                if ("help.find.action".equals(id)) return isMacPreset ? List.of("⇧⌘P") : List.of("Ctrl+Shift+P");
+                if ("file.new.scratch".equals(id)) return isMacPreset ? List.of("⌘N") : List.of("Ctrl+N");
+                if ("navigate.file".equals(id)) return isMacPreset ? List.of("⌘P") : List.of("Ctrl+P");
+                if ("db.execute".equals(id) || "run.execute.statement".equals(id)) return isMacPreset ? List.of("⌘↵") : List.of("Ctrl+Enter");
+            }
+
+            if (isMacPreset) {
+                if ("help.find.action".equals(id)) return List.of("⇧⌘A");
+                if ("file.new.scratch".equals(id)) return List.of("⇧⌘N");
+                if ("file.settings".equals(id)) return List.of("⌘,");
+                if ("db.execute".equals(id) || "run.execute.statement".equals(id) || "db.execute.statement".equals(id)) return List.of("⌘↵");
+                if ("run.execute.script".equals(id) || "db.execute.script".equals(id)) return List.of("⌥⌘↵");
+                if ("db.console".equals(id) || "file.new.console".equals(id) || "db.open.console".equals(id)) return List.of("⇧⌘Q");
+                if ("db.refresh".equals(id) || "db.refresh.schema".equals(id)) return List.of("⌥⌘Y");
+                if ("run.compare".equals(id)) return List.of("⌘D");
+                if ("run.compare.structure".equals(id) || "db.compare.schema".equals(id)) return List.of("⇧⌘D");
+                if ("run.fulltext.search".equals(id)) return List.of("⌥⇧⌘F");
+                if ("vcs.operations.popup".equals(id)) return List.of("⌃V");
+                if ("vcs.commit".equals(id)) return List.of("⌘K");
+                if ("vcs.push".equals(id)) return List.of("⇧⌘K");
+                if ("vcs.update".equals(id)) return List.of("⌘T");
+                if ("window.minimize".equals(id)) return List.of("⌘M");
+                if ("window.next.tab".equals(id)) return List.of("⇧⌘]");
+                if ("window.prev.tab".equals(id)) return List.of("⇧⌘[");
+                if ("window.next.window".equals(id)) return List.of("⌘`");
+                if ("window.prev.window".equals(id)) return List.of("⇧⌘`");
+                if ("editor.comment.line".equals(id)) return List.of("⌘/");
+                if ("editor.comment.block".equals(id)) return List.of("⌥⌘/");
+                if ("editor.duplicate".equals(id)) return List.of("⌘D");
+                if ("editor.delete.line".equals(id)) return List.of("⌘⌫");
+                if ("editor.move.line.up".equals(id)) return List.of("⌥⇧Up");
+                if ("editor.move.line.down".equals(id)) return List.of("⌥⇧Down");
+                if ("editor.reformat".equals(id) || "code.reformat".equals(id)) return List.of("⌥⌘L");
+                if ("editor.complete.basic".equals(id)) return List.of("⌃Space");
+                if ("editor.complete.smart".equals(id)) return List.of("⌃⇧Space");
+                if ("navigate.search.everywhere".equals(id)) return List.of("Shift+Shift");
+                if ("navigate.class".equals(id)) return List.of("⌘O");
+                if ("navigate.file".equals(id)) return List.of("⇧⌘O");
+                if ("navigate.symbol".equals(id)) return List.of("⌥⌘O");
+                if ("navigate.line".equals(id)) return List.of("⌘L");
+                if ("edit.undo".equals(id)) return List.of("⌘Z");
+                if ("edit.redo".equals(id)) return List.of("⇧⌘Z");
+                if ("edit.cut".equals(id)) return List.of("⌘X");
+                if ("edit.copy".equals(id)) return List.of("⌘C");
+                if ("edit.paste".equals(id)) return List.of("⌘V");
+                if ("edit.find".equals(id)) return List.of("⌘F");
+                if ("edit.replace".equals(id)) return List.of("⌘R");
+                if ("toolwindow.database".equals(id)) return List.of("⌘1");
+                if ("toolwindow.terminal".equals(id) || "tools.terminal".equals(id)) return List.of("⌥F12");
+            } else {
+                if ("help.find.action".equals(id)) return List.of("Ctrl+Shift+A");
+                if ("file.new.scratch".equals(id)) return List.of("Ctrl+Alt+Shift+Insert");
+                if ("file.settings".equals(id)) return List.of("Ctrl+Alt+S");
+                if ("db.execute".equals(id) || "run.execute.statement".equals(id) || "db.execute.statement".equals(id)) return List.of("Ctrl+Enter");
+                if ("run.execute.script".equals(id) || "db.execute.script".equals(id)) return List.of("Ctrl+Shift+Enter");
+                if ("db.console".equals(id) || "file.new.console".equals(id) || "db.open.console".equals(id)) return List.of("Ctrl+Shift+Q");
+                if ("db.refresh".equals(id) || "db.refresh.schema".equals(id)) return List.of("Ctrl+Alt+Y");
+                if ("run.compare".equals(id)) return List.of("Ctrl+D");
+                if ("run.compare.structure".equals(id) || "db.compare.schema".equals(id)) return List.of("Ctrl+Shift+D");
+                if ("run.fulltext.search".equals(id)) return List.of("Ctrl+Alt+Shift+F");
+                if ("vcs.operations.popup".equals(id)) return List.of("Alt+`");
+                if ("vcs.commit".equals(id)) return List.of("Ctrl+K");
+                if ("vcs.push".equals(id)) return List.of("Ctrl+Shift+K");
+                if ("vcs.update".equals(id)) return List.of("Ctrl+T");
+                if ("window.minimize".equals(id)) return List.of("Win+Down");
+                if ("window.next.tab".equals(id)) return List.of("Alt+Right");
+                if ("window.prev.tab".equals(id)) return List.of("Alt+Left");
+                if ("window.next.window".equals(id)) return List.of("Ctrl+Alt+]");
+                if ("window.prev.window".equals(id)) return List.of("Ctrl+Alt+[");
+                if ("editor.comment.line".equals(id)) return List.of("Ctrl+/");
+                if ("editor.comment.block".equals(id)) return List.of("Ctrl+Shift+/");
+                if ("editor.duplicate".equals(id)) return List.of("Ctrl+D");
+                if ("editor.delete.line".equals(id)) return List.of("Ctrl+Y");
+                if ("editor.move.line.up".equals(id)) return List.of("Alt+Shift+Up");
+                if ("editor.move.line.down".equals(id)) return List.of("Alt+Shift+Down");
+                if ("editor.reformat".equals(id) || "code.reformat".equals(id)) return List.of("Ctrl+Alt+L");
+                if ("editor.complete.basic".equals(id)) return List.of("Ctrl+Space");
+                if ("editor.complete.smart".equals(id)) return List.of("Ctrl+Shift+Space");
+                if ("navigate.search.everywhere".equals(id)) return List.of("Shift+Shift");
+                if ("navigate.class".equals(id)) return List.of("Ctrl+N");
+                if ("navigate.file".equals(id)) return List.of("Ctrl+Shift+N");
+                if ("navigate.symbol".equals(id)) return List.of("Ctrl+Alt+Shift+N");
+                if ("navigate.line".equals(id)) return List.of("Ctrl+G");
+                if ("edit.undo".equals(id)) return List.of("Ctrl+Z");
+                if ("edit.redo".equals(id)) return List.of("Ctrl+Shift+Z");
+                if ("edit.cut".equals(id)) return List.of("Ctrl+X");
+                if ("edit.copy".equals(id)) return List.of("Ctrl+C");
+                if ("edit.paste".equals(id)) return List.of("Ctrl+V");
+                if ("edit.find".equals(id)) return List.of("Ctrl+F");
+                if ("edit.replace".equals(id)) return List.of("Ctrl+R");
+                if ("toolwindow.database".equals(id)) return List.of("Alt+1");
+                if ("toolwindow.terminal".equals(id) || "tools.terminal".equals(id)) return List.of("Alt+F12");
+            }
+            return defaultShortcuts;
+        }
+
+        public boolean isModified(String preset,
+                                  Map<String, List<String>> customShortcuts,
+                                  Map<String, List<String>> removedShortcuts) {
+            if (isCategory) return false;
+            return (customShortcuts != null && customShortcuts.containsKey(id)) ||
+                   (removedShortcuts != null && removedShortcuts.containsKey(id));
+        }
+
+        @Override
+        public String toString() {
+            return name;
+        }
+    }
+
+    public static VBox buildKeymapPanel(AppSettingsStore.Settings settings,
+                                        Map<String, Object> inputs,
+                                        java.util.function.Consumer<String> navigateTo) {
+        // Ensure actions are registered in ActionManager
+        try {
+            ActionRegistry.initialize(ActionManager.getInstance());
+        } catch (Exception ignored) {}
+
+        // Working state maps (bound to inputs for applySettings)
+        Map<String, List<String>> workingCustomShortcuts =
+                new LinkedHashMap<>(settings.getCustomKeymapShortcuts());
+        Map<String, List<String>> workingRemovedShortcuts =
+                new LinkedHashMap<>(settings.getRemovedKeymapShortcuts());
+        List<String> workingCustomPresets =
+                new ArrayList<>(settings.getCustomKeymapPresets());
+
+        inputs.put("customKeymapShortcuts", workingCustomShortcuts);
+        inputs.put("removedKeymapShortcuts", workingRemovedShortcuts);
+        inputs.put("customKeymapPresets", workingCustomPresets);
+
+        // 1. Top Section: Keymap Title
         Label title = new Label("Keymap");
         title.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: -text;");
 
-        Label presetLabel = new Label("Keymap preset:");
+        // 2. Preset ComboBox + Gear ⚙ Menu
         ComboBox<String> keymapCombo = new ComboBox<>();
-        keymapCombo.getItems().addAll("DataGrip Default", "Windows 10+", "macOS System", "Eclipse", "VS Code");
-        keymapCombo.getSelectionModel().select(settings.getKeymapPreset());
-        keymapCombo.setPrefWidth(200);
+        keymapCombo.setPrefWidth(210);
+        keymapCombo.setStyle("-fx-background-color: #2b2d30; -fx-text-fill: -text; -fx-border-color: #393b40; -fx-border-radius: 4; -fx-background-radius: 4;");
+
+        Runnable refreshPresetsList = () -> {
+            String current = keymapCombo.getValue();
+            keymapCombo.getItems().clear();
+            List<String> presets = AppSettingsStore.defaultKeymapPresets();
+            keymapCombo.getItems().addAll(presets);
+            for (String custom : workingCustomPresets) {
+                if (!keymapCombo.getItems().contains(custom)) {
+                    keymapCombo.getItems().add(custom);
+                }
+            }
+            if (current != null && keymapCombo.getItems().contains(current)) {
+                keymapCombo.getSelectionModel().select(current);
+            } else if (keymapCombo.getItems().contains(settings.getKeymapPreset())) {
+                keymapCombo.getSelectionModel().select(settings.getKeymapPreset());
+            } else if (!keymapCombo.getItems().isEmpty()) {
+                keymapCombo.getSelectionModel().select(0);
+            }
+        };
+        refreshPresetsList.run();
+        inputs.put("keymapCombo", keymapCombo);
+
+        // Gear button with Duplicate, Restore Defaults, Remove, Rename
+        Button gearBtn = new Button();
+        gearBtn.setGraphic(Icons.of(FontAwesomeSolid.COG, "#a9b7c6", 13));
+        gearBtn.setStyle("-fx-background-color: transparent; -fx-cursor: hand; -fx-padding: 4 6;");
+
+        ContextMenu gearMenu = new ContextMenu();
+        MenuItem miDuplicate = new MenuItem("Duplicate…");
+        MenuItem miRestore = new MenuItem("Restore Defaults");
+        MenuItem miRemove = new MenuItem("Remove");
+        MenuItem miRename = new MenuItem("Rename…");
+        gearMenu.getItems().addAll(miDuplicate, miRestore, miRemove, miRename);
+
+        gearBtn.setOnAction(e -> {
+            String activePreset = keymapCombo.getValue();
+            boolean isCustom = workingCustomPresets.contains(activePreset);
+            miRemove.setDisable(!isCustom);
+            miRename.setDisable(!isCustom);
+            gearMenu.show(gearBtn, Side.BOTTOM, 0, 0);
+        });
+
+        HBox presetRow = new HBox(8, keymapCombo, gearBtn);
+        presetRow.setAlignment(Pos.CENTER_LEFT);
+
+        // Hyperlink: Get more keymaps in Settings | Plugins
+        Hyperlink pluginLink = new Hyperlink("Get more keymaps in Settings | Plugins");
+        pluginLink.setStyle("-fx-text-fill: #589df6; -fx-padding: 2 0; -fx-border-color: transparent; -fx-underline: false; -fx-font-size: 12px;");
+        pluginLink.setOnMouseEntered(ev -> pluginLink.setStyle("-fx-text-fill: #70aeff; -fx-padding: 2 0; -fx-border-color: transparent; -fx-underline: true; -fx-font-size: 12px;"));
+        pluginLink.setOnMouseExited(ev -> pluginLink.setStyle("-fx-text-fill: #589df6; -fx-padding: 2 0; -fx-border-color: transparent; -fx-underline: false; -fx-font-size: 12px;"));
+        pluginLink.setOnAction(e -> {
+            if (navigateTo != null) {
+                navigateTo.accept("Plugins");
+            }
+        });
+
+        VBox topControls = new VBox(6, title, presetRow, pluginLink);
+
+        // 3. Hierarchical Action Tree Model
+        TreeItem<KeymapActionItem> rootItem = new TreeItem<>(
+                new KeymapActionItem("root", "Root", "", "", true, null, null, null));
+        rootItem.setExpanded(true);
+
+        List<TreeItem<KeymapActionItem>> allCategoryItems = buildActionTreeCategories();
+        rootItem.getChildren().addAll(allCategoryItems);
+
+        TreeView<KeymapActionItem> treeView = new TreeView<>(rootItem);
+        treeView.setShowRoot(false);
+        treeView.setStyle("-fx-background-color: #1e1f22; -fx-border-color: #393b40; -fx-border-radius: 4; -fx-background-radius: 4;");
+        VBox.setVgrow(treeView, Priority.ALWAYS);
+
+        // 4. Toolbar above TreeView
+        Button btnCollapseAll = new Button();
+        btnCollapseAll.setText("><");
+        btnCollapseAll.setTooltip(new Tooltip("Collapse All"));
+        btnCollapseAll.setStyle("-fx-background-color: #2b2d30; -fx-text-fill: #a9b7c6; -fx-border-color: #393b40; -fx-border-radius: 3; -fx-font-size: 11px; -fx-padding: 3 6; -fx-cursor: hand;");
+
+        Button btnExpandAll = new Button();
+        btnExpandAll.setText("<>");
+        btnExpandAll.setTooltip(new Tooltip("Expand All"));
+        btnExpandAll.setStyle("-fx-background-color: #2b2d30; -fx-text-fill: #a9b7c6; -fx-border-color: #393b40; -fx-border-radius: 3; -fx-font-size: 11px; -fx-padding: 3 6; -fx-cursor: hand;");
+
+        Button btnEdit = new Button("✎");
+        btnEdit.setTooltip(new Tooltip("Edit Shortcut (Enter)"));
+        btnEdit.setStyle("-fx-background-color: #2b2d30; -fx-text-fill: #a9b7c6; -fx-border-color: #393b40; -fx-border-radius: 3; -fx-font-size: 12px; -fx-padding: 2 6; -fx-cursor: hand;");
+        btnEdit.setDisable(true);
+
+        ToggleButton btnFilter = new ToggleButton("⚠️");
+        btnFilter.setTooltip(new Tooltip("Show only modified or conflicting shortcuts"));
+        btnFilter.setStyle("-fx-background-color: #2b2d30; -fx-text-fill: #a9b7c6; -fx-border-color: #393b40; -fx-border-radius: 3; -fx-font-size: 11px; -fx-padding: 2 6; -fx-cursor: hand;");
+
+        Region toolbarSpacer = new Region();
+        HBox.setHgrow(toolbarSpacer, Priority.ALWAYS);
 
         TextField searchFilter = new TextField();
         searchFilter.setPromptText("Search actions by shortcut or name…");
-        searchFilter.setPrefWidth(300);
+        searchFilter.setPrefWidth(280);
+        searchFilter.setStyle("-fx-background-color: #2b2d30; -fx-text-fill: -text; -fx-border-color: #393b40; -fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 4 8;");
 
-        HBox topBar = new HBox(12, presetLabel, keymapCombo, searchFilter);
-        topBar.setAlignment(Pos.CENTER_LEFT);
+        Button btnFindByShortcut = new Button("🔍⌨");
+        btnFindByShortcut.setTooltip(new Tooltip("Find Action by Keystroke"));
+        btnFindByShortcut.setStyle("-fx-background-color: #2b2d30; -fx-text-fill: #a9b7c6; -fx-border-color: #393b40; -fx-border-radius: 3; -fx-font-size: 11px; -fx-padding: 3 6; -fx-cursor: hand;");
 
-        TableView<String[]> table = new TableView<>();
-        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        HBox toolbar = new HBox(6, btnCollapseAll, btnExpandAll, btnEdit, btnFilter, toolbarSpacer, searchFilter, btnFindByShortcut);
+        toolbar.setAlignment(Pos.CENTER_LEFT);
+        toolbar.setPadding(new Insets(2, 0, 2, 0));
 
-        TableColumn<String[], String> colAction = new TableColumn<>("Action");
-        colAction.setCellValueFactory(data -> new javafx.beans.property.SimpleStringProperty(data.getValue()[0]));
+        // 5. Conflict Banner at the bottom
+        VBox bottomConflictBanner = new VBox(2);
+        bottomConflictBanner.setStyle("-fx-background-color: rgba(224, 164, 76, 0.08); -fx-border-color: rgba(224, 164, 76, 0.25); -fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 8 12;");
 
-        TableColumn<String[], String> colShortcut = new TableColumn<>("Shortcut");
-        colShortcut.setCellValueFactory(data -> new javafx.beans.property.SimpleStringProperty(data.getValue()[1]));
+        // Helper to refresh conflict banner
+        Runnable refreshConflictBanner = () -> {
+            bottomConflictBanner.getChildren().clear();
+            String currentPreset = keymapCombo.getValue();
+            List<TreeItem<KeymapActionItem>> leaves = getAllLeafActions(rootItem);
+            List<KeymapActionItem> conflicts = new ArrayList<>();
 
-        TableColumn<String[], String> colCategory = new TableColumn<>("Category");
-        colCategory.setCellValueFactory(data -> new javafx.beans.property.SimpleStringProperty(data.getValue()[2]));
+            for (TreeItem<KeymapActionItem> leaf : leaves) {
+                KeymapActionItem item = leaf.getValue();
+                if (item != null) {
+                    List<String> shortcuts = item.getEffectiveShortcuts(currentPreset, workingCustomShortcuts, workingRemovedShortcuts);
+                    for (String sc : shortcuts) {
+                        if (KeyStrokeFormatter.checkMacConflict(sc) != null) {
+                            conflicts.add(item);
+                            break;
+                        }
+                    }
+                }
+            }
 
-        table.getColumns().addAll(colAction, colShortcut, colCategory);
+            if (conflicts.isEmpty() || !KeyStrokeFormatter.isMac()) {
+                bottomConflictBanner.setVisible(false);
+                bottomConflictBanner.setManaged(false);
+                return;
+            }
 
-        ObservableList<String[]> rows = FXCollections.observableArrayList(
-                new String[]{"Execute Statement", "Ctrl+Enter", "SQL Console"},
-                new String[]{"Find Action…", "Ctrl+Shift+A", "Help"},
-                new String[]{"Settings…", "Ctrl+Alt+S", "File"},
-                new String[]{"Compare Data", "Ctrl+D", "Run"},
-                new String[]{"Compare Schema Structure", "Ctrl+Shift+D", "Run"},
-                new String[]{"Full-Text Search…", "Ctrl+Alt+Shift+F", "Run"},
-                new String[]{"VCS Operations Popup…", "Alt+`", "VCS"},
-                new String[]{"New Scratch File", "Ctrl+Alt+Shift+Insert", "File"},
-                new String[]{"Select Next Tab", "Alt+Right", "Window / Editor Tabs"},
-                new String[]{"Select Previous Tab", "Alt+Left", "Window / Editor Tabs"},
-                new String[]{"Next Project Window", "Ctrl+Alt+]", "Window"},
-                new String[]{"Previous Project Window", "Ctrl+Alt+[", "Window"}
-        );
-        table.setItems(rows);
-        table.setPrefHeight(260);
+            bottomConflictBanner.setVisible(true);
+            bottomConflictBanner.setManaged(true);
 
-        inputs.put("keymapCombo", keymapCombo);
+            HBox line1 = new HBox(4);
+            line1.setAlignment(Pos.CENTER_LEFT);
 
-        VBox panel = new VBox(12, title, topBar, table);
-        VBox.setVgrow(table, Priority.ALWAYS);
-        panel.setPadding(new Insets(4, 8, 16, 8));
+            Label warnIcon = new Label("⚠️ ");
+            warnIcon.setStyle("-fx-text-fill: #e0a44c; -fx-font-size: 12px;");
+            line1.getChildren().add(warnIcon);
+
+            int displayCount = Math.min(3, conflicts.size());
+            for (int i = 0; i < displayCount; i++) {
+                KeymapActionItem cItem = conflicts.get(i);
+                Hyperlink actionLink = new Hyperlink(cItem.getName());
+                actionLink.setStyle("-fx-text-fill: #589df6; -fx-padding: 0; -fx-border-color: transparent; -fx-font-size: 12px;");
+                actionLink.setOnAction(ev -> {
+                    selectActionInTree(treeView, rootItem, cItem.getId());
+                });
+                line1.getChildren().add(actionLink);
+                if (i < displayCount - 1) {
+                    Label comma = new Label(", ");
+                    comma.setStyle("-fx-text-fill: -text; -fx-font-size: 12px;");
+                    line1.getChildren().add(comma);
+                }
+            }
+
+            if (conflicts.size() > 3) {
+                int more = conflicts.size() - 3;
+                Label andLabel = new Label(" and ");
+                andLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 12px;");
+                Hyperlink moreLink = new Hyperlink(more + " more");
+                moreLink.setStyle("-fx-text-fill: #589df6; -fx-padding: 0; -fx-border-color: transparent; -fx-font-size: 12px;");
+                moreLink.setOnAction(ev -> {
+                    btnFilter.setSelected(true);
+                    btnFilter.fire();
+                });
+                Label suffix = new Label(" shortcuts conflict with the macOS system shortcuts.");
+                suffix.setStyle("-fx-text-fill: -text; -fx-font-size: 12px;");
+                line1.getChildren().addAll(andLabel, moreLink, suffix);
+            } else {
+                Label suffix = new Label(" shortcuts conflict with the macOS system shortcuts.");
+                suffix.setStyle("-fx-text-fill: -text; -fx-font-size: 12px;");
+                line1.getChildren().add(suffix);
+            }
+
+            Label line2 = new Label("Assign custom shortcuts or change the macOS system settings.");
+            line2.setStyle("-fx-text-fill: #868a91; -fx-font-size: 11px;");
+
+            bottomConflictBanner.getChildren().addAll(line1, line2);
+        };
+
+        // Filter / Search engine
+        Runnable applyFilter = () -> {
+            String query = searchFilter.getText() != null ? searchFilter.getText().trim().toLowerCase() : "";
+            boolean filterConflicts = btnFilter.isSelected();
+            String currentPreset = keymapCombo.getValue();
+
+            filterTreeRecursively(rootItem, allCategoryItems, query, filterConflicts, currentPreset,
+                    workingCustomShortcuts, workingRemovedShortcuts);
+            refreshConflictBanner.run();
+        };
+
+        searchFilter.textProperty().addListener((obs, oldV, newV) -> applyFilter.run());
+        btnFilter.setOnAction(e -> applyFilter.run());
+
+        // Find by Keystroke Popup
+        btnFindByShortcut.setOnAction(e -> {
+            Dialog<String> ksDialog = new Dialog<>();
+            ksDialog.setTitle("Find Shortcut by Keystroke");
+            DialogPane pane = ksDialog.getDialogPane();
+            pane.setStyle("-fx-background-color: #2b2d30; -fx-text-fill: -text;");
+
+            Label prompt = new Label("Press the shortcut key combination to filter:");
+            prompt.setStyle("-fx-text-fill: -text;");
+            TextField strokeBox = new TextField();
+            strokeBox.setPromptText("Press keys (e.g. ⇧⌘A)…");
+            strokeBox.setStyle("-fx-background-color: #1e1f22; -fx-text-fill: #dfe1e5; -fx-border-color: #3574f0; -fx-font-weight: bold;");
+
+            strokeBox.setOnKeyPressed(ke -> {
+                String formatted = KeyStrokeFormatter.formatFromEvent(ke);
+                if (formatted != null) {
+                    strokeBox.setText(formatted);
+                    ksDialog.setResult(formatted);
+                    ksDialog.close();
+                }
+                ke.consume();
+            });
+
+            VBox box = new VBox(10, prompt, strokeBox);
+            box.setPadding(new Insets(14));
+            pane.setContent(box);
+            pane.getButtonTypes().add(ButtonType.CANCEL);
+            ksDialog.showAndWait().ifPresent(res -> {
+                if (res != null && !res.isBlank()) {
+                    searchFilter.setText(res);
+                }
+            });
+        });
+
+        // Collapse / Expand handlers
+        btnCollapseAll.setOnAction(e -> setTreeExpanded(rootItem, false));
+        btnExpandAll.setOnAction(e -> setTreeExpanded(rootItem, true));
+
+        // Cell Factory for custom display
+        treeView.setCellFactory(tv -> new TreeCell<>() {
+            @Override
+            protected void updateItem(KeymapActionItem item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                    setGraphic(null);
+                    setContextMenu(null);
+                    setStyle("-fx-background-color: transparent;");
+                } else if (item.isCategory()) {
+                    setText(null);
+                    HBox box = new HBox(6);
+                    box.setAlignment(Pos.CENTER_LEFT);
+                    box.getChildren().add(Icons.of(FontAwesomeSolid.FOLDER, "#e0a44c", 13));
+                    Label catLabel = new Label(item.getName());
+                    catLabel.setStyle("-fx-text-fill: #dfe1e5; -fx-font-weight: normal;");
+                    box.getChildren().add(catLabel);
+                    setGraphic(box);
+                    setContextMenu(null);
+                } else {
+                    setText(null);
+                    HBox row = new HBox(6);
+                    row.setAlignment(Pos.CENTER_LEFT);
+
+                    if (item.getIcon() != null) {
+                        row.getChildren().add(Icons.of(item.getIcon(), item.getIconColor(), 12));
+                    } else {
+                        Region space = new Region();
+                        space.setPrefWidth(12);
+                        row.getChildren().add(space);
+                    }
+
+                    Label nameLabel = new Label(item.getName());
+                    nameLabel.setStyle("-fx-text-fill: -text;");
+                    row.getChildren().add(nameLabel);
+
+                    Region spacer = new Region();
+                    HBox.setHgrow(spacer, Priority.ALWAYS);
+                    row.getChildren().add(spacer);
+
+                    String currentPreset = keymapCombo.getValue();
+                    List<String> effective = item.getEffectiveShortcuts(currentPreset, workingCustomShortcuts, workingRemovedShortcuts);
+                    boolean modified = item.isModified(currentPreset, workingCustomShortcuts, workingRemovedShortcuts);
+
+                    if (!effective.isEmpty()) {
+                        HBox badges = new HBox(4);
+                        badges.setAlignment(Pos.CENTER_RIGHT);
+                        for (String sc : effective) {
+                            Label badge = new Label(sc);
+                            if (modified) {
+                                badge.setStyle("-fx-background-color: #2e436e; -fx-text-fill: #70aeff; -fx-font-weight: bold; -fx-padding: 1 6; -fx-background-radius: 4; -fx-font-size: 11px;");
+                            } else {
+                                badge.setStyle("-fx-background-color: #393b40; -fx-text-fill: #dfe1e5; -fx-padding: 1 6; -fx-background-radius: 4; -fx-font-size: 11px;");
+                            }
+                            badges.getChildren().add(badge);
+                        }
+                        row.getChildren().add(badges);
+                    }
+
+                    setGraphic(row);
+
+                    // Context Menu for action
+                    ContextMenu cm = new ContextMenu();
+                    MenuItem miAdd = new MenuItem("Add Keyboard Shortcut…");
+                    MenuItem miRemove = new MenuItem("Remove Shortcut");
+                    MenuItem miReset = new MenuItem("Reset to Default");
+
+                    miAdd.setOnAction(ev -> showKeyboardShortcutDialog(item, keymapCombo.getValue(),
+                            workingCustomShortcuts, workingRemovedShortcuts, () -> {
+                                treeView.refresh();
+                                refreshConflictBanner.run();
+                            }));
+
+                    miRemove.setOnAction(ev -> {
+                        List<String> current = item.getEffectiveShortcuts(keymapCombo.getValue(), workingCustomShortcuts, workingRemovedShortcuts);
+                        if (!current.isEmpty()) {
+                            workingRemovedShortcuts.computeIfAbsent(item.getId(), k -> new ArrayList<>()).addAll(current);
+                            workingCustomShortcuts.remove(item.getId());
+                            treeView.refresh();
+                            refreshConflictBanner.run();
+                        }
+                    });
+
+                    miReset.setOnAction(ev -> {
+                        workingCustomShortcuts.remove(item.getId());
+                        workingRemovedShortcuts.remove(item.getId());
+                        treeView.refresh();
+                        refreshConflictBanner.run();
+                    });
+
+                    cm.getItems().addAll(miAdd, miRemove, miReset);
+                    setContextMenu(cm);
+                }
+            }
+        });
+
+        // Selection Listener enables Edit button
+        treeView.getSelectionModel().selectedItemProperty().addListener((obs, oldV, newV) -> {
+            boolean isLeaf = newV != null && newV.getValue() != null && !newV.getValue().isCategory();
+            btnEdit.setDisable(!isLeaf);
+        });
+
+        // Edit button action
+        btnEdit.setOnAction(e -> {
+            TreeItem<KeymapActionItem> selected = treeView.getSelectionModel().getSelectedItem();
+            if (selected != null && selected.getValue() != null && !selected.getValue().isCategory()) {
+                showKeyboardShortcutDialog(selected.getValue(), keymapCombo.getValue(),
+                        workingCustomShortcuts, workingRemovedShortcuts, () -> {
+                            treeView.refresh();
+                            refreshConflictBanner.run();
+                        });
+            }
+        });
+
+        // Double click & Enter key trigger shortcut dialog
+        treeView.setOnMouseClicked(e -> {
+            if (e.getClickCount() == 2) {
+                TreeItem<KeymapActionItem> selected = treeView.getSelectionModel().getSelectedItem();
+                if (selected != null && selected.getValue() != null && !selected.getValue().isCategory()) {
+                    showKeyboardShortcutDialog(selected.getValue(), keymapCombo.getValue(),
+                            workingCustomShortcuts, workingRemovedShortcuts, () -> {
+                                treeView.refresh();
+                                refreshConflictBanner.run();
+                            });
+                }
+            }
+        });
+
+        treeView.setOnKeyPressed(e -> {
+            if (e.getCode() == KeyCode.ENTER) {
+                TreeItem<KeymapActionItem> selected = treeView.getSelectionModel().getSelectedItem();
+                if (selected != null && selected.getValue() != null && !selected.getValue().isCategory()) {
+                    showKeyboardShortcutDialog(selected.getValue(), keymapCombo.getValue(),
+                            workingCustomShortcuts, workingRemovedShortcuts, () -> {
+                                treeView.refresh();
+                                refreshConflictBanner.run();
+                            });
+                    e.consume();
+                }
+            }
+        });
+
+        // Gear Menu Actions: Duplicate, Restore, Remove, Rename
+        miDuplicate.setOnAction(e -> {
+            TextInputDialog tid = new TextInputDialog(keymapCombo.getValue() + " copy");
+            tid.setTitle("Duplicate Keymap");
+            tid.setHeaderText("Create a copy of '" + keymapCombo.getValue() + "'");
+            tid.setContentText("Keymap name:");
+            tid.showAndWait().ifPresent(name -> {
+                String trimmed = name.trim();
+                if (!trimmed.isEmpty() && !workingCustomPresets.contains(trimmed)) {
+                    workingCustomPresets.add(trimmed);
+                    refreshPresetsList.run();
+                    keymapCombo.getSelectionModel().select(trimmed);
+                    applyFilter.run();
+                }
+            });
+        });
+
+        miRestore.setOnAction(e -> {
+            workingCustomShortcuts.clear();
+            workingRemovedShortcuts.clear();
+            treeView.refresh();
+            refreshConflictBanner.run();
+        });
+
+        miRemove.setOnAction(e -> {
+            String active = keymapCombo.getValue();
+            if (workingCustomPresets.contains(active)) {
+                workingCustomPresets.remove(active);
+                refreshPresetsList.run();
+                applyFilter.run();
+            }
+        });
+
+        miRename.setOnAction(e -> {
+            String active = keymapCombo.getValue();
+            if (workingCustomPresets.contains(active)) {
+                TextInputDialog tid = new TextInputDialog(active);
+                tid.setTitle("Rename Keymap");
+                tid.setHeaderText("Enter new name for '" + active + "'");
+                tid.setContentText("New name:");
+                tid.showAndWait().ifPresent(name -> {
+                    String trimmed = name.trim();
+                    if (!trimmed.isEmpty()) {
+                        int idx = workingCustomPresets.indexOf(active);
+                        if (idx >= 0) workingCustomPresets.set(idx, trimmed);
+                        refreshPresetsList.run();
+                        keymapCombo.getSelectionModel().select(trimmed);
+                    }
+                });
+            }
+        });
+
+        keymapCombo.valueProperty().addListener((obs, oldV, newV) -> {
+            treeView.refresh();
+            refreshConflictBanner.run();
+        });
+
+        // Initialize conflict banner
+        refreshConflictBanner.run();
+
+        VBox panel = new VBox(10, topControls, toolbar, treeView, bottomConflictBanner);
+        VBox.setVgrow(treeView, Priority.ALWAYS);
+        panel.setPadding(new Insets(4, 8, 12, 8));
         return panel;
+    }
+
+    private static void setTreeExpanded(TreeItem<?> item, boolean expanded) {
+        if (item == null) return;
+        for (TreeItem<?> child : item.getChildren()) {
+            child.setExpanded(expanded);
+            setTreeExpanded(child, expanded);
+        }
+    }
+
+    private static List<TreeItem<KeymapActionItem>> getAllLeafActions(TreeItem<KeymapActionItem> root) {
+        List<TreeItem<KeymapActionItem>> leaves = new ArrayList<>();
+        collectLeaves(root, leaves);
+        return leaves;
+    }
+
+    private static void collectLeaves(TreeItem<KeymapActionItem> node, List<TreeItem<KeymapActionItem>> leaves) {
+        if (node == null) return;
+        if (node.getValue() != null && !node.getValue().isCategory()) {
+            leaves.add(node);
+        }
+        for (TreeItem<KeymapActionItem> child : node.getChildren()) {
+            collectLeaves(child, leaves);
+        }
+    }
+
+    private static void selectActionInTree(TreeView<KeymapActionItem> treeView,
+                                          TreeItem<KeymapActionItem> root,
+                                          String actionId) {
+        TreeItem<KeymapActionItem> target = findActionItem(root, actionId);
+        if (target != null) {
+            TreeItem<KeymapActionItem> p = target.getParent();
+            while (p != null) {
+                p.setExpanded(true);
+                p = p.getParent();
+            }
+            treeView.getSelectionModel().select(target);
+            int row = treeView.getRow(target);
+            if (row >= 0) treeView.scrollTo(row);
+        }
+    }
+
+    private static TreeItem<KeymapActionItem> findActionItem(TreeItem<KeymapActionItem> current, String actionId) {
+        if (current == null) return null;
+        if (current.getValue() != null && actionId.equals(current.getValue().getId())) {
+            return current;
+        }
+        for (TreeItem<KeymapActionItem> child : current.getChildren()) {
+            TreeItem<KeymapActionItem> found = findActionItem(child, actionId);
+            if (found != null) return found;
+        }
+        return null;
+    }
+
+    private static void filterTreeRecursively(TreeItem<KeymapActionItem> root,
+                                              List<TreeItem<KeymapActionItem>> allCategories,
+                                              String query,
+                                              boolean filterConflicts,
+                                              String preset,
+                                              Map<String, List<String>> customShortcuts,
+                                              Map<String, List<String>> removedShortcuts) {
+        root.getChildren().clear();
+        for (TreeItem<KeymapActionItem> cat : allCategories) {
+            TreeItem<KeymapActionItem> filteredCat = filterItem(cat, query, filterConflicts, preset, customShortcuts, removedShortcuts);
+            if (filteredCat != null) {
+                root.getChildren().add(filteredCat);
+                if (!query.isEmpty() || filterConflicts) {
+                    filteredCat.setExpanded(true);
+                }
+            }
+        }
+    }
+
+    private static TreeItem<KeymapActionItem> filterItem(TreeItem<KeymapActionItem> item,
+                                                        String query,
+                                                        boolean filterConflicts,
+                                                        String preset,
+                                                        Map<String, List<String>> customShortcuts,
+                                                        Map<String, List<String>> removedShortcuts) {
+        if (item == null || item.getValue() == null) return null;
+        KeymapActionItem val = item.getValue();
+
+        if (!val.isCategory()) {
+            boolean matchesQuery = true;
+            if (!query.isEmpty()) {
+                boolean nameMatch = val.getName().toLowerCase().contains(query);
+                boolean idMatch = val.getId().toLowerCase().contains(query);
+                boolean descMatch = val.getDescription().toLowerCase().contains(query);
+                boolean shortcutMatch = val.getEffectiveShortcuts(preset, customShortcuts, removedShortcuts).stream()
+                        .anyMatch(s -> s.toLowerCase().contains(query));
+                matchesQuery = nameMatch || idMatch || descMatch || shortcutMatch;
+            }
+
+            boolean matchesConflict = true;
+            if (filterConflicts) {
+                boolean isMod = val.isModified(preset, customShortcuts, removedShortcuts);
+                boolean hasConflict = val.getEffectiveShortcuts(preset, customShortcuts, removedShortcuts).stream()
+                        .anyMatch(s -> KeyStrokeFormatter.checkMacConflict(s) != null);
+                matchesConflict = isMod || hasConflict;
+            }
+
+            if (matchesQuery && matchesConflict) {
+                return new TreeItem<>(val);
+            }
+            return null;
+        } else {
+            TreeItem<KeymapActionItem> copyCat = new TreeItem<>(val);
+            for (TreeItem<KeymapActionItem> child : item.getChildren()) {
+                TreeItem<KeymapActionItem> filteredChild = filterItem(child, query, filterConflicts, preset, customShortcuts, removedShortcuts);
+                if (filteredChild != null) {
+                    copyCat.getChildren().add(filteredChild);
+                }
+            }
+            if (!copyCat.getChildren().isEmpty()) {
+                return copyCat;
+            }
+            if (!query.isEmpty() && val.getName().toLowerCase().contains(query)) {
+                // If category name matches query, include all its children
+                copyCat.getChildren().addAll(item.getChildren());
+                return copyCat;
+            }
+            return null;
+        }
+    }
+
+    /**
+     * Builds the complete taxonomy of categories and actions matching DataGrip.
+     */
+    private static List<TreeItem<KeymapActionItem>> buildActionTreeCategories() {
+        List<TreeItem<KeymapActionItem>> categories = new ArrayList<>();
+
+        // 1. Editor Actions
+        TreeItem<KeymapActionItem> editorActions = new TreeItem<>(
+                new KeymapActionItem("cat.editor", "Editor Actions", "Actions performed within the code and SQL editor", "Editor Actions", true, null, null, null));
+        editorActions.getChildren().addAll(
+                new TreeItem<>(new KeymapActionItem("editor.complete.basic", "Basic", "Code completion popup", "Editor Actions", false, null, null, List.of("⌃Space"))),
+                new TreeItem<>(new KeymapActionItem("editor.complete.smart", "SmartType", "Smart completion popup", "Editor Actions", false, null, null, List.of("⌃⇧Space"))),
+                new TreeItem<>(new KeymapActionItem("editor.comment.line", "Comment with Line Comment", "Toggle single-line comment", "Editor Actions", false, null, null, List.of("⌘/"))),
+                new TreeItem<>(new KeymapActionItem("editor.comment.block", "Comment with Block Comment", "Toggle multi-line block comment", "Editor Actions", false, null, null, List.of("⌥⌘/"))),
+                new TreeItem<>(new KeymapActionItem("editor.duplicate", "Duplicate Line or Selection", "Duplicate current line or selection", "Editor Actions", false, null, null, List.of("⌘D"))),
+                new TreeItem<>(new KeymapActionItem("editor.delete.line", "Delete Line", "Delete active line", "Editor Actions", false, null, null, List.of("⌘⌫"))),
+                new TreeItem<>(new KeymapActionItem("editor.move.line.up", "Move Line Up", "Move current line up", "Editor Actions", false, null, null, List.of("⌥⇧Up"))),
+                new TreeItem<>(new KeymapActionItem("editor.move.line.down", "Move Line Down", "Move current line down", "Editor Actions", false, null, null, List.of("⌥⇧Down"))),
+                new TreeItem<>(new KeymapActionItem("editor.reformat", "Reformat Code", "Format SQL / code according to rules", "Editor Actions", false, null, null, List.of("⌥⌘L"))),
+                new TreeItem<>(new KeymapActionItem("editor.indent", "Indent Selection", "Indent line or selection", "Editor Actions", false, null, null, List.of("⇥"))),
+                new TreeItem<>(new KeymapActionItem("editor.unindent", "Unindent Selection", "Unindent line or selection", "Editor Actions", false, null, null, List.of("⇧⇥"))),
+                new TreeItem<>(new KeymapActionItem("editor.toggle.case", "Toggle Case", "Toggle case of selected text", "Editor Actions", false, null, null, List.of("⇧⌘U"))),
+                new TreeItem<>(new KeymapActionItem("editor.join.lines", "Join Lines", "Join lines into one", "Editor Actions", false, null, null, List.of("⌃⇧J")))
+        );
+        categories.add(editorActions);
+
+        // 2. Main Menu
+        TreeItem<KeymapActionItem> mainMenu = new TreeItem<>(
+                new KeymapActionItem("cat.mainmenu", "Main Menu", "Application main menu items", "Main Menu", true, null, null, null));
+
+        // Submenus: File, Edit, View, Navigate, Code, Refactor, Run, Tools, Database, Window, Help
+        TreeItem<KeymapActionItem> menuFile = new TreeItem<>(new KeymapActionItem("menu.file", "File", "File operations", "Main Menu | File", true, null, null, null));
+        TreeItem<KeymapActionItem> menuFileNew = new TreeItem<>(new KeymapActionItem("file.new", "New", "Create new items", "Main Menu | File | New", true, null, null, null));
+        menuFileNew.getChildren().addAll(
+                new TreeItem<>(new KeymapActionItem("file.new.project", "Project…", "Create a new project", "Main Menu | File | New", false, null, null, Collections.emptyList())),
+                new TreeItem<>(new KeymapActionItem("file.new.sqlfile", "SQL File", "Create a new SQL file", "Main Menu | File | New", false, FontAwesomeSolid.FILE_CODE, "#a9b7c6", Collections.emptyList())),
+                new TreeItem<>(new KeymapActionItem("file.new.scratch", "Scratch File", "Open a scratch SQL buffer", "Main Menu | File | New", false, FontAwesomeSolid.FILE_ALT, "#a9b7c6", List.of("⇧⌘N"))),
+                new TreeItem<>(new KeymapActionItem("file.new.console", "Query Console", "Open a new query console", "Main Menu | File | New", false, FontAwesomeSolid.TERMINAL, "#6897bb", List.of("⇧⌘Q"))),
+                new TreeItem<>(new KeymapActionItem("file.new.queryfile", "Query File…", "Create a new query file", "Main Menu | File | New", false, FontAwesomeSolid.FILE_CODE, "#4a88c7", Collections.emptyList())),
+                new TreeItem<>(new KeymapActionItem("file.new.database", "Database", "Create a new database", "Main Menu | File | New", false, FontAwesomeSolid.DATABASE, "#4a88c7", Collections.emptyList())),
+                new TreeItem<>(new KeymapActionItem("file.new.datasource", "Data Source", "Create a new connection profile", "Main Menu | File | New", false, FontAwesomeSolid.DATABASE, "#57965c", Collections.emptyList()))
+        );
+        menuFile.getChildren().addAll(
+                menuFileNew,
+                new TreeItem<>(new KeymapActionItem("file.open", "Open…", "Open a directory or file", "Main Menu | File", false, null, null, List.of("⌘O"))),
+                new TreeItem<>(new KeymapActionItem("file.save", "Save All", "Save all modified files", "Main Menu | File", false, null, null, List.of("⌘S"))),
+                new TreeItem<>(new KeymapActionItem("file.settings", "Settings…", "Open Settings dialog", "Main Menu | File", false, null, null, List.of("⌘,"))),
+                new TreeItem<>(new KeymapActionItem("file.invalidate.caches", "Invalidate Caches…", "Invalidate IDE caches and restart", "Main Menu | File", false, null, null, Collections.emptyList())),
+                new TreeItem<>(new KeymapActionItem("file.exit", "Exit", "Exit application", "Main Menu | File", false, null, null, List.of("⌘Q")))
+        );
+
+        TreeItem<KeymapActionItem> menuEdit = new TreeItem<>(new KeymapActionItem("menu.edit", "Edit", "Edit commands", "Main Menu | Edit", true, null, null, null));
+        menuEdit.getChildren().addAll(
+                new TreeItem<>(new KeymapActionItem("edit.undo", "Undo", "Undo last operation", "Main Menu | Edit", false, null, null, List.of("⌘Z"))),
+                new TreeItem<>(new KeymapActionItem("edit.redo", "Redo", "Redo last operation", "Main Menu | Edit", false, null, null, List.of("⇧⌘Z"))),
+                new TreeItem<>(new KeymapActionItem("edit.cut", "Cut", "Cut selection to clipboard", "Main Menu | Edit", false, null, null, List.of("⌘X"))),
+                new TreeItem<>(new KeymapActionItem("edit.copy", "Copy", "Copy selection to clipboard", "Main Menu | Edit", false, null, null, List.of("⌘C"))),
+                new TreeItem<>(new KeymapActionItem("edit.paste", "Paste", "Paste from clipboard", "Main Menu | Edit", false, null, null, List.of("⌘V"))),
+                new TreeItem<>(new KeymapActionItem("edit.find", "Find", "Find text in current buffer", "Main Menu | Edit", false, null, null, List.of("⌘F"))),
+                new TreeItem<>(new KeymapActionItem("edit.replace", "Replace", "Replace text in current buffer", "Main Menu | Edit", false, null, null, List.of("⌘R"))),
+                new TreeItem<>(new KeymapActionItem("edit.find.in.files", "Find in Files…", "Search across project files", "Main Menu | Edit", false, null, null, List.of("⇧⌘F"))),
+                new TreeItem<>(new KeymapActionItem("edit.replace.in.files", "Replace in Files…", "Replace across project files", "Main Menu | Edit", false, null, null, List.of("⇧⌘R")))
+        );
+
+        TreeItem<KeymapActionItem> menuView = new TreeItem<>(new KeymapActionItem("menu.view", "View", "View options", "Main Menu | View", true, null, null, null));
+        menuView.getChildren().addAll(
+                new TreeItem<>(new KeymapActionItem("view.quick.doc", "Quick Documentation", "Show documentation popup", "Main Menu | View", false, null, null, List.of("F1"))),
+                new TreeItem<>(new KeymapActionItem("view.quick.definition", "Quick Definition", "Show definition popup", "Main Menu | View", false, null, null, List.of("⌥Space"))),
+                new TreeItem<>(new KeymapActionItem("view.toolwindows", "Tool Windows", "Manage tool windows", "Main Menu | View", false, null, null, Collections.emptyList()))
+        );
+
+        TreeItem<KeymapActionItem> menuNavigate = new TreeItem<>(new KeymapActionItem("menu.navigate", "Navigate", "Navigation actions", "Main Menu | Navigate", true, null, null, null));
+        menuNavigate.getChildren().addAll(
+                new TreeItem<>(new KeymapActionItem("navigate.search.everywhere", "Search Everywhere", "Search for anything across the IDE", "Main Menu | Navigate", false, null, null, List.of("Shift+Shift"))),
+                new TreeItem<>(new KeymapActionItem("navigate.class", "Class…", "Navigate to database entity or class", "Main Menu | Navigate", false, null, null, List.of("⌘O"))),
+                new TreeItem<>(new KeymapActionItem("navigate.file", "File…", "Navigate to file", "Main Menu | Navigate", false, null, null, List.of("⇧⌘O"))),
+                new TreeItem<>(new KeymapActionItem("navigate.symbol", "Symbol…", "Navigate to symbol", "Main Menu | Navigate", false, null, null, List.of("⌥⌘O"))),
+                new TreeItem<>(new KeymapActionItem("navigate.line", "Line:Column…", "Jump to line and column", "Main Menu | Navigate", false, null, null, List.of("⌘L"))),
+                new TreeItem<>(new KeymapActionItem("navigate.back", "Back", "Navigate back in history", "Main Menu | Navigate", false, null, null, List.of("⌘["))),
+                new TreeItem<>(new KeymapActionItem("navigate.forward", "Forward", "Navigate forward in history", "Main Menu | Navigate", false, null, null, List.of("⌘]")))
+        );
+
+        TreeItem<KeymapActionItem> menuCode = new TreeItem<>(new KeymapActionItem("menu.code", "Code", "Code tools", "Main Menu | Code", true, null, null, null));
+        menuCode.getChildren().addAll(
+                new TreeItem<>(new KeymapActionItem("code.reformat", "Reformat Code", "Reformat code to standards", "Main Menu | Code", false, null, null, List.of("⌥⌘L"))),
+                new TreeItem<>(new KeymapActionItem("code.generate", "Generate…", "Generate SQL / DDL / queries", "Main Menu | Code", false, null, null, List.of("⌘N")))
+        );
+
+        TreeItem<KeymapActionItem> menuRun = new TreeItem<>(new KeymapActionItem("menu.run", "Run", "Execution commands", "Main Menu | Run", true, null, null, null));
+        menuRun.getChildren().addAll(
+                new TreeItem<>(new KeymapActionItem("run.execute.statement", "Execute Statement", "Run current statement", "Main Menu | Run", false, FontAwesomeSolid.PLAY, "#57965c", List.of("⌘↵"))),
+                new TreeItem<>(new KeymapActionItem("run.execute.script", "Execute Script", "Run entire script", "Main Menu | Run", false, FontAwesomeSolid.FAST_FORWARD, "#4a88c7", List.of("⌥⌘↵"))),
+                new TreeItem<>(new KeymapActionItem("run.compare", "Compare Data", "Compare database tables or query results", "Main Menu | Run", false, null, null, List.of("⌘D"))),
+                new TreeItem<>(new KeymapActionItem("run.compare.structure", "Compare Schema Structure", "Diff schemas between connections", "Main Menu | Run", false, null, null, List.of("⇧⌘D"))),
+                new TreeItem<>(new KeymapActionItem("run.fulltext.search", "Full-Text Search…", "Search full-text across database tables", "Main Menu | Run", false, null, null, List.of("⌥⇧⌘F")))
+        );
+
+        TreeItem<KeymapActionItem> menuWindow = new TreeItem<>(new KeymapActionItem("menu.window", "Window", "Window management", "Main Menu | Window", true, null, null, null));
+        menuWindow.getChildren().addAll(
+                new TreeItem<>(new KeymapActionItem("window.minimize", "Minimize", "Minimize DBNavigator window", "Main Menu | Window", false, null, null, List.of("⌘M"))),
+                new TreeItem<>(new KeymapActionItem("window.next.tab", "Select Next Tab", "Switch to next editor tab", "Main Menu | Window", false, null, null, List.of("⇧⌘]"))),
+                new TreeItem<>(new KeymapActionItem("window.prev.tab", "Select Previous Tab", "Switch to previous editor tab", "Main Menu | Window", false, null, null, List.of("⇧⌘["))),
+                new TreeItem<>(new KeymapActionItem("window.next.window", "Next Project Window", "Focus next project window", "Main Menu | Window", false, null, null, List.of("⌘`"))),
+                new TreeItem<>(new KeymapActionItem("window.prev.window", "Previous Project Window", "Focus previous project window", "Main Menu | Window", false, null, null, List.of("⇧⌘`")))
+        );
+
+        TreeItem<KeymapActionItem> menuHelp = new TreeItem<>(new KeymapActionItem("menu.help", "Help", "Help and documentation", "Main Menu | Help", true, null, null, null));
+        menuHelp.getChildren().addAll(
+                new TreeItem<>(new KeymapActionItem("help.find.action", "Find Action…", "Find any action or settings entry", "Main Menu | Help", false, null, null, List.of("⇧⌘A"))),
+                new TreeItem<>(new KeymapActionItem("help.about", "About DBNavigator", "Version and licensing info", "Main Menu | Help", false, null, null, Collections.emptyList()))
+        );
+
+        mainMenu.getChildren().addAll(menuFile, menuEdit, menuView, menuNavigate, menuCode, menuRun, menuWindow, menuHelp);
+        categories.add(mainMenu);
+
+        // 3. Tool Windows
+        TreeItem<KeymapActionItem> toolWindows = new TreeItem<>(
+                new KeymapActionItem("cat.toolwindows", "Tool Windows", "IDE Tool Windows", "Tool Windows", true, null, null, null));
+        toolWindows.getChildren().addAll(
+                new TreeItem<>(new KeymapActionItem("toolwindow.database", "Database", "Show Database explorer tool window", "Tool Windows", false, FontAwesomeSolid.DATABASE, "#57965c", List.of("⌘1"))),
+                new TreeItem<>(new KeymapActionItem("toolwindow.files", "Files", "Show Files tool window", "Tool Windows", false, FontAwesomeSolid.FOLDER, "#e0a44c", List.of("⌘2"))),
+                new TreeItem<>(new KeymapActionItem("toolwindow.commit", "Commit", "Show Commit tool window", "Tool Windows", false, FontAwesomeSolid.CODE_BRANCH, "#4a88c7", List.of("⌘0"))),
+                new TreeItem<>(new KeymapActionItem("toolwindow.services", "Services", "Show Services tool window", "Tool Windows", false, FontAwesomeSolid.SERVER, "#e0a44c", List.of("⌘8"))),
+                new TreeItem<>(new KeymapActionItem("toolwindow.terminal", "Terminal", "Show Terminal tool window", "Tool Windows", false, FontAwesomeSolid.TERMINAL, "#6897bb", List.of("⌥F12"))),
+                new TreeItem<>(new KeymapActionItem("toolwindow.run", "Run", "Show Run tool window", "Tool Windows", false, FontAwesomeSolid.PLAY, "#57965c", List.of("⌘4"))),
+                new TreeItem<>(new KeymapActionItem("toolwindow.output", "Output Console", "Show Output Console", "Tool Windows", false, FontAwesomeSolid.DESKTOP, "#868a91", List.of("⌘5")))
+        );
+        categories.add(toolWindows);
+
+        // 4. External Tools
+        categories.add(new TreeItem<>(new KeymapActionItem("cat.externaltools", "External Tools", "Configured external tools and scripts", "External Tools", true, null, null, null)));
+
+        // 5. External Build Systems
+        categories.add(new TreeItem<>(new KeymapActionItem("cat.buildsystems", "External Build Systems", "Build systems integration", "External Build Systems", true, null, null, null)));
+
+        // 6. Version Control Systems
+        TreeItem<KeymapActionItem> vcs = new TreeItem<>(
+                new KeymapActionItem("cat.vcs", "Version Control Systems", "Git and version control", "Version Control Systems", true, null, null, null));
+        vcs.getChildren().addAll(
+                new TreeItem<>(new KeymapActionItem("vcs.operations.popup", "VCS Operations Popup…", "Open VCS quick popup", "Version Control Systems", false, null, null, List.of("⌃V"))),
+                new TreeItem<>(new KeymapActionItem("vcs.commit", "Commit…", "Commit changes", "Version Control Systems", false, null, null, List.of("⌘K"))),
+                new TreeItem<>(new KeymapActionItem("vcs.push", "Push…", "Push commits to remote", "Version Control Systems", false, null, null, List.of("⇧⌘K"))),
+                new TreeItem<>(new KeymapActionItem("vcs.update", "Update Project…", "Pull and update project", "Version Control Systems", false, null, null, List.of("⌘T")))
+        );
+        categories.add(vcs);
+
+        // 7. Database
+        TreeItem<KeymapActionItem> database = new TreeItem<>(
+                new KeymapActionItem("cat.database", "Database", "Database operations and query execution", "Database", true, null, null, null));
+        database.getChildren().addAll(
+                new TreeItem<>(new KeymapActionItem("db.execute.statement", "Execute Statement", "Execute query statement", "Database", false, FontAwesomeSolid.PLAY, "#57965c", List.of("⌘↵"))),
+                new TreeItem<>(new KeymapActionItem("db.execute.script", "Execute Script", "Execute script file", "Database", false, FontAwesomeSolid.FAST_FORWARD, "#4a88c7", List.of("⌥⌘↵"))),
+                new TreeItem<>(new KeymapActionItem("db.open.console", "Open Console", "Open new query console", "Database", false, FontAwesomeSolid.TERMINAL, "#6897bb", List.of("⇧⌘Q"))),
+                new TreeItem<>(new KeymapActionItem("db.refresh.schema", "Refresh Schema", "Synchronize database schema metadata", "Database", false, FontAwesomeSolid.SYNC_ALT, "#4a88c7", List.of("⌥⌘Y"))),
+                new TreeItem<>(new KeymapActionItem("db.compare.schema", "Compare Schema Structure", "Diff schemas between connections", "Database", false, null, null, List.of("⇧⌘D"))),
+                new TreeItem<>(new KeymapActionItem("db.export.data", "Export Data…", "Export table or query results", "Database", false, FontAwesomeSolid.FILE_EXPORT, "#4a88c7", Collections.emptyList())),
+                new TreeItem<>(new KeymapActionItem("db.import.data", "Import Data…", "Import CSV or SQL dump into database", "Database", false, FontAwesomeSolid.FILE_IMPORT, "#57965c", Collections.emptyList()))
+        );
+        categories.add(database);
+
+        // 8. Macros
+        categories.add(new TreeItem<>(new KeymapActionItem("cat.macros", "Macros", "Recorded keystroke macros", "Macros", true, null, null, null)));
+
+        // 9. Intentions
+        categories.add(new TreeItem<>(new KeymapActionItem("cat.intentions", "Intentions", "SQL and code intentions", "Intentions", true, null, null, null)));
+
+        // 10. Quick Lists
+        categories.add(new TreeItem<>(new KeymapActionItem("cat.quicklists", "Quick Lists", "Custom action quick lists", "Quick Lists", true, null, null, null)));
+
+        // 11. Plugins
+        categories.add(new TreeItem<>(new KeymapActionItem("cat.plugins", "Plugins", "Plugin-contributed actions", "Plugins", true, null, null, null)));
+
+        // 12. Other
+        categories.add(new TreeItem<>(new KeymapActionItem("cat.other", "Other", "Miscellaneous actions", "Other", true, null, null, null)));
+
+        return categories;
+    }
+
+    /**
+     * Shows the Keyboard Shortcut recording modal dialog (Image 2 - media_1790395087139.png).
+     */
+    public static void showKeyboardShortcutDialog(KeymapActionItem item,
+                                                  String currentPreset,
+                                                  Map<String, List<String>> customShortcuts,
+                                                  Map<String, List<String>> removedShortcuts,
+                                                  Runnable onSaved) {
+        Dialog<Boolean> dialog = new Dialog<>();
+        dialog.setTitle("Keyboard Shortcut");
+        dialog.initModality(Modality.APPLICATION_MODAL);
+
+        DialogPane pane = dialog.getDialogPane();
+        pane.setStyle("-fx-background-color: #2b2d30;");
+        pane.setPrefWidth(440);
+
+        // Action Path Label: "Find Action... in Main Menu | Help"
+        Text nameText = new Text(item.getName());
+        nameText.setStyle("-fx-font-weight: bold; -fx-fill: #dfe1e5; -fx-font-size: 13px;");
+        Text pathText = new Text(" in " + item.getCategoryPath());
+        pathText.setStyle("-fx-fill: #868a91; -fx-font-size: 12px;");
+        TextFlow pathFlow = new TextFlow(nameText, pathText);
+        pathFlow.setPadding(new Insets(0, 0, 8, 0));
+
+        // First stroke input
+        List<String> currentShortcuts = item.getEffectiveShortcuts(currentPreset, customShortcuts, removedShortcuts);
+        String initialStroke = currentShortcuts.isEmpty() ? "" : currentShortcuts.get(0);
+
+        TextField firstStrokeField = new TextField(initialStroke);
+        firstStrokeField.setPromptText("Press shortcut keys…");
+        firstStrokeField.setStyle("-fx-background-color: #1e1f22; -fx-text-fill: #dfe1e5; -fx-font-weight: bold; -fx-border-color: #3574f0; -fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 7 10; -fx-font-size: 13px;");
+        HBox.setHgrow(firstStrokeField, Priority.ALWAYS);
+
+        Button clearBtn = new Button("✕");
+        clearBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: #868a91; -fx-cursor: hand; -fx-font-size: 12px;");
+        clearBtn.setOnAction(e -> firstStrokeField.clear());
+
+        HBox firstStrokeBox = new HBox(4, firstStrokeField, clearBtn);
+        firstStrokeBox.setAlignment(Pos.CENTER_LEFT);
+
+        // Second stroke input
+        CheckBox secondStrokeCheck = new CheckBox("Second stroke:");
+        secondStrokeCheck.setStyle("-fx-text-fill: -text;");
+        secondStrokeCheck.setPrefWidth(120);
+
+        TextField secondStrokeField = new TextField();
+        secondStrokeField.setDisable(true);
+        secondStrokeField.setStyle("-fx-background-color: #1e1f22; -fx-text-fill: #dfe1e5; -fx-border-color: #393b40; -fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 6 10;");
+        HBox.setHgrow(secondStrokeField, Priority.ALWAYS);
+
+        secondStrokeCheck.selectedProperty().addListener((obs, oldV, newV) -> secondStrokeField.setDisable(!newV));
+
+        HBox secondStrokeBox = new HBox(8, secondStrokeCheck, secondStrokeField);
+        secondStrokeBox.setAlignment(Pos.CENTER_LEFT);
+
+        // Conflict section
+        VBox conflictBox = new VBox(4);
+        conflictBox.setPadding(new Insets(6, 0, 0, 0));
+
+        Label conflictTitle = new Label("⚠️ Already assigned to:");
+        conflictTitle.setStyle("-fx-text-fill: #e0a44c; -fx-font-size: 12px; -fx-font-weight: bold;");
+
+        Label conflictDetail = new Label();
+        conflictDetail.setStyle("-fx-text-fill: #868a91; -fx-font-size: 12px; -fx-padding: 0 0 0 16;");
+        conflictBox.getChildren().addAll(conflictTitle, conflictDetail);
+
+        Runnable updateConflict = () -> {
+            String stroke = firstStrokeField.getText().trim();
+            if (stroke.isEmpty()) {
+                conflictBox.setVisible(false);
+                conflictBox.setManaged(false);
+                return;
+            }
+            String macConflict = KeyStrokeFormatter.checkMacConflict(stroke);
+            if (macConflict != null) {
+                conflictDetail.setText(macConflict);
+                conflictBox.setVisible(true);
+                conflictBox.setManaged(true);
+                return;
+            }
+            conflictBox.setVisible(false);
+            conflictBox.setManaged(false);
+        };
+
+        firstStrokeField.setOnKeyPressed(e -> {
+            String stroke = KeyStrokeFormatter.formatFromEvent(e);
+            if (stroke != null) {
+                firstStrokeField.setText(stroke);
+                updateConflict.run();
+            }
+            e.consume();
+        });
+
+        secondStrokeField.setOnKeyPressed(e -> {
+            String stroke = KeyStrokeFormatter.formatFromEvent(e);
+            if (stroke != null) {
+                secondStrokeField.setText(stroke);
+            }
+            e.consume();
+        });
+
+        updateConflict.run();
+
+        VBox content = new VBox(10, pathFlow, firstStrokeBox, secondStrokeBox, conflictBox);
+        content.setPadding(new Insets(16));
+        pane.setContent(content);
+
+        ButtonType btnTypeOk = new ButtonType("OK", ButtonBar.ButtonData.OK_DONE);
+        ButtonType btnTypeCancel = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
+        ButtonType btnTypeHelp = new ButtonType("?", ButtonBar.ButtonData.HELP);
+
+        pane.getButtonTypes().addAll(btnTypeHelp, btnTypeCancel, btnTypeOk);
+
+        Button okBtn = (Button) pane.lookupButton(btnTypeOk);
+        okBtn.setStyle("-fx-background-color: #3574f0; -fx-text-fill: #ffffff; -fx-font-weight: bold; -fx-background-radius: 4; -fx-padding: 5 16;");
+
+        Button cancelBtn = (Button) pane.lookupButton(btnTypeCancel);
+        cancelBtn.setStyle("-fx-background-color: #2b2d30; -fx-text-fill: -text; -fx-border-color: #393b40; -fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 5 12;");
+
+        Button helpBtn = (Button) pane.lookupButton(btnTypeHelp);
+        helpBtn.setStyle("-fx-background-color: #2b2d30; -fx-text-fill: #868a91; -fx-border-color: #393b40; -fx-border-radius: 12; -fx-background-radius: 12; -fx-padding: 2 8; -fx-font-weight: bold;");
+
+        dialog.setResultConverter(btnType -> {
+            if (btnType == btnTypeOk) {
+                String stroke = firstStrokeField.getText().trim();
+                if (secondStrokeCheck.isSelected() && !secondStrokeField.getText().trim().isEmpty()) {
+                    stroke += ", " + secondStrokeField.getText().trim();
+                }
+                if (!stroke.isEmpty()) {
+                    customShortcuts.put(item.getId(), new ArrayList<>(List.of(stroke)));
+                    if (removedShortcuts.containsKey(item.getId())) {
+                        removedShortcuts.get(item.getId()).remove(stroke);
+                    }
+                } else {
+                    customShortcuts.remove(item.getId());
+                    removedShortcuts.computeIfAbsent(item.getId(), k -> new ArrayList<>())
+                            .addAll(item.resolvePresetShortcuts(currentPreset));
+                }
+                if (onSaved != null) onSaved.run();
+                return true;
+            }
+            return false;
+        });
+
+        Platform.runLater(firstStrokeField::requestFocus);
+        dialog.showAndWait();
     }
 
     private static VBox buildPluginsPanel() {
@@ -8086,6 +9136,18 @@ public final class SettingsDialog {
         if (inputs.containsKey("keymapCombo")) {
             ComboBox<String> combo = (ComboBox<String>) inputs.get("keymapCombo");
             if (combo.getValue() != null) settings.setKeymapPreset(combo.getValue());
+        }
+        if (inputs.containsKey("customKeymapPresets")) {
+            List<String> presets = (List<String>) inputs.get("customKeymapPresets");
+            settings.setCustomKeymapPresets(new ArrayList<>(presets));
+        }
+        if (inputs.containsKey("customKeymapShortcuts")) {
+            Map<String, List<String>> map = (Map<String, List<String>>) inputs.get("customKeymapShortcuts");
+            settings.setCustomKeymapShortcuts(new LinkedHashMap<>(map));
+        }
+        if (inputs.containsKey("removedKeymapShortcuts")) {
+            Map<String, List<String>> map = (Map<String, List<String>>) inputs.get("removedKeymapShortcuts");
+            settings.setRemovedKeymapShortcuts(new LinkedHashMap<>(map));
         }
 
         // Output and Results settings
