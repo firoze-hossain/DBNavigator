@@ -2797,5 +2797,20 @@ public class SettingsDialogTest {
 
         javafx.scene.Node vcsNode = SettingsDialog.buildPanelForPath("Editor / Color Scheme / VCS", settings, inputs, null);
         assertNotNull(vcsNode);
+
+        javafx.scene.Node dataEditorNode = SettingsDialog.buildPanelForPath("Editor / Color Scheme / Data Editor and Viewer", settings, inputs, null);
+        assertNotNull(dataEditorNode);
+
+        javafx.scene.Node databaseNode = SettingsDialog.buildPanelForPath("Editor / Color Scheme / Database", settings, inputs, null);
+        assertNotNull(databaseNode);
+
+        javafx.scene.Node diagramsNode = SettingsDialog.buildPanelForPath("Editor / Color Scheme / Diagrams", settings, inputs, null);
+        assertNotNull(diagramsNode);
+
+        javafx.scene.Node htmlNode = SettingsDialog.buildPanelForPath("Editor / Color Scheme / HTML", settings, inputs, null);
+        assertNotNull(htmlNode);
+
+        javafx.scene.Node jsonNode = SettingsDialog.buildPanelForPath("Editor / Color Scheme / JSON", settings, inputs, null);
+        assertNotNull(jsonNode);
     }
 }

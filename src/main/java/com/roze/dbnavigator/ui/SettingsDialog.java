@@ -37,6 +37,11 @@ import com.roze.dbnavigator.ui.colorscheme.DebuggerPanel;
 import com.roze.dbnavigator.ui.colorscheme.DiffMergePanel;
 import com.roze.dbnavigator.ui.colorscheme.UserDefinedFileTypesPanel;
 import com.roze.dbnavigator.ui.colorscheme.VcsPanel;
+import com.roze.dbnavigator.ui.colorscheme.DataEditorViewerPanel;
+import com.roze.dbnavigator.ui.colorscheme.DatabaseColorSchemePanel;
+import com.roze.dbnavigator.ui.colorscheme.DiagramsColorSchemePanel;
+import com.roze.dbnavigator.ui.colorscheme.HtmlColorSchemePanel;
+import com.roze.dbnavigator.ui.colorscheme.JsonColorSchemePanel;
 
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
@@ -1003,6 +1008,16 @@ public final class SettingsDialog {
             return UserDefinedFileTypesPanel.build(settings, inputs, navigateTo);
         } else if ("Editor / Color Scheme / VCS".equals(fullPath) || (cat != null && "cs.vcs".equals(cat.getId()))) {
             return VcsPanel.build(settings, inputs, navigateTo);
+        } else if ("Editor / Color Scheme / Data Editor and Viewer".equals(fullPath) || (cat != null && "cs.data_editor".equals(cat.getId()))) {
+            return DataEditorViewerPanel.build(settings, inputs, navigateTo);
+        } else if ("Editor / Color Scheme / Database".equals(fullPath) || (cat != null && "cs.database".equals(cat.getId()))) {
+            return DatabaseColorSchemePanel.build(settings, inputs, navigateTo);
+        } else if ("Editor / Color Scheme / Diagrams".equals(fullPath) || (cat != null && "cs.diagrams".equals(cat.getId()))) {
+            return DiagramsColorSchemePanel.build(settings, inputs, navigateTo);
+        } else if ("Editor / Color Scheme / HTML".equals(fullPath) || (cat != null && "cs.html".equals(cat.getId()))) {
+            return HtmlColorSchemePanel.build(settings, inputs, navigateTo);
+        } else if ("Editor / Color Scheme / JSON".equals(fullPath) || (cat != null && "cs.json".equals(cat.getId()))) {
+            return JsonColorSchemePanel.build(settings, inputs, navigateTo);
         } else if ("Editor / Color Scheme".equals(fullPath) || "Color Scheme".equals(fullPath)) {
             return buildColorSchemeLandingPanel(cat, navigateTo);
         } else if ("Editor / Code Style / SQL".equals(fullPath)) {

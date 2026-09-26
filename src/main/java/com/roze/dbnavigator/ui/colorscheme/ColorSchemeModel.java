@@ -850,6 +850,220 @@ public final class ColorSchemeModel {
         register(new ColorSchemeElement("vcs.annotations.foreground_last_commit", "Foreground for last commit",
                 List.of("VCS Annotations", "Foreground for last commit"),
                 new ColorSchemeAttribute(false, false, "DFE1E5", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "VCS"));
+
+        // =========================================================================
+        // HTML (15 items)
+        // =========================================================================
+        register(new ColorSchemeElement("html.attribute_name", "Attribute name",
+                List.of("Attribute name"),
+                new ColorSchemeAttribute(false, false, "BABABA", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "HTML"));
+        register(new ColorSchemeElement("html.attribute_value", "Attribute value",
+                List.of("Attribute value"),
+                new ColorSchemeAttribute(false, false, "6A8759", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "HTML"));
+        register(new ColorSchemeElement("html.comment", "Comment",
+                List.of("Comment"),
+                new ColorSchemeAttribute(false, false, "808080", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "HTML"));
+        register(new ColorSchemeElement("html.custom_tag_name", "Custom Tag Name",
+                List.of("Custom Tag Name"),
+                new ColorSchemeAttribute(false, false, "2FBAA3", true, null, false, null, false, null, false, "Bordered", false, null),
+                "html.tag_name", "Tag name\n(HTML)", "HTML"));
+        register(new ColorSchemeElement("html.entity_reference", "Entity reference",
+                List.of("Entity reference"),
+                new ColorSchemeAttribute(false, false, "6D9CBE", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "HTML"));
+        register(new ColorSchemeElement("html.html_code", "HTML code",
+                List.of("HTML code"),
+                new ColorSchemeAttribute(false, false, null, false, null, false, null, false, null, false, "Underscored", false, null), null, null, "HTML"));
+        register(new ColorSchemeElement("html.injected_language_fragment", "Injected Language Fragment",
+                List.of("Injected Language Fragment"),
+                new ColorSchemeAttribute(false, false, null, false, "363636", true, null, false, null, false, "Underscored", false, null), null, null, "HTML"));
+        register(new ColorSchemeElement("html.tag", "Tag",
+                List.of("Tag"),
+                new ColorSchemeAttribute(false, false, "E8BF6A", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "HTML"));
+        register(new ColorSchemeElement("html.tag_name", "Tag name",
+                List.of("Tag name"),
+                new ColorSchemeAttribute(false, false, "E8BF6A", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "HTML"));
+        register(new ColorSchemeElement("html.tag_tree_1", "Tag tree (level 1)",
+                List.of("Tag tree (level 1)"),
+                new ColorSchemeAttribute(false, false, null, false, "313A31", true, null, false, null, false, "Underscored", false, null), null, null, "HTML"));
+        register(new ColorSchemeElement("html.tag_tree_2", "Tag tree (level 2)",
+                List.of("Tag tree (level 2)"),
+                new ColorSchemeAttribute(false, false, null, false, "323A3E", true, null, false, null, false, "Underscored", false, null), null, null, "HTML"));
+        register(new ColorSchemeElement("html.tag_tree_3", "Tag tree (level 3)",
+                List.of("Tag tree (level 3)"),
+                new ColorSchemeAttribute(false, false, null, false, "3B333B", true, null, false, null, false, "Underscored", false, null), null, null, "HTML"));
+        register(new ColorSchemeElement("html.tag_tree_4", "Tag tree (level 4)",
+                List.of("Tag tree (level 4)"),
+                new ColorSchemeAttribute(false, false, null, false, "3A3832", true, null, false, null, false, "Underscored", false, null), null, null, "HTML"));
+        register(new ColorSchemeElement("html.tag_tree_5", "Tag tree (level 5)",
+                List.of("Tag tree (level 5)"),
+                new ColorSchemeAttribute(false, false, null, false, "323838", true, null, false, null, false, "Underscored", false, null), null, null, "HTML"));
+        register(new ColorSchemeElement("html.tag_tree_6", "Tag tree (level 6)",
+                List.of("Tag tree (level 6)"),
+                new ColorSchemeAttribute(false, false, null, false, "383338", true, null, false, null, false, "Underscored", false, null), null, null, "HTML"));
+
+        // =========================================================================
+        // DATA EDITOR AND VIEWER (Data Grid: 4 items)
+        // =========================================================================
+        register(new ColorSchemeElement("data_editor.alternating_row_color", "Alternating row color",
+                List.of("Data Grid", "Alternating row color"),
+                new ColorSchemeAttribute(false, false, null, false, "25272B", true, null, false, null, false, "Underscored", false, null), null, null, "Data Editor and Viewer"));
+        register(new ColorSchemeElement("data_editor.error_data", "Error data",
+                List.of("Data Grid", "Error data"),
+                new ColorSchemeAttribute(false, false, null, false, null, false, "D6405B", true, "FA6675", true, "Underwaved", true, "errors.error"),
+                "errors.error", "Errors and Warnings->Error\n(General)", "Data Editor and Viewer"));
+        register(new ColorSchemeElement("data_editor.image_data", "Image data",
+                List.of("Data Grid", "Image data"),
+                new ColorSchemeAttribute(false, false, null, false, "393B40", true, null, false, null, false, "Underscored", false, null), null, null, "Data Editor and Viewer"));
+        register(new ColorSchemeElement("data_editor.null_data", "Null data",
+                List.of("Data Grid", "Null data"),
+                new ColorSchemeAttribute(false, true, "7A7E85", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Data Editor and Viewer"));
+
+        // =========================================================================
+        // DIAGRAMS (25 items)
+        // =========================================================================
+        register(new ColorSchemeElement("diagrams.bends.bend", "Bend",
+                List.of("Bends", "Bend"),
+                new ColorSchemeAttribute(false, false, "808080", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Diagrams"));
+        register(new ColorSchemeElement("diagrams.bends.bend_selection", "Bend selection",
+                List.of("Bends", "Bend selection"),
+                new ColorSchemeAttribute(false, false, "CC7832", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Diagrams"));
+
+        register(new ColorSchemeElement("diagrams.coarse_grid", "Coarse grid",
+                List.of("Coarse grid"),
+                new ColorSchemeAttribute(false, false, "2B2D30", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Diagrams"));
+
+        register(new ColorSchemeElement("diagrams.edges.annotation_edge", "Annotation edge",
+                List.of("Edges", "Annotation edge"),
+                new ColorSchemeAttribute(false, false, "707070", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Diagrams"));
+        register(new ColorSchemeElement("diagrams.edges.bad_edge", "Bad edge",
+                List.of("Edges", "Bad edge"),
+                new ColorSchemeAttribute(false, false, "FF6B68", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Diagrams"));
+        register(new ColorSchemeElement("diagrams.edges.default_edge", "Default edge",
+                List.of("Edges", "Default edge"),
+                new ColorSchemeAttribute(false, false, "A9B7C6", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Diagrams"));
+        register(new ColorSchemeElement("diagrams.edges.edge_selection", "Edge selection",
+                List.of("Edges", "Edge selection"),
+                new ColorSchemeAttribute(false, false, "CC7832", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Diagrams"));
+        register(new ColorSchemeElement("diagrams.edges.generalization_edge", "Generalization edge",
+                List.of("Edges", "Generalization edge"),
+                new ColorSchemeAttribute(false, false, "A9B7C6", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Diagrams"));
+        register(new ColorSchemeElement("diagrams.edges.inner_class_edge", "Inner class edge",
+                List.of("Edges", "Inner class edge"),
+                new ColorSchemeAttribute(false, false, "A9B7C6", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Diagrams"));
+        register(new ColorSchemeElement("diagrams.edges.realization_edge", "Realization edge",
+                List.of("Edges", "Realization edge"),
+                new ColorSchemeAttribute(false, false, "A9B7C6", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Diagrams"));
+
+        register(new ColorSchemeElement("diagrams.fine_grid", "Fine grid",
+                List.of("Fine grid"),
+                new ColorSchemeAttribute(false, false, "26282A", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Diagrams"));
+        register(new ColorSchemeElement("diagrams.hot_spots", "Hot spots",
+                List.of("Hot spots"),
+                new ColorSchemeAttribute(false, false, "393B40", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Diagrams"));
+
+        register(new ColorSchemeElement("diagrams.nodes.highlighted_node_border", "Highlighted node border",
+                List.of("Nodes", "Highlighted node border"),
+                new ColorSchemeAttribute(false, false, "4A88C7", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Diagrams"));
+        register(new ColorSchemeElement("diagrams.nodes.node_background", "Node background",
+                List.of("Nodes", "Node background"),
+                new ColorSchemeAttribute(false, false, null, false, "313335", true, null, false, null, false, "Underscored", false, null), null, null, "Diagrams"));
+        register(new ColorSchemeElement("diagrams.nodes.node_border", "Node border",
+                List.of("Nodes", "Node border"),
+                new ColorSchemeAttribute(false, false, "393B40", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Diagrams"));
+        register(new ColorSchemeElement("diagrams.nodes.node_header", "Node header",
+                List.of("Nodes", "Node header"),
+                new ColorSchemeAttribute(false, false, null, false, "3C3F41", true, null, false, null, false, "Underscored", false, null), null, null, "Diagrams"));
+        register(new ColorSchemeElement("diagrams.nodes.overview_node_background", "Overview node background",
+                List.of("Nodes", "Overview node background"),
+                new ColorSchemeAttribute(false, false, null, false, "2B2D30", true, null, false, null, false, "Underscored", false, null), null, null, "Diagrams"));
+        register(new ColorSchemeElement("diagrams.nodes.selected_node_border", "Selected node border",
+                List.of("Nodes", "Selected node border"),
+                new ColorSchemeAttribute(false, false, "214283", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Diagrams"));
+
+        register(new ColorSchemeElement("diagrams.notes.note_background", "Note background",
+                List.of("Notes", "Note background"),
+                new ColorSchemeAttribute(false, false, null, false, "393B40", true, null, false, null, false, "Underscored", false, null), null, null, "Diagrams"));
+        register(new ColorSchemeElement("diagrams.notes.note_border", "Note border",
+                List.of("Notes", "Note border"),
+                new ColorSchemeAttribute(false, false, "555555", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Diagrams"));
+        register(new ColorSchemeElement("diagrams.notes.overview_note_background", "Overview note background",
+                List.of("Notes", "Overview note background"),
+                new ColorSchemeAttribute(false, false, null, false, "2B2D30", true, null, false, null, false, "Underscored", false, null), null, null, "Diagrams"));
+
+        register(new ColorSchemeElement("diagrams.port", "Port",
+                List.of("Port"),
+                new ColorSchemeAttribute(false, false, "808080", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Diagrams"));
+
+        register(new ColorSchemeElement("diagrams.selection_box.background", "Selection box background",
+                List.of("Selection Box", "Selection box background"),
+                new ColorSchemeAttribute(false, false, null, false, "214283", true, null, false, null, false, "Underscored", false, null), null, null, "Diagrams"));
+        register(new ColorSchemeElement("diagrams.selection_box.border", "Selection box border",
+                List.of("Selection Box", "Selection box border"),
+                new ColorSchemeAttribute(false, false, "214283", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Diagrams"));
+
+        register(new ColorSchemeElement("diagrams.snapping_lines", "Snapping lines",
+                List.of("Snapping lines"),
+                new ColorSchemeAttribute(false, false, "CC7832", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Diagrams"));
+
+        // =========================================================================
+        // JSON (14 items)
+        // =========================================================================
+        register(new ColorSchemeElement("json.block_comment", "Block comment",
+                List.of("Block comment"),
+                new ColorSchemeAttribute(false, false, "7A7E85", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "JSON"));
+        register(new ColorSchemeElement("json.braces", "Braces",
+                List.of("Braces"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "JSON"));
+        register(new ColorSchemeElement("json.brackets", "Brackets",
+                List.of("Brackets"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "JSON"));
+        register(new ColorSchemeElement("json.colon", "Colon",
+                List.of("Colon"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "JSON"));
+        register(new ColorSchemeElement("json.comma", "Comma",
+                List.of("Comma"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "JSON"));
+        register(new ColorSchemeElement("json.invalid_escape", "Invalid escape sequence",
+                List.of("Invalid escape sequence"),
+                new ColorSchemeAttribute(false, false, "FA6675", true, null, false, null, false, "FA6675", true, "Underwaved", false, null), null, null, "JSON"));
+        register(new ColorSchemeElement("json.keyword", "Keyword",
+                List.of("Keyword"),
+                new ColorSchemeAttribute(false, false, "CF8E6D", true, null, false, null, false, null, false, "Bordered", true, "lang.keyword"),
+                "lang.keyword", "Keyword\n(Language Defaults)", "JSON"));
+        register(new ColorSchemeElement("json.line_comment", "Line comment",
+                List.of("Line comment"),
+                new ColorSchemeAttribute(false, false, "7A7E85", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "JSON"));
+        register(new ColorSchemeElement("json.number", "Number",
+                List.of("Number"),
+                new ColorSchemeAttribute(false, false, "2AACB8", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "JSON"));
+        register(new ColorSchemeElement("json.parameter", "Parameter",
+                List.of("Parameter"),
+                new ColorSchemeAttribute(false, false, "BCBEC4", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "JSON"));
+        register(new ColorSchemeElement("json.property_key", "Property key",
+                List.of("Property key"),
+                new ColorSchemeAttribute(false, false, "C792EA", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "JSON"));
+        register(new ColorSchemeElement("json.semantic_highlighting", "Semantic highlighting",
+                List.of("Semantic highlighting"),
+                new ColorSchemeAttribute(false, false, null, false, null, false, null, false, null, false, "Underscored", false, null), null, null, "JSON"));
+        register(new ColorSchemeElement("json.string", "String",
+                List.of("String"),
+                new ColorSchemeAttribute(false, false, "6A8759", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "JSON"));
+        register(new ColorSchemeElement("json.valid_escape", "Valid escape sequence",
+                List.of("Valid escape sequence"),
+                new ColorSchemeAttribute(false, false, "CF8E6D", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "JSON"));
+
+        // =========================================================================
+        // DATABASE (Console: 1 item, Parameters: 2 items)
+        // =========================================================================
+        register(new ColorSchemeElement("database.statement_to_execute", "Statement to execute",
+                List.of("Console", "Statement to execute"),
+                new ColorSchemeAttribute(false, false, null, false, null, false, null, false, "3D7A49", true, "Bordered", false, null), null, null, "Database"));
+        register(new ColorSchemeElement("database.parameter", "Parameter",
+                List.of("Parameters", "Parameter"),
+                new ColorSchemeAttribute(false, false, "3D7A49", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Database"));
+        register(new ColorSchemeElement("database.parameter_usage", "Parameter usage",
+                List.of("Parameters", "Parameter usage"),
+                new ColorSchemeAttribute(false, false, null, false, "264D3B", true, null, false, "3D7A49", true, "Bordered", false, null), null, null, "Database"));
     }
 
     private static void register(ColorSchemeElement element) {
@@ -931,6 +1145,86 @@ public final class ColorSchemeModel {
         return Collections.unmodifiableList(list);
     }
 
+    public static List<ColorSchemeElement> getHtmlElements() {
+        List<ColorSchemeElement> list = new ArrayList<>();
+        for (ColorSchemeElement el : ALL_ELEMENTS) {
+            if ("HTML".equals(el.getPage())) {
+                list.add(el);
+            }
+        }
+        return Collections.unmodifiableList(list);
+    }
+
+    public static List<ColorSchemeElement> getDataEditorViewerElements() {
+        List<ColorSchemeElement> list = new ArrayList<>();
+        for (ColorSchemeElement el : ALL_ELEMENTS) {
+            if ("Data Editor and Viewer".equals(el.getPage())) {
+                list.add(el);
+            }
+        }
+        return Collections.unmodifiableList(list);
+    }
+
+    public static List<String> getDataEditorViewerCategories() {
+        Set<String> set = new LinkedHashSet<>();
+        for (ColorSchemeElement el : ALL_ELEMENTS) {
+            if ("Data Editor and Viewer".equals(el.getPage())) {
+                set.add(el.getCategory());
+            }
+        }
+        return new ArrayList<>(set);
+    }
+
+    public static List<ColorSchemeElement> getDiagramsElements() {
+        List<ColorSchemeElement> list = new ArrayList<>();
+        for (ColorSchemeElement el : ALL_ELEMENTS) {
+            if ("Diagrams".equals(el.getPage())) {
+                list.add(el);
+            }
+        }
+        return Collections.unmodifiableList(list);
+    }
+
+    public static List<String> getDiagramsCategories() {
+        Set<String> set = new LinkedHashSet<>();
+        for (ColorSchemeElement el : ALL_ELEMENTS) {
+            if ("Diagrams".equals(el.getPage())) {
+                set.add(el.getCategory());
+            }
+        }
+        return new ArrayList<>(set);
+    }
+
+    public static List<ColorSchemeElement> getJsonElements() {
+        List<ColorSchemeElement> list = new ArrayList<>();
+        for (ColorSchemeElement el : ALL_ELEMENTS) {
+            if ("JSON".equals(el.getPage())) {
+                list.add(el);
+            }
+        }
+        return Collections.unmodifiableList(list);
+    }
+
+    public static List<ColorSchemeElement> getDatabaseElements() {
+        List<ColorSchemeElement> list = new ArrayList<>();
+        for (ColorSchemeElement el : ALL_ELEMENTS) {
+            if ("Database".equals(el.getPage())) {
+                list.add(el);
+            }
+        }
+        return Collections.unmodifiableList(list);
+    }
+
+    public static List<String> getDatabaseCategories() {
+        Set<String> set = new LinkedHashSet<>();
+        for (ColorSchemeElement el : ALL_ELEMENTS) {
+            if ("Database".equals(el.getPage())) {
+                set.add(el.getCategory());
+            }
+        }
+        return new ArrayList<>(set);
+    }
+
     public static ColorSchemeElement getElement(String id) {
         if (id == null) return null;
         ColorSchemeElement el = ELEMENT_MAP.get(id);
@@ -965,6 +1259,11 @@ public final class ColorSchemeModel {
         if ("console.reworked_terminal.selection".equals(id)) return ELEMENT_MAP.get("console.reworked_terminal.selected_block_background");
         if ("console.terminal.cursor".equals(id)) return ELEMENT_MAP.get("console.terminal.command_to_run_using_ide");
         if ("console.terminal.selection".equals(id)) return ELEMENT_MAP.get("console.terminal.command_to_run_using_ide");
+        if ("html.custom_tag".equals(id)) return ELEMENT_MAP.get("html.custom_tag_name");
+        if ("data_editor.error".equals(id)) return ELEMENT_MAP.get("data_editor.error_data");
+        if ("data_editor.null".equals(id)) return ELEMENT_MAP.get("data_editor.null_data");
+        if ("json.property".equals(id)) return ELEMENT_MAP.get("json.property_key");
+        if ("database.statement".equals(id)) return ELEMENT_MAP.get("database.statement_to_execute");
         return null;
     }
 
