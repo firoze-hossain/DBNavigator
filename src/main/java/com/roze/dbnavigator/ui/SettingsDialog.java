@@ -49,6 +49,8 @@ import com.roze.dbnavigator.ui.colorscheme.TableDiffColorSchemePanel;
 import com.roze.dbnavigator.ui.colorscheme.XmlColorSchemePanel;
 import com.roze.dbnavigator.ui.colorscheme.XPathColorSchemePanel;
 import com.roze.dbnavigator.ui.colorscheme.XsltColorSchemePanel;
+import com.roze.dbnavigator.ui.colorscheme.ByScopeColorSchemePanel;
+import com.roze.dbnavigator.ui.colorscheme.ImagesColorSchemePanel;
 
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
@@ -1039,6 +1041,10 @@ public final class SettingsDialog {
             return XPathColorSchemePanel.build(settings, inputs, navigateTo);
         } else if ("Editor / Color Scheme / XSLT".equals(fullPath) || (cat != null && "cs.xslt".equals(cat.getId()))) {
             return XsltColorSchemePanel.build(settings, inputs, navigateTo);
+        } else if ("Editor / Color Scheme / By Scope".equals(fullPath) || (cat != null && "cs.by_scope".equals(cat.getId()))) {
+            return ByScopeColorSchemePanel.build(settings, inputs, navigateTo);
+        } else if ("Editor / Color Scheme / Images".equals(fullPath) || (cat != null && "cs.images".equals(cat.getId()))) {
+            return ImagesColorSchemePanel.build(settings, inputs, navigateTo);
         } else if ("Editor / Color Scheme".equals(fullPath) || "Color Scheme".equals(fullPath)) {
             return buildColorSchemeLandingPanel(cat, navigateTo);
         } else if ("Editor / Code Style / SQL".equals(fullPath)) {

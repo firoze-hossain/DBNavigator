@@ -2833,5 +2833,11 @@ public class SettingsDialogTest {
 
         javafx.scene.Node xsltNode = SettingsDialog.buildPanelForPath("Editor / Color Scheme / XSLT", settings, inputs, null);
         assertNotNull(xsltNode);
+
+        javafx.scene.Node byScopeNode = SettingsDialog.buildPanelForPath("Editor / Color Scheme / By Scope", settings, inputs, null);
+        assertNotNull(byScopeNode);
+
+        javafx.scene.Node imagesNode = SettingsDialog.buildPanelForPath("Editor / Color Scheme / Images", settings, inputs, null);
+        assertNotNull(imagesNode);
     }
 }
