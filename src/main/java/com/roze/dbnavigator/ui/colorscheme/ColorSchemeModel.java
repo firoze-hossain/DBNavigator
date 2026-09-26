@@ -1440,6 +1440,38 @@ public final class ColorSchemeModel {
                 List.of("XSLT Directive"),
                 new ColorSchemeAttribute(false, false, null, false, "2B2D30", true, null, false, null, false, "Underscored", true, "lang.template"),
                 "lang.template", "Template language\n(Language Defaults)", "XSLT"));
+
+        // =========================================================================
+        // BY SCOPE (4 items matching Screenshot 2)
+        // =========================================================================
+        register(new ColorSchemeElement("by_scope.all", "All",
+                List.of("All"),
+                new ColorSchemeAttribute(false, false, null, false, null, false, null, false, null, false, "Bordered", false, null), null, null, "By Scope"));
+        register(new ColorSchemeElement("by_scope.non_project_files", "Non-Project Files",
+                List.of("Non-Project Files"),
+                new ColorSchemeAttribute(false, false, null, false, null, false, null, false, null, false, "Bordered", false, null), null, null, "By Scope"));
+        register(new ColorSchemeElement("by_scope.open_files", "Open Files",
+                List.of("Open Files"),
+                new ColorSchemeAttribute(false, false, null, false, null, false, null, false, null, false, "Bordered", false, null), null, null, "By Scope"));
+        register(new ColorSchemeElement("by_scope.scratches_and_consoles", "Scratches and Consoles",
+                List.of("Scratches and Consoles"),
+                new ColorSchemeAttribute(false, false, null, false, null, false, null, false, null, false, "Bordered", false, null), null, null, "By Scope"));
+
+        // =========================================================================
+        // IMAGES (4 items matching Screenshot 1)
+        // =========================================================================
+        register(new ColorSchemeElement("images.black_cell", "'Black' cell",
+                List.of("'Black' cell"),
+                new ColorSchemeAttribute(false, false, null, false, "2B2D30", true, null, false, null, false, "Underscored", false, null), null, null, "Images"));
+        register(new ColorSchemeElement("images.white_cell", "'White' cell",
+                List.of("'White' cell"),
+                new ColorSchemeAttribute(false, false, null, false, "393B40", true, null, false, null, false, "Underscored", false, null), null, null, "Images"));
+        register(new ColorSchemeElement("images.background", "Background",
+                List.of("Background"),
+                new ColorSchemeAttribute(false, false, null, false, "1E1F22", true, null, false, null, false, "Underscored", false, null), null, null, "Images"));
+        register(new ColorSchemeElement("images.grid_line", "Grid line",
+                List.of("Grid line"),
+                new ColorSchemeAttribute(false, false, null, false, "C0C0C0", true, null, false, null, false, "Underscored", false, null), null, null, "Images"));
     }
 
     private static void register(ColorSchemeElement element) {
@@ -1681,6 +1713,26 @@ public final class ColorSchemeModel {
         return Collections.unmodifiableList(list);
     }
 
+    public static List<ColorSchemeElement> getByScopeElements() {
+        List<ColorSchemeElement> list = new ArrayList<>();
+        for (ColorSchemeElement el : ALL_ELEMENTS) {
+            if ("By Scope".equals(el.getPage())) {
+                list.add(el);
+            }
+        }
+        return Collections.unmodifiableList(list);
+    }
+
+    public static List<ColorSchemeElement> getImagesElements() {
+        List<ColorSchemeElement> list = new ArrayList<>();
+        for (ColorSchemeElement el : ALL_ELEMENTS) {
+            if ("Images".equals(el.getPage())) {
+                list.add(el);
+            }
+        }
+        return Collections.unmodifiableList(list);
+    }
+
     public static ColorSchemeElement getElement(String id) {
         if (id == null) return null;
         ColorSchemeElement el = ELEMENT_MAP.get(id);
@@ -1728,6 +1780,8 @@ public final class ColorSchemeModel {
         if ("xml.entity".equals(id)) return ELEMENT_MAP.get("xml.entity_reference");
         if ("xpath.number".equals(id)) return ELEMENT_MAP.get("xpath.number");
         if ("xslt.directive".equals(id)) return ELEMENT_MAP.get("xslt.directive");
+        if ("by_scope.non_project".equals(id)) return ELEMENT_MAP.get("by_scope.non_project_files");
+        if ("images.grid".equals(id)) return ELEMENT_MAP.get("images.grid_line");
         return null;
     }
 
