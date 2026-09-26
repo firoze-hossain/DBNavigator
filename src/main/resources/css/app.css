@@ -20,8 +20,46 @@
     -fx-font-family: "Segoe UI", "SF Pro Text", "Ubuntu", sans-serif;
     -fx-font-size: 13px;
     -fx-accent: -accent;
-    -fx-focus-color: -accent;
+    -fx-focus-color: transparent;
     -fx-faint-focus-color: transparent;
+    -fx-selection-bar: #2e436e;
+    -fx-selection-bar-non-focused: #2e436e;
+}
+
+/* ---------- Global Tree & List DataGrip Selection ---------- */
+.tree-view, .list-view {
+    -fx-selection-bar: #2e436e;
+    -fx-selection-bar-non-focused: #2e436e;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+.tree-cell, .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: #dfe1e5;
+    -fx-padding: 3 6 3 6;
+}
+
+.tree-cell:hover, .list-cell:hover {
+    -fx-background-color: #2a2b2d;
+    -fx-text-fill: #dfe1e5;
+}
+
+.tree-cell:selected,
+.tree-cell:filled:selected,
+.tree-cell:filled:selected:focused,
+.tree-view:focused .tree-cell:filled:selected,
+.list-cell:selected,
+.list-cell:filled:selected,
+.list-cell:filled:selected:focused,
+.list-view:focused .list-cell:filled:selected {
+    -fx-background-color: #2e436e !important;
+    -fx-text-fill: #dfe1e5 !important;
+}
+
+.tree-cell:filled:selected .label,
+.list-cell:filled:selected .label {
+    -fx-text-fill: #dfe1e5 !important;
 }
 
 .app-root { -fx-background-color: -bg-dark; }

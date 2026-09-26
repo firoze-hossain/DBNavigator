@@ -26,7 +26,59 @@ public final class AppSettingsStore {
         return Settings.defaultKeymapPresets();
     }
 
+    public static List<String> defaultEditorColorSchemes() {
+        return Settings.defaultEditorColorSchemes();
+    }
+
     public enum Theme { DARK, LIGHT }
+
+    /**
+     * Color scheme attribute holding visual styles for an editor token/element.
+     */
+    public static class ColorSchemeAttribute {
+        public boolean bold;
+        public boolean italic;
+        public String foreground;
+        public boolean foregroundEnabled;
+        public String background;
+        public boolean backgroundEnabled;
+        public String errorStripe;
+        public boolean errorStripeEnabled;
+        public String effectColor;
+        public boolean effectEnabled;
+        public String effectType = "Underscored";
+        public boolean inherit;
+        public String inheritFromKey;
+
+        public ColorSchemeAttribute() {}
+
+        public ColorSchemeAttribute(boolean bold, boolean italic,
+                                    String foreground, boolean foregroundEnabled,
+                                    String background, boolean backgroundEnabled,
+                                    String errorStripe, boolean errorStripeEnabled,
+                                    String effectColor, boolean effectEnabled, String effectType,
+                                    boolean inherit, String inheritFromKey) {
+            this.bold = bold;
+            this.italic = italic;
+            this.foreground = foreground;
+            this.foregroundEnabled = foregroundEnabled;
+            this.background = background;
+            this.backgroundEnabled = backgroundEnabled;
+            this.errorStripe = errorStripe;
+            this.errorStripeEnabled = errorStripeEnabled;
+            this.effectColor = effectColor;
+            this.effectEnabled = effectEnabled;
+            this.effectType = effectType != null ? effectType : "Underscored";
+            this.inherit = inherit;
+            this.inheritFromKey = inheritFromKey;
+        }
+
+        public ColorSchemeAttribute copy() {
+            return new ColorSchemeAttribute(bold, italic, foreground, foregroundEnabled,
+                    background, backgroundEnabled, errorStripe, errorStripeEnabled,
+                    effectColor, effectEnabled, effectType, inherit, inheritFromKey);
+        }
+    }
 
     /** Plain data holder — Jackson needs a no-arg constructor and public fields/getters+setters. */
     public static class Settings {
@@ -190,7 +242,9 @@ public final class AppSettingsStore {
         // Appearance: Theme & Colors (DataGrip Alignment)
         public String uiTheme = "Islands Dark";
         public boolean syncThemeWithOs = false;
-        public String editorColorScheme = "Islands Dark Theme default";
+        public String editorColorScheme = "Dark Theme default";
+        public List<String> customColorSchemes = new ArrayList<>();
+        public Map<String, Map<String, ColorSchemeAttribute>> colorSchemeOverrides = new LinkedHashMap<>();
         public boolean differentToolWindowBackground = false;
 
         // Appearance: Accessibility (DataGrip Alignment)
@@ -481,10 +535,10 @@ public final class AppSettingsStore {
 
         public static List<String> defaultEditorColorSchemes() {
             return List.of(
-                    "Islands Dark Theme default",
+                    "Dark Theme default",
+                    "Light",
                     "Darcula",
                     "High Contrast",
-                    "Light",
                     "Classic Light"
             );
         }
@@ -1152,9 +1206,31 @@ public final class AppSettingsStore {
         public boolean isSyncThemeWithOs() { return syncThemeWithOs; }
         public void setSyncThemeWithOs(boolean syncThemeWithOs) { this.syncThemeWithOs = syncThemeWithOs; }
 
-        public String getEditorColorScheme() { return editorColorScheme; }
+        public String getEditorColorScheme() {
+            if (editorColorScheme == null || editorColorScheme.isBlank() || "Islands Dark Theme default".equals(editorColorScheme)) {
+                editorColorScheme = "Dark Theme default";
+            }
+            return editorColorScheme;
+        }
         public void setEditorColorScheme(String editorColorScheme) {
-            this.editorColorScheme = (editorColorScheme != null && !editorColorScheme.isBlank()) ? editorColorScheme : "Islands Dark Theme default";
+            this.editorColorScheme = (editorColorScheme != null && !editorColorScheme.isBlank())
+                    ? editorColorScheme : "Dark Theme default";
+        }
+
+        public List<String> getCustomColorSchemes() {
+            if (customColorSchemes == null) customColorSchemes = new ArrayList<>();
+            return customColorSchemes;
+        }
+        public void setCustomColorSchemes(List<String> customColorSchemes) {
+            this.customColorSchemes = customColorSchemes != null ? customColorSchemes : new ArrayList<>();
+        }
+
+        public Map<String, Map<String, ColorSchemeAttribute>> getColorSchemeOverrides() {
+            if (colorSchemeOverrides == null) colorSchemeOverrides = new LinkedHashMap<>();
+            return colorSchemeOverrides;
+        }
+        public void setColorSchemeOverrides(Map<String, Map<String, ColorSchemeAttribute>> colorSchemeOverrides) {
+            this.colorSchemeOverrides = colorSchemeOverrides != null ? colorSchemeOverrides : new LinkedHashMap<>();
         }
 
         public boolean isDifferentToolWindowBackground() { return differentToolWindowBackground; }
