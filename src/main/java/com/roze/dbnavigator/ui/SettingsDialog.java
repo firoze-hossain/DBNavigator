@@ -33,6 +33,10 @@ import com.roze.dbnavigator.ui.colorscheme.ColorSchemeModel.ColorSchemeElement;
 import com.roze.dbnavigator.ui.colorscheme.ColorSchemeFontPanel;
 import com.roze.dbnavigator.ui.colorscheme.ConsoleFontPanel;
 import com.roze.dbnavigator.ui.colorscheme.ConsoleColorsPanel;
+import com.roze.dbnavigator.ui.colorscheme.DebuggerPanel;
+import com.roze.dbnavigator.ui.colorscheme.DiffMergePanel;
+import com.roze.dbnavigator.ui.colorscheme.UserDefinedFileTypesPanel;
+import com.roze.dbnavigator.ui.colorscheme.VcsPanel;
 
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
@@ -991,6 +995,14 @@ public final class SettingsDialog {
             return ConsoleFontPanel.build(settings, inputs, navigateTo);
         } else if ("Editor / Color Scheme / Console Colors".equals(fullPath) || (cat != null && "cs.console_colors".equals(cat.getId()))) {
             return ConsoleColorsPanel.build(settings, inputs, navigateTo);
+        } else if ("Editor / Color Scheme / Debugger".equals(fullPath) || (cat != null && "cs.debugger".equals(cat.getId()))) {
+            return DebuggerPanel.build(settings, inputs, navigateTo);
+        } else if ("Editor / Color Scheme / Diff & Merge".equals(fullPath) || (cat != null && "cs.diff_merge".equals(cat.getId()))) {
+            return DiffMergePanel.build(settings, inputs, navigateTo);
+        } else if ("Editor / Color Scheme / User-Defined File Types".equals(fullPath) || (cat != null && "cs.user_types".equals(cat.getId()))) {
+            return UserDefinedFileTypesPanel.build(settings, inputs, navigateTo);
+        } else if ("Editor / Color Scheme / VCS".equals(fullPath) || (cat != null && "cs.vcs".equals(cat.getId()))) {
+            return VcsPanel.build(settings, inputs, navigateTo);
         } else if ("Editor / Color Scheme".equals(fullPath) || "Color Scheme".equals(fullPath)) {
             return buildColorSchemeLandingPanel(cat, navigateTo);
         } else if ("Editor / Code Style / SQL".equals(fullPath)) {

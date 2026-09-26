@@ -2780,4 +2780,22 @@ public class SettingsDialogTest {
         assertEquals(1.15, settings.getConsoleFontLineHeight());
         assertTrue(settings.isConsoleFontEnableLigatures());
     }
+
+    @Test
+    public void testColorSchemeNewPanelsRouting() {
+        AppSettingsStore.Settings settings = new AppSettingsStore.Settings();
+        Map<String, Object> inputs = new HashMap<>();
+
+        javafx.scene.Node debuggerNode = SettingsDialog.buildPanelForPath("Editor / Color Scheme / Debugger", settings, inputs, null);
+        assertNotNull(debuggerNode);
+
+        javafx.scene.Node diffMergeNode = SettingsDialog.buildPanelForPath("Editor / Color Scheme / Diff & Merge", settings, inputs, null);
+        assertNotNull(diffMergeNode);
+
+        javafx.scene.Node userTypesNode = SettingsDialog.buildPanelForPath("Editor / Color Scheme / User-Defined File Types", settings, inputs, null);
+        assertNotNull(userTypesNode);
+
+        javafx.scene.Node vcsNode = SettingsDialog.buildPanelForPath("Editor / Color Scheme / VCS", settings, inputs, null);
+        assertNotNull(vcsNode);
+    }
 }

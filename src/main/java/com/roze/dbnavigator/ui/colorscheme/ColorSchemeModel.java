@@ -701,6 +701,155 @@ public final class ColorSchemeModel {
         register(new ColorSchemeElement("console.terminal.command_to_run_using_ide", "Command to run using IDE",
                 List.of("Terminal", "Command to run using IDE"),
                 new ColorSchemeAttribute(false, false, null, false, "40503C", true, null, false, null, false, "Bordered", false, null), null, null, "Console Colors"));
+
+        // =========================================================================
+        // DEBUGGER (11 items from DataGrip in exact order)
+        // =========================================================================
+        register(new ColorSchemeElement("debugger.breakpoint_line", "Breakpoint line",
+                List.of("Debugger", "Breakpoint line"),
+                new ColorSchemeAttribute(false, false, null, false, "3A2323", true, "E05555", true, null, false, "Underscored", false, null), null, null, "Debugger"));
+        register(new ColorSchemeElement("debugger.evaluated_expression_text", "Evaluated expression text",
+                List.of("Debugger", "Evaluated expression text"),
+                new ColorSchemeAttribute(false, true, "868A91", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Debugger"));
+        register(new ColorSchemeElement("debugger.evaluated_expression_text_execution_line", "Evaluated expression text for execution line",
+                List.of("Debugger", "Evaluated expression text for execution line"),
+                new ColorSchemeAttribute(false, true, "868A91", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Debugger"));
+        register(new ColorSchemeElement("debugger.execution_point", "Execution point",
+                List.of("Debugger", "Execution point"),
+                new ColorSchemeAttribute(false, false, null, false, "2A5091", true, "3574F0", true, null, false, "Bordered", false, null), null, null, "Debugger"));
+        register(new ColorSchemeElement("debugger.inlined_stack_frames", "Inline stack frames",
+                List.of("Debugger", "Inline stack frames"),
+                new ColorSchemeAttribute(false, false, "868A91", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Debugger"));
+        register(new ColorSchemeElement("debugger.inlined_modified_values", "Inlined modified values",
+                List.of("Debugger", "Inlined modified values"),
+                new ColorSchemeAttribute(false, true, "868A91", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Debugger"));
+        register(new ColorSchemeElement("debugger.inlined_values", "Inlined values",
+                List.of("Debugger", "Inlined values"),
+                new ColorSchemeAttribute(false, true, "868A91", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Debugger"));
+        register(new ColorSchemeElement("debugger.inlined_values_execution_line", "Inlined values for execution line",
+                List.of("Debugger", "Inlined values for execution line"),
+                new ColorSchemeAttribute(false, true, "868A91", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Debugger"));
+        register(new ColorSchemeElement("debugger.not_top_frame", "Not top frame",
+                List.of("Debugger", "Not top frame"),
+                new ColorSchemeAttribute(false, false, null, false, "25324D", true, null, false, null, false, "Underscored", false, null), null, null, "Debugger"));
+        register(new ColorSchemeElement("debugger.smart_step_into_selection", "Smart step into selection",
+                List.of("Debugger", "Smart step into selection"),
+                new ColorSchemeAttribute(false, false, null, false, "2E436E", true, null, false, null, false, "Underscored", false, null), null, null, "Debugger"));
+        register(new ColorSchemeElement("debugger.smart_step_into_target", "Smart step into target",
+                List.of("Debugger", "Smart step into target"),
+                new ColorSchemeAttribute(false, false, null, false, "2E436E", true, null, false, null, false, "Underscored", false, null), null, null, "Debugger"));
+
+        // =========================================================================
+        // DIFF & MERGE (Changed lines and Folded unchanged fragments)
+        // =========================================================================
+        register(new ColorSchemeElement("diff.changed", "Changed",
+                List.of("Changed lines", "Changed"),
+                new ColorSchemeAttribute(false, false, null, false, "2E436E", true, "385570", true, null, false, "Underscored", false, null, "2E3540", false, true), null, null, "Diff & Merge"));
+        register(new ColorSchemeElement("diff.conflict", "Conflict",
+                List.of("Changed lines", "Conflict"),
+                new ColorSchemeAttribute(false, false, null, false, "5E3838", true, "D54040", true, null, false, "Underscored", false, null, "402828", false, true), null, null, "Diff & Merge"));
+        register(new ColorSchemeElement("diff.deleted", "Deleted",
+                List.of("Changed lines", "Deleted"),
+                new ColorSchemeAttribute(false, false, null, false, "484A4A", true, "656E76", true, null, false, "Underscored", false, null, "383838", false, true), null, null, "Diff & Merge"));
+        register(new ColorSchemeElement("diff.inserted", "Inserted",
+                List.of("Changed lines", "Inserted"),
+                new ColorSchemeAttribute(false, false, null, false, "294436", true, "436946", true, null, false, "Underscored", false, null, "203328", false, true), null, null, "Diff & Merge"));
+        register(new ColorSchemeElement("diff.folded_wave", "Wave",
+                List.of("Folded unchanged fragments", "Wave"),
+                new ColorSchemeAttribute(false, false, "555555", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "Diff & Merge"));
+
+        // =========================================================================
+        // USER-DEFINED FILE TYPES (10 items in exact alphabetical order)
+        // =========================================================================
+        register(new ColorSchemeElement("user_types.block_comment", "Block comment",
+                List.of("User-Defined File Types", "Block comment"),
+                new ColorSchemeAttribute(false, false, "7A7E85", true, null, false, null, false, null, false, "Underscored", true, "lang.comments.block"),
+                "lang.comments.block", "Comments → Block comment (Language Defaults)", "User-Defined File Types"));
+        register(new ColorSchemeElement("user_types.invalid_string_escape", "Invalid string escape",
+                List.of("User-Defined File Types", "Invalid string escape"),
+                new ColorSchemeAttribute(false, false, "CF8E6D", true, null, false, null, false, "F75464", true, "Underwaved", false, null), null, null, "User-Defined File Types"));
+        register(new ColorSchemeElement("user_types.keyword1", "Keyword1",
+                List.of("User-Defined File Types", "Keyword1"),
+                new ColorSchemeAttribute(false, false, "CF8E6D", true, null, false, null, false, null, false, "Bordered", false, "lang.keyword"),
+                "lang.keyword", "Keyword (Language Defaults)", "User-Defined File Types"));
+        register(new ColorSchemeElement("user_types.keyword2", "Keyword2",
+                List.of("User-Defined File Types", "Keyword2"),
+                new ColorSchemeAttribute(false, false, "C77DBB", true, null, false, null, false, null, false, "Bordered", false, null), null, null, "User-Defined File Types"));
+        register(new ColorSchemeElement("user_types.keyword3", "Keyword3",
+                List.of("User-Defined File Types", "Keyword3"),
+                new ColorSchemeAttribute(false, false, "56A8F5", true, null, false, null, false, null, false, "Bordered", false, null), null, null, "User-Defined File Types"));
+        register(new ColorSchemeElement("user_types.keyword4", "Keyword4",
+                List.of("User-Defined File Types", "Keyword4"),
+                new ColorSchemeAttribute(false, false, "2BBAC5", true, null, false, null, false, null, false, "Bordered", false, null), null, null, "User-Defined File Types"));
+        register(new ColorSchemeElement("user_types.line_comment", "Line comment",
+                List.of("User-Defined File Types", "Line comment"),
+                new ColorSchemeAttribute(false, false, "7A7E85", true, null, false, null, false, null, false, "Underscored", true, "lang.comments.line"),
+                "lang.comments.line", "Comments → Line comment (Language Defaults)", "User-Defined File Types"));
+        register(new ColorSchemeElement("user_types.number", "Number",
+                List.of("User-Defined File Types", "Number"),
+                new ColorSchemeAttribute(false, false, "2AACB8", true, null, false, null, false, null, false, "Underscored", true, "lang.number"),
+                "lang.number", "Numbers (Language Defaults)", "User-Defined File Types"));
+        register(new ColorSchemeElement("user_types.string", "String",
+                List.of("User-Defined File Types", "String"),
+                new ColorSchemeAttribute(false, false, "6AAB73", true, null, false, null, false, null, false, "Underscored", true, "lang.string"),
+                "lang.string", "String (Language Defaults)", "User-Defined File Types"));
+        register(new ColorSchemeElement("user_types.valid_string_escape", "Valid string escape",
+                List.of("User-Defined File Types", "Valid string escape"),
+                new ColorSchemeAttribute(false, false, "CF8E6D", true, null, false, null, false, null, false, "Underscored", true, "lang.string.valid_escape"),
+                "lang.string.valid_escape", "String → Valid escape sequence (Language Defaults)", "User-Defined File Types"));
+
+        // =========================================================================
+        // VCS (Editor Gutter: 9 items, VCS Annotations: 7 items)
+        // =========================================================================
+        register(new ColorSchemeElement("vcs.gutter.added_ignored_lines_border", "Added ignored lines border",
+                List.of("Editor Gutter", "Added ignored lines border"),
+                new ColorSchemeAttribute(false, false, null, false, null, false, null, false, "436946", true, "Bordered", false, null), null, null, "VCS"));
+        register(new ColorSchemeElement("vcs.gutter.added_lines", "Added lines",
+                List.of("Editor Gutter", "Added lines"),
+                new ColorSchemeAttribute(false, false, null, false, "436946", true, null, false, null, false, "Underscored", false, null), null, null, "VCS"));
+        register(new ColorSchemeElement("vcs.gutter.border", "Border",
+                List.of("Editor Gutter", "Border"),
+                new ColorSchemeAttribute(false, false, null, false, null, false, null, false, "393B40", true, "Bordered", false, null), null, null, "VCS"));
+        register(new ColorSchemeElement("vcs.gutter.changed_lines_popup", "Changed lines popup",
+                List.of("Editor Gutter", "Changed lines popup"),
+                new ColorSchemeAttribute(false, false, null, false, "2B2D30", true, null, false, null, false, "Underscored", false, null), null, null, "VCS"));
+        register(new ColorSchemeElement("vcs.gutter.deleted_ignored_lines_border", "Deleted ignored lines border",
+                List.of("Editor Gutter", "Deleted ignored lines border"),
+                new ColorSchemeAttribute(false, false, null, false, null, false, null, false, "868A91", true, "Bordered", false, null), null, null, "VCS"));
+        register(new ColorSchemeElement("vcs.gutter.deleted_lines", "Deleted lines",
+                List.of("Editor Gutter", "Deleted lines"),
+                new ColorSchemeAttribute(false, false, null, false, "868A91", true, null, false, null, false, "Underscored", false, null), null, null, "VCS"));
+        register(new ColorSchemeElement("vcs.gutter.modified_ignored_lines_border", "Modified ignored lines border",
+                List.of("Editor Gutter", "Modified ignored lines border"),
+                new ColorSchemeAttribute(false, false, null, false, null, false, null, false, "385570", true, "Bordered", false, null), null, null, "VCS"));
+        register(new ColorSchemeElement("vcs.gutter.modified_lines", "Modified lines",
+                List.of("Editor Gutter", "Modified lines"),
+                new ColorSchemeAttribute(false, false, null, false, "385570", true, null, false, null, false, "Underscored", false, null), null, null, "VCS"));
+        register(new ColorSchemeElement("vcs.gutter.whitespace_modified_lines", "Whitespace-modified lines",
+                List.of("Editor Gutter", "Whitespace-modified lines"),
+                new ColorSchemeAttribute(false, false, null, false, "4B5059", true, null, false, null, false, "Underscored", false, null), null, null, "VCS"));
+
+        register(new ColorSchemeElement("vcs.annotations.bg_color_1", "Background color #1",
+                List.of("VCS Annotations", "Background color #1"),
+                new ColorSchemeAttribute(false, false, null, false, "25324D", true, null, false, null, false, "Underscored", false, null), null, null, "VCS"));
+        register(new ColorSchemeElement("vcs.annotations.bg_color_2", "Background color #2",
+                List.of("VCS Annotations", "Background color #2"),
+                new ColorSchemeAttribute(false, false, null, false, "2E3A4D", true, null, false, null, false, "Underscored", false, null), null, null, "VCS"));
+        register(new ColorSchemeElement("vcs.annotations.bg_color_3", "Background color #3",
+                List.of("VCS Annotations", "Background color #3"),
+                new ColorSchemeAttribute(false, false, null, false, "384659", true, null, false, null, false, "Underscored", false, null), null, null, "VCS"));
+        register(new ColorSchemeElement("vcs.annotations.bg_color_4", "Background color #4",
+                List.of("VCS Annotations", "Background color #4"),
+                new ColorSchemeAttribute(false, false, null, false, "425266", true, null, false, null, false, "Underscored", false, null), null, null, "VCS"));
+        register(new ColorSchemeElement("vcs.annotations.bg_color_5", "Background color #5",
+                List.of("VCS Annotations", "Background color #5"),
+                new ColorSchemeAttribute(false, false, null, false, "4C5E73", true, null, false, null, false, "Underscored", false, null), null, null, "VCS"));
+        register(new ColorSchemeElement("vcs.annotations.foreground", "Foreground",
+                List.of("VCS Annotations", "Foreground"),
+                new ColorSchemeAttribute(false, false, "868A91", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "VCS"));
+        register(new ColorSchemeElement("vcs.annotations.foreground_last_commit", "Foreground for last commit",
+                List.of("VCS Annotations", "Foreground for last commit"),
+                new ColorSchemeAttribute(false, false, "DFE1E5", true, null, false, null, false, null, false, "Underscored", false, null), null, null, "VCS"));
     }
 
     private static void register(ColorSchemeElement element) {
@@ -736,6 +885,46 @@ public final class ColorSchemeModel {
         List<ColorSchemeElement> list = new ArrayList<>();
         for (ColorSchemeElement el : ALL_ELEMENTS) {
             if ("Console Colors".equals(el.getPage())) {
+                list.add(el);
+            }
+        }
+        return Collections.unmodifiableList(list);
+    }
+
+    public static List<ColorSchemeElement> getDebuggerElements() {
+        List<ColorSchemeElement> list = new ArrayList<>();
+        for (ColorSchemeElement el : ALL_ELEMENTS) {
+            if ("Debugger".equals(el.getPage())) {
+                list.add(el);
+            }
+        }
+        return Collections.unmodifiableList(list);
+    }
+
+    public static List<ColorSchemeElement> getDiffMergeElements() {
+        List<ColorSchemeElement> list = new ArrayList<>();
+        for (ColorSchemeElement el : ALL_ELEMENTS) {
+            if ("Diff & Merge".equals(el.getPage())) {
+                list.add(el);
+            }
+        }
+        return Collections.unmodifiableList(list);
+    }
+
+    public static List<ColorSchemeElement> getUserDefinedFileTypeElements() {
+        List<ColorSchemeElement> list = new ArrayList<>();
+        for (ColorSchemeElement el : ALL_ELEMENTS) {
+            if ("User-Defined File Types".equals(el.getPage())) {
+                list.add(el);
+            }
+        }
+        return Collections.unmodifiableList(list);
+    }
+
+    public static List<ColorSchemeElement> getVcsElements() {
+        List<ColorSchemeElement> list = new ArrayList<>();
+        for (ColorSchemeElement el : ALL_ELEMENTS) {
+            if ("VCS".equals(el.getPage())) {
                 list.add(el);
             }
         }
@@ -803,6 +992,26 @@ public final class ColorSchemeModel {
         Set<String> set = new LinkedHashSet<>();
         for (ColorSchemeElement el : ALL_ELEMENTS) {
             if ("Console Colors".equals(el.getPage())) {
+                set.add(el.getCategory());
+            }
+        }
+        return new ArrayList<>(set);
+    }
+
+    public static List<String> getDiffMergeCategories() {
+        Set<String> set = new LinkedHashSet<>();
+        for (ColorSchemeElement el : ALL_ELEMENTS) {
+            if ("Diff & Merge".equals(el.getPage())) {
+                set.add(el.getCategory());
+            }
+        }
+        return new ArrayList<>(set);
+    }
+
+    public static List<String> getVcsCategories() {
+        Set<String> set = new LinkedHashSet<>();
+        for (ColorSchemeElement el : ALL_ELEMENTS) {
+            if ("VCS".equals(el.getPage())) {
                 set.add(el.getCategory());
             }
         }
