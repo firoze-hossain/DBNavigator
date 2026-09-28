@@ -911,6 +911,8 @@ public final class SettingsDialog {
             return buildEditorAppearancePanel(settings, inputs, navigateTo);
         } else if ("Appearance & Behavior / Appearance".equals(fullPath) || "Appearance".equals(fullPath)) {
             return buildAppearancePanel(settings, inputs, navigateTo);
+        } else if ("Appearance & Behavior / Menus and Toolbars".equals(fullPath) || "Menus and Toolbars".equals(fullPath)) {
+            return new MenusAndToolbarsPanel(settings, inputs).createPanel();
         } else if ("Appearance & Behavior / System Settings / Updates".equals(fullPath) || "Updates".equals(fullPath)) {
             return buildUpdatesPanel(settings, inputs);
         } else if ("Editor / General / Auto Import".equals(fullPath) || "Auto Import".equals(fullPath)) {
@@ -6653,6 +6655,7 @@ public final class SettingsDialog {
         return panel;
     }
 
+
     private static VBox buildCsvFormatsPanel(AppSettingsStore.Settings settings, Map<String, Object> inputs) {
         Label breadcrumb = new Label("Database \u203A CSV Formats");
         breadcrumb.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 13px;");
@@ -11218,6 +11221,13 @@ public final class SettingsDialog {
                 }
             }
         }
+        if (inputs.containsKey("menusAndToolbarsList")) {
+            @SuppressWarnings("unchecked")
+            List<AppSettingsStore.MenuItemConfig> list = (List<AppSettingsStore.MenuItemConfig>) inputs.get("menusAndToolbarsList");
+            if (list != null && !list.isEmpty()) {
+                settings.setMenusAndToolbars(new ArrayList<>(list));
+            }
+        }
         if (inputs.containsKey("keymapCombo")) {
             ComboBox<String> combo = (ComboBox<String>) inputs.get("keymapCombo");
             if (combo.getValue() != null) settings.setKeymapPreset(combo.getValue());
@@ -12508,6 +12518,7 @@ public final class SettingsDialog {
         // Apply to open consoles and notify
         if (mainWindow != null) {
             mainWindow.applyEditorSettingsToOpenConsoles();
+            mainWindow.refreshMenusAndToolbars();
             mainWindow.setStatus("Settings applied");
         }
     }

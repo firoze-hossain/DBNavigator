@@ -302,15 +302,21 @@ public class MainWindow {
         brandIcon.getStyleClass().add("header-brand-icon");
         brandIcon.setTooltip(new Tooltip("DBNavigator Pro"));
 
-        // Menus: File, Edit, View, Navigate, Run, VCS, Window, Help
-        MenuBar menuBar = actionManager.buildMenuBar(ActionRegistry.getMainMenuBarGroups(actionManager), this);
+        // Menus: File, Edit, View, Navigate, Run, VCS, Window, Help from dynamic schema
+        AppSettingsStore.Settings settings = AppSettingsStore.load();
+        AppSettingsStore.MenuItemConfig mainMenuCfg = settings.getMenuConfig("root.main.menu");
+        MenuBar menuBar = (mainMenuCfg != null)
+                ? actionManager.buildMenuBarFromConfig(mainMenuCfg, this)
+                : actionManager.buildMenuBar(ActionRegistry.getMainMenuBarGroups(actionManager), this);
 
         HBox leftBox = new HBox(6, brandIcon, menuBar);
         leftBox.setAlignment(Pos.CENTER_LEFT);
 
-        // Center: 4 middle icons + 3 dots "..."
-        ActionGroup middleGroup = actionManager.getGroup("group.middle");
-        HBox middleBox = actionManager.buildToolBar(middleGroup, this);
+        // Center: middle toolbar from dynamic schema
+        AppSettingsStore.MenuItemConfig toolbarCfg = settings.getMenuConfig("root.main.toolbar");
+        HBox middleBox = (toolbarCfg != null)
+                ? actionManager.buildToolBarFromConfig(toolbarCfg, this)
+                : actionManager.buildToolBar(actionManager.getGroup("group.middle"), this);
         middleBox.setAlignment(Pos.CENTER);
         this.headerMiddleBar = middleBox;
 
@@ -342,6 +348,12 @@ public class MainWindow {
         BorderPane.setAlignment(rightBox, Pos.CENTER_RIGHT);
 
         return headerBar;
+    }
+
+    public void refreshMenusAndToolbars() {
+        ActionManager actionManager = ActionManager.getInstance();
+        root.setTop(buildDataGripHeader(actionManager));
+        actionManager.updateActions(this);
     }
 
     public void showSearchEverywhere() {
