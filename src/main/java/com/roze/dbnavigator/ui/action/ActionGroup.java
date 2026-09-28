@@ -65,6 +65,10 @@ public class ActionGroup extends AnAction {
         return this;
     }
 
+    public java.util.function.BiConsumer<Menu, MainWindow> getOnMenuShowing() {
+        return onMenuShowing;
+    }
+
     public List<AnAction> getChildren() {
         return Collections.unmodifiableList(children);
     }
