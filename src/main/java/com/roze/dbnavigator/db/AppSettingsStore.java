@@ -2264,55 +2264,223 @@ public final class AppSettingsStore {
 
             roots.add(MenuItemConfig.group("root.editor.popup", "Editor Popup Menu", editorPopup));
 
-            // 4. Editor Gutter Popup Menu
+            // 4. Editor Gutter Popup Menu (Image 1)
             List<MenuItemConfig> gutterPopup = new ArrayList<>();
-            gutterPopup.add(MenuItemConfig.group("gutter.vcs.popup", "EditorGutterVcsPopupMenu", List.of()));
-            gutterPopup.add(MenuItemConfig.group("gutter.bookmark.context", "popup@BookmarkContextMenu", List.of()));
-            gutterPopup.add(MenuItemConfig.action("editor.softwrap", "Soft-Wrap"));
+            List<MenuItemConfig> gutterVcsChildren = new ArrayList<>();
+            gutterVcsChildren.add(MenuItemConfig.action("gutter.vcs.annotate", "Annotate"));
+            gutterVcsChildren.add(MenuItemConfig.separator());
+            gutterPopup.add(MenuItemConfig.group("gutter.vcs.popup", "EditorGutterVcsPopupMenu", false, gutterVcsChildren));
+
+            List<MenuItemConfig> gutterBookmarkChildren = new ArrayList<>();
+            gutterBookmarkChildren.add(MenuItemConfig.action("gutter.bookmark.add.another.list", "Add Bookmark to Another List"));
+            gutterBookmarkChildren.add(MenuItemConfig.action("gutter.bookmark.rename", "Rename Bookmark\u2026", "EDIT"));
+            gutterBookmarkChildren.add(MenuItemConfig.action("gutter.bookmark.toggle", "Toggle Bookmark"));
+            gutterBookmarkChildren.add(MenuItemConfig.action("gutter.bookmark.remove.mnemonic", "Remove Mnemonic"));
+            gutterBookmarkChildren.add(MenuItemConfig.action("gutter.bookmark.toggle.mnemonic", "Toggle Bookmark Mnemonic\u2026"));
+            gutterBookmarkChildren.add(MenuItemConfig.separator());
+            gutterPopup.add(MenuItemConfig.group("gutter.bookmark.context", "popup@BookmarkContextMenu", false, gutterBookmarkChildren));
+
+            gutterPopup.add(MenuItemConfig.action("editor.softwrap", "Soft-Wrap", "ALIGN_LEFT"));
             gutterPopup.add(MenuItemConfig.action("editor.configure.softwraps", "Configure Soft Wraps\u2026"));
             gutterPopup.add(MenuItemConfig.separator());
-            gutterPopup.add(MenuItemConfig.group("gutter.appearance", "Appearance", List.of()));
-            gutterPopup.add(MenuItemConfig.action("gutter.configure.icons", "Configure Gutter Icons\u2026"));
+
+            List<MenuItemConfig> gutterAppearanceChildren = new ArrayList<>();
+            gutterAppearanceChildren.add(MenuItemConfig.action("gutter.appearance.line.numbers", "Show Line Numbers"));
+            gutterAppearanceChildren.add(MenuItemConfig.action("gutter.appearance.breakpoints.over.line.numbers", "Breakpoints Over Line Numbers"));
+            gutterAppearanceChildren.add(MenuItemConfig.action("gutter.appearance.indent.guides", "Show Indent Guides"));
+            gutterAppearanceChildren.add(MenuItemConfig.action("gutter.appearance.sticky.lines", "Show Sticky Lines"));
+
+            List<MenuItemConfig> gutterBreadcrumbsChildren = new ArrayList<>();
+            gutterBreadcrumbsChildren.add(MenuItemConfig.action("gutter.breadcrumbs.top", "Top"));
+            gutterBreadcrumbsChildren.add(MenuItemConfig.action("gutter.breadcrumbs.bottom", "Bottom"));
+            gutterBreadcrumbsChildren.add(MenuItemConfig.action("gutter.breadcrumbs.dont.show", "Don't Show"));
+            gutterAppearanceChildren.add(MenuItemConfig.group("gutter.breadcrumbs", "Breadcrumbs", true, "FOLDER", gutterBreadcrumbsChildren));
+            gutterAppearanceChildren.add(MenuItemConfig.action("gutter.configure.icons", "Configure Gutter Icons\u2026"));
+            gutterPopup.add(MenuItemConfig.group("gutter.appearance", "Appearance", true, "FOLDER", gutterAppearanceChildren));
+
             gutterPopup.add(MenuItemConfig.action("gutter.remove.breakpoints", "Remove other breakpoints"));
             gutterPopup.add(MenuItemConfig.action("gutter.disable.breakpoints", "Disable other breakpoints"));
             roots.add(MenuItemConfig.group("root.editor.gutter.popup", "Editor Gutter Popup Menu", gutterPopup));
 
-            // 5. Editor Tab Popup Menu
+            // 5. Editor Tab Popup Menu (Images 2, 3, 4, 5)
             List<MenuItemConfig> tabPopup = new ArrayList<>();
-            tabPopup.add(MenuItemConfig.group("tab.close.actions", "Editor Close Actions", List.of(
-                    MenuItemConfig.action("tab.close", "Close"),
-                    MenuItemConfig.action("tab.close.others", "Close Others"),
-                    MenuItemConfig.action("tab.close.all", "Close All")
-            )));
-            tabPopup.add(MenuItemConfig.separator());
+
+            // Editor Close Actions (Image 2 & 3)
+            List<MenuItemConfig> tabCloseActions = new ArrayList<>();
+            tabCloseActions.add(MenuItemConfig.action("tab.close", "Close Tab"));
+            tabCloseActions.add(MenuItemConfig.action("tab.close.others", "Close Other Tabs"));
+            tabCloseActions.add(MenuItemConfig.action("tab.close.all", "Close All Tabs"));
+            tabCloseActions.add(MenuItemConfig.action("tab.close.unmodified", "Close Unmodified Tabs"));
+            tabCloseActions.add(MenuItemConfig.action("tab.close.all.but.pinned", "Close All but Pinned"));
+            tabCloseActions.add(MenuItemConfig.action("tab.close.left", "Close Tabs to the Left"));
+            tabCloseActions.add(MenuItemConfig.action("tab.close.right", "Close Tabs to the Right"));
+            tabCloseActions.add(MenuItemConfig.action("tab.close.all.readonly", "Close All Read-Only Tabs"));
+            tabCloseActions.add(MenuItemConfig.action("tab.open.as.editor.tab", "Open as Editor Tab", "EXTERNAL_LINK_ALT"));
+            tabCloseActions.add(MenuItemConfig.separator());
+            tabPopup.add(MenuItemConfig.group("tab.close.actions", "Editor Close Actions", false, tabCloseActions));
+
             tabPopup.add(MenuItemConfig.action("tab.copy.paths", "Copy Paths"));
             tabPopup.add(MenuItemConfig.action("tab.copy.reference", "Copy Reference"));
             tabPopup.add(MenuItemConfig.action("tab.copy.json.pointer", "Copy JSON Pointer"));
             tabPopup.add(MenuItemConfig.action("tab.change.template.lang", "Change Template Data Language"));
-            tabPopup.add(MenuItemConfig.group("tab.copy.path.reference.group", "Copy Path/Reference\u2026", List.of()));
+
+            // Copy Path/Reference... (Image 2 & 3)
+            List<MenuItemConfig> tabCopyPathRefChildren = new ArrayList<>();
+            List<MenuItemConfig> tabCopyFileRefChildren = new ArrayList<>();
+            tabCopyFileRefChildren.add(MenuItemConfig.action("tab.copy.path.absolute", "Absolute Path"));
+            tabCopyFileRefChildren.add(MenuItemConfig.action("tab.copy.path.filename", "File Name"));
+            tabCopyFileRefChildren.add(MenuItemConfig.separator());
+            tabCopyFileRefChildren.add(MenuItemConfig.action("tab.copy.path.line.number", "Path with Line Number"));
+            tabCopyFileRefChildren.add(MenuItemConfig.action("tab.copy.path.content.root", "Path from Content Root"));
+            tabCopyFileRefChildren.add(MenuItemConfig.action("tab.copy.path.source.root", "Path from Source Root"));
+            tabCopyFileRefChildren.add(MenuItemConfig.action("tab.copy.path.repo.root", "Path From Repository Root"));
+            tabCopyFileRefChildren.add(MenuItemConfig.action("tab.copy.git.hosting.link", "Git.Hosting.Copy.Link.Group"));
+            tabCopyPathRefChildren.add(MenuItemConfig.group("tab.copy.file.reference.group", "CopyFileReference", false, tabCopyFileRefChildren));
+            tabCopyPathRefChildren.add(MenuItemConfig.separator());
+
+            List<MenuItemConfig> tabCopyExtRefChildren = new ArrayList<>();
+            tabCopyExtRefChildren.add(MenuItemConfig.action("tab.copy.toolbox.url", "Toolbox URL", "TOOLBOX"));
+            tabCopyPathRefChildren.add(MenuItemConfig.group("tab.copy.external.reference.group", "CopyExternalReferenceGroup", false, tabCopyExtRefChildren));
+            tabCopyPathRefChildren.add(MenuItemConfig.action("tab.copy.ref.action", "Copy Reference"));
+            tabPopup.add(MenuItemConfig.group("tab.copy.path.reference.group", "Copy Path/Reference\u2026", true, tabCopyPathRefChildren));
+
             tabPopup.add(MenuItemConfig.separator());
-            tabPopup.add(MenuItemConfig.action("tab.diff.separate.window", "Show Diff in Separate Window"));
+            tabPopup.add(MenuItemConfig.action("tab.diff.separate.window", "Show Diff in Separate Window", "EXTERNAL_LINK_ALT"));
             tabPopup.add(MenuItemConfig.action("tab.diff.all.one.view", "Show All Files in One Diff View"));
-            tabPopup.add(MenuItemConfig.group("vcs.diff.editor.tabs.group", "Vcs.Diff.EditorTabs.Group", List.of()));
-            tabPopup.add(MenuItemConfig.action("editor.split.right", "Split Right"));
-            tabPopup.add(MenuItemConfig.action("editor.split.move.right", "Split and Move Right"));
-            tabPopup.add(MenuItemConfig.action("editor.split.down", "Split Down"));
-            tabPopup.add(MenuItemConfig.action("editor.split.move.down", "Split and Move Down"));
-            tabPopup.add(MenuItemConfig.action("editor.split.move.opposite", "Move to Opposite Group"));
-            tabPopup.add(MenuItemConfig.action("editor.split.open.opposite", "Open in Opposite Group"));
-            tabPopup.add(MenuItemConfig.action("editor.split.change.orientation", "Change Splitter Orientation"));
-            tabPopup.add(MenuItemConfig.action("editor.split.unsplit", "Unsplit"));
-            tabPopup.add(MenuItemConfig.action("editor.split.unsplit.all", "Unsplit All"));
+
+            // Vcs.Diff.EditorTabs.Group (Image 4)
+            List<MenuItemConfig> tabVcsDiffChildren = new ArrayList<>();
+            tabVcsDiffChildren.add(MenuItemConfig.action("tab.vcs.diff.collapse.all", "Collapse All Files"));
+            tabPopup.add(MenuItemConfig.group("vcs.diff.editor.tabs.group", "Vcs.Diff.EditorTabs.Group", false, tabVcsDiffChildren));
+
+            tabPopup.add(MenuItemConfig.action("editor.split.right", "Split Right", "COLUMNS"));
+            tabPopup.add(MenuItemConfig.action("tab.split.move.right", "Split and Move Right"));
+            tabPopup.add(MenuItemConfig.action("editor.split.down", "Split Down", "WINDOW_RESTORE"));
+            tabPopup.add(MenuItemConfig.action("tab.split.move.down", "Split and Move Down"));
+            tabPopup.add(MenuItemConfig.action("tab.move.opposite.group", "Move to Opposite Group"));
+            tabPopup.add(MenuItemConfig.action("tab.open.opposite.group", "Open in Opposite Group"));
+            tabPopup.add(MenuItemConfig.action("tab.change.splitter.orientation", "Change Splitter Orientation"));
+            tabPopup.add(MenuItemConfig.action("tab.unsplit", "Unsplit"));
+            tabPopup.add(MenuItemConfig.action("tab.unsplit.all", "Unsplit All"));
             tabPopup.add(MenuItemConfig.separator());
-            tabPopup.add(MenuItemConfig.action("tab.pin", "Pin Active Tab"));
+            tabPopup.add(MenuItemConfig.action("tab.pin.active", "Pin Active Tab"));
             tabPopup.add(MenuItemConfig.action("tab.keep.open", "Keep Tab Open"));
-            tabPopup.add(MenuItemConfig.action("tab.open.new.window", "Open Tab in New Window"));
+            tabPopup.add(MenuItemConfig.action("tab.open.in.new.window", "Open Tab in New Window"));
             tabPopup.add(MenuItemConfig.action("tab.configure.editor.tabs", "Configure Editor Tabs\u2026"));
             tabPopup.add(MenuItemConfig.separator());
             tabPopup.add(MenuItemConfig.action("tab.reopen.closed", "Reopen Closed Tab"));
-            tabPopup.add(MenuItemConfig.group("database.editor.tab.popup", "Database.EditorTabPopupMenu", List.of()));
-            tabPopup.add(MenuItemConfig.group("tab.bookmarks", "Bookmarks", List.of()));
-            tabPopup.add(MenuItemConfig.group("tab.editor.tab.popup.actions.1", "Editor Tab Popup Menu Actions (1)", List.of()));
+
+            // Database.EditorTabPopupMenu (Image 4)
+            List<MenuItemConfig> tabDatabaseChildren = new ArrayList<>();
+            tabDatabaseChildren.add(MenuItemConfig.separator());
+            tabDatabaseChildren.add(MenuItemConfig.action("tab.database.shorten.titles", "Shorten Tab Titles"));
+            tabPopup.add(MenuItemConfig.group("database.editor.tab.popup", "Database.EditorTabPopupMenu", false, tabDatabaseChildren));
+
+            // Bookmarks (Image 4)
+            List<MenuItemConfig> tabBookmarksChildren = new ArrayList<>();
+            tabBookmarksChildren.add(MenuItemConfig.action("tab.bookmark.add.another.list", "Add Bookmark to Another List"));
+            tabBookmarksChildren.add(MenuItemConfig.action("tab.bookmark.rename", "Rename Bookmark\u2026", "EDIT"));
+            tabBookmarksChildren.add(MenuItemConfig.action("tab.bookmark.toggle", "Toggle Bookmark"));
+            tabPopup.add(MenuItemConfig.group("tab.bookmarks", "Bookmarks", false, tabBookmarksChildren));
+
+            // Editor Tab Popup Menu Actions (1) (Image 4 & 5)
+            List<MenuItemConfig> tabActions1Children = new ArrayList<>();
+            tabActions1Children.add(MenuItemConfig.separator());
+            tabActions1Children.add(MenuItemConfig.action("tab.actions1.change.file.language", "Change File Language"));
+            tabActions1Children.add(MenuItemConfig.action("tab.actions1.associate.file.type", "Associate with File Type\u2026"));
+
+            // Mark File As (Image 5)
+            List<MenuItemConfig> tabMarkFileAsChildren = new ArrayList<>();
+            tabMarkFileAsChildren.add(MenuItemConfig.action("tab.mark.file.override.type", "Override File Type"));
+            tabMarkFileAsChildren.add(MenuItemConfig.action("tab.mark.file.revert.override", "Revert File Type Override"));
+            tabActions1Children.add(MenuItemConfig.group("tab.mark.file.as.group", "Mark File As", true, "FOLDER", tabMarkFileAsChildren));
+            tabActions1Children.add(MenuItemConfig.separator());
+
+            // Run Configurations (Image 5)
+            List<MenuItemConfig> tabRunConfigsChildren = new ArrayList<>();
+            List<MenuItemConfig> tabRunContextChildren = new ArrayList<>();
+            List<MenuItemConfig> tabRunContextInnerChildren = new ArrayList<>();
+
+            List<MenuItemConfig> tabExecutorsChildren = new ArrayList<>();
+            tabExecutorsChildren.add(MenuItemConfig.action("run.context.configuration", "Run context configuration", "PLAY"));
+            tabExecutorsChildren.add(MenuItemConfig.action("debug.context.configuration", "Debug context configuration", "BUG"));
+            tabRunContextInnerChildren.add(MenuItemConfig.group("tab.run.context.executors.group", "RunContextExecutorsGroup", false, tabExecutorsChildren));
+
+            List<MenuItemConfig> tabMoreRunDebugChildren = new ArrayList<>();
+            tabMoreRunDebugChildren.add(MenuItemConfig.action("run.coverage.context.configuration", "Run with Coverage context configuration", "SHIELD_ALT"));
+            tabMoreRunDebugChildren.add(MenuItemConfig.action("run.profiler.context.configuration", "Run with Profiler"));
+            tabMoreRunDebugChildren.add(MenuItemConfig.action("run.create.configuration", "Create Run Configuration"));
+            tabMoreRunDebugChildren.add(MenuItemConfig.separator());
+            tabMoreRunDebugChildren.add(MenuItemConfig.action("run.context.configuration.secondary", "Run context configuration", "PLAY"));
+            tabMoreRunDebugChildren.add(MenuItemConfig.action("debug.context.configuration.secondary", "Debug context configuration", "BUG"));
+            tabMoreRunDebugChildren.add(MenuItemConfig.action("run.modify.configuration", "Modify Run Configuration\u2026"));
+            tabRunContextInnerChildren.add(MenuItemConfig.group("tab.more.run.debug.group", "More Run/Debug", false, tabMoreRunDebugChildren));
+
+            tabRunContextChildren.add(MenuItemConfig.group("tab.run.context.group.inner", "RunContextGroupInner", false, tabRunContextInnerChildren));
+            tabRunContextChildren.add(MenuItemConfig.separator());
+
+            // Console.Jdbc.RunContextGroup (Image 5)
+            List<MenuItemConfig> tabConsoleJdbcRunChildren = new ArrayList<>();
+            tabConsoleJdbcRunChildren.add(MenuItemConfig.action("console.attach.data.source", "Attach Data Source"));
+            tabConsoleJdbcRunChildren.add(MenuItemConfig.separator());
+            tabConsoleJdbcRunChildren.add(MenuItemConfig.action("console.recompile", "Recompile\u2026", "HAMMER"));
+
+            List<MenuItemConfig> tabExplainPlanChildren = new ArrayList<>();
+            tabExplainPlanChildren.add(MenuItemConfig.action("console.explain.plan", "Explain Plan", "PROJECT_DIAGRAM"));
+            tabExplainPlanChildren.add(MenuItemConfig.action("console.explain.plan.raw", "Explain Plan (Raw)", "PROJECT_DIAGRAM"));
+            tabExplainPlanChildren.add(MenuItemConfig.action("console.explain.analyse", "Explain Analyse", "PROJECT_DIAGRAM"));
+            tabExplainPlanChildren.add(MenuItemConfig.action("console.explain.analyse.raw", "Explain Analyse (Raw)", "PROJECT_DIAGRAM"));
+            tabConsoleJdbcRunChildren.add(MenuItemConfig.group("console.explain.plan.group", "Explain Plan", true, tabExplainPlanChildren));
+
+            tabConsoleJdbcRunChildren.add(MenuItemConfig.action("middle.run", "Execute", "PLAY"));
+            tabConsoleJdbcRunChildren.add(MenuItemConfig.action("editor.execute.selection.single", "Execute Selection as Single Statement", "PLAY"));
+            tabConsoleJdbcRunChildren.add(MenuItemConfig.action("editor.export.data", "Export Data\u2026", "DOWNLOAD"));
+            tabConsoleJdbcRunChildren.add(MenuItemConfig.action("editor.debug", "Debug", "BUG"));
+            tabConsoleJdbcRunChildren.add(MenuItemConfig.action("editor.debug.routine", "Debug Routine\u2026", "BUG"));
+            tabConsoleJdbcRunChildren.add(MenuItemConfig.separator());
+            tabConsoleJdbcRunChildren.add(MenuItemConfig.action("editor.migrate.consoles.to.queryfiles", "Migrate Query Consoles to Query Files\u2026", "ARROW_RIGHT"));
+
+            tabRunContextChildren.add(MenuItemConfig.group("console.jdbc.run.context.group", "Console.Jdbc.RunContextGroup", false, tabConsoleJdbcRunChildren));
+
+            tabRunConfigsChildren.add(MenuItemConfig.group("tab.run.context.group", "RunContextGroup", false, tabRunContextChildren));
+            tabActions1Children.add(MenuItemConfig.group("tab.run.configurations.group", "Run Configurations", false, tabRunConfigsChildren));
+
+            // SplitRevealGroup (Image: media_1790694503981.png)
+            List<MenuItemConfig> tabSplitRevealChildren = new ArrayList<>();
+            tabSplitRevealChildren.add(MenuItemConfig.action("editor.open.in.right.split", "Open in Right Split", "COLUMNS"));
+            tabSplitRevealChildren.add(MenuItemConfig.action("editor.open.in.split.chooser", "Open in Split with Chooser\u2026"));
+
+            List<MenuItemConfig> tabOpenInChildren = new ArrayList<>();
+            tabOpenInChildren.add(MenuItemConfig.action("editor.open.in.file.manager", "Show in File Manager"));
+            tabOpenInChildren.add(MenuItemConfig.action("editor.open.in.associated.app", "Open in Associated Application"));
+            tabOpenInChildren.add(MenuItemConfig.action("editor.open.in.browser", "Open in Browser", "GLOBE"));
+            tabOpenInChildren.add(MenuItemConfig.action("editor.open.in.file.path", "File Path"));
+            tabOpenInChildren.add(MenuItemConfig.action("editor.open.in.terminal", "Open in Terminal", "TERMINAL"));
+            tabOpenInChildren.add(MenuItemConfig.action("editor.open.in.terminal.second", "Open in Terminal", "TERMINAL"));
+            tabOpenInChildren.add(MenuItemConfig.action("git.hosting.open.in.browser.group", "Git.Hosting.Open.In.Browser.Group"));
+            tabSplitRevealChildren.add(MenuItemConfig.group("editor.open.in.group", "Open In", true, tabOpenInChildren));
+
+            tabActions1Children.add(MenuItemConfig.group("tab.split.reveal.group", "SplitRevealGroup", false, tabSplitRevealChildren));
+            tabActions1Children.add(MenuItemConfig.separator());
+
+            // VCS/LVCS Actions (Image: media_1790694503981.png)
+            List<MenuItemConfig> tabVcsLvcsChildren = new ArrayList<>();
+            List<MenuItemConfig> tabLocalHistoryChildren = new ArrayList<>();
+            tabLocalHistoryChildren.add(MenuItemConfig.action("editor.local.history.show", "Show History\u2026"));
+            tabLocalHistoryChildren.add(MenuItemConfig.action("editor.local.history.show.selection", "Show History for Selection\u2026"));
+            tabLocalHistoryChildren.add(MenuItemConfig.separator());
+            tabLocalHistoryChildren.add(MenuItemConfig.action("editor.local.history.show.project", "Show Project History\u2026"));
+            tabLocalHistoryChildren.add(MenuItemConfig.action("editor.local.history.recent.changes", "Recent Changes"));
+            tabLocalHistoryChildren.add(MenuItemConfig.action("editor.local.history.put.label", "Put Label\u2026"));
+            tabLocalHistoryChildren.add(MenuItemConfig.action("editor.local.history.vcs.group", "Version Control Group"));
+            tabVcsLvcsChildren.add(MenuItemConfig.group("editor.local.history.group", "Local History", true, tabLocalHistoryChildren));
+            tabVcsLvcsChildren.add(MenuItemConfig.separator());
+            tabVcsLvcsChildren.add(MenuItemConfig.action("editor.external.tools", "External Tools"));
+            tabVcsLvcsChildren.add(MenuItemConfig.action("tab.rename.file", "Rename File\u2026"));
+
+            tabActions1Children.add(MenuItemConfig.group("tab.vcs.lvcs.actions.group", "VCS/LVCS Actions", false, tabVcsLvcsChildren));
+
+            tabPopup.add(MenuItemConfig.group("tab.editor.tab.popup.actions.1", "Editor Tab Popup Menu Actions (1)", false, tabActions1Children));
             roots.add(MenuItemConfig.group("root.editor.tab.popup", "Editor Tab Popup Menu", tabPopup));
 
             // 6. Project View Popup Menu
@@ -2948,6 +3116,29 @@ public final class AppSettingsStore {
                         if (needsPopupMigration) {
                             for (MenuItemConfig defRoot : defaultMenusAndToolbars()) {
                                 if ("root.editor.popup".equalsIgnoreCase(defRoot.getId())) {
+                                    menusAndToolbars.set(i, defRoot.copy());
+                                    break;
+                                }
+                            }
+                        }
+                    } else if ("root.editor.gutter.popup".equalsIgnoreCase(root.getId())) {
+                        boolean needsGutterMigration = root.getChildren().stream()
+                                .noneMatch(c -> "gutter.appearance".equalsIgnoreCase(c.getId()) && !c.getChildren().isEmpty());
+                        if (needsGutterMigration) {
+                            for (MenuItemConfig defRoot : defaultMenusAndToolbars()) {
+                                if ("root.editor.gutter.popup".equalsIgnoreCase(defRoot.getId())) {
+                                    menusAndToolbars.set(i, defRoot.copy());
+                                    break;
+                                }
+                            }
+                        }
+                    } else if ("root.editor.tab.popup".equalsIgnoreCase(root.getId())) {
+                        boolean needsTabMigration = root.getChildren().stream()
+                                .noneMatch(c -> "tab.editor.tab.popup.actions.1".equalsIgnoreCase(c.getId()) &&
+                                        c.getChildren().stream().anyMatch(sub -> "tab.vcs.lvcs.actions.group".equalsIgnoreCase(sub.getId())));
+                        if (needsTabMigration) {
+                            for (MenuItemConfig defRoot : defaultMenusAndToolbars()) {
+                                if ("root.editor.tab.popup".equalsIgnoreCase(defRoot.getId())) {
                                     menusAndToolbars.set(i, defRoot.copy());
                                     break;
                                 }
