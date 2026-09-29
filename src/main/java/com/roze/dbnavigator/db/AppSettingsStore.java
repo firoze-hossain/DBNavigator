@@ -1747,14 +1747,117 @@ public final class AppSettingsStore {
             winMenu.add(MenuItemConfig.group("window.open.project.windows", "Open Project Windows", true, openProjectWindowsChildren));
             mainMenuChildren.add(MenuItemConfig.group("menu.window", "Window", true, winMenu));
 
-            // Help
+            // Help Menu (Matching DataGrip Images 1-4)
             List<MenuItemConfig> helpMenu = new ArrayList<>();
+
+            // 1. Find Action...
             helpMenu.add(MenuItemConfig.action("help.find.action", "Find Action\u2026"));
-            helpMenu.add(MenuItemConfig.action("help.topics", "Help Topics"));
-            helpMenu.add(MenuItemConfig.action("help.tip.day", "Tip of the Day"));
-            helpMenu.add(MenuItemConfig.action("help.check.updates", "Check for Updates\u2026"));
-            helpMenu.add(MenuItemConfig.action("help.about", "About"));
-            mainMenuChildren.add(MenuItemConfig.group("menu.help", "Help", helpMenu));
+            helpMenu.add(MenuItemConfig.separator());
+
+            // 2. Help
+            MenuItemConfig helpActionItem = MenuItemConfig.action("help.help", "Help");
+            helpActionItem.setIconName("QUESTION_CIRCLE");
+            helpMenu.add(helpActionItem);
+            helpMenu.add(MenuItemConfig.separator());
+
+            // 3. LearnGroup (non-popup group, Image 1)
+            List<MenuItemConfig> learnGroupChildren = new ArrayList<>();
+            MenuItemConfig learnFeaturesItem = MenuItemConfig.action("help.learn.features", "Learn IDE Features");
+            learnFeaturesItem.setIconName("GRADUATION_CAP");
+            learnGroupChildren.add(learnFeaturesItem);
+            helpMenu.add(MenuItemConfig.group("help.learn.group", "LearnGroup", false, learnGroupChildren));
+            helpMenu.add(MenuItemConfig.separator());
+
+            // 4. Learning & Documentation items
+            helpMenu.add(MenuItemConfig.action("help.whats.new", "What's New"));
+            helpMenu.add(MenuItemConfig.action("help.configure.new.ui", "Configure the New UI"));
+            helpMenu.add(MenuItemConfig.action("help.getting.started", "Getting Started"));
+            helpMenu.add(MenuItemConfig.action("help.youtube", "DataGrip on YouTube"));
+            helpMenu.add(MenuItemConfig.action("help.shortcuts.pdf", "Keyboard Shortcuts PDF"));
+
+            // Image 2: ProductivityFeatures (popup submenu)
+            List<MenuItemConfig> productivityChildren = new ArrayList<>();
+            productivityChildren.add(MenuItemConfig.action("help.tip.of.the.day", "Tip of the Day"));
+            productivityChildren.add(MenuItemConfig.separator());
+            productivityChildren.add(MenuItemConfig.action("help.my.productivity", "My Productivity"));
+            helpMenu.add(MenuItemConfig.group("help.productivity.features", "ProductivityFeatures", true, productivityChildren));
+            helpMenu.add(MenuItemConfig.separator());
+
+            // 5. Support & Feedback
+            helpMenu.add(MenuItemConfig.action("help.contact.support", "Contact Support\u2026"));
+            helpMenu.add(MenuItemConfig.action("help.bug.report", "Submit a Bug Report\u2026"));
+            helpMenu.add(MenuItemConfig.action("help.submit.feedback", "Submit Feedback\u2026"));
+            helpMenu.add(MenuItemConfig.separator());
+
+            // 6. Logs & Diagnostics
+            helpMenu.add(MenuItemConfig.action("help.show.log.in.files", "Show Log in Finder"));
+            helpMenu.add(MenuItemConfig.action("help.show.sql.log.in.files", "Show SQL Log"));
+            helpMenu.add(MenuItemConfig.action("help.collect.logs", "Collect Logs and Diagnostic Data"));
+            helpMenu.add(MenuItemConfig.action("help.delete.leftover.dirs", "Delete Leftover IDE Directories\u2026"));
+            helpMenu.add(MenuItemConfig.separator());
+
+            // 7. Diagnostic Tools (popup submenu, Images 2 & 3)
+            List<MenuItemConfig> diagnosticChildren = new ArrayList<>();
+            diagnosticChildren.add(MenuItemConfig.action("help.diagnostic.activity.monitor", "Activity Monitor\u2026"));
+            diagnosticChildren.add(MenuItemConfig.action("help.diagnostic.dump.threads", "Dump Threads"));
+            diagnosticChildren.add(MenuItemConfig.action("help.diagnostic.run.memory.tester", "Run Memory Tester\u2026"));
+            diagnosticChildren.add(MenuItemConfig.separator());
+            diagnosticChildren.add(MenuItemConfig.action("help.diagnostic.debug.log.settings", "Debug Log Settings\u2026"));
+            diagnosticChildren.add(MenuItemConfig.action("help.diagnostic.special.files", "Special Files and Folders"));
+
+            // Image 3: StartProfileGroup -> AsyncGroup
+            List<MenuItemConfig> asyncGroupChildren = new ArrayList<>();
+            asyncGroupChildren.add(MenuItemConfig.separator());
+            MenuItemConfig cpuProfilingItem = MenuItemConfig.action("help.diagnostic.start.cpu.profiling", "Start CPU Usage Profiling");
+            cpuProfilingItem.setIconName("TACHOMETER_ALT");
+            asyncGroupChildren.add(cpuProfilingItem);
+            asyncGroupChildren.add(MenuItemConfig.action("help.diagnostic.start.async.profiler", "Start Async Profiler"));
+
+            List<MenuItemConfig> startProfileChildren = new ArrayList<>();
+            startProfileChildren.add(MenuItemConfig.group("help.diagnostic.async.group", "AsyncGroup", false, asyncGroupChildren));
+            diagnosticChildren.add(MenuItemConfig.group("help.diagnostic.start.profile.group", "StartProfileGroup", false, startProfileChildren));
+
+            // Image 3: DiagnosticGroup -> AsyncDiagnosticGroup
+            List<MenuItemConfig> diagnosticGroupChildren = new ArrayList<>();
+            diagnosticGroupChildren.add(MenuItemConfig.separator());
+            MenuItemConfig memorySnapshotItem = MenuItemConfig.action("help.diagnostic.capture.memory.snapshot", "Capture Memory Snapshot");
+            memorySnapshotItem.setIconName("CAMERA");
+            diagnosticGroupChildren.add(memorySnapshotItem);
+            diagnosticGroupChildren.add(MenuItemConfig.separator());
+
+            List<MenuItemConfig> asyncDiagChildren = new ArrayList<>();
+            asyncDiagChildren.add(MenuItemConfig.action("help.diagnostic.profile.indexing", "Profile Indexing"));
+            diagnosticGroupChildren.add(MenuItemConfig.group("help.diagnostic.async.diagnostic.group", "AsyncDiagnosticGroup", false, asyncDiagChildren));
+            diagnosticChildren.add(MenuItemConfig.group("help.diagnostic.diagnostic.group", "DiagnosticGroup", false, diagnosticGroupChildren));
+
+            // Image 3: IndexingDiagnosticGroup
+            List<MenuItemConfig> indexingDiagnosticChildren = new ArrayList<>();
+            indexingDiagnosticChildren.add(MenuItemConfig.action("help.diagnostic.open.indexing.diagnostics", "Open Indexing Diagnostics"));
+            diagnosticChildren.add(MenuItemConfig.group("help.diagnostic.indexing.diagnostic.group", "IndexingDiagnosticGroup", false, indexingDiagnosticChildren));
+
+            helpMenu.add(MenuItemConfig.group("help.diagnostic.tools", "Diagnostic Tools", true, diagnosticChildren));
+
+            // Siblings of Diagnostic Tools under Help
+            helpMenu.add(MenuItemConfig.action("help.change.memory.settings", "Change Memory Settings"));
+            helpMenu.add(MenuItemConfig.action("help.custom.properties", "Edit Custom Properties\u2026"));
+            helpMenu.add(MenuItemConfig.action("help.custom.vm.options", "Edit Custom VM Options\u2026"));
+            helpMenu.add(MenuItemConfig.separator());
+
+            // 8. Registration Actions popup (Image 4)
+            List<MenuItemConfig> registrationChildren = new ArrayList<>();
+            registrationChildren.add(MenuItemConfig.action("help.registration.register", "Register\u2026"));
+            helpMenu.add(MenuItemConfig.group("help.registration.actions", "Registration Actions", true, registrationChildren));
+
+            // 9. Updates & About (Image 4)
+            MenuItemConfig updatesItem = MenuItemConfig.action("help.updates", "Check for Updates\u2026");
+            updatesItem.setIconName("DOWNLOAD");
+            helpMenu.add(updatesItem);
+            MenuItemConfig aboutItem = MenuItemConfig.action("help.about", "About");
+            aboutItem.setIconName("INFO_CIRCLE");
+            helpMenu.add(aboutItem);
+            helpMenu.add(MenuItemConfig.separator());
+
+            mainMenuChildren.add(MenuItemConfig.group("menu.help", "Help", true, helpMenu));
 
             roots.add(MenuItemConfig.group("root.main.menu", "Main Menu", mainMenuChildren));
 
@@ -2392,6 +2495,9 @@ public final class AppSettingsStore {
                         MenuItemConfig windowMenu = root.getChildren().stream()
                                 .filter(c -> "menu.window".equalsIgnoreCase(c.getId()) || "Window".equalsIgnoreCase(c.getText()))
                                 .findFirst().orElse(null);
+                        MenuItemConfig helpMenu = root.getChildren().stream()
+                                .filter(c -> "menu.help".equalsIgnoreCase(c.getId()) || "Help".equalsIgnoreCase(c.getText()))
+                                .findFirst().orElse(null);
 
                         boolean needsMigration = false;
                         if (fileMenu != null && fileMenu.getChildren().stream().noneMatch(c -> "file.open.actions".equalsIgnoreCase(c.getId()))) {
@@ -2445,6 +2551,17 @@ public final class AppSettingsStore {
                                         .filter(c -> "window.editor.tabs".equalsIgnoreCase(c.getId()))
                                         .anyMatch(g -> g.getChildren().size() > 5);
                                 if (!hasOpenProj || !hasEditorTabsGroup) {
+                                    needsMigration = true;
+                                }
+                            }
+                            if (helpMenu != null) {
+                                boolean hasDiagnosticTools = helpMenu.getChildren().stream()
+                                        .anyMatch(c -> "help.diagnostic.tools".equalsIgnoreCase(c.getId()));
+                                boolean hasProductivity = helpMenu.getChildren().stream()
+                                        .anyMatch(c -> "help.productivity.features".equalsIgnoreCase(c.getId()));
+                                boolean hasRegistration = helpMenu.getChildren().stream()
+                                        .anyMatch(c -> "help.registration.actions".equalsIgnoreCase(c.getId()));
+                                if (!hasDiagnosticTools || !hasProductivity || !hasRegistration || helpMenu.getChildren().size() < 10) {
                                     needsMigration = true;
                                 }
                             }

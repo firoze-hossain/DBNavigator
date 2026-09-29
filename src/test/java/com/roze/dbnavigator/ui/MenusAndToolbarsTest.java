@@ -1772,5 +1772,144 @@ public class MenusAndToolbarsTest {
         assertTrue(catalogIds.contains("window.background.tasks.show"));
         assertTrue(catalogIds.contains("window.project.merge.all"));
     }
+
+    @Test
+    @DisplayName("Verify Help Menu structure and nested groups match DataGrip (Images 1-4)")
+    public void testHelpMenuCompletenessMatchingDataGrip() {
+        MenuItemConfig mainMenu = settings.getMenuConfig("root.main.menu");
+        assertNotNull(mainMenu);
+
+        MenuItemConfig helpMenu = mainMenu.getChildren().stream()
+                .filter(c -> "menu.help".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertEquals("Help", helpMenu.getText());
+        assertTrue(helpMenu.isPopup());
+
+        List<MenuItemConfig> children = helpMenu.getChildren();
+        List<String> childIds = children.stream().map(MenuItemConfig::getId).toList();
+
+        // Image 1: Top-level Help menu items
+        assertTrue(childIds.contains("help.find.action"));
+        assertTrue(childIds.contains("help.help"));
+        assertTrue(childIds.contains("help.learn.group"));
+        assertTrue(childIds.contains("help.whats.new"));
+        assertTrue(childIds.contains("help.configure.new.ui"));
+        assertTrue(childIds.contains("help.getting.started"));
+        assertTrue(childIds.contains("help.youtube"));
+        assertTrue(childIds.contains("help.shortcuts.pdf"));
+        assertTrue(childIds.contains("help.productivity.features"));
+        assertTrue(childIds.contains("help.contact.support"));
+        assertTrue(childIds.contains("help.bug.report"));
+        assertTrue(childIds.contains("help.submit.feedback"));
+        assertTrue(childIds.contains("help.show.log.in.files"));
+        assertTrue(childIds.contains("help.show.sql.log.in.files"));
+        assertTrue(childIds.contains("help.collect.logs"));
+        assertTrue(childIds.contains("help.delete.leftover.dirs"));
+        assertTrue(childIds.contains("help.diagnostic.tools"));
+        assertTrue(childIds.contains("help.change.memory.settings"));
+        assertTrue(childIds.contains("help.custom.properties"));
+        assertTrue(childIds.contains("help.custom.vm.options"));
+        assertTrue(childIds.contains("help.registration.actions"));
+        assertTrue(childIds.contains("help.updates"));
+        assertTrue(childIds.contains("help.about"));
+
+        // Verify LearnGroup (non-popup)
+        MenuItemConfig learnGroup = children.stream()
+                .filter(c -> "help.learn.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertFalse(learnGroup.isPopup());
+        List<String> learnIds = learnGroup.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(learnIds.contains("help.learn.features"));
+
+        // Image 2: ProductivityFeatures popup
+        MenuItemConfig productivityFeatures = children.stream()
+                .filter(c -> "help.productivity.features".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertTrue(productivityFeatures.isPopup());
+        List<String> prodIds = productivityFeatures.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(prodIds.contains("help.tip.of.the.day"));
+        assertTrue(prodIds.contains("help.my.productivity"));
+        long prodSeps = productivityFeatures.getChildren().stream()
+                .filter(c -> c.getType() == MenuItemConfig.Type.SEPARATOR).count();
+        assertEquals(1, prodSeps);
+
+        // Images 2 & 3: Diagnostic Tools popup and nested groups
+        MenuItemConfig diagnosticTools = children.stream()
+                .filter(c -> "help.diagnostic.tools".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertTrue(diagnosticTools.isPopup());
+        List<String> diagIds = diagnosticTools.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(diagIds.contains("help.diagnostic.activity.monitor"));
+        assertTrue(diagIds.contains("help.diagnostic.dump.threads"));
+        assertTrue(diagIds.contains("help.diagnostic.run.memory.tester"));
+        assertTrue(diagIds.contains("help.diagnostic.debug.log.settings"));
+        assertTrue(diagIds.contains("help.diagnostic.special.files"));
+        assertTrue(diagIds.contains("help.diagnostic.start.profile.group"));
+        assertTrue(diagIds.contains("help.diagnostic.diagnostic.group"));
+        assertTrue(diagIds.contains("help.diagnostic.indexing.diagnostic.group"));
+
+        // Image 3: StartProfileGroup -> AsyncGroup
+        MenuItemConfig startProfileGroup = diagnosticTools.getChildren().stream()
+                .filter(c -> "help.diagnostic.start.profile.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        MenuItemConfig asyncGroup = startProfileGroup.getChildren().stream()
+                .filter(c -> "help.diagnostic.async.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> asyncIds = asyncGroup.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(asyncIds.contains("help.diagnostic.start.cpu.profiling"));
+        assertTrue(asyncIds.contains("help.diagnostic.start.async.profiler"));
+
+        // Image 3: DiagnosticGroup -> AsyncDiagnosticGroup
+        MenuItemConfig diagGroup = diagnosticTools.getChildren().stream()
+                .filter(c -> "help.diagnostic.diagnostic.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> diagGroupIds = diagGroup.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(diagGroupIds.contains("help.diagnostic.capture.memory.snapshot"));
+        MenuItemConfig asyncDiagGroup = diagGroup.getChildren().stream()
+                .filter(c -> "help.diagnostic.async.diagnostic.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> asyncDiagIds = asyncDiagGroup.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(asyncDiagIds.contains("help.diagnostic.profile.indexing"));
+
+        // Image 3: IndexingDiagnosticGroup
+        MenuItemConfig indexingDiagGroup = diagnosticTools.getChildren().stream()
+                .filter(c -> "help.diagnostic.indexing.diagnostic.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> indexingDiagIds = indexingDiagGroup.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(indexingDiagIds.contains("help.diagnostic.open.indexing.diagnostics"));
+
+        // Image 4: Registration Actions popup
+        MenuItemConfig registrationActions = children.stream()
+                .filter(c -> "help.registration.actions".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertTrue(registrationActions.isPopup());
+        List<String> regIds = registrationActions.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(regIds.contains("help.registration.register"));
+
+        // Verify ActionCatalog contains Help category and entries
+        ActionManager actionManager = ActionManager.getInstance();
+        var catalog = actionManager.getActionCatalog();
+        var mainMenuCat = catalog.stream().filter(c -> "Main Menu".equals(c.getName())).findFirst().orElseThrow();
+        var helpCat = mainMenuCat.getSubCategories().stream().filter(c -> "Help".equals(c.getName())).findFirst().orElseThrow();
+        assertFalse(helpCat.getEntries().isEmpty());
+        List<String> catalogIds = helpCat.getEntries().stream().map(ActionManager.ActionCatalogEntry::getId).toList();
+        assertTrue(catalogIds.contains("help.find.action"));
+        assertTrue(catalogIds.contains("help.help"));
+        assertTrue(catalogIds.contains("help.learn.features"));
+        assertTrue(catalogIds.contains("help.whats.new"));
+        assertTrue(catalogIds.contains("help.configure.new.ui"));
+        assertTrue(catalogIds.contains("help.tip.of.the.day"));
+        assertTrue(catalogIds.contains("help.my.productivity"));
+        assertTrue(catalogIds.contains("help.diagnostic.activity.monitor"));
+        assertTrue(catalogIds.contains("help.diagnostic.run.memory.tester"));
+        assertTrue(catalogIds.contains("help.diagnostic.start.cpu.profiling"));
+        assertTrue(catalogIds.contains("help.diagnostic.start.async.profiler"));
+        assertTrue(catalogIds.contains("help.diagnostic.capture.memory.snapshot"));
+        assertTrue(catalogIds.contains("help.diagnostic.profile.indexing"));
+        assertTrue(catalogIds.contains("help.diagnostic.open.indexing.diagnostics"));
+        assertTrue(catalogIds.contains("help.registration.register"));
+        assertTrue(catalogIds.contains("help.updates"));
+        assertTrue(catalogIds.contains("help.about"));
+    }
 }
 

@@ -950,6 +950,42 @@ public class ActionManager {
         windowCat.addEntry(new ActionCatalogEntry("window.project.merge.all", "Merge All Project Windows", null, MenuItemConfig.Type.ACTION));
         mainMenuCat.addSubCategory(windowCat);
 
+        ActionCatalogCategory helpCat = new ActionCatalogCategory("Help");
+        helpCat.addEntry(new ActionCatalogEntry("help.find.action", "Find Action\u2026", null, MenuItemConfig.Type.ACTION));
+        helpCat.addEntry(new ActionCatalogEntry("help.help", "Help", "QUESTION_CIRCLE", MenuItemConfig.Type.ACTION));
+        helpCat.addEntry(new ActionCatalogEntry("help.learn.features", "Learn IDE Features", "GRADUATION_CAP", MenuItemConfig.Type.ACTION));
+        helpCat.addEntry(new ActionCatalogEntry("help.whats.new", "What's New", null, MenuItemConfig.Type.ACTION));
+        helpCat.addEntry(new ActionCatalogEntry("help.configure.new.ui", "Configure the New UI", null, MenuItemConfig.Type.ACTION));
+        helpCat.addEntry(new ActionCatalogEntry("help.getting.started", "Getting Started", null, MenuItemConfig.Type.ACTION));
+        helpCat.addEntry(new ActionCatalogEntry("help.youtube", "DataGrip on YouTube", null, MenuItemConfig.Type.ACTION));
+        helpCat.addEntry(new ActionCatalogEntry("help.shortcuts.pdf", "Keyboard Shortcuts PDF", null, MenuItemConfig.Type.ACTION));
+        helpCat.addEntry(new ActionCatalogEntry("help.tip.of.the.day", "Tip of the Day", null, MenuItemConfig.Type.ACTION));
+        helpCat.addEntry(new ActionCatalogEntry("help.my.productivity", "My Productivity", null, MenuItemConfig.Type.ACTION));
+        helpCat.addEntry(new ActionCatalogEntry("help.contact.support", "Contact Support\u2026", null, MenuItemConfig.Type.ACTION));
+        helpCat.addEntry(new ActionCatalogEntry("help.bug.report", "Submit a Bug Report\u2026", null, MenuItemConfig.Type.ACTION));
+        helpCat.addEntry(new ActionCatalogEntry("help.submit.feedback", "Submit Feedback\u2026", null, MenuItemConfig.Type.ACTION));
+        helpCat.addEntry(new ActionCatalogEntry("help.show.log.in.files", "Show Log in Finder", null, MenuItemConfig.Type.ACTION));
+        helpCat.addEntry(new ActionCatalogEntry("help.show.sql.log.in.files", "Show SQL Log", null, MenuItemConfig.Type.ACTION));
+        helpCat.addEntry(new ActionCatalogEntry("help.collect.logs", "Collect Logs and Diagnostic Data", null, MenuItemConfig.Type.ACTION));
+        helpCat.addEntry(new ActionCatalogEntry("help.delete.leftover.dirs", "Delete Leftover IDE Directories\u2026", null, MenuItemConfig.Type.ACTION));
+        helpCat.addEntry(new ActionCatalogEntry("help.diagnostic.activity.monitor", "Activity Monitor\u2026", null, MenuItemConfig.Type.ACTION));
+        helpCat.addEntry(new ActionCatalogEntry("help.diagnostic.dump.threads", "Dump Threads", null, MenuItemConfig.Type.ACTION));
+        helpCat.addEntry(new ActionCatalogEntry("help.diagnostic.run.memory.tester", "Run Memory Tester\u2026", null, MenuItemConfig.Type.ACTION));
+        helpCat.addEntry(new ActionCatalogEntry("help.diagnostic.debug.log.settings", "Debug Log Settings\u2026", null, MenuItemConfig.Type.ACTION));
+        helpCat.addEntry(new ActionCatalogEntry("help.diagnostic.special.files", "Special Files and Folders", null, MenuItemConfig.Type.ACTION));
+        helpCat.addEntry(new ActionCatalogEntry("help.diagnostic.start.cpu.profiling", "Start CPU Usage Profiling", "TACHOMETER_ALT", MenuItemConfig.Type.ACTION));
+        helpCat.addEntry(new ActionCatalogEntry("help.diagnostic.start.async.profiler", "Start Async Profiler", null, MenuItemConfig.Type.ACTION));
+        helpCat.addEntry(new ActionCatalogEntry("help.diagnostic.capture.memory.snapshot", "Capture Memory Snapshot", "CAMERA", MenuItemConfig.Type.ACTION));
+        helpCat.addEntry(new ActionCatalogEntry("help.diagnostic.profile.indexing", "Profile Indexing", null, MenuItemConfig.Type.ACTION));
+        helpCat.addEntry(new ActionCatalogEntry("help.diagnostic.open.indexing.diagnostics", "Open Indexing Diagnostics", null, MenuItemConfig.Type.ACTION));
+        helpCat.addEntry(new ActionCatalogEntry("help.change.memory.settings", "Change Memory Settings", null, MenuItemConfig.Type.ACTION));
+        helpCat.addEntry(new ActionCatalogEntry("help.custom.properties", "Edit Custom Properties\u2026", null, MenuItemConfig.Type.ACTION));
+        helpCat.addEntry(new ActionCatalogEntry("help.custom.vm.options", "Edit Custom VM Options\u2026", null, MenuItemConfig.Type.ACTION));
+        helpCat.addEntry(new ActionCatalogEntry("help.registration.register", "Register\u2026", null, MenuItemConfig.Type.ACTION));
+        helpCat.addEntry(new ActionCatalogEntry("help.updates", "Check for Updates\u2026", "DOWNLOAD", MenuItemConfig.Type.ACTION));
+        helpCat.addEntry(new ActionCatalogEntry("help.about", "About", "INFO_CIRCLE", MenuItemConfig.Type.ACTION));
+        mainMenuCat.addSubCategory(helpCat);
+
         rootCategories.add(mainMenuCat);
 
         // 3. External Build Systems
