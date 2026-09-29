@@ -99,10 +99,22 @@ public class MenusAndToolbarsTest {
         List<String> newGroupItems = newGroup.getChildren().stream()
                 .map(MenuItemConfig::getText)
                 .toList();
-        assertTrue(newGroupItems.contains("SQL File"));
-        assertTrue(newGroupItems.contains("Scratch File"));
-        assertTrue(newGroupItems.contains("Query Console"));
-        assertTrue(newGroupItems.contains("Data Source"));
+        assertTrue(newGroupItems.contains("New File"));
+        assertTrue(newGroupItems.contains("New"));
+
+        MenuItemConfig newFileGroup = newGroup.getChildren().stream()
+                .filter(m -> "New File".equals(m.getText()))
+                .findFirst()
+                .orElse(null);
+        assertNotNull(newFileGroup);
+        List<String> newFileItems = newFileGroup.getChildren().stream()
+                .map(MenuItemConfig::getText)
+                .toList();
+        assertTrue(newFileItems.contains("SQL File"));
+        assertTrue(newFileItems.contains("File"));
+        assertTrue(newFileItems.contains("Scratch File"));
+        assertTrue(newFileItems.contains("Directory/Package"));
+        assertTrue(newFileItems.contains("Web Development Templates"));
     }
 
     @Test
@@ -473,7 +485,7 @@ public class MenusAndToolbarsTest {
     }
 
     @Test
-    @DisplayName("Verify File menu contains all 21 options matching DataGrip and ActionRegistry")
+    @DisplayName("Verify File menu contains exact options matching DataGrip Images 1-4")
     public void testFileMenuCompletenessMatchingActionRegistry() {
         MenuItemConfig mainMenu = settings.getMenuConfig("root.main.menu");
         assertNotNull(mainMenu);
@@ -488,28 +500,45 @@ public class MenusAndToolbarsTest {
                 .map(MenuItemConfig::getId)
                 .toList();
 
-        // Check all 21 items from Image 1 / ActionRegistry are present
+        // Check top-level items from Images 1-4 are present
+        assertTrue(actionIds.contains("file.open.actions"), "Should contain File Open Actions");
         assertTrue(actionIds.contains("file.new"), "Should contain New group");
         assertTrue(actionIds.contains("file.open.sql"), "Should contain Open...");
         assertTrue(actionIds.contains("file.save.as"), "Should contain Save As...");
         assertTrue(actionIds.contains("file.recent"), "Should contain Recent Projects");
-        assertTrue(actionIds.contains("file.rename.project"), "Should contain Rename Project...");
-        assertTrue(actionIds.contains("file.attach.directory"), "Should contain Attach Directory to Project...");
-        assertTrue(actionIds.contains("file.settings"), "Should contain Settings...");
-        assertTrue(actionIds.contains("file.data.sources"), "Should contain Data Sources...");
-        assertTrue(actionIds.contains("file.plugins"), "Should contain Plugins...");
+        assertTrue(actionIds.contains("file.remote.dev.actions"), "Should contain Remote Development actions");
+        assertTrue(actionIds.contains("file.settings.actions"), "Should contain Settings actions");
         assertTrue(actionIds.contains("file.sql.dialects"), "Should contain SQL Dialects...");
         assertTrue(actionIds.contains("file.sql.scopes"), "Should contain SQL Resolution Scopes...");
         assertTrue(actionIds.contains("file.edit.datasources.xml"), "Should contain Edit dataSources.xml");
         assertTrue(actionIds.contains("file.properties"), "Should contain File Properties");
-        assertTrue(actionIds.contains("file.local.history"), "Should contain Local History");
+        assertTrue(actionIds.contains("file.local.history.main.group"), "Should contain Local History main group");
         assertTrue(actionIds.contains("file.save.all"), "Should contain Save All");
         assertTrue(actionIds.contains("file.reload.all"), "Should contain Reload All from Disk");
         assertTrue(actionIds.contains("file.manage.settings"), "Should contain Manage IDE Settings");
-        assertTrue(actionIds.contains("file.export"), "Should contain Export");
-        assertTrue(actionIds.contains("file.print"), "Should contain Print...");
+        assertTrue(actionIds.contains("file.print.export.actions"), "Should contain Print/Export actions");
         assertTrue(actionIds.contains("file.power.save"), "Should contain Power Save Mode");
         assertTrue(actionIds.contains("file.exit"), "Should contain Exit");
+
+        // Verify Recent Projects children (Image 2)
+        MenuItemConfig recentGroup = fileMenu.getChildren().stream()
+                .filter(c -> "file.recent".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> recentIds = recentGroup.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(recentIds.contains("file.reopen.project"));
+        assertTrue(recentIds.contains("file.manage.projects"));
+        assertTrue(recentIds.contains("file.close.project"));
+        assertTrue(recentIds.contains("file.rename.project"));
+        assertTrue(recentIds.contains("file.attach.directory"));
+
+        // Verify Settings Actions children (Image 2 & 4)
+        MenuItemConfig settingsGroup = fileMenu.getChildren().stream()
+                .filter(c -> "file.settings.actions".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertFalse(settingsGroup.isPopup(), "Settings Actions should be non-popup group");
+        List<String> settingsIds = settingsGroup.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(settingsIds.contains("file.settings"));
+        assertTrue(settingsIds.contains("file.project.structure"));
     }
 
     @Test
@@ -526,7 +555,17 @@ public class MenusAndToolbarsTest {
                 .findFirst()
                 .orElseThrow();
 
-        MenuItemConfig cloudGroup = newGroup.getChildren().stream()
+        MenuItemConfig newDbGroup = newGroup.getChildren().stream()
+                .filter(m -> "file.new.db.group".equals(m.getId()))
+                .findFirst()
+                .orElseThrow();
+
+        MenuItemConfig createDsGroup = newDbGroup.getChildren().stream()
+                .filter(m -> "file.new.create.datasource".equals(m.getId()))
+                .findFirst()
+                .orElseThrow();
+
+        MenuItemConfig cloudGroup = createDsGroup.getChildren().stream()
                 .filter(m -> "file.new.datasource.cloud".equals(m.getId()))
                 .findFirst()
                 .orElseThrow();
@@ -542,7 +581,7 @@ public class MenusAndToolbarsTest {
     @DisplayName("Verify automatic migration of old truncated File menu in settings")
     public void testAutoMigrationOfOutdatedMainMenu() {
         AppSettingsStore.Settings staleSettings = new AppSettingsStore.Settings();
-        // Create an outdated File menu without file.save.as
+        // Create an outdated File menu without file.open.actions
         MenuItemConfig staleFileMenu = MenuItemConfig.group("menu.file", "File", List.of(
                 MenuItemConfig.action("file.new", "New"),
                 MenuItemConfig.action("file.open.sql", "Open\u2026"),
@@ -564,9 +603,234 @@ public class MenusAndToolbarsTest {
                 .orElseThrow();
 
         List<String> ids = migratedFile.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(ids.contains("file.open.actions"), "Migrated File menu must now include file.open.actions");
         assertTrue(ids.contains("file.save.as"), "Migrated File menu must now include file.save.as");
         assertTrue(ids.contains("file.recent"), "Migrated File menu must now include file.recent");
-        assertTrue(ids.contains("file.data.sources"), "Migrated File menu must now include file.data.sources");
+        assertTrue(ids.contains("file.settings.actions"), "Migrated File menu must now include file.settings.actions");
+    }
+
+    @Test
+    @DisplayName("Verify Edit Menu completeness matching DataGrip Images 1-3")
+    public void testEditMenuCompletenessMatchingDataGrip() {
+        MenuItemConfig mainMenu = settings.getMenuConfig("root.main.menu");
+        MenuItemConfig editMenu = mainMenu.getChildren().stream()
+                .filter(m -> "Edit".equals(m.getText()) || "menu.edit".equals(m.getId()))
+                .findFirst()
+                .orElseThrow();
+
+        List<String> editIds = editMenu.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(editIds.contains("edit.undo"));
+        assertTrue(editIds.contains("edit.redo"));
+        assertTrue(editIds.contains("edit.cut.copy.paste.actions"));
+        assertTrue(editIds.contains("edit.delete"));
+        assertTrue(editIds.contains("edit.find"));
+        assertTrue(editIds.contains("edit.replace"));
+        assertTrue(editIds.contains("edit.find.in.files"));
+        assertTrue(editIds.contains("edit.replace.in.files"));
+        assertTrue(editIds.contains("edit.find.usages"));
+        assertTrue(editIds.contains("edit.generate.root.group"));
+        assertTrue(editIds.contains("edit.insert.live.template"));
+        assertTrue(editIds.contains("edit.surround.with"));
+        assertTrue(editIds.contains("edit.format.code"));
+        assertTrue(editIds.contains("edit.format.file"));
+        assertTrue(editIds.contains("edit.comment.line"));
+        assertTrue(editIds.contains("edit.comment.block"));
+        assertTrue(editIds.contains("edit.auto.indent"));
+        assertTrue(editIds.contains("edit.refactor"));
+        assertTrue(editIds.contains("edit.selection"));
+        assertTrue(editIds.contains("edit.toggle.bookmark"));
+        assertTrue(editIds.contains("edit.show.bookmarks"));
+
+        // Verify Cut/Copy/Paste Actions children (Image 1)
+        MenuItemConfig ccpGroup = editMenu.getChildren().stream()
+                .filter(c -> "edit.cut.copy.paste.actions".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertFalse(ccpGroup.isPopup(), "Cut/Copy/Paste Actions should be non-popup group");
+        List<String> ccpIds = ccpGroup.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(ccpIds.contains("edit.cut"));
+        assertTrue(ccpIds.contains("edit.copy"));
+        assertTrue(ccpIds.contains("edit.copy.paths"));
+        assertTrue(ccpIds.contains("edit.copy.plain"));
+        assertTrue(ccpIds.contains("edit.copy.rich"));
+        assertTrue(ccpIds.contains("edit.copy.path.reference.group"));
+        assertTrue(ccpIds.contains("edit.paste.group"));
+        assertTrue(ccpIds.contains("edit.copy.json.pointer"));
+
+        // Verify Copy Path/Reference... group (Image 1)
+        MenuItemConfig copyPathRefGroup = ccpGroup.getChildren().stream()
+                .filter(c -> "edit.copy.path.reference.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertTrue(copyPathRefGroup.isPopup(), "Copy Path/Reference should be popup submenu");
+        List<String> copyPathRefIds = copyPathRefGroup.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(copyPathRefIds.contains("edit.copy.file.reference.group"));
+        assertTrue(copyPathRefIds.contains("edit.copy.external.reference.group"));
+        assertTrue(copyPathRefIds.contains("edit.copy.reference"));
+
+        MenuItemConfig copyFileRefGroup = copyPathRefGroup.getChildren().stream()
+                .filter(c -> "edit.copy.file.reference.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> fileRefIds = copyFileRefGroup.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(fileRefIds.contains("edit.copy.path.absolute"));
+        assertTrue(fileRefIds.contains("edit.copy.path.filename"));
+        assertTrue(fileRefIds.contains("edit.copy.path.line.number"));
+        assertTrue(fileRefIds.contains("edit.copy.path.content.root"));
+        assertTrue(fileRefIds.contains("edit.copy.path.source.root"));
+        assertTrue(fileRefIds.contains("edit.copy.path.repo.root"));
+        assertTrue(fileRefIds.contains("edit.copy.git.hosting.link"));
+
+        // Verify Generate... children (Image 2)
+        MenuItemConfig genRoot = editMenu.getChildren().stream()
+                .filter(c -> "edit.generate.root.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertTrue(genRoot.isPopup(), "Generate root group should be popup");
+        MenuItemConfig genInner = genRoot.getChildren().stream()
+                .filter(c -> "edit.generate.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> genInnerIds = genInner.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(genInnerIds.contains("edit.generate.sql.group"));
+        assertTrue(genInnerIds.contains("edit.generate.xml.tag"));
+        assertTrue(genInnerIds.contains("edit.generate.override.methods"));
+        assertTrue(genInnerIds.contains("edit.generate.implement.methods"));
+        assertTrue(genInnerIds.contains("edit.generate.delegate.methods"));
+        assertTrue(genInnerIds.contains("edit.generate.test.creators.group"));
+        assertTrue(genInnerIds.contains("edit.generate.markdown.group"));
+
+        MenuItemConfig mdGroup = genInner.getChildren().stream()
+                .filter(c -> "edit.generate.markdown.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> mdIds = mdGroup.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(mdIds.contains("edit.generate.markdown.link"));
+        assertTrue(mdIds.contains("edit.generate.markdown.table"));
+        assertTrue(mdIds.contains("edit.generate.markdown.image"));
+        assertTrue(mdIds.contains("edit.generate.markdown.toc"));
+
+        // Verify Refactor children (Image 3)
+        MenuItemConfig refactorGroup = editMenu.getChildren().stream()
+                .filter(c -> "edit.refactor".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertTrue(refactorGroup.isPopup(), "Refactor should be a popup submenu");
+        List<String> refactorIds = refactorGroup.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(refactorIds.contains("edit.refactor.rename"));
+        assertTrue(refactorIds.contains("edit.refactor.expand.column.list"));
+        assertTrue(refactorIds.contains("edit.refactor.convert.subquery"));
+        assertTrue(refactorIds.contains("edit.refactor.subquery.cte"));
+        assertTrue(refactorIds.contains("edit.refactor.extract.introduce.group"));
+        assertTrue(refactorIds.contains("edit.refactor.qualify.identifier"));
+        assertTrue(refactorIds.contains("edit.refactor.unqualify.identifier"));
+        assertTrue(refactorIds.contains("edit.refactor.quote.identifier"));
+        assertTrue(refactorIds.contains("edit.refactor.unquote.identifier"));
+        assertTrue(refactorIds.contains("edit.refactor.flip.expression"));
+        assertTrue(refactorIds.contains("edit.refactor.inject.language"));
+        assertTrue(refactorIds.contains("edit.refactor.uninject.language"));
+
+        // Verify Selection children (Image 2)
+        MenuItemConfig selectionGroup = editMenu.getChildren().stream()
+                .filter(c -> "edit.selection".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertTrue(selectionGroup.isPopup(), "Selection should be a popup submenu");
+        List<String> selIds = selectionGroup.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(selIds.contains("edit.selection.column.mode"));
+        assertTrue(selIds.contains("edit.selection.editor.select.actions"));
+        assertTrue(selIds.contains("edit.toggle.case"));
+        assertTrue(selIds.contains("edit.join.lines"));
+        assertTrue(selIds.contains("edit.duplicate.lines"));
+        assertTrue(selIds.contains("edit.sort.lines"));
+
+        MenuItemConfig editorSelect = selectionGroup.getChildren().stream()
+                .filter(c -> "edit.selection.editor.select.actions".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> esIds = editorSelect.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(esIds.contains("edit.select.all"));
+        assertTrue(esIds.contains("edit.selection.add.carets.ends"));
+        assertTrue(esIds.contains("edit.selection.word.actions"));
+    }
+
+    @Test
+    @DisplayName("Verify View Menu completeness matching DataGrip Images 4, 5")
+    public void testViewMenuCompletenessMatchingDataGrip() {
+        MenuItemConfig mainMenu = settings.getMenuConfig("root.main.menu");
+        MenuItemConfig viewMenu = mainMenu.getChildren().stream()
+                .filter(m -> "View".equals(m.getText()) || "menu.view".equals(m.getId()))
+                .findFirst()
+                .orElseThrow();
+
+        List<String> viewIds = viewMenu.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(viewIds.contains("view.tool.windows"));
+        assertTrue(viewIds.contains("view.appearance"));
+        assertTrue(viewIds.contains("view.recent.actions.group"));
+        assertTrue(viewIds.contains("view.font.increase"));
+        assertTrue(viewIds.contains("view.font.decrease"));
+        assertTrue(viewIds.contains("view.font.reset"));
+
+        // Verify Tool Windows (Image 4)
+        MenuItemConfig twGroup = viewMenu.getChildren().stream()
+                .filter(c -> "view.tool.windows".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertTrue(twGroup.isPopup(), "Tool Windows should be popup submenu");
+        List<String> twIds = twGroup.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(twIds.contains("middle.database"));
+        assertTrue(twIds.contains("view.tool.files"));
+        assertTrue(twIds.contains("view.tool.terminal"));
+        assertTrue(twIds.contains("file.new.console"));
+
+        // Verify Appearance (Image 4 & 5)
+        MenuItemConfig appGroup = viewMenu.getChildren().stream()
+                .filter(c -> "view.appearance".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertTrue(appGroup.isPopup(), "Appearance should be popup submenu");
+        List<String> appIds = appGroup.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(appIds.contains("view.toggle.fullscreen.group"));
+        assertTrue(appIds.contains("view.zoom.ide"));
+        assertTrue(appIds.contains("view.ui.toggle.actions"));
+
+        MenuItemConfig fsGroup = appGroup.getChildren().stream()
+                .filter(c -> "view.toggle.fullscreen.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertFalse(fsGroup.isPopup(), "ToggleFullScreenGroup should be non-popup");
+        List<String> fsIds = fsGroup.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(fsIds.contains("view.toggle.presentation.mode"));
+        assertTrue(fsIds.contains("view.toggle.distraction.free.mode"));
+        assertTrue(fsIds.contains("view.toggle.fullscreen.mode"));
+        assertTrue(fsIds.contains("view.toggle.zen.mode"));
+        assertTrue(fsIds.contains("view.compact.mode"));
+
+        MenuItemConfig uiToggleGroup = appGroup.getChildren().stream()
+                .filter(c -> "view.ui.toggle.actions".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertFalse(uiToggleGroup.isPopup(), "UIToggleActions should be non-popup");
+        List<String> uiIds = uiToggleGroup.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(uiIds.contains("view.toggle.presentation.assistant"));
+        assertTrue(uiIds.contains("view.toggle.main.menu"));
+        assertTrue(uiIds.contains("view.toggle.main.menu.separate"));
+        assertTrue(uiIds.contains("view.toggle.toolbar"));
+        assertTrue(uiIds.contains("view.toggle.toolbar.classic"));
+        assertTrue(uiIds.contains("view.toggle.navigation.bar"));
+        assertTrue(uiIds.contains("view.toolbar.actions.group"));
+
+        MenuItemConfig tbGroup = uiToggleGroup.getChildren().stream()
+                .filter(c -> "view.toolbar.actions.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> tbIds = tbGroup.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(tbIds.contains("view.toolbar.actions.toolbar"));
+        assertTrue(tbIds.contains("view.toolbar.actions.navbar"));
+        assertTrue(tbIds.contains("view.toolbar.actions.navbar.group"));
+        assertTrue(tbIds.contains("view.toggle.tool.window.bars"));
+        assertTrue(tbIds.contains("view.toggle.status.bar"));
+        assertTrue(tbIds.contains("view.status.bar.widgets"));
+        assertTrue(tbIds.contains("view.toggle.members.in.nav.bar"));
+
+        // Verify View Recent Actions Group (Image 5)
+        MenuItemConfig recentGroup = viewMenu.getChildren().stream()
+                .filter(c -> "view.recent.actions.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertFalse(recentGroup.isPopup(), "View Recent Actions Group should be non-popup");
+        List<String> recentIds = recentGroup.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(recentIds.contains("view.recent.files"));
+        assertTrue(recentIds.contains("view.recent.toggle.changed.only"));
+        assertTrue(recentIds.contains("view.recent.iterate.files"));
+        assertTrue(recentIds.contains("view.recently.changed.files"));
+        assertTrue(recentIds.contains("view.recent.locations"));
+        assertTrue(recentIds.contains("view.recent.changes"));
     }
 }
 

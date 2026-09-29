@@ -145,18 +145,28 @@ public class ActionManager {
         }
 
         for (AnAction child : group.getChildren()) {
-            if (child instanceof ActionSeparator) {
-                menu.getItems().add(new SeparatorMenuItem());
-            } else if (child instanceof ActionGroup subGroup) {
-                menu.getItems().add(buildMenu(subGroup, ctx));
-            } else {
-                MenuItem item = child.createMenuItem(ctx);
-                boundMenuItems.add(new BoundItem(new WeakReference<>(item), child));
-                menu.getItems().add(item);
-            }
+            appendActionToMenu(child, menu, ctx);
         }
 
         return menu;
+    }
+
+    private void appendActionToMenu(AnAction child, javafx.scene.control.Menu targetMenu, MainWindow ctx) {
+        if (child instanceof ActionSeparator) {
+            addSeparatorToMenu(targetMenu);
+        } else if (child instanceof ActionGroup subGroup) {
+            if (subGroup.isPopup()) {
+                targetMenu.getItems().add(buildMenu(subGroup, ctx));
+            } else {
+                for (AnAction grandChild : subGroup.getChildren()) {
+                    appendActionToMenu(grandChild, targetMenu, ctx);
+                }
+            }
+        } else {
+            MenuItem item = child.createMenuItem(ctx);
+            boundMenuItems.add(new BoundItem(new WeakReference<>(item), child));
+            targetMenu.getItems().add(item);
+        }
     }
 
     private javafx.scene.control.Menu buildMenuFromConfig(MenuItemConfig groupConfig, MainWindow ctx) {
@@ -174,37 +184,53 @@ public class ActionManager {
         List<MenuItemConfig> children = groupConfig.getChildren();
         if ((children == null || children.isEmpty()) && regGroup != null && !regGroup.getChildren().isEmpty()) {
             for (AnAction childAction : regGroup.getChildren()) {
-                if (childAction instanceof ActionSeparator) {
-                    menu.getItems().add(new SeparatorMenuItem());
-                } else if (childAction instanceof ActionGroup subGroup) {
-                    menu.getItems().add(buildMenu(subGroup, ctx));
-                } else {
-                    MenuItem item = childAction.createMenuItem(ctx);
-                    boundMenuItems.add(new BoundItem(new WeakReference<>(item), childAction));
-                    menu.getItems().add(item);
-                }
+                appendActionToMenu(childAction, menu, ctx);
             }
             return menu;
         }
 
         if (children != null) {
             for (MenuItemConfig child : children) {
-                if (child.getType() == MenuItemConfig.Type.SEPARATOR) {
-                    menu.getItems().add(new SeparatorMenuItem());
-                } else if (child.getType() == MenuItemConfig.Type.GROUP) {
-                    menu.getItems().add(buildMenuFromConfig(child, ctx));
-                } else {
-                    ActionGroup childGroup = getGroup(child.getId());
-                    if (childGroup != null) {
-                        menu.getItems().add(buildMenu(childGroup, ctx));
-                    } else {
-                        MenuItem item = createConfiguredMenuItem(child, ctx);
-                        menu.getItems().add(item);
-                    }
-                }
+                appendConfigItemToMenu(child, menu, ctx);
             }
         }
         return menu;
+    }
+
+    private void appendConfigItemToMenu(MenuItemConfig child, javafx.scene.control.Menu targetMenu, MainWindow ctx) {
+        if (child.getType() == MenuItemConfig.Type.SEPARATOR) {
+            addSeparatorToMenu(targetMenu);
+        } else if (child.getType() == MenuItemConfig.Type.GROUP) {
+            if (child.isPopup()) {
+                targetMenu.getItems().add(buildMenuFromConfig(child, ctx));
+            } else {
+                if (child.getChildren() != null) {
+                    for (MenuItemConfig grandChild : child.getChildren()) {
+                        appendConfigItemToMenu(grandChild, targetMenu, ctx);
+                    }
+                }
+            }
+        } else {
+            ActionGroup childGroup = getGroup(child.getId());
+            if (childGroup != null) {
+                if (childGroup.isPopup()) {
+                    targetMenu.getItems().add(buildMenu(childGroup, ctx));
+                } else {
+                    for (AnAction a : childGroup.getChildren()) {
+                        appendActionToMenu(a, targetMenu, ctx);
+                    }
+                }
+            } else {
+                MenuItem item = createConfiguredMenuItem(child, ctx);
+                targetMenu.getItems().add(item);
+            }
+        }
+    }
+
+    private void addSeparatorToMenu(javafx.scene.control.Menu menu) {
+        if (!menu.getItems().isEmpty() && !(menu.getItems().get(menu.getItems().size() - 1) instanceof SeparatorMenuItem)) {
+            menu.getItems().add(new SeparatorMenuItem());
+        }
     }
 
     private MenuItem createConfiguredMenuItem(MenuItemConfig config, MainWindow ctx) {
@@ -319,20 +345,60 @@ public class ActionManager {
         if (config == null || config.getChildren().isEmpty()) return menu;
 
         for (MenuItemConfig child : config.getChildren()) {
-            if (child.getType() == MenuItemConfig.Type.SEPARATOR) {
-                menu.getItems().add(new SeparatorMenuItem());
-            } else if (child.getType() == MenuItemConfig.Type.GROUP) {
-                menu.getItems().add(buildMenuFromConfig(child, ctx));
-            } else {
-                ActionGroup childGroup = getGroup(child.getId());
-                if (childGroup != null) {
-                    menu.getItems().add(buildMenu(childGroup, ctx));
-                } else {
-                    menu.getItems().add(createConfiguredMenuItem(child, ctx));
-                }
-            }
+            appendConfigItemToContextMenu(child, menu, ctx);
         }
         return menu;
+    }
+
+    private void appendConfigItemToContextMenu(MenuItemConfig child, ContextMenu targetMenu, MainWindow ctx) {
+        if (child.getType() == MenuItemConfig.Type.SEPARATOR) {
+            if (!targetMenu.getItems().isEmpty() && !(targetMenu.getItems().get(targetMenu.getItems().size() - 1) instanceof SeparatorMenuItem)) {
+                targetMenu.getItems().add(new SeparatorMenuItem());
+            }
+        } else if (child.getType() == MenuItemConfig.Type.GROUP) {
+            if (child.isPopup()) {
+                targetMenu.getItems().add(buildMenuFromConfig(child, ctx));
+            } else {
+                if (child.getChildren() != null) {
+                    for (MenuItemConfig grandChild : child.getChildren()) {
+                        appendConfigItemToContextMenu(grandChild, targetMenu, ctx);
+                    }
+                }
+            }
+        } else {
+            ActionGroup childGroup = getGroup(child.getId());
+            if (childGroup != null) {
+                if (childGroup.isPopup()) {
+                    targetMenu.getItems().add(buildMenu(childGroup, ctx));
+                } else {
+                    for (AnAction a : childGroup.getChildren()) {
+                        appendActionToContextMenu(a, targetMenu, ctx);
+                    }
+                }
+            } else {
+                targetMenu.getItems().add(createConfiguredMenuItem(child, ctx));
+            }
+        }
+    }
+
+    private void appendActionToContextMenu(AnAction child, ContextMenu targetMenu, MainWindow ctx) {
+        if (child instanceof ActionSeparator) {
+            if (!targetMenu.getItems().isEmpty() && !(targetMenu.getItems().get(targetMenu.getItems().size() - 1) instanceof SeparatorMenuItem)) {
+                targetMenu.getItems().add(new SeparatorMenuItem());
+            }
+        } else if (child instanceof ActionGroup subGroup) {
+            if (subGroup.isPopup()) {
+                targetMenu.getItems().add(buildMenu(subGroup, ctx));
+            } else {
+                for (AnAction grandChild : subGroup.getChildren()) {
+                    appendActionToContextMenu(grandChild, targetMenu, ctx);
+                }
+            }
+        } else {
+            MenuItem item = child.createMenuItem(ctx);
+            boundMenuItems.add(new BoundItem(new WeakReference<>(item), child));
+            targetMenu.getItems().add(item);
+        }
     }
 
     /**
@@ -401,28 +467,65 @@ public class ActionManager {
         // 2. Main Menu
         ActionCatalogCategory mainMenuCat = new ActionCatalogCategory("Main Menu");
         ActionCatalogCategory fileCat = new ActionCatalogCategory("File");
+        fileCat.addEntry(new ActionCatalogEntry("file.open.actions", "File Open Actions", null, MenuItemConfig.Type.ACTION));
         fileCat.addEntry(new ActionCatalogEntry("file.new.project", "New Project\u2026", null, MenuItemConfig.Type.ACTION));
         fileCat.addEntry(new ActionCatalogEntry("file.new.sqlfile", "New SQL File", "FILE_CODE", MenuItemConfig.Type.ACTION));
+        fileCat.addEntry(new ActionCatalogEntry("file.new.generic.file", "New File", "FILE", MenuItemConfig.Type.ACTION));
         fileCat.addEntry(new ActionCatalogEntry("file.new.scratch", "New Scratch File", "FILE_ALT", MenuItemConfig.Type.ACTION));
-        fileCat.addEntry(new ActionCatalogEntry("file.new.console", "New Query Console", "TERMINAL", MenuItemConfig.Type.ACTION));
-        fileCat.addEntry(new ActionCatalogEntry("file.new.queryfile", "New Query File\u2026", "FILE_CODE", MenuItemConfig.Type.ACTION));
+        fileCat.addEntry(new ActionCatalogEntry("file.new.directory.package", "Directory/Package", "FOLDER", MenuItemConfig.Type.ACTION));
+        fileCat.addEntry(new ActionCatalogEntry("file.new.html", "HTML File", "FILE_CODE", MenuItemConfig.Type.ACTION));
+        fileCat.addEntry(new ActionCatalogEntry("file.microservices.templates", "Microservices Templates", null, MenuItemConfig.Type.ACTION));
+        fileCat.addEntry(new ActionCatalogEntry("file.from.template", "From Template", null, MenuItemConfig.Type.ACTION));
+        fileCat.addEntry(new ActionCatalogEntry("file.xml.config.file", "XML Configuration File", "CODE", MenuItemConfig.Type.ACTION));
+        fileCat.addEntry(new ActionCatalogEntry("file.new.queryfile.active", "Query File", "TERMINAL", MenuItemConfig.Type.ACTION));
+        fileCat.addEntry(new ActionCatalogEntry("file.new.queryfile", "Query File\u2026", "FILE_CODE", MenuItemConfig.Type.ACTION));
+        fileCat.addEntry(new ActionCatalogEntry("file.new.scratch.queryfile", "Scratch Query File", "TERMINAL", MenuItemConfig.Type.ACTION));
+        fileCat.addEntry(new ActionCatalogEntry("file.new.add.ddl.object", "Add Ddl Object", "DATABASE", MenuItemConfig.Type.ACTION));
+        fileCat.addEntry(new ActionCatalogEntry("file.new.datasource.cloud", "Data Source from Cloud Provider", "CLOUD", MenuItemConfig.Type.ACTION));
+        fileCat.addEntry(new ActionCatalogEntry("file.new.datasource.templates", "Data Source Templates", "LAYER_GROUP", MenuItemConfig.Type.ACTION));
+        fileCat.addEntry(new ActionCatalogEntry("file.new.datasource.file", "Data Source from File/Folder", "FOLDER_OPEN", MenuItemConfig.Type.ACTION));
+        fileCat.addEntry(new ActionCatalogEntry("file.new.datasource.url", "Data Source from URL", "LINK", MenuItemConfig.Type.ACTION));
+        fileCat.addEntry(new ActionCatalogEntry("file.new.datasource.selection", "Add Data Source from Selection\u2026", null, MenuItemConfig.Type.ACTION));
+        fileCat.addEntry(new ActionCatalogEntry("file.new.datasource.path", "Data Source in Path", null, MenuItemConfig.Type.ACTION));
+        fileCat.addEntry(new ActionCatalogEntry("file.new.datasource.clipboard", "Import from Clipboard", null, MenuItemConfig.Type.ACTION));
+        fileCat.addEntry(new ActionCatalogEntry("file.new.folder", "Create a New Folder", "FOLDER", MenuItemConfig.Type.ACTION));
+        fileCat.addEntry(new ActionCatalogEntry("file.new.driver", "Driver", "PLUG", MenuItemConfig.Type.ACTION));
         fileCat.addEntry(new ActionCatalogEntry("file.open.sql", "Open\u2026", "FOLDER_OPEN", MenuItemConfig.Type.ACTION));
         fileCat.addEntry(new ActionCatalogEntry("file.save.as", "Save As\u2026", null, MenuItemConfig.Type.ACTION));
         fileCat.addEntry(new ActionCatalogEntry("file.recent", "Recent Projects", null, MenuItemConfig.Type.GROUP));
+        fileCat.addEntry(new ActionCatalogEntry("file.reopen.project", "Reopen Project", null, MenuItemConfig.Type.ACTION));
+        fileCat.addEntry(new ActionCatalogEntry("file.manage.projects", "Manage Projects\u2026", null, MenuItemConfig.Type.ACTION));
+        fileCat.addEntry(new ActionCatalogEntry("file.close.project", "Close Project", null, MenuItemConfig.Type.ACTION));
         fileCat.addEntry(new ActionCatalogEntry("file.rename.project", "Rename Project\u2026", null, MenuItemConfig.Type.ACTION));
         fileCat.addEntry(new ActionCatalogEntry("file.attach.directory", "Attach Directory to Project\u2026", "FOLDER_PLUS", MenuItemConfig.Type.ACTION));
+        fileCat.addEntry(new ActionCatalogEntry("file.remote.dev", "Remote Development", "DESKTOP", MenuItemConfig.Type.ACTION));
+        fileCat.addEntry(new ActionCatalogEntry("file.remote.dev.daemon.action", "Remote Development\u2026", null, MenuItemConfig.Type.ACTION));
         fileCat.addEntry(new ActionCatalogEntry("file.settings", "Settings\u2026", "COG", MenuItemConfig.Type.ACTION));
-        fileCat.addEntry(new ActionCatalogEntry("file.data.sources", "Data Sources\u2026", "DATABASE", MenuItemConfig.Type.ACTION));
-        fileCat.addEntry(new ActionCatalogEntry("file.plugins", "Plugins\u2026", null, MenuItemConfig.Type.ACTION));
+        fileCat.addEntry(new ActionCatalogEntry("file.project.structure", "Project Structure\u2026", null, MenuItemConfig.Type.ACTION));
         fileCat.addEntry(new ActionCatalogEntry("file.sql.dialects", "SQL Dialects\u2026", null, MenuItemConfig.Type.ACTION));
         fileCat.addEntry(new ActionCatalogEntry("file.sql.scopes", "SQL Resolution Scopes\u2026", null, MenuItemConfig.Type.ACTION));
         fileCat.addEntry(new ActionCatalogEntry("file.edit.datasources.xml", "Edit dataSources.xml", null, MenuItemConfig.Type.ACTION));
-        fileCat.addEntry(new ActionCatalogEntry("file.properties", "File Properties", null, MenuItemConfig.Type.GROUP));
-        fileCat.addEntry(new ActionCatalogEntry("file.local.history", "Local History", "HISTORY", MenuItemConfig.Type.GROUP));
+        fileCat.addEntry(new ActionCatalogEntry("file.props.encoding", "File Encoding", null, MenuItemConfig.Type.ACTION));
+        fileCat.addEntry(new ActionCatalogEntry("file.remove.bom", "Remove BOM", null, MenuItemConfig.Type.ACTION));
+        fileCat.addEntry(new ActionCatalogEntry("file.add.bom", "Add BOM", null, MenuItemConfig.Type.ACTION));
+        fileCat.addEntry(new ActionCatalogEntry("file.associate.file.type", "Associate with File Type\u2026", null, MenuItemConfig.Type.ACTION));
+        fileCat.addEntry(new ActionCatalogEntry("file.change.template.lang", "Change Template Data Language", null, MenuItemConfig.Type.ACTION));
+        fileCat.addEntry(new ActionCatalogEntry("file.toggle.readonly", "Toggle Read-Only Attribute", null, MenuItemConfig.Type.ACTION));
+        fileCat.addEntry(new ActionCatalogEntry("file.line.sep.crlf", "CRLF - Windows (\\r\\n)", null, MenuItemConfig.Type.ACTION));
+        fileCat.addEntry(new ActionCatalogEntry("file.line.sep.lf", "LF - Unix and macOS (\\n)", null, MenuItemConfig.Type.ACTION));
+        fileCat.addEntry(new ActionCatalogEntry("file.line.sep.cr", "CR - Classic Mac OS (\\r)", null, MenuItemConfig.Type.ACTION));
+        fileCat.addEntry(new ActionCatalogEntry("history.show", "Show History\u2026", "HISTORY", MenuItemConfig.Type.ACTION));
+        fileCat.addEntry(new ActionCatalogEntry("history.show.selection", "Show History for Selection\u2026", null, MenuItemConfig.Type.ACTION));
+        fileCat.addEntry(new ActionCatalogEntry("history.show.project", "Show Project History\u2026", null, MenuItemConfig.Type.ACTION));
+        fileCat.addEntry(new ActionCatalogEntry("history.recent.changes", "Recent Changes", null, MenuItemConfig.Type.ACTION));
+        fileCat.addEntry(new ActionCatalogEntry("history.put.label", "Put Label\u2026", "TAG", MenuItemConfig.Type.ACTION));
         fileCat.addEntry(new ActionCatalogEntry("file.save.all", "Save All", "SAVE", MenuItemConfig.Type.ACTION));
         fileCat.addEntry(new ActionCatalogEntry("file.reload.all", "Reload All from Disk", "SYNC_ALT", MenuItemConfig.Type.ACTION));
-        fileCat.addEntry(new ActionCatalogEntry("file.manage.settings", "Manage IDE Settings", null, MenuItemConfig.Type.GROUP));
-        fileCat.addEntry(new ActionCatalogEntry("file.export", "Export", "FILE_EXPORT", MenuItemConfig.Type.GROUP));
+        fileCat.addEntry(new ActionCatalogEntry("file.settings.import", "Import Settings\u2026", null, MenuItemConfig.Type.ACTION));
+        fileCat.addEntry(new ActionCatalogEntry("file.settings.export", "Export Settings\u2026", null, MenuItemConfig.Type.ACTION));
+        fileCat.addEntry(new ActionCatalogEntry("file.settings.restore", "Restore Default Settings\u2026", null, MenuItemConfig.Type.ACTION));
+        fileCat.addEntry(new ActionCatalogEntry("file.settings.backup.sync", "Backup and Sync\u2026", null, MenuItemConfig.Type.ACTION));
+        fileCat.addEntry(new ActionCatalogEntry("file.export.html", "Export Files or Selection to HTML\u2026", null, MenuItemConfig.Type.ACTION));
         fileCat.addEntry(new ActionCatalogEntry("file.print", "Print\u2026", "PRINT", MenuItemConfig.Type.ACTION));
         fileCat.addEntry(new ActionCatalogEntry("file.power.save", "Power Save Mode", null, MenuItemConfig.Type.ACTION));
         fileCat.addEntry(new ActionCatalogEntry("file.exit", "Exit", null, MenuItemConfig.Type.ACTION));
@@ -431,15 +534,104 @@ public class ActionManager {
         ActionCatalogCategory editCat = new ActionCatalogCategory("Edit");
         editCat.addEntry(new ActionCatalogEntry("edit.undo", "Undo", "UNDO", MenuItemConfig.Type.ACTION));
         editCat.addEntry(new ActionCatalogEntry("edit.redo", "Redo", "REDO", MenuItemConfig.Type.ACTION));
-        editCat.addEntry(new ActionCatalogEntry("edit.find", "Find\u2026", "SEARCH", MenuItemConfig.Type.ACTION));
-        editCat.addEntry(new ActionCatalogEntry("edit.replace", "Replace\u2026", null, MenuItemConfig.Type.ACTION));
-        editCat.addEntry(new ActionCatalogEntry("edit.find.files", "Find in Files\u2026", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.cut", "Cut", "CUT", MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.copy", "Copy", "COPY", MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.copy.paths", "Copy Paths", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.copy.plain", "Copy as Plain Text", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.copy.rich", "Copy as Rich Text", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.copy.path.absolute", "Copy Absolute Path", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.copy.path.filename", "Copy File Name", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.copy.path.line.number", "Copy Path with Line Number", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.copy.path.content.root", "Copy Path from Content Root", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.copy.path.source.root", "Copy Path from Source Root", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.copy.path.repo.root", "Copy Path from Repository Root", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.copy.git.hosting.link", "Copy Git Hosting Link", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.copy.toolbox.url", "Copy Toolbox URL", "CUBES", MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.copy.reference", "Copy Reference", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.paste", "Paste", "PASTE", MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.paste.history", "Paste from History…", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.paste.plain", "Paste as Plain Text", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.copy.json.pointer", "Copy JSON Pointer", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.delete", "Delete", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.find", "Find…", "SEARCH", MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.replace", "Replace…", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.find.in.files", "Find in Files…", "SEARCH", MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.replace.in.files", "Replace in Files…", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.find.usages", "Find Usages", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.generate.sql.group", "SqlGenerateGroup", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.generate.xml.tag", "XML Tag…", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.generate.override.methods", "Override Methods…", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.generate.implement.methods", "Implement Methods…", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.generate.delegate.methods", "Delegate Methods…", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.generate.test.creators.group", "GenerateFromTestCreatorsGroup", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.generate.markdown.link", "Create Link", "LINK", MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.generate.markdown.table", "Insert Table", "TABLE", MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.generate.markdown.image", "Insert Image", "IMAGE", MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.generate.markdown.toc", "Generate Table Of Contents", "LIST", MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.generate", "Generate…", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.insert.live.template", "Insert Live Template…", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.surround.with", "Surround With…", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.format.code", "Reformat Code", "INDENT", MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.format.file", "Reformat File…", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.comment.line", "// Comment with Line Comment", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.comment.block", "Comment with Block Comment", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.auto.indent", "Auto-Indent Lines", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.refactor.rename", "Rename…", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.refactor.expand.column.list", "Expand Column List", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.refactor.convert.subquery", "Convert to Subquery", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.refactor.subquery.cte", "Subquery as CTE", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.refactor.table.alias", "Table alias…", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.refactor.introduce.variable", "Introduce Variable…", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.refactor.extract.routine", "Extract Routine…", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.refactor.qualify.identifier", "Qualify Identifier", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.refactor.unqualify.identifier", "Unqualify Identifier", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.refactor.quote.identifier", "Quote Identifier", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.refactor.unquote.identifier", "Unquote Identifier", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.refactor.flip.expression", "Flip Expression", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.refactor.inject.language", "Inject Language or Reference", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.refactor.uninject.language", "Uninject Language or Reference", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.refactor.extract.view", "Extract View…", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.refactor.extract.subquery", "Extract Subquery…", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.selection.column.mode", "Column Selection Mode", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.select.all", "Select All", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.selection.add.carets.ends", "Add Carets to Ends of Selected Lines", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.selection.extend", "Extend Selection", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.selection.shrink", "Shrink Selection", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.toggle.case", "Toggle Case", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.join.lines", "Join Lines", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.duplicate.lines", "Duplicate Entire Lines", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.sort.lines", "Sort Lines", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.toggle.bookmark", "Toggle Bookmark", "BOOKMARK", MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.show.bookmarks", "Show Bookmarks…", null, MenuItemConfig.Type.ACTION));
         mainMenuCat.addSubCategory(editCat);
 
         ActionCatalogCategory viewCat = new ActionCatalogCategory("View");
         viewCat.addEntry(new ActionCatalogEntry("middle.database", "Database Explorer", "DATABASE", MenuItemConfig.Type.ACTION));
         viewCat.addEntry(new ActionCatalogEntry("view.tool.files", "Files Tool Window", "FOLDER", MenuItemConfig.Type.ACTION));
         viewCat.addEntry(new ActionCatalogEntry("view.tool.terminal", "Terminal Tool Window", "TERMINAL", MenuItemConfig.Type.ACTION));
+        viewCat.addEntry(new ActionCatalogEntry("file.new.console", "Query Console", "TERMINAL", MenuItemConfig.Type.ACTION));
+        viewCat.addEntry(new ActionCatalogEntry("view.toggle.presentation.mode", "Toggle Presentation Mode", null, MenuItemConfig.Type.ACTION));
+        viewCat.addEntry(new ActionCatalogEntry("view.toggle.distraction.free.mode", "Toggle Distraction Free Mode", null, MenuItemConfig.Type.ACTION));
+        viewCat.addEntry(new ActionCatalogEntry("view.toggle.fullscreen.mode", "Toggle Full Screen Mode", null, MenuItemConfig.Type.ACTION));
+        viewCat.addEntry(new ActionCatalogEntry("view.toggle.zen.mode", "Toggle Zen Mode", null, MenuItemConfig.Type.ACTION));
+        viewCat.addEntry(new ActionCatalogEntry("view.compact.mode", "Compact Mode", null, MenuItemConfig.Type.ACTION));
+        viewCat.addEntry(new ActionCatalogEntry("view.zoom.ide", "Zoom IDE", null, MenuItemConfig.Type.ACTION));
+        viewCat.addEntry(new ActionCatalogEntry("view.toggle.presentation.assistant", "Presentation Assistant", null, MenuItemConfig.Type.ACTION));
+        viewCat.addEntry(new ActionCatalogEntry("view.toggle.main.menu", "Main Menu", null, MenuItemConfig.Type.ACTION));
+        viewCat.addEntry(new ActionCatalogEntry("view.toggle.toolbar", "Toolbar", null, MenuItemConfig.Type.ACTION));
+        viewCat.addEntry(new ActionCatalogEntry("view.toggle.toolbar.classic", "Toolbar Classic", null, MenuItemConfig.Type.ACTION));
+        viewCat.addEntry(new ActionCatalogEntry("view.toggle.navigation.bar", "Navigation Bar", null, MenuItemConfig.Type.ACTION));
+        viewCat.addEntry(new ActionCatalogEntry("view.toggle.tool.window.bars", "Tool Window Bars", null, MenuItemConfig.Type.ACTION));
+        viewCat.addEntry(new ActionCatalogEntry("view.toggle.status.bar", "Status Bar", null, MenuItemConfig.Type.ACTION));
+        viewCat.addEntry(new ActionCatalogEntry("view.status.bar.widget.status.text", "Status Text", null, MenuItemConfig.Type.ACTION));
+        viewCat.addEntry(new ActionCatalogEntry("view.toggle.members.in.nav.bar", "Members in Navigation Bar", null, MenuItemConfig.Type.ACTION));
+        viewCat.addEntry(new ActionCatalogEntry("view.recent.files", "Recent Files", null, MenuItemConfig.Type.ACTION));
+        viewCat.addEntry(new ActionCatalogEntry("view.recent.locations", "Recent Locations", null, MenuItemConfig.Type.ACTION));
+        viewCat.addEntry(new ActionCatalogEntry("view.recent.changes", "Recent Changes", null, MenuItemConfig.Type.ACTION));
+        viewCat.addEntry(new ActionCatalogEntry("view.recently.changed.files", "Recently Changed Files", null, MenuItemConfig.Type.ACTION));
+        viewCat.addEntry(new ActionCatalogEntry("view.font.increase", "Increase Font Size in All Editors", null, MenuItemConfig.Type.ACTION));
+        viewCat.addEntry(new ActionCatalogEntry("view.font.decrease", "Decrease Font Size in All Editors", null, MenuItemConfig.Type.ACTION));
+        viewCat.addEntry(new ActionCatalogEntry("view.font.reset", "Reset Font Size in All Editors", null, MenuItemConfig.Type.ACTION));
         viewCat.addEntry(new ActionCatalogEntry("view.fullscreen", "Enter Full Screen", "EXPAND", MenuItemConfig.Type.ACTION));
         mainMenuCat.addSubCategory(viewCat);
 

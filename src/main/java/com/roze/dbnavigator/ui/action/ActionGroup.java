@@ -98,7 +98,11 @@ public class ActionGroup extends AnAction {
             if (child instanceof ActionSeparator) {
                 targetList.add(new SeparatorMenuItem());
             } else if (child instanceof ActionGroup group) {
-                targetList.add(group.createMenu(ctx));
+                if (group.isPopup()) {
+                    targetList.add(group.createMenu(ctx));
+                } else {
+                    group.populateMenuItems(targetList, ctx);
+                }
             } else {
                 targetList.add(child.createMenuItem(ctx));
             }

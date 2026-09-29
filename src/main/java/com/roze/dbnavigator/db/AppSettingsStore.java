@@ -688,149 +688,375 @@ public final class AppSettingsStore {
             // 1. Main Menu
             List<MenuItemConfig> mainMenuChildren = new ArrayList<>();
 
-            // File
-            List<MenuItemConfig> fileNewChildren = new ArrayList<>();
-            fileNewChildren.add(MenuItemConfig.action("file.new.project", "Project\u2026"));
-            fileNewChildren.add(MenuItemConfig.separator());
-            fileNewChildren.add(MenuItemConfig.action("file.new.sqlfile", "SQL File"));
-            fileNewChildren.add(MenuItemConfig.action("file.new.scratch", "Scratch File"));
-            fileNewChildren.add(MenuItemConfig.action("file.new.console", "Query Console"));
-            fileNewChildren.add(MenuItemConfig.action("file.new.queryfile", "Query File\u2026"));
-            fileNewChildren.add(MenuItemConfig.separator());
-            fileNewChildren.add(MenuItemConfig.action("file.new.database", "Database"));
-            fileNewChildren.add(MenuItemConfig.action("file.new.role", "Role"));
-            fileNewChildren.add(MenuItemConfig.action("file.new.user", "User"));
-            fileNewChildren.add(MenuItemConfig.separator());
-            fileNewChildren.add(MenuItemConfig.action("file.new.virtualview", "Virtual View"));
-            fileNewChildren.add(MenuItemConfig.separator());
+            // -------------------------------------------------------------
+            // Main Menu > File (Exact match to DataGrip Images 1, 2, 3, 4)
+            // -------------------------------------------------------------
+            // Image 1: New -> New File
+            List<MenuItemConfig> xmlChildren = new ArrayList<>();
+            xmlChildren.add(MenuItemConfig.action("file.new.html", "HTML File", "FILE_CODE"));
 
-            List<MenuItemConfig> dsChildren = new ArrayList<>();
-            dsChildren.add(MenuItemConfig.action("file.new.datasource.mysql", "MySQL"));
-            dsChildren.add(MenuItemConfig.action("file.new.datasource.mariadb", "MariaDB"));
-            dsChildren.add(MenuItemConfig.action("file.new.datasource.postgres", "PostgreSQL"));
-            dsChildren.add(MenuItemConfig.action("file.new.datasource.stratos", "StratosDB"));
-            dsChildren.add(MenuItemConfig.action("file.new.datasource.sqlite", "SQLite"));
-            dsChildren.add(MenuItemConfig.action("file.new.datasource.oracle", "Oracle"));
-            dsChildren.add(MenuItemConfig.action("file.new.datasource.sqlserver", "Microsoft SQL Server"));
-            dsChildren.add(MenuItemConfig.action("file.new.datasource.mongodb", "MongoDB"));
-            dsChildren.add(MenuItemConfig.separator());
-            dsChildren.add(MenuItemConfig.action("file.new.datasource.generic", "More / Connection Wizard\u2026"));
-            fileNewChildren.add(MenuItemConfig.group("file.new.datasource.group", "Data Source", dsChildren));
+            List<MenuItemConfig> webDevChildren = new ArrayList<>();
+            webDevChildren.add(MenuItemConfig.group("file.web.dev.xml", "XML", true, xmlChildren));
+            webDevChildren.add(MenuItemConfig.action("file.microservices.templates", "Microservices Templates"));
+            webDevChildren.add(MenuItemConfig.action("file.from.template", "From Template"));
+            webDevChildren.add(MenuItemConfig.action("file.xml.config.file", "XML Configuration File", "CODE"));
 
-            List<MenuItemConfig> awsChildren = new ArrayList<>();
-            awsChildren.add(MenuItemConfig.action("cloud.aws.aurora.mysql", "Amazon Aurora MySQL"));
-            awsChildren.add(MenuItemConfig.action("cloud.aws.aurora.postgres", "Amazon Aurora PostgreSQL"));
-            awsChildren.add(MenuItemConfig.action("cloud.aws.rds.mysql", "Amazon RDS MySQL"));
-            awsChildren.add(MenuItemConfig.action("cloud.aws.rds.postgres", "Amazon RDS PostgreSQL"));
-            awsChildren.add(MenuItemConfig.action("cloud.aws.redshift", "Amazon Redshift"));
+            List<MenuItemConfig> newFileChildren = new ArrayList<>();
+            newFileChildren.add(MenuItemConfig.action("file.new.sqlfile", "SQL File", "FILE_CODE"));
+            newFileChildren.add(MenuItemConfig.separator());
+            newFileChildren.add(MenuItemConfig.action("file.new.generic.file", "File", "FILE"));
+            newFileChildren.add(MenuItemConfig.action("file.new.scratch", "Scratch File", "FILE_ALT"));
+            newFileChildren.add(MenuItemConfig.action("file.new.directory.package", "Directory/Package", "FOLDER"));
+            newFileChildren.add(MenuItemConfig.action("file.template.separator.group", "FileTemplateSeparatorGroup"));
+            newFileChildren.add(MenuItemConfig.group("file.web.dev.templates", "Web Development Templates", true, webDevChildren));
 
-            List<MenuItemConfig> gcpChildren = new ArrayList<>();
-            gcpChildren.add(MenuItemConfig.action("cloud.gcp.mysql", "Google Cloud SQL for MySQL"));
-            gcpChildren.add(MenuItemConfig.action("cloud.gcp.postgres", "Google Cloud SQL for PostgreSQL"));
-
-            List<MenuItemConfig> azureChildren = new ArrayList<>();
-            azureChildren.add(MenuItemConfig.action("cloud.azure.sql", "Azure SQL Database"));
-            azureChildren.add(MenuItemConfig.action("cloud.azure.mysql", "Azure Database for MySQL"));
-            azureChildren.add(MenuItemConfig.action("cloud.azure.postgres", "Azure Database for PostgreSQL"));
+            // Image 1: New -> New (Add + Create Data Source)
+            List<MenuItemConfig> addChildren = new ArrayList<>();
+            addChildren.add(MenuItemConfig.action("file.new.queryfile.active", "Query File", "TERMINAL"));
+            addChildren.add(MenuItemConfig.action("file.new.queryfile", "Query File\u2026", "FILE_CODE"));
+            addChildren.add(MenuItemConfig.action("file.new.scratch.queryfile", "Scratch Query File", "TERMINAL"));
+            addChildren.add(MenuItemConfig.separator());
+            addChildren.add(MenuItemConfig.action("file.new.add.ddl.object", "Add Ddl Object", "DATABASE"));
+            addChildren.add(MenuItemConfig.separator());
 
             List<MenuItemConfig> cloudChildren = new ArrayList<>();
-            cloudChildren.add(MenuItemConfig.group("file.new.datasource.cloud.aws", "Amazon AWS", awsChildren));
-            cloudChildren.add(MenuItemConfig.group("file.new.datasource.cloud.gcp", "Google Cloud", gcpChildren));
-            cloudChildren.add(MenuItemConfig.group("file.new.datasource.cloud.azure", "Microsoft Azure", azureChildren));
-            fileNewChildren.add(MenuItemConfig.group("file.new.datasource.cloud", "Data Source from Cloud Provider", cloudChildren));
+            cloudChildren.add(MenuItemConfig.action("cloud.aws", "Amazon AWS", "DATABASE"));
+            cloudChildren.add(MenuItemConfig.action("cloud.gcp", "Google Cloud", "DATABASE"));
+            cloudChildren.add(MenuItemConfig.action("cloud.azure", "Microsoft Azure", "DATABASE"));
 
-            fileNewChildren.add(MenuItemConfig.action("file.new.datasource.templates", "Data Source Templates"));
-            fileNewChildren.add(MenuItemConfig.action("file.new.datasource.file", "Data Source from File/Folder"));
-            fileNewChildren.add(MenuItemConfig.action("file.new.datasource.url", "Data Source from URL"));
-            fileNewChildren.add(MenuItemConfig.action("file.new.datasource.ddl", "DDL Data Source"));
-            fileNewChildren.add(MenuItemConfig.separator());
-            fileNewChildren.add(MenuItemConfig.action("file.new.folder", "Folder"));
-            fileNewChildren.add(MenuItemConfig.action("file.new.driver", "Driver"));
+            List<MenuItemConfig> createDsChildren = new ArrayList<>();
+            createDsChildren.add(MenuItemConfig.group("file.new.datasource.cloud", "Data Source from Cloud Provider", true, "CLOUD", cloudChildren));
+            createDsChildren.add(MenuItemConfig.action("file.new.datasource.templates", "Data Source Templates", "LAYER_GROUP"));
+            createDsChildren.add(MenuItemConfig.action("file.new.datasource.file", "Data Source from File/Folder", "FOLDER_OPEN"));
+            createDsChildren.add(MenuItemConfig.action("file.new.datasource.url", "Data Source from URL", "LINK"));
+            createDsChildren.add(MenuItemConfig.action("file.new.datasource.selection", "Add Data Source from Selection\u2026"));
+            createDsChildren.add(MenuItemConfig.action("file.new.datasource.path", "Data Source in Path"));
+            createDsChildren.add(MenuItemConfig.action("file.new.datasource.clipboard", "Import from Clipboard"));
+            createDsChildren.add(MenuItemConfig.separator());
+            createDsChildren.add(MenuItemConfig.action("file.new.folder", "Create a New Folder", "FOLDER"));
+            createDsChildren.add(MenuItemConfig.action("file.new.driver", "Driver", "PLUG"));
 
+            List<MenuItemConfig> newDbChildren = new ArrayList<>();
+            newDbChildren.add(MenuItemConfig.group("file.new.add.group", "Add", false, addChildren));
+            newDbChildren.add(MenuItemConfig.group("file.new.create.datasource", "Create Data Source", true, createDsChildren));
+
+            List<MenuItemConfig> fileNewChildren = new ArrayList<>();
+            fileNewChildren.add(MenuItemConfig.group("file.new.file.group", "New File", true, newFileChildren));
+            fileNewChildren.add(MenuItemConfig.group("file.new.db.group", "New", false, newDbChildren));
+
+            // Image 2: Recent Projects
+            List<MenuItemConfig> recentChildren = new ArrayList<>();
+            recentChildren.add(MenuItemConfig.action("file.reopen.project", "Reopen Project"));
+            recentChildren.add(MenuItemConfig.separator());
+            recentChildren.add(MenuItemConfig.action("file.manage.projects", "Manage Projects\u2026"));
+            recentChildren.add(MenuItemConfig.action("file.close.project", "Close Project"));
+            recentChildren.add(MenuItemConfig.action("file.rename.project", "Rename Project\u2026"));
+            recentChildren.add(MenuItemConfig.separator());
+            recentChildren.add(MenuItemConfig.action("file.attach.directory", "Attach Directory to Project\u2026", "FOLDER_PLUS"));
+
+            // Image 2: Remote Development
+            List<MenuItemConfig> remoteDaemonChildren = new ArrayList<>();
+            remoteDaemonChildren.add(MenuItemConfig.action("file.remote.dev.daemon.action", "Remote Development\u2026"));
+
+            List<MenuItemConfig> remoteDevChildren = new ArrayList<>();
+            remoteDevChildren.add(MenuItemConfig.action("file.remote.dev", "Remote Development", "DESKTOP"));
+            remoteDevChildren.add(MenuItemConfig.group("file.remote.dev.daemon", "FileMenu.RemoteDevelopmentActions.Daemon", false, remoteDaemonChildren));
+
+            // Image 2 & 4: Settings Actions
+            List<MenuItemConfig> settingsChildren = new ArrayList<>();
+            settingsChildren.add(MenuItemConfig.action("file.settings", "Settings\u2026", "COG"));
+            settingsChildren.add(MenuItemConfig.action("file.project.structure", "Project Structure\u2026"));
+
+            // Image 3: File Properties
+            List<MenuItemConfig> removeBomChildren = new ArrayList<>();
+            removeBomChildren.add(MenuItemConfig.action("file.remove.bom", "Remove BOM"));
+
+            List<MenuItemConfig> addBomChildren = new ArrayList<>();
+            addBomChildren.add(MenuItemConfig.action("file.add.bom", "Add BOM"));
+
+            List<MenuItemConfig> lineSepChildren = new ArrayList<>();
+            lineSepChildren.add(MenuItemConfig.action("file.line.sep.crlf", "CRLF - Windows (\\r\\n)"));
+            lineSepChildren.add(MenuItemConfig.action("file.line.sep.lf", "LF - Unix and macOS (\\n)"));
+            lineSepChildren.add(MenuItemConfig.action("file.line.sep.cr", "CR - Classic Mac OS (\\r)"));
+
+            List<MenuItemConfig> filePropsChildren = new ArrayList<>();
+            filePropsChildren.add(MenuItemConfig.action("file.props.encoding", "File Encoding"));
+            filePropsChildren.add(MenuItemConfig.group("file.remove.bom.group", "RemoveBom.Group", false, removeBomChildren));
+            filePropsChildren.add(MenuItemConfig.group("file.add.bom.group", "AddBom.Group", false, addBomChildren));
+            filePropsChildren.add(MenuItemConfig.action("file.associate.file.type", "Associate with File Type\u2026"));
+            filePropsChildren.add(MenuItemConfig.action("file.change.template.lang", "Change Template Data Language"));
+            filePropsChildren.add(MenuItemConfig.action("file.toggle.readonly", "Toggle Read-Only Attribute"));
+            filePropsChildren.add(MenuItemConfig.group("file.line.separators", "Line Separators", true, lineSepChildren));
+            filePropsChildren.add(MenuItemConfig.separator());
+
+            // Image 3: LocalHistory.MainMenuGroup
+            List<MenuItemConfig> localHistChildren = new ArrayList<>();
+            localHistChildren.add(MenuItemConfig.action("history.show", "Show History\u2026", "HISTORY"));
+            localHistChildren.add(MenuItemConfig.action("history.show.selection", "Show History for Selection\u2026"));
+            localHistChildren.add(MenuItemConfig.separator());
+            localHistChildren.add(MenuItemConfig.action("history.show.project", "Show Project History\u2026"));
+            localHistChildren.add(MenuItemConfig.action("history.recent.changes", "Recent Changes"));
+            localHistChildren.add(MenuItemConfig.action("history.put.label", "Put Label\u2026"));
+
+            List<MenuItemConfig> localHistMainChildren = new ArrayList<>();
+            localHistMainChildren.add(MenuItemConfig.separator());
+            localHistMainChildren.add(MenuItemConfig.group("file.local.history", "Local History", true, localHistChildren));
+            localHistMainChildren.add(MenuItemConfig.separator());
+
+            // Image 4: Manage IDE Settings
+            List<MenuItemConfig> manageSettingsChildren = new ArrayList<>();
+            manageSettingsChildren.add(MenuItemConfig.action("file.settings.import", "Import Settings\u2026"));
+            manageSettingsChildren.add(MenuItemConfig.action("file.settings.export", "Export Settings\u2026"));
+            manageSettingsChildren.add(MenuItemConfig.separator());
+            manageSettingsChildren.add(MenuItemConfig.action("file.settings.restore", "Restore Default Settings\u2026"));
+            manageSettingsChildren.add(MenuItemConfig.action("file.settings.backup.sync", "Backup and Sync\u2026"));
+
+            // Image 4: Print/Export Actions
+            List<MenuItemConfig> exportSubChildren = new ArrayList<>();
+            exportSubChildren.add(MenuItemConfig.action("file.export.html", "Export Files or Selection to HTML\u2026"));
+
+            List<MenuItemConfig> printExportChildren = new ArrayList<>();
+            printExportChildren.add(MenuItemConfig.separator());
+            printExportChildren.add(MenuItemConfig.group("file.export", "Export", true, exportSubChildren));
+            printExportChildren.add(MenuItemConfig.action("file.print", "Print\u2026", "PRINT"));
+
+            // Full File Menu assembling Images 1-4
             List<MenuItemConfig> fileMenu = new ArrayList<>();
-            fileMenu.add(MenuItemConfig.group("file.new", "New", fileNewChildren));
-            fileMenu.add(MenuItemConfig.action("file.open.sql", "Open\u2026"));
+            fileMenu.add(MenuItemConfig.action("file.open.actions", "File Open Actions"));
+            fileMenu.add(MenuItemConfig.group("file.new", "New", true, fileNewChildren));
+            fileMenu.add(MenuItemConfig.action("file.open.sql", "Open\u2026", "FOLDER_OPEN"));
             fileMenu.add(MenuItemConfig.action("file.save.as", "Save As\u2026"));
-            fileMenu.add(MenuItemConfig.group("file.recent", "Recent Projects", List.of(
-                    MenuItemConfig.action("file.recent.none", "No Recent Projects")
-            )));
-            fileMenu.add(MenuItemConfig.action("file.rename.project", "Rename Project\u2026"));
-            fileMenu.add(MenuItemConfig.action("file.attach.directory", "Attach Directory to Project\u2026"));
+            fileMenu.add(MenuItemConfig.group("file.recent", "Recent Projects", true, recentChildren));
             fileMenu.add(MenuItemConfig.separator());
-            fileMenu.add(MenuItemConfig.action("file.settings", "Settings\u2026"));
-            fileMenu.add(MenuItemConfig.action("file.data.sources", "Data Sources\u2026"));
-            fileMenu.add(MenuItemConfig.action("file.plugins", "Plugins\u2026"));
+            fileMenu.add(MenuItemConfig.group("file.remote.dev.actions", "FileMenu.RemoteDevelopmentActions", false, remoteDevChildren));
+            fileMenu.add(MenuItemConfig.separator());
+            fileMenu.add(MenuItemConfig.group("file.settings.actions", "Settings Actions", false, settingsChildren));
+            fileMenu.add(MenuItemConfig.separator());
             fileMenu.add(MenuItemConfig.action("file.sql.dialects", "SQL Dialects\u2026"));
             fileMenu.add(MenuItemConfig.action("file.sql.scopes", "SQL Resolution Scopes\u2026"));
             fileMenu.add(MenuItemConfig.action("file.edit.datasources.xml", "Edit dataSources.xml"));
             fileMenu.add(MenuItemConfig.separator());
-            fileMenu.add(MenuItemConfig.group("file.properties", "File Properties", List.of(
-                    MenuItemConfig.action("file.props.encoding", "File Encoding: UTF-8"),
-                    MenuItemConfig.action("file.props.line.sep", "Line Separators: LF - Unix and macOS")
-            )));
-            fileMenu.add(MenuItemConfig.group("file.local.history", "Local History", List.of(
-                    MenuItemConfig.action("history.show", "Show History\u2026"),
-                    MenuItemConfig.action("history.show.selection", "Show History for Selection\u2026"),
-                    MenuItemConfig.action("history.show.project", "Show Project History\u2026"),
-                    MenuItemConfig.action("history.recent.changes", "Recent Changes"),
-                    MenuItemConfig.separator(),
-                    MenuItemConfig.action("history.put.label", "Put Label\u2026")
-            )));
+            fileMenu.add(MenuItemConfig.group("file.properties", "File Properties", true, filePropsChildren));
             fileMenu.add(MenuItemConfig.separator());
-            fileMenu.add(MenuItemConfig.action("file.save.all", "Save All"));
-            fileMenu.add(MenuItemConfig.action("file.reload.all", "Reload All from Disk"));
-            fileMenu.add(MenuItemConfig.group("file.manage.settings", "Manage IDE Settings", List.of(
-                    MenuItemConfig.action("file.settings.export", "Export Settings\u2026"),
-                    MenuItemConfig.action("file.settings.restore", "Restore Default Settings\u2026")
-            )));
-            fileMenu.add(MenuItemConfig.group("file.export", "Export", List.of(
-                    MenuItemConfig.action("file.export.data", "Export Data\u2026")
-            )));
-            fileMenu.add(MenuItemConfig.action("file.print", "Print\u2026"));
+            fileMenu.add(MenuItemConfig.group("file.local.history.main.group", "LocalHistory.MainMenuGroup", false, localHistMainChildren));
             fileMenu.add(MenuItemConfig.separator());
+            fileMenu.add(MenuItemConfig.action("file.save.all", "Save All", "SAVE"));
+            fileMenu.add(MenuItemConfig.action("file.reload.all", "Reload All from Disk", "SYNC_ALT"));
+            fileMenu.add(MenuItemConfig.separator());
+            fileMenu.add(MenuItemConfig.group("file.manage.settings", "Manage IDE Settings", true, manageSettingsChildren));
+            fileMenu.add(MenuItemConfig.separator());
+            fileMenu.add(MenuItemConfig.group("file.print.export.actions", "Print/Export Actions", false, printExportChildren));
             fileMenu.add(MenuItemConfig.action("file.power.save", "Power Save Mode"));
             fileMenu.add(MenuItemConfig.separator());
             fileMenu.add(MenuItemConfig.action("file.exit", "Exit"));
-            mainMenuChildren.add(MenuItemConfig.group("menu.file", "File", fileMenu));
+            mainMenuChildren.add(MenuItemConfig.group("menu.file", "File", true, fileMenu));
 
-            // Edit
-            List<MenuItemConfig> editFind = new ArrayList<>();
-            editFind.add(MenuItemConfig.action("edit.find", "Find\u2026"));
-            editFind.add(MenuItemConfig.action("edit.replace", "Replace\u2026"));
-            editFind.add(MenuItemConfig.action("edit.find.files", "Find in Files\u2026"));
-            editFind.add(MenuItemConfig.action("edit.replace.files", "Replace in Files\u2026"));
+            // -------------------------------------------------------------
+            // Main Menu > Edit (Exact match to DataGrip Images 1, 2, 3)
+            // -------------------------------------------------------------
+            // Image 1: Cut/Copy/Paste Actions > Copy Path/Reference... > CopyFileReference
+            List<MenuItemConfig> copyFileRefChildren = new ArrayList<>();
+            copyFileRefChildren.add(MenuItemConfig.action("edit.copy.path.absolute", "Absolute Path"));
+            copyFileRefChildren.add(MenuItemConfig.action("edit.copy.path.filename", "File Name"));
+            copyFileRefChildren.add(MenuItemConfig.separator());
+            copyFileRefChildren.add(MenuItemConfig.action("edit.copy.path.line.number", "Path with Line Number"));
+            copyFileRefChildren.add(MenuItemConfig.action("edit.copy.path.content.root", "Path from Content Root"));
+            copyFileRefChildren.add(MenuItemConfig.action("edit.copy.path.source.root", "Path from Source Root"));
+            copyFileRefChildren.add(MenuItemConfig.action("edit.copy.path.repo.root", "Path From Repository Root"));
+            copyFileRefChildren.add(MenuItemConfig.action("edit.copy.git.hosting.link", "Git.Hosting.Copy.Link.Group"));
+
+            List<MenuItemConfig> copyExtRefChildren = new ArrayList<>();
+            copyExtRefChildren.add(MenuItemConfig.action("edit.copy.toolbox.url", "Toolbox URL", "CUBES"));
+
+            List<MenuItemConfig> copyPathRefChildren = new ArrayList<>();
+            copyPathRefChildren.add(MenuItemConfig.group("edit.copy.file.reference.group", "CopyFileReference", false, copyFileRefChildren));
+            copyPathRefChildren.add(MenuItemConfig.separator());
+            copyPathRefChildren.add(MenuItemConfig.group("edit.copy.external.reference.group", "CopyExternalReferenceGroup", false, copyExtRefChildren));
+            copyPathRefChildren.add(MenuItemConfig.action("edit.copy.reference", "Copy Reference"));
+
+            List<MenuItemConfig> pasteChildren = new ArrayList<>();
+            pasteChildren.add(MenuItemConfig.action("edit.paste", "Paste", "PASTE"));
+            pasteChildren.add(MenuItemConfig.action("edit.paste.history", "Paste from History\u2026"));
+            pasteChildren.add(MenuItemConfig.action("edit.paste.plain", "Paste as Plain Text"));
+
+            List<MenuItemConfig> cutCopyPasteChildren = new ArrayList<>();
+            cutCopyPasteChildren.add(MenuItemConfig.action("edit.cut", "Cut", "CUT"));
+            cutCopyPasteChildren.add(MenuItemConfig.action("edit.copy", "Copy", "COPY"));
+            cutCopyPasteChildren.add(MenuItemConfig.action("edit.copy.paths", "Copy Paths"));
+            cutCopyPasteChildren.add(MenuItemConfig.action("edit.copy.plain", "Copy as Plain Text"));
+            cutCopyPasteChildren.add(MenuItemConfig.action("edit.copy.rich", "Copy as Rich Text"));
+            cutCopyPasteChildren.add(MenuItemConfig.group("edit.copy.path.reference.group", "Copy Path/Reference\u2026", true, copyPathRefChildren));
+            cutCopyPasteChildren.add(MenuItemConfig.group("edit.paste.group", "Paste", false, pasteChildren));
+            cutCopyPasteChildren.add(MenuItemConfig.action("edit.copy.json.pointer", "Copy JSON Pointer"));
+
+            // Image 2: Generate...
+            List<MenuItemConfig> markdownChildren = new ArrayList<>();
+            markdownChildren.add(MenuItemConfig.action("edit.generate.markdown.link", "Create Link", "LINK"));
+            markdownChildren.add(MenuItemConfig.action("edit.generate.markdown.table", "Insert Table", "TABLE"));
+            markdownChildren.add(MenuItemConfig.action("edit.generate.markdown.image", "Insert Image", "IMAGE"));
+            markdownChildren.add(MenuItemConfig.action("edit.generate.markdown.toc", "Generate Table Of Contents", "LIST"));
+
+            List<MenuItemConfig> generateInnerChildren = new ArrayList<>();
+            generateInnerChildren.add(MenuItemConfig.action("edit.generate.sql.group", "SqlGenerateGroup"));
+            generateInnerChildren.add(MenuItemConfig.action("edit.generate.xml.tag", "XML Tag\u2026"));
+            generateInnerChildren.add(MenuItemConfig.action("edit.generate.override.methods", "Override Methods\u2026"));
+            generateInnerChildren.add(MenuItemConfig.action("edit.generate.implement.methods", "Implement Methods\u2026"));
+            generateInnerChildren.add(MenuItemConfig.action("edit.generate.delegate.methods", "Delegate Methods\u2026"));
+            generateInnerChildren.add(MenuItemConfig.action("edit.generate.test.creators.group", "GenerateFromTestCreatorsGroup"));
+            generateInnerChildren.add(MenuItemConfig.group("edit.generate.markdown.group", "Markdown.InsertGroup", true, markdownChildren));
+
+            List<MenuItemConfig> generateRootChildren = new ArrayList<>();
+            generateRootChildren.add(MenuItemConfig.group("edit.generate.group", "Generate", false, generateInnerChildren));
+
+            // Image 3: Refactor
+            List<MenuItemConfig> extractIntroduceChildren = new ArrayList<>();
+            extractIntroduceChildren.add(MenuItemConfig.action("edit.refactor.table.alias", "Table alias\u2026"));
+            extractIntroduceChildren.add(MenuItemConfig.action("edit.refactor.introduce.variable", "Introduce Variable\u2026"));
+            extractIntroduceChildren.add(MenuItemConfig.action("edit.refactor.extract.routine", "Extract Routine\u2026"));
+
+            List<MenuItemConfig> refactorChildren = new ArrayList<>();
+            refactorChildren.add(MenuItemConfig.action("edit.refactor.rename", "Rename\u2026"));
+            refactorChildren.add(MenuItemConfig.separator());
+            refactorChildren.add(MenuItemConfig.action("edit.refactor.expand.column.list", "Expand Column List"));
+            refactorChildren.add(MenuItemConfig.separator());
+            refactorChildren.add(MenuItemConfig.action("edit.refactor.convert.subquery", "Convert to Subquery"));
+            refactorChildren.add(MenuItemConfig.action("edit.refactor.subquery.cte", "Subquery as CTE"));
+            refactorChildren.add(MenuItemConfig.separator());
+            refactorChildren.add(MenuItemConfig.group("edit.refactor.extract.introduce.group", "Extract/Introduce", true, extractIntroduceChildren));
+            refactorChildren.add(MenuItemConfig.action("edit.refactor.qualify.identifier", "Qualify Identifier"));
+            refactorChildren.add(MenuItemConfig.action("edit.refactor.unqualify.identifier", "Unqualify Identifier"));
+            refactorChildren.add(MenuItemConfig.action("edit.refactor.quote.identifier", "Quote Identifier"));
+            refactorChildren.add(MenuItemConfig.action("edit.refactor.unquote.identifier", "Unquote Identifier"));
+            refactorChildren.add(MenuItemConfig.separator());
+            refactorChildren.add(MenuItemConfig.action("edit.refactor.flip.expression", "Flip Expression"));
+            refactorChildren.add(MenuItemConfig.separator());
+            refactorChildren.add(MenuItemConfig.action("edit.refactor.inject.language", "Inject Language or Reference"));
+            refactorChildren.add(MenuItemConfig.action("edit.refactor.uninject.language", "Uninject Language or Reference"));
+
+            // Image 2: Selection
+            List<MenuItemConfig> selectWordChildren = new ArrayList<>();
+            selectWordChildren.add(MenuItemConfig.action("edit.selection.extend", "Extend Selection"));
+            selectWordChildren.add(MenuItemConfig.action("edit.selection.shrink", "Shrink Selection"));
+
+            List<MenuItemConfig> editorSelectChildren = new ArrayList<>();
+            editorSelectChildren.add(MenuItemConfig.action("edit.select.all", "Select All"));
+            editorSelectChildren.add(MenuItemConfig.action("edit.selection.add.carets.ends", "Add Carets to Ends of Selected Lines"));
+            editorSelectChildren.add(MenuItemConfig.group("edit.selection.word.actions", "Select Word Actions", false, selectWordChildren));
+
+            List<MenuItemConfig> selectionChildren = new ArrayList<>();
+            selectionChildren.add(MenuItemConfig.action("edit.selection.column.mode", "Column Selection Mode"));
+            selectionChildren.add(MenuItemConfig.group("edit.selection.editor.select.actions", "Editor Select Actions", false, editorSelectChildren));
+            selectionChildren.add(MenuItemConfig.action("edit.toggle.case", "Toggle Case"));
+            selectionChildren.add(MenuItemConfig.action("edit.join.lines", "Join Lines"));
+            selectionChildren.add(MenuItemConfig.action("edit.duplicate.lines", "Duplicate Entire Lines"));
+            selectionChildren.add(MenuItemConfig.action("edit.sort.lines", "Sort Lines"));
 
             List<MenuItemConfig> editMenu = new ArrayList<>();
-            editMenu.add(MenuItemConfig.action("edit.undo", "Undo"));
-            editMenu.add(MenuItemConfig.action("edit.redo", "Redo"));
+            editMenu.add(MenuItemConfig.action("edit.undo", "Undo", "UNDO"));
+            editMenu.add(MenuItemConfig.action("edit.redo", "Redo", "REDO"));
             editMenu.add(MenuItemConfig.separator());
-            editMenu.add(MenuItemConfig.action("edit.cut", "Cut"));
-            editMenu.add(MenuItemConfig.action("edit.copy", "Copy"));
-            editMenu.add(MenuItemConfig.action("edit.paste", "Paste"));
+            editMenu.add(MenuItemConfig.group("edit.cut.copy.paste.actions", "Cut/Copy/Paste Actions", false, cutCopyPasteChildren));
             editMenu.add(MenuItemConfig.action("edit.delete", "Delete"));
             editMenu.add(MenuItemConfig.separator());
-            editMenu.add(MenuItemConfig.action("edit.select.all", "Select All"));
+            editMenu.add(MenuItemConfig.action("edit.find", "Find\u2026", "SEARCH"));
+            editMenu.add(MenuItemConfig.action("edit.replace", "Replace\u2026"));
+            editMenu.add(MenuItemConfig.action("edit.find.in.files", "Find in Files\u2026", "SEARCH"));
+            editMenu.add(MenuItemConfig.action("edit.replace.in.files", "Replace in Files\u2026"));
+            editMenu.add(MenuItemConfig.action("edit.find.usages", "Find Usages"));
             editMenu.add(MenuItemConfig.separator());
-            editMenu.add(MenuItemConfig.group("edit.find.group", "Find", editFind));
-            mainMenuChildren.add(MenuItemConfig.group("menu.edit", "Edit", editMenu));
+            editMenu.add(MenuItemConfig.group("edit.generate.root.group", "Generate\u2026", true, generateRootChildren));
+            editMenu.add(MenuItemConfig.separator());
+            editMenu.add(MenuItemConfig.action("edit.insert.live.template", "Insert Live Template\u2026"));
+            editMenu.add(MenuItemConfig.action("edit.surround.with", "Surround With\u2026"));
+            editMenu.add(MenuItemConfig.separator());
+            editMenu.add(MenuItemConfig.action("edit.format.code", "Reformat Code", "INDENT"));
+            editMenu.add(MenuItemConfig.action("edit.format.file", "Reformat File\u2026"));
+            editMenu.add(MenuItemConfig.action("edit.comment.line", "// Comment with Line Comment"));
+            editMenu.add(MenuItemConfig.action("edit.comment.block", "Comment with Block Comment"));
+            editMenu.add(MenuItemConfig.action("edit.auto.indent", "Auto-Indent Lines"));
+            editMenu.add(MenuItemConfig.separator());
+            editMenu.add(MenuItemConfig.group("edit.refactor", "Refactor", true, refactorChildren));
+            editMenu.add(MenuItemConfig.separator());
+            editMenu.add(MenuItemConfig.group("edit.selection", "Selection", true, selectionChildren));
+            editMenu.add(MenuItemConfig.separator());
+            editMenu.add(MenuItemConfig.action("edit.toggle.bookmark", "Toggle Bookmark", "BOOKMARK"));
+            editMenu.add(MenuItemConfig.action("edit.show.bookmarks", "Show Bookmarks\u2026"));
+            mainMenuChildren.add(MenuItemConfig.group("menu.edit", "Edit", true, editMenu));
 
-            // View
+            // -------------------------------------------------------------
+            // Main Menu > View (Exact match to DataGrip Images 4, 5)
+            // -------------------------------------------------------------
             List<MenuItemConfig> toolWindows = new ArrayList<>();
-            toolWindows.add(MenuItemConfig.action("middle.database", "Database Explorer"));
-            toolWindows.add(MenuItemConfig.action("view.tool.files", "Files"));
-            toolWindows.add(MenuItemConfig.action("view.tool.terminal", "Terminal"));
-            toolWindows.add(MenuItemConfig.action("file.new.console", "Query Console"));
+            toolWindows.add(MenuItemConfig.action("middle.database", "Database Explorer", "DATABASE"));
+            toolWindows.add(MenuItemConfig.action("view.tool.files", "Files", "FOLDER"));
+            toolWindows.add(MenuItemConfig.action("view.tool.terminal", "Terminal", "TERMINAL"));
+            toolWindows.add(MenuItemConfig.action("file.new.console", "Query Console", "TERMINAL"));
 
-            List<MenuItemConfig> appearance = new ArrayList<>();
-            appearance.add(MenuItemConfig.action("view.fullscreen", "Enter Full Screen"));
-            appearance.add(MenuItemConfig.action("view.presentation", "Toggle Presentation Mode"));
+            // Image 4: Appearance > ToggleFullScreenGroup
+            List<MenuItemConfig> fullScreenGroupChildren = new ArrayList<>();
+            fullScreenGroupChildren.add(MenuItemConfig.separator());
+            fullScreenGroupChildren.add(MenuItemConfig.action("view.toggle.presentation.mode", "Toggle Presentation Mode"));
+            fullScreenGroupChildren.add(MenuItemConfig.action("view.toggle.distraction.free.mode", "Toggle Distraction Free Mode"));
+            fullScreenGroupChildren.add(MenuItemConfig.action("view.toggle.fullscreen.mode", "Toggle Full Screen Mode"));
+            fullScreenGroupChildren.add(MenuItemConfig.action("view.toggle.zen.mode", "Toggle Zen Mode"));
+            fullScreenGroupChildren.add(MenuItemConfig.separator());
+            fullScreenGroupChildren.add(MenuItemConfig.action("view.compact.mode", "Compact Mode"));
+
+            // Image 5: Appearance > UIToggleActions > ViewToolbarActionsGroup
+            List<MenuItemConfig> statusBarWidgetChildren = new ArrayList<>();
+            statusBarWidgetChildren.add(MenuItemConfig.action("view.status.bar.widget.status.text", "Status Text"));
+
+            List<MenuItemConfig> navBarGroupChildren = new ArrayList<>();
+
+            List<MenuItemConfig> viewToolbarActionsChildren = new ArrayList<>();
+            viewToolbarActionsChildren.add(MenuItemConfig.action("view.toolbar.actions.toolbar", "Toolbar"));
+            viewToolbarActionsChildren.add(MenuItemConfig.action("view.toolbar.actions.navbar", "Navigation Bar"));
+            viewToolbarActionsChildren.add(MenuItemConfig.group("view.toolbar.actions.navbar.group", "Navigation Bar", true, navBarGroupChildren));
+            viewToolbarActionsChildren.add(MenuItemConfig.action("view.toggle.tool.window.bars", "Tool Window Bars"));
+            viewToolbarActionsChildren.add(MenuItemConfig.action("view.toggle.status.bar", "Status Bar"));
+            viewToolbarActionsChildren.add(MenuItemConfig.group("view.status.bar.widgets", "Status Bar Widgets", true, statusBarWidgetChildren));
+            viewToolbarActionsChildren.add(MenuItemConfig.action("view.toggle.members.in.nav.bar", "Members in Navigation Bar"));
+
+            List<MenuItemConfig> uiToggleActionsChildren = new ArrayList<>();
+            uiToggleActionsChildren.add(MenuItemConfig.separator());
+            uiToggleActionsChildren.add(MenuItemConfig.action("view.toggle.presentation.assistant", "Presentation Assistant"));
+            uiToggleActionsChildren.add(MenuItemConfig.separator());
+            uiToggleActionsChildren.add(MenuItemConfig.action("view.toggle.main.menu", "Main Menu"));
+            uiToggleActionsChildren.add(MenuItemConfig.action("view.toggle.main.menu.separate", "Main Menu"));
+            uiToggleActionsChildren.add(MenuItemConfig.action("view.toggle.toolbar", "Toolbar"));
+            uiToggleActionsChildren.add(MenuItemConfig.action("view.toggle.toolbar.classic", "Toolbar Classic"));
+            uiToggleActionsChildren.add(MenuItemConfig.action("view.toggle.navigation.bar", "Navigation Bar"));
+            uiToggleActionsChildren.add(MenuItemConfig.group("view.toolbar.actions.group", "ViewToolbarActionsGroup", false, viewToolbarActionsChildren));
+            uiToggleActionsChildren.add(MenuItemConfig.separator());
+
+            List<MenuItemConfig> appearanceChildren = new ArrayList<>();
+            appearanceChildren.add(MenuItemConfig.group("view.toggle.fullscreen.group", "ToggleFullScreenGroup", false, fullScreenGroupChildren));
+            appearanceChildren.add(MenuItemConfig.action("view.zoom.ide", "Zoom IDE"));
+            appearanceChildren.add(MenuItemConfig.group("view.ui.toggle.actions", "UIToggleActions", false, uiToggleActionsChildren));
+            appearanceChildren.add(MenuItemConfig.separator());
+
+            // Image 5: View Recent Actions Group
+            List<MenuItemConfig> viewRecentActionsChildren = new ArrayList<>();
+            viewRecentActionsChildren.add(MenuItemConfig.action("view.recent.files", "Recent Files"));
+            viewRecentActionsChildren.add(MenuItemConfig.action("view.recent.toggle.changed.only", "Toggle Changed Only Files"));
+            viewRecentActionsChildren.add(MenuItemConfig.action("view.recent.iterate.files", "Iterate Recent Files"));
+            viewRecentActionsChildren.add(MenuItemConfig.action("view.recently.changed.files", "Recently Changed Files"));
+            viewRecentActionsChildren.add(MenuItemConfig.action("view.recent.locations", "Recent Locations"));
+            viewRecentActionsChildren.add(MenuItemConfig.action("view.recent.toggle.changed.only.second", "Toggle Changed Only Files"));
+            viewRecentActionsChildren.add(MenuItemConfig.action("view.recent.iterate.files.second", "Iterate Recent Files"));
+            viewRecentActionsChildren.add(MenuItemConfig.action("view.recent.files.second", "Recent Files"));
+            viewRecentActionsChildren.add(MenuItemConfig.action("view.recently.changed.files.second", "Recently Changed Files"));
+            viewRecentActionsChildren.add(MenuItemConfig.action("view.recent.changes", "Recent Changes"));
 
             List<MenuItemConfig> viewMenu = new ArrayList<>();
-            viewMenu.add(MenuItemConfig.group("view.tool.windows", "Tool Windows", toolWindows));
-            viewMenu.add(MenuItemConfig.group("view.appearance", "Appearance", appearance));
-            viewMenu.add(MenuItemConfig.action("view.quick.doc", "Quick Documentation"));
-            viewMenu.add(MenuItemConfig.action("view.parameter.info", "Parameter Info"));
-            mainMenuChildren.add(MenuItemConfig.group("menu.view", "View", viewMenu));
+            viewMenu.add(MenuItemConfig.group("view.tool.windows", "Tool Windows", true, toolWindows));
+            viewMenu.add(MenuItemConfig.group("view.appearance", "Appearance", true, appearanceChildren));
+            viewMenu.add(MenuItemConfig.group("view.recent.actions.group", "View Recent Actions Group", false, viewRecentActionsChildren));
+            viewMenu.add(MenuItemConfig.separator());
+            viewMenu.add(MenuItemConfig.action("view.font.increase", "Increase Font Size in All Editors"));
+            viewMenu.add(MenuItemConfig.action("view.font.decrease", "Decrease Font Size in All Editors"));
+            viewMenu.add(MenuItemConfig.action("view.font.reset", "Reset Font Size in All Editors"));
+            mainMenuChildren.add(MenuItemConfig.group("menu.view", "View", true, viewMenu));
 
             // Navigate
             List<MenuItemConfig> navMenu = new ArrayList<>();
@@ -1508,7 +1734,24 @@ public final class AppSettingsStore {
                         MenuItemConfig fileMenu = root.getChildren().stream()
                                 .filter(c -> "menu.file".equalsIgnoreCase(c.getId()) || "File".equalsIgnoreCase(c.getText()))
                                 .findFirst().orElse(null);
-                        if (fileMenu != null && fileMenu.getChildren().stream().noneMatch(c -> "file.save.as".equalsIgnoreCase(c.getId()))) {
+                        MenuItemConfig editMenu = root.getChildren().stream()
+                                .filter(c -> "menu.edit".equalsIgnoreCase(c.getId()) || "Edit".equalsIgnoreCase(c.getText()))
+                                .findFirst().orElse(null);
+                        MenuItemConfig viewMenu = root.getChildren().stream()
+                                .filter(c -> "menu.view".equalsIgnoreCase(c.getId()) || "View".equalsIgnoreCase(c.getText()))
+                                .findFirst().orElse(null);
+
+                        boolean needsMigration = false;
+                        if (fileMenu != null && fileMenu.getChildren().stream().noneMatch(c -> "file.open.actions".equalsIgnoreCase(c.getId()))) {
+                            needsMigration = true;
+                        }
+                        if (editMenu != null && editMenu.getChildren().stream().noneMatch(c -> "edit.generate.root.group".equalsIgnoreCase(c.getId()))) {
+                            needsMigration = true;
+                        }
+                        if (viewMenu != null && viewMenu.getChildren().stream().noneMatch(c -> "view.recent.actions.group".equalsIgnoreCase(c.getId()))) {
+                            needsMigration = true;
+                        }
+                        if (needsMigration) {
                             for (MenuItemConfig defRoot : defaultMenusAndToolbars()) {
                                 if ("root.main.menu".equalsIgnoreCase(defRoot.getId())) {
                                     menusAndToolbars.set(i, defRoot.copy());
@@ -2927,22 +3170,33 @@ public final class AppSettingsStore {
         private String text = "";
         private String iconName;
         private String iconPath;
+        private boolean popup = true;
         private List<MenuItemConfig> children = new ArrayList<>();
 
         public MenuItemConfig() {}
 
         public MenuItemConfig(Type type, String id, String text) {
+            this(type, id, text, true);
+        }
+
+        public MenuItemConfig(Type type, String id, String text, boolean popup) {
             this.type = type != null ? type : Type.ACTION;
             this.id = id != null ? id : "";
             this.text = text != null ? text : "";
+            this.popup = popup;
         }
 
         public MenuItemConfig(Type type, String id, String text, String iconName, String iconPath, List<MenuItemConfig> children) {
+            this(type, id, text, iconName, iconPath, true, children);
+        }
+
+        public MenuItemConfig(Type type, String id, String text, String iconName, String iconPath, boolean popup, List<MenuItemConfig> children) {
             this.type = type != null ? type : Type.ACTION;
             this.id = id != null ? id : "";
             this.text = text != null ? text : "";
             this.iconName = iconName;
             this.iconPath = iconPath;
+            this.popup = popup;
             if (children != null) this.children = new ArrayList<>(children);
         }
 
@@ -2957,13 +3211,21 @@ public final class AppSettingsStore {
         }
 
         public static MenuItemConfig group(String id, String text, List<MenuItemConfig> children) {
-            MenuItemConfig g = new MenuItemConfig(Type.GROUP, id, text);
+            return group(id, text, true, children);
+        }
+
+        public static MenuItemConfig group(String id, String text, boolean popup, List<MenuItemConfig> children) {
+            MenuItemConfig g = new MenuItemConfig(Type.GROUP, id, text, popup);
             if (children != null) g.children = new ArrayList<>(children);
             return g;
         }
 
         public static MenuItemConfig group(String id, String text, String iconName, List<MenuItemConfig> children) {
-            MenuItemConfig g = new MenuItemConfig(Type.GROUP, id, text);
+            return group(id, text, true, iconName, children);
+        }
+
+        public static MenuItemConfig group(String id, String text, boolean popup, String iconName, List<MenuItemConfig> children) {
+            MenuItemConfig g = new MenuItemConfig(Type.GROUP, id, text, popup);
             g.setIconName(iconName);
             if (children != null) g.children = new ArrayList<>(children);
             return g;
@@ -2974,7 +3236,7 @@ public final class AppSettingsStore {
         }
 
         public MenuItemConfig copy() {
-            MenuItemConfig copy = new MenuItemConfig(type, id, text);
+            MenuItemConfig copy = new MenuItemConfig(type, id, text, popup);
             copy.iconName = this.iconName;
             copy.iconPath = this.iconPath;
             if (this.children != null) {
@@ -3000,6 +3262,9 @@ public final class AppSettingsStore {
 
         public String getIconPath() { return iconPath; }
         public void setIconPath(String iconPath) { this.iconPath = iconPath; }
+
+        public boolean isPopup() { return popup; }
+        public void setPopup(boolean popup) { this.popup = popup; }
 
         public List<MenuItemConfig> getChildren() {
             if (children == null) children = new ArrayList<>();
