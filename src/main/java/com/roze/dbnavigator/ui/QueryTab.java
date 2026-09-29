@@ -1181,32 +1181,86 @@ public class QueryTab extends Tab {
     }
 
     private void buildConfiguredEditorContextMenu(ContextMenu menu, AppSettingsStore.MenuItemConfig popupConfig, boolean hasSelection) {
-        for (AppSettingsStore.MenuItemConfig child : popupConfig.getChildren()) {
-            if (child.getType() == AppSettingsStore.MenuItemConfig.Type.SEPARATOR) {
-                menu.getItems().add(new SeparatorMenuItem());
-            } else if (child.getType() == AppSettingsStore.MenuItemConfig.Type.GROUP) {
+        if (popupConfig.getChildren() != null) {
+            for (AppSettingsStore.MenuItemConfig child : popupConfig.getChildren()) {
+                appendConfigItemToEditorContextMenu(child, menu, hasSelection);
+            }
+        }
+        cleanTrailingSeparators(menu);
+    }
+
+    private void appendConfigItemToEditorContextMenu(AppSettingsStore.MenuItemConfig child, ContextMenu menu, boolean hasSelection) {
+        if (child.getType() == AppSettingsStore.MenuItemConfig.Type.SEPARATOR) {
+            addSeparatorToContextMenu(menu);
+        } else if (child.getType() == AppSettingsStore.MenuItemConfig.Type.GROUP) {
+            if (child.isPopup()) {
                 Menu sub = new Menu(child.getText());
                 buildConfiguredSubMenu(sub, child, hasSelection);
                 menu.getItems().add(sub);
-            } else {
-                MenuItem item = createEditorActionMenuItem(child, hasSelection);
+            } else if (child.getChildren() != null) {
+                for (AppSettingsStore.MenuItemConfig grandChild : child.getChildren()) {
+                    appendConfigItemToEditorContextMenu(grandChild, menu, hasSelection);
+                }
+            }
+        } else {
+            MenuItem item = createEditorActionMenuItem(child, hasSelection);
+            if (item != null) {
                 menu.getItems().add(item);
             }
         }
     }
 
     private void buildConfiguredSubMenu(Menu menu, AppSettingsStore.MenuItemConfig groupConfig, boolean hasSelection) {
-        for (AppSettingsStore.MenuItemConfig child : groupConfig.getChildren()) {
-            if (child.getType() == AppSettingsStore.MenuItemConfig.Type.SEPARATOR) {
-                menu.getItems().add(new SeparatorMenuItem());
-            } else if (child.getType() == AppSettingsStore.MenuItemConfig.Type.GROUP) {
+        if (groupConfig.getChildren() != null) {
+            for (AppSettingsStore.MenuItemConfig child : groupConfig.getChildren()) {
+                appendConfigItemToSubMenu(child, menu, hasSelection);
+            }
+        }
+        cleanTrailingSeparators(menu);
+    }
+
+    private void appendConfigItemToSubMenu(AppSettingsStore.MenuItemConfig child, Menu menu, boolean hasSelection) {
+        if (child.getType() == AppSettingsStore.MenuItemConfig.Type.SEPARATOR) {
+            addSeparatorToMenu(menu);
+        } else if (child.getType() == AppSettingsStore.MenuItemConfig.Type.GROUP) {
+            if (child.isPopup()) {
                 Menu sub = new Menu(child.getText());
                 buildConfiguredSubMenu(sub, child, hasSelection);
                 menu.getItems().add(sub);
-            } else {
-                MenuItem item = createEditorActionMenuItem(child, hasSelection);
+            } else if (child.getChildren() != null) {
+                for (AppSettingsStore.MenuItemConfig grandChild : child.getChildren()) {
+                    appendConfigItemToSubMenu(grandChild, menu, hasSelection);
+                }
+            }
+        } else {
+            MenuItem item = createEditorActionMenuItem(child, hasSelection);
+            if (item != null) {
                 menu.getItems().add(item);
             }
+        }
+    }
+
+    private void addSeparatorToContextMenu(ContextMenu menu) {
+        if (!menu.getItems().isEmpty() && !(menu.getItems().get(menu.getItems().size() - 1) instanceof SeparatorMenuItem)) {
+            menu.getItems().add(new SeparatorMenuItem());
+        }
+    }
+
+    private void addSeparatorToMenu(Menu menu) {
+        if (!menu.getItems().isEmpty() && !(menu.getItems().get(menu.getItems().size() - 1) instanceof SeparatorMenuItem)) {
+            menu.getItems().add(new SeparatorMenuItem());
+        }
+    }
+
+    private void cleanTrailingSeparators(ContextMenu menu) {
+        while (!menu.getItems().isEmpty() && menu.getItems().get(menu.getItems().size() - 1) instanceof SeparatorMenuItem) {
+            menu.getItems().remove(menu.getItems().size() - 1);
+        }
+    }
+
+    private void cleanTrailingSeparators(Menu menu) {
+        while (!menu.getItems().isEmpty() && menu.getItems().get(menu.getItems().size() - 1) instanceof SeparatorMenuItem) {
+            menu.getItems().remove(menu.getItems().size() - 1);
         }
     }
 
@@ -1224,7 +1278,23 @@ public class QueryTab extends Tab {
                 mi.setDisable(!hasSelection);
                 return mi;
             }
+            case "edit.copy.plain": {
+                MenuItem mi = action(text, null, () -> mainWindow.copyAsPlainTextCurrentEditor());
+                mi.setDisable(!hasSelection);
+                return mi;
+            }
+            case "edit.copy.reference": {
+                MenuItem mi = action(text, null, () -> mainWindow.copyPathOrReferenceCurrentEditor());
+                mi.setDisable(!hasSelection);
+                return mi;
+            }
+            case "edit.copy.rich": {
+                MenuItem mi = action(text, null, editor::copy);
+                mi.setDisable(!hasSelection);
+                return mi;
+            }
             case "edit.paste":
+            case "edit.paste.plain":
                 return action(text, new KeyCodeCombination(KeyCode.V, KeyCombination.SHORTCUT_DOWN), editor::paste);
             case "middle.run":
             case "run.run":
@@ -1233,21 +1303,24 @@ public class QueryTab extends Tab {
                 return action(text, null, this::showExecutionPlan);
             case "code.reformat":
                 return action(text, new KeyCodeCombination(KeyCode.L, KeyCombination.SHORTCUT_DOWN, KeyCombination.ALT_DOWN), this::reformatCode);
-            case "folding.expand":
-            case "folding.collapse":
-            case "folding.expand.all":
-            case "folding.collapse.all":
-            case "editor.modify.table":
+            case "editor.popup.show.context.actions":
+                return action(text, new KeyCodeCombination(KeyCode.ENTER, KeyCombination.ALT_DOWN), () -> mainWindow.setStatus(text));
+            case "diff.compare.clipboard":
+                return action(text, null, () -> mainWindow.setStatus("Compare with Clipboard"));
+            case "editor.search.with.google":
+                return action(text, null, () -> mainWindow.setStatus("Search with Google"));
             case "editor.jump.ddl":
-            case "editor.split.right":
-            case "editor.split.down":
-                return disabled(text, null);
+                return action(text, null, () -> mainWindow.setStatus("DDL"));
             default: {
                 com.roze.dbnavigator.ui.action.AnAction regAction = com.roze.dbnavigator.ui.action.ActionManager.getInstance().getAction(id);
                 if (regAction != null) {
-                    return regAction.createMenuItem(mainWindow);
+                    MenuItem mi = regAction.createMenuItem(mainWindow);
+                    if (text != null && !text.isBlank()) {
+                        mi.setText(text);
+                    }
+                    return mi;
                 }
-                return disabled(text, null);
+                return action(text, null, () -> mainWindow.setStatus(text));
             }
         }
     }

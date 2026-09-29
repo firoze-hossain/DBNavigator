@@ -1863,19 +1863,24 @@ public final class AppSettingsStore {
 
             // 2. Main Toolbar
             List<MenuItemConfig> tbLeft = new ArrayList<>();
-            tbLeft.add(MenuItemConfig.action("toolbar.open.project", "Open Project"));
-            tbLeft.add(MenuItemConfig.action("toolbar.vcs.widget", "VCS Widget"));
+            tbLeft.add(MenuItemConfig.action("toolbar.project.widget", "Project Widget", "FOLDER"));
+            List<MenuItemConfig> vcsGroup = new ArrayList<>();
+            vcsGroup.add(MenuItemConfig.action("toolbar.vcs.widget", "VCS Widget", "CODE_BRANCH"));
+            vcsGroup.add(MenuItemConfig.action("toolbar.vcs.merge.rebase.widget", "VCS Merge/Rebase Widget", "CODE_BRANCH"));
+            tbLeft.add(MenuItemConfig.group("toolbar.vcs.group", "VCS Group", true, vcsGroup));
+            List<MenuItemConfig> genActions = new ArrayList<>();
+            genActions.add(MenuItemConfig.separator());
+            tbLeft.add(MenuItemConfig.group("toolbar.general.actions.group", "General Actions", false, genActions));
 
             List<MenuItemConfig> tbCenter = new ArrayList<>();
-            tbCenter.add(MenuItemConfig.action("middle.database", "Database Explorer"));
-            tbCenter.add(MenuItemConfig.action("middle.run", "Execute"));
-            tbCenter.add(MenuItemConfig.action("middle.console", "New Query Console"));
-            tbCenter.add(MenuItemConfig.action("middle.folder", "Open SQL File"));
-            tbCenter.add(MenuItemConfig.action("middle.more", "More Actions"));
+            tbCenter.add(MenuItemConfig.action("toolbar.single.tool.window.bar", "Single Tool Window Bar", "DESKTOP"));
+            tbCenter.add(MenuItemConfig.action("toolbar.file.name.widget", "File Name Widget (when editor tabs are hidden or \"Always show full path\" is enabled)", "FILE_ALT"));
 
             List<MenuItemConfig> tbRight = new ArrayList<>();
-            tbRight.add(MenuItemConfig.action("header.search", "Search Everywhere"));
-            tbRight.add(MenuItemConfig.action("header.settings", "Settings"));
+            tbRight.add(MenuItemConfig.group("toolbar.execution.targets.group", "ExecutionTargetsToolbarGroup", true, "FOLDER", new ArrayList<>()));
+            tbRight.add(MenuItemConfig.action("toolbar.ai.assistant.action", "AIAssistantHubPopupAction", "ROBOT"));
+            tbRight.add(MenuItemConfig.action("header.search", "Search Everywhere", "SEARCH"));
+            tbRight.add(MenuItemConfig.action("header.settings", "IDE and Project Settings", "COG"));
 
             List<MenuItemConfig> toolbarChildren = new ArrayList<>();
             toolbarChildren.add(MenuItemConfig.group("toolbar.left", "Left", tbLeft));
@@ -1885,26 +1890,378 @@ public final class AppSettingsStore {
 
             // 3. Editor Popup Menu
             List<MenuItemConfig> editorPopup = new ArrayList<>();
-            editorPopup.add(MenuItemConfig.action("middle.run", "Execute"));
-            editorPopup.add(MenuItemConfig.action("editor.explain.plan", "Explain Plan"));
+
+            // ShowIntentionsGroup
+            List<MenuItemConfig> intentionsGroup = new ArrayList<>();
+            MenuItemConfig showCtxActions = MenuItemConfig.action("editor.popup.show.context.actions", "Show Context Actions", "LIGHTBULB");
+            intentionsGroup.add(showCtxActions);
+            intentionsGroup.add(MenuItemConfig.separator());
+            editorPopup.add(MenuItemConfig.group("editor.popup.show.intentions", "ShowIntentionsGroup", false, intentionsGroup));
+
+            // LightEditModePopup
+            List<MenuItemConfig> lightEditGroup = new ArrayList<>();
+            lightEditGroup.add(MenuItemConfig.action("editor.popup.open.file.in.project", "Open File in Project\u2026", "FOLDER_OPEN"));
+            lightEditGroup.add(MenuItemConfig.separator());
+            editorPopup.add(MenuItemConfig.group("editor.popup.light.edit.mode", "LightEditModePopup", false, lightEditGroup));
+
+            // Cut, Copy, Copy as Rich Text, Paste
+            editorPopup.add(MenuItemConfig.action("edit.cut", "Cut", "CUT"));
+            editorPopup.add(MenuItemConfig.action("edit.copy", "Copy", "COPY"));
+            editorPopup.add(MenuItemConfig.action("edit.copy.rich", "Copy as Rich Text"));
+            editorPopup.add(MenuItemConfig.action("edit.paste", "Paste", "PASTE"));
+
+            // Copy / Paste Special
+            List<MenuItemConfig> copyPasteSpecial = new ArrayList<>();
+            copyPasteSpecial.add(MenuItemConfig.action("edit.copy.reference", "Copy Reference"));
+            copyPasteSpecial.add(MenuItemConfig.action("edit.copy.git.hosting.link", "Git.Hosting.Copy.Link.Group"));
+            copyPasteSpecial.add(MenuItemConfig.action("edit.copy.plain", "Copy as Plain Text"));
+            copyPasteSpecial.add(MenuItemConfig.action("edit.paste.plain", "Paste as Plain Text"));
+            copyPasteSpecial.add(MenuItemConfig.action("edit.paste.history", "Paste from History\u2026"));
+            editorPopup.add(MenuItemConfig.group("editor.popup.copy.paste.special", "Copy / Paste Special", true, copyPasteSpecial));
+
+            // Copy JSON Pointer, Column Selection Mode
+            editorPopup.add(MenuItemConfig.action("edit.copy.json.pointer", "Copy JSON Pointer"));
+            editorPopup.add(MenuItemConfig.action("edit.column.selection.mode", "Column Selection Mode"));
+
+            // Markdown.EditorContextMenuGroup
+            List<MenuItemConfig> mdEditorGroup = new ArrayList<>();
+            mdEditorGroup.add(MenuItemConfig.separator());
+
+            List<MenuItemConfig> tableChildren = new ArrayList<>();
+            tableChildren.add(MenuItemConfig.action("markdown.table.insert.col.left", "Insert Column Left", "PLUS"));
+            tableChildren.add(MenuItemConfig.action("markdown.table.insert.col.right", "Insert Column Right", "PLUS"));
+            tableChildren.add(MenuItemConfig.action("markdown.table.insert.row.above", "Insert Row Above", "ARROW_UP"));
+            tableChildren.add(MenuItemConfig.action("markdown.table.insert.row.below", "Insert Row Below", "ARROW_DOWN"));
+            tableChildren.add(MenuItemConfig.separator());
+
+            List<MenuItemConfig> colAlignChildren = new ArrayList<>();
+            List<MenuItemConfig> setColAlignChildren = new ArrayList<>();
+            setColAlignChildren.add(MenuItemConfig.action("markdown.table.align.left", "Align Left", "ALIGN_LEFT"));
+            setColAlignChildren.add(MenuItemConfig.action("markdown.table.align.center", "Align Center", "ALIGN_CENTER"));
+            setColAlignChildren.add(MenuItemConfig.action("markdown.table.align.right", "Align Right", "ALIGN_RIGHT"));
+            colAlignChildren.add(MenuItemConfig.group("markdown.table.set.col.alignment.group", "Set Column Alignment", true, setColAlignChildren));
+            colAlignChildren.add(MenuItemConfig.action("markdown.table.move.col.left", "Move Column Left", "ARROW_LEFT"));
+            colAlignChildren.add(MenuItemConfig.action("markdown.table.move.col.right", "Move Column Right", "ARROW_RIGHT"));
+            colAlignChildren.add(MenuItemConfig.separator());
+            colAlignChildren.add(MenuItemConfig.action("markdown.table.remove.col", "Remove Column", "TRASH"));
+            colAlignChildren.add(MenuItemConfig.action("markdown.table.remove.row", "Remove Row", "TRASH"));
+
+            tableChildren.add(MenuItemConfig.group("markdown.table.col.alignment.group", "Column Alignment", true, colAlignChildren));
+            tableChildren.add(MenuItemConfig.action("markdown.table.insert", "Insert\u2026"));
+
+            mdEditorGroup.add(MenuItemConfig.group("markdown.table.group", "Table", true, tableChildren));
+            mdEditorGroup.add(MenuItemConfig.separator());
+            editorPopup.add(MenuItemConfig.group("editor.popup.markdown.group", "Markdown.EditorContextMenuGroup", false, mdEditorGroup));
+
             editorPopup.add(MenuItemConfig.separator());
-            editorPopup.add(MenuItemConfig.action("edit.cut", "Cut"));
-            editorPopup.add(MenuItemConfig.action("edit.copy", "Copy"));
-            editorPopup.add(MenuItemConfig.action("edit.paste", "Paste"));
+
+            // Editor Popup Menu Actions (1)
+            List<MenuItemConfig> actions1Group = new ArrayList<>();
+            actions1Group.add(MenuItemConfig.action("edit.find.in.files", "Find in Files"));
+
+            List<MenuItemConfig> findRefactorGroup = new ArrayList<>();
+            findRefactorGroup.add(MenuItemConfig.action("edit.find.usages", "Find Usages"));
+
+            // Go To
+            List<MenuItemConfig> goToChildren = new ArrayList<>();
+            List<MenuItemConfig> tblNavigateGroup = new ArrayList<>();
+            tblNavigateGroup.add(MenuItemConfig.action("console.table.navigate.first", "First Page", "FAST_BACKWARD"));
+            tblNavigateGroup.add(MenuItemConfig.action("console.table.navigate.prev", "Previous Page", "STEP_BACKWARD"));
+            tblNavigateGroup.add(MenuItemConfig.action("console.table.navigate.next", "Next Page", "STEP_FORWARD"));
+            tblNavigateGroup.add(MenuItemConfig.action("console.table.navigate.last", "Last Page", "FAST_FORWARD"));
+            tblNavigateGroup.add(MenuItemConfig.separator());
+            goToChildren.add(MenuItemConfig.group("console.table.result.navigate.group", "Console.TableResult.Navigate.Group", false, tblNavigateGroup));
+
+            goToChildren.add(MenuItemConfig.action("nav.jump.to.navbar", "Jump to Navigation Bar"));
+            goToChildren.add(MenuItemConfig.action("nav.goto.declaration", "Go to Declaration or Usages"));
+            goToChildren.add(MenuItemConfig.action("editor.edit.data", "Edit Data", "TABLE"));
+            goToChildren.add(MenuItemConfig.action("editor.select.in.db.explorer", "Select in Database Explorer"));
+            goToChildren.add(MenuItemConfig.action("nav.goto.implementation", "Go to Implementation(s)"));
+            goToChildren.add(MenuItemConfig.action("nav.goto.type.declaration", "Go to Type Declaration"));
+            goToChildren.add(MenuItemConfig.action("nav.goto.super.method", "Go to Super Method"));
+            goToChildren.add(MenuItemConfig.action("nav.related.symbol", "Related Symbol\u2026"));
+            goToChildren.add(MenuItemConfig.action("nav.goto.test", "Go to Test"));
+            goToChildren.add(MenuItemConfig.action("editor.jump.ddl", "DDL"));
+            goToChildren.add(MenuItemConfig.action("editor.goto.row", "Row\u2026"));
+
+            List<MenuItemConfig> dbGoToGroup = new ArrayList<>();
+            dbGoToGroup.add(MenuItemConfig.action("console.table.goto.related.rows", "Related Rows", "TH"));
+            dbGoToGroup.add(MenuItemConfig.action("console.table.goto.open.url", "Open URL", "GLOBE"));
+            dbGoToGroup.add(MenuItemConfig.action("console.table.goto.open.file.uri", "Open File URI", "FOLDER_OPEN"));
+            dbGoToGroup.add(MenuItemConfig.action("console.table.goto.referencing.result", "Referencing Result"));
+            dbGoToGroup.add(MenuItemConfig.separator());
+            goToChildren.add(MenuItemConfig.group("console.table.result.database.goto.group", "Console.TableResult.Database.GoTo", false, dbGoToGroup));
+
+            findRefactorGroup.add(MenuItemConfig.group("editor.popup.goto", "Go To", true, goToChildren));
+            findRefactorGroup.add(MenuItemConfig.separator());
+
+            // Folding
+            List<MenuItemConfig> popupFoldingChildren = new ArrayList<>();
+            popupFoldingChildren.add(MenuItemConfig.action("folding.expand", "Expand"));
+            popupFoldingChildren.add(MenuItemConfig.action("folding.expand.recursively", "Expand Recursively"));
+            popupFoldingChildren.add(MenuItemConfig.action("folding.expand.all", "Expand All"));
+            popupFoldingChildren.add(MenuItemConfig.separator());
+            popupFoldingChildren.add(MenuItemConfig.action("folding.collapse", "Collapse"));
+            popupFoldingChildren.add(MenuItemConfig.action("folding.collapse.recursively", "Collapse Recursively"));
+            popupFoldingChildren.add(MenuItemConfig.action("folding.collapse.all", "Collapse All"));
+            popupFoldingChildren.add(MenuItemConfig.separator());
+
+            List<MenuItemConfig> expandToLevel = new ArrayList<>();
+            for (int lvl = 1; lvl <= 5; lvl++) {
+                expandToLevel.add(MenuItemConfig.action("folding.expand.to.level." + lvl, String.valueOf(lvl)));
+            }
+            popupFoldingChildren.add(MenuItemConfig.group("folding.expand.to.level.group", "Expand to Level", true, expandToLevel));
+
+            List<MenuItemConfig> expandAllToLevel = new ArrayList<>();
+            for (int lvl = 1; lvl <= 5; lvl++) {
+                expandAllToLevel.add(MenuItemConfig.action("folding.expand.all.to.level." + lvl, String.valueOf(lvl)));
+            }
+            popupFoldingChildren.add(MenuItemConfig.group("folding.expand.all.to.level.group", "Expand All to Level", true, expandAllToLevel));
+            popupFoldingChildren.add(MenuItemConfig.separator());
+
+            List<MenuItemConfig> langFolding = new ArrayList<>();
+            langFolding.add(MenuItemConfig.action("folding.expand.doc.comments", "Expand Doc Comments"));
+            langFolding.add(MenuItemConfig.action("folding.collapse.doc.comments", "Collapse Doc Comments"));
+            popupFoldingChildren.add(MenuItemConfig.group("folding.language.specific.group", "LanguageSpecificFoldingGroup", false, langFolding));
+            popupFoldingChildren.add(MenuItemConfig.separator());
+
+            popupFoldingChildren.add(MenuItemConfig.action("folding.toggle", "Toggle Folding"));
+            popupFoldingChildren.add(MenuItemConfig.separator());
+            popupFoldingChildren.add(MenuItemConfig.action("folding.selection.remove.region", "Fold Selection / Remove Region"));
+            popupFoldingChildren.add(MenuItemConfig.action("folding.code.block", "Fold Code Block"));
+
+            findRefactorGroup.add(MenuItemConfig.group("editor.popup.folding", "Folding", true, popupFoldingChildren));
+            findRefactorGroup.add(MenuItemConfig.action("tools.save.as.live.template", "Save as Live Template\u2026"));
+            findRefactorGroup.add(MenuItemConfig.action("code.reformat", "Reformat Code", "INDENT"));
+
+            actions1Group.add(MenuItemConfig.group("editor.popup.find.refactor", "EditorPopupMenu1.FindRefactor", false, findRefactorGroup));
+
+            editorPopup.add(MenuItemConfig.group("editor.popup.actions.1", "Editor Popup Menu Actions (1)", false, actions1Group));
+
             editorPopup.add(MenuItemConfig.separator());
-            editorPopup.add(MenuItemConfig.action("code.reformat", "Reformat Code"));
-            List<MenuItemConfig> folding = new ArrayList<>();
-            folding.add(MenuItemConfig.action("folding.expand", "Expand"));
-            folding.add(MenuItemConfig.action("folding.collapse", "Collapse"));
-            folding.add(MenuItemConfig.action("folding.expand.all", "Expand All"));
-            folding.add(MenuItemConfig.action("folding.collapse.all", "Collapse All"));
-            editorPopup.add(MenuItemConfig.group("editor.folding", "Folding", folding));
+
+            // EditorPopupMenu2 (Image 1)
+            List<MenuItemConfig> popupMenu2Children = new ArrayList<>();
+            List<MenuItemConfig> sqlScriptsChildren = new ArrayList<>();
+            sqlScriptsChildren.add(MenuItemConfig.action("editor.sql.generator", "SQL Generator\u2026"));
+            sqlScriptsChildren.add(MenuItemConfig.separator());
+            sqlScriptsChildren.add(MenuItemConfig.action("editor.sql.request.copy.ddl", "Request and Copy Original DDL"));
+            sqlScriptsChildren.add(MenuItemConfig.action("editor.sql.generate.ddl.clipboard", "Generate DDL to Clipboard"));
+            sqlScriptsChildren.add(MenuItemConfig.action("editor.sql.generate.ddl.queryfile", "Generate DDL to Query File"));
+            sqlScriptsChildren.add(MenuItemConfig.action("editor.sql.context.templates", "Context Templates"));
+            sqlScriptsChildren.add(MenuItemConfig.separator());
+            sqlScriptsChildren.add(MenuItemConfig.action("editor.sql.run.script", "Run SQL Script\u2026"));
+            sqlScriptsChildren.add(MenuItemConfig.action("editor.sql.regenerate.definition", "Regenerate definition"));
+            sqlScriptsChildren.add(MenuItemConfig.action("editor.sql.import.to.database", "Import to Database\u2026", "UPLOAD"));
+            sqlScriptsChildren.add(MenuItemConfig.action("editor.sql.view.as.table", "View as Table", "TABLE"));
+            sqlScriptsChildren.add(MenuItemConfig.action("editor.sql.edit.as.table", "Edit as Table", "TABLE"));
+            sqlScriptsChildren.add(MenuItemConfig.action("editor.sql.change.file.language", "Change File Language"));
+            sqlScriptsChildren.add(MenuItemConfig.action("editor.sql.change.sql.dialect", "Change SQL Dialect"));
+            popupMenu2Children.add(MenuItemConfig.group("editor.sql.scripts", "SQL Scripts", true, "FOLDER", sqlScriptsChildren));
+            editorPopup.add(MenuItemConfig.group("editor.popup.menu.2", "EditorPopupMenu2", true, popupMenu2Children));
+
             editorPopup.add(MenuItemConfig.separator());
-            editorPopup.add(MenuItemConfig.action("editor.modify.table", "Modify Table\u2026"));
-            editorPopup.add(MenuItemConfig.action("editor.jump.ddl", "Jump to DDL"));
+
+            // EditorPopupMenu3 (Image 1)
+            List<MenuItemConfig> popupMenu3Children = new ArrayList<>();
+            popupMenu3Children.add(MenuItemConfig.action("editor.popup.set.background.image", "Set Background Image"));
+            editorPopup.add(MenuItemConfig.group("editor.popup.menu.3", "EditorPopupMenu3", true, popupMenu3Children));
+
             editorPopup.add(MenuItemConfig.separator());
-            editorPopup.add(MenuItemConfig.action("editor.split.right", "Split Right"));
-            editorPopup.add(MenuItemConfig.action("editor.split.down", "Split Down"));
+
+            // Search with Google
+            editorPopup.add(MenuItemConfig.action("editor.search.with.google", "Search with Google"));
+
+            editorPopup.add(MenuItemConfig.separator());
+
+            // Editor Popup Menu Actions (2) (Images 2, 3, 4, 5)
+            List<MenuItemConfig> actions2Group = new ArrayList<>();
+            actions2Group.add(MenuItemConfig.separator());
+            actions2Group.add(MenuItemConfig.action("editor.popup.rename", "Rename\u2026"));
+
+            // Refactor [popup] (Image 2)
+            List<MenuItemConfig> popupRefactorChildren = new ArrayList<>();
+            popupRefactorChildren.add(MenuItemConfig.action("refactor.this", "Refactor This\u2026"));
+            popupRefactorChildren.add(MenuItemConfig.action("refactor.rename", "Rename\u2026"));
+            popupRefactorChildren.add(MenuItemConfig.action("refactor.change.signature", "Change Signature\u2026"));
+            popupRefactorChildren.add(MenuItemConfig.action("refactor.modify.object", "Modify Object\u2026"));
+            popupRefactorChildren.add(MenuItemConfig.separator());
+
+            // Extract/Introduce [popup] (Image 2)
+            List<MenuItemConfig> extractIntroChildren = new ArrayList<>();
+            extractIntroChildren.add(MenuItemConfig.action("refactor.introduce.variable", "Introduce Variable\u2026"));
+            extractIntroChildren.add(MenuItemConfig.action("refactor.extract.routine", "Extract Routine\u2026"));
+            extractIntroChildren.add(MenuItemConfig.action("refactor.table.alias", "Table alias\u2026"));
+            extractIntroChildren.add(MenuItemConfig.action("refactor.introduce.constant", "Introduce Constant\u2026"));
+            extractIntroChildren.add(MenuItemConfig.action("refactor.introduce.field", "Introduce Field\u2026"));
+            extractIntroChildren.add(MenuItemConfig.action("refactor.introduce.parameter", "Introduce Parameter\u2026"));
+            extractIntroChildren.add(MenuItemConfig.separator());
+            extractIntroChildren.add(MenuItemConfig.action("refactor.introduce.parameter.object", "Introduce Parameter Object\u2026"));
+            extractIntroChildren.add(MenuItemConfig.separator());
+            extractIntroChildren.add(MenuItemConfig.action("refactor.extract.method", "Extract Method\u2026"));
+            extractIntroChildren.add(MenuItemConfig.separator());
+            extractIntroChildren.add(MenuItemConfig.action("refactor.extract.delegate", "Extract Delegate\u2026"));
+            extractIntroChildren.add(MenuItemConfig.action("refactor.include.file", "Include File\u2026"));
+            extractIntroChildren.add(MenuItemConfig.action("refactor.extract.interface", "Extract Interface\u2026"));
+            extractIntroChildren.add(MenuItemConfig.action("refactor.extract.superclass", "Extract Superclass\u2026"));
+            extractIntroChildren.add(MenuItemConfig.action("refactor.extract.module", "Extract Module\u2026"));
+            extractIntroChildren.add(MenuItemConfig.action("refactor.subquery.cte", "Subquery as CTE"));
+            popupRefactorChildren.add(MenuItemConfig.group("editor.refactor.extract.introduce", "Extract/Introduce", true, extractIntroChildren));
+
+            popupRefactorChildren.add(MenuItemConfig.action("refactor.inline", "Inline\u2026"));
+            popupRefactorChildren.add(MenuItemConfig.separator());
+            popupRefactorChildren.add(MenuItemConfig.action("refactor.move", "Move\u2026"));
+            popupRefactorChildren.add(MenuItemConfig.action("refactor.copy", "Copy\u2026"));
+            popupRefactorChildren.add(MenuItemConfig.action("refactor.safe.delete", "Safe Delete\u2026"));
+            popupRefactorChildren.add(MenuItemConfig.separator());
+            popupRefactorChildren.add(MenuItemConfig.action("refactor.pull.members.up", "Pull Members Up\u2026"));
+            popupRefactorChildren.add(MenuItemConfig.action("refactor.push.members.down", "Push Members Down\u2026"));
+            popupRefactorChildren.add(MenuItemConfig.action("refactor.invert.boolean", "Invert Boolean\u2026"));
+            actions2Group.add(MenuItemConfig.group("editor.popup.refactor", "Refactor", true, popupRefactorChildren));
+
+            actions2Group.add(MenuItemConfig.action("editor.popup.generate", "Generate\u2026"));
+            actions2Group.add(MenuItemConfig.separator());
+
+            // Debug Actions (Image 3)
+            List<MenuItemConfig> debugActionsChildren = new ArrayList<>();
+            debugActionsChildren.add(MenuItemConfig.action("debug.copy.js.script.clipboard", "Copy JS Script to Clipboard"));
+            debugActionsChildren.add(MenuItemConfig.action("debug.show.js.script", "Show JS Script"));
+            debugActionsChildren.add(MenuItemConfig.separator());
+            debugActionsChildren.add(MenuItemConfig.action("debug.evaluate.expression", "Evaluate Expression\u2026", "CALCULATOR"));
+            debugActionsChildren.add(MenuItemConfig.action("debug.run.to.cursor", "Run to Cursor"));
+            debugActionsChildren.add(MenuItemConfig.action("debug.force.run.to.cursor", "Force Run to Cursor"));
+            debugActionsChildren.add(MenuItemConfig.action("debug.add.to.watches", "Add to Watches"));
+            debugActionsChildren.add(MenuItemConfig.action("debug.add.inline.watch", "Add Inline Watch"));
+            debugActionsChildren.add(MenuItemConfig.action("debug.evaluate.in.console", "Evaluate in Console"));
+            debugActionsChildren.add(MenuItemConfig.separator());
+
+            List<MenuItemConfig> hotSwapChildren = new ArrayList<>();
+            hotSwapChildren.add(MenuItemConfig.action("debug.compile.reload.modified.files", "Compile and Reload Modified Files"));
+            hotSwapChildren.add(MenuItemConfig.separator());
+            debugActionsChildren.add(MenuItemConfig.group("editor.popup.debug.hotswap", "EditorPopupMenuDebugHotSwap", false, hotSwapChildren));
+
+            actions2Group.add(MenuItemConfig.group("editor.debug.actions", "Debug Actions", false, debugActionsChildren));
+
+            // Compile/Run Actions (Image 3 & 4)
+            List<MenuItemConfig> compileRunChildren = new ArrayList<>();
+            List<MenuItemConfig> runConfigsChildren = new ArrayList<>();
+            List<MenuItemConfig> runContextChildren = new ArrayList<>();
+
+            // RunContextGroupInner (Image 3)
+            List<MenuItemConfig> runContextInnerChildren = new ArrayList<>();
+            List<MenuItemConfig> executorsChildren = new ArrayList<>();
+            executorsChildren.add(MenuItemConfig.action("run.context.configuration", "Run context configuration", "PLAY"));
+            executorsChildren.add(MenuItemConfig.action("debug.context.configuration", "Debug context configuration", "BUG"));
+            runContextInnerChildren.add(MenuItemConfig.group("editor.run.context.executors.group", "RunContextExecutorsGroup", false, executorsChildren));
+
+            List<MenuItemConfig> moreRunDebugChildren = new ArrayList<>();
+            moreRunDebugChildren.add(MenuItemConfig.action("run.coverage.context.configuration", "Run with Coverage context configuration"));
+            moreRunDebugChildren.add(MenuItemConfig.action("run.profiler.context.configuration", "Run with Profiler"));
+            moreRunDebugChildren.add(MenuItemConfig.action("run.create.configuration", "Create Run Configuration"));
+            moreRunDebugChildren.add(MenuItemConfig.separator());
+            moreRunDebugChildren.add(MenuItemConfig.action("run.context.configuration.secondary", "Run context configuration", "PLAY"));
+            moreRunDebugChildren.add(MenuItemConfig.action("debug.context.configuration.secondary", "Debug context configuration", "BUG"));
+            moreRunDebugChildren.add(MenuItemConfig.action("run.modify.configuration", "Modify Run Configuration\u2026"));
+            moreRunDebugChildren.add(MenuItemConfig.separator());
+            runContextInnerChildren.add(MenuItemConfig.group("editor.more.run.debug.group", "More Run/Debug", false, moreRunDebugChildren));
+
+            runContextChildren.add(MenuItemConfig.group("editor.run.context.group.inner", "RunContextGroupInner", false, runContextInnerChildren));
+            runContextChildren.add(MenuItemConfig.separator());
+
+            // Console.Jdbc.RunContextGroup (Image 4)
+            List<MenuItemConfig> consoleJdbcRunChildren = new ArrayList<>();
+            consoleJdbcRunChildren.add(MenuItemConfig.action("console.attach.data.source", "Attach Data Source"));
+            consoleJdbcRunChildren.add(MenuItemConfig.separator());
+            consoleJdbcRunChildren.add(MenuItemConfig.action("console.recompile", "Recompile\u2026"));
+
+            List<MenuItemConfig> explainPlanChildren = new ArrayList<>();
+            explainPlanChildren.add(MenuItemConfig.action("console.explain.plan", "Explain Plan"));
+            explainPlanChildren.add(MenuItemConfig.action("console.explain.plan.raw", "Explain Plan (Raw)"));
+            explainPlanChildren.add(MenuItemConfig.action("console.explain.analyse", "Explain Analyse"));
+            explainPlanChildren.add(MenuItemConfig.action("console.explain.analyse.raw", "Explain Analyse (Raw)"));
+            consoleJdbcRunChildren.add(MenuItemConfig.group("console.explain.plan.group", "Explain Plan", true, explainPlanChildren));
+
+            consoleJdbcRunChildren.add(MenuItemConfig.action("middle.run", "Execute", "PLAY"));
+            consoleJdbcRunChildren.add(MenuItemConfig.action("editor.execute.selection.single", "Execute Selection as Single Statement", "PLAY"));
+            consoleJdbcRunChildren.add(MenuItemConfig.action("editor.export.data", "Export Data\u2026", "DOWNLOAD"));
+            consoleJdbcRunChildren.add(MenuItemConfig.action("editor.debug", "Debug", "BUG"));
+            consoleJdbcRunChildren.add(MenuItemConfig.action("editor.debug.routine", "Debug Routine\u2026", "BUG"));
+            consoleJdbcRunChildren.add(MenuItemConfig.separator());
+            consoleJdbcRunChildren.add(MenuItemConfig.action("editor.migrate.consoles.to.queryfiles", "Migrate Query Consoles to Query Files\u2026"));
+            consoleJdbcRunChildren.add(MenuItemConfig.separator());
+
+            runContextChildren.add(MenuItemConfig.group("console.jdbc.run.context.group", "Console.Jdbc.RunContextGroup", false, consoleJdbcRunChildren));
+
+            runConfigsChildren.add(MenuItemConfig.group("editor.run.context.group", "RunContextGroup", false, runContextChildren));
+            compileRunChildren.add(MenuItemConfig.group("editor.run.configurations.group", "Run Configurations", false, runConfigsChildren));
+            actions2Group.add(MenuItemConfig.group("editor.compile.run.actions", "Compile/Run Actions", false, compileRunChildren));
+
+            // SplitRevealGroup (Image 4)
+            List<MenuItemConfig> splitRevealChildren = new ArrayList<>();
+            splitRevealChildren.add(MenuItemConfig.action("editor.open.in.right.split", "Open in Right Split", "COLUMNS"));
+            splitRevealChildren.add(MenuItemConfig.action("editor.open.in.split.chooser", "Open in Split with Chooser\u2026"));
+
+            List<MenuItemConfig> openInChildren = new ArrayList<>();
+            openInChildren.add(MenuItemConfig.action("editor.open.in.file.manager", "Show in File Manager"));
+            openInChildren.add(MenuItemConfig.action("editor.open.in.associated.app", "Open in Associated Application"));
+            openInChildren.add(MenuItemConfig.action("editor.open.in.browser", "Open in Browser", "GLOBE"));
+            openInChildren.add(MenuItemConfig.action("editor.open.in.file.path", "File Path"));
+            openInChildren.add(MenuItemConfig.action("editor.open.in.terminal", "Open in Terminal", "TERMINAL"));
+            openInChildren.add(MenuItemConfig.action("editor.open.in.terminal.second", "Open in Terminal", "TERMINAL"));
+            openInChildren.add(MenuItemConfig.action("git.hosting.open.in.browser.group", "Git.Hosting.Open.In.Browser.Group"));
+            splitRevealChildren.add(MenuItemConfig.group("editor.open.in.group", "Open In", true, "FOLDER", openInChildren));
+            splitRevealChildren.add(MenuItemConfig.separator());
+
+            actions2Group.add(MenuItemConfig.group("editor.split.reveal.group", "SplitRevealGroup", false, splitRevealChildren));
+            actions2Group.add(MenuItemConfig.separator());
+
+            // VCS/LVCS Actions (Image 5)
+            List<MenuItemConfig> vcsLvcsChildren = new ArrayList<>();
+            List<MenuItemConfig> localHistoryChildren = new ArrayList<>();
+            localHistoryChildren.add(MenuItemConfig.action("editor.local.history.show", "Show History\u2026"));
+            localHistoryChildren.add(MenuItemConfig.action("editor.local.history.show.selection", "Show History for Selection\u2026"));
+            localHistoryChildren.add(MenuItemConfig.separator());
+            localHistoryChildren.add(MenuItemConfig.action("editor.local.history.show.project", "Show Project History\u2026"));
+            localHistoryChildren.add(MenuItemConfig.action("editor.local.history.recent.changes", "Recent Changes"));
+            localHistoryChildren.add(MenuItemConfig.action("editor.local.history.put.label", "Put Label\u2026"));
+            localHistoryChildren.add(MenuItemConfig.action("editor.local.history.vcs.group", "Version Control Group"));
+            vcsLvcsChildren.add(MenuItemConfig.group("editor.local.history.group", "Local History", true, localHistoryChildren));
+            vcsLvcsChildren.add(MenuItemConfig.separator());
+            vcsLvcsChildren.add(MenuItemConfig.action("editor.external.tools", "External Tools"));
+            vcsLvcsChildren.add(MenuItemConfig.action("editor.update.tag.emmet", "Update tag with Emmet"));
+            vcsLvcsChildren.add(MenuItemConfig.action("diff.compare.clipboard", "Compare with Clipboard", "EXCHANGE_ALT"));
+            vcsLvcsChildren.add(MenuItemConfig.action("vcs.show.review.diff", "Show Review Diff", "ARROW_RIGHT"));
+            vcsLvcsChildren.add(MenuItemConfig.action("vcs.add.review.comment", "Add Review Comment"));
+
+            actions2Group.add(MenuItemConfig.group("editor.vcs.lvcs.actions.group", "VCS/LVCS Actions", false, vcsLvcsChildren));
+
+            editorPopup.add(MenuItemConfig.group("editor.popup.actions.2", "Editor Popup Menu Actions (2)", false, actions2Group));
+
+            // Git [popup] (Image 5)
+            List<MenuItemConfig> gitChildren = new ArrayList<>();
+            gitChildren.add(MenuItemConfig.action("git.show.local.version", "Show Local Version"));
+            gitChildren.add(MenuItemConfig.action("git.compare.with.head", "Compare with HEAD Version"));
+            gitChildren.add(MenuItemConfig.action("git.compare.with.local", "Compare with Local Version"));
+            gitChildren.add(MenuItemConfig.action("git.compare.head.staged.local", "Compare HEAD, Staged and Local Versions"));
+            editorPopup.add(MenuItemConfig.group("editor.popup.git", "Git", true, gitChildren));
+
+            // Diagrams [popup] (Image 5)
+            List<MenuItemConfig> diagChildren = new ArrayList<>();
+            diagChildren.add(MenuItemConfig.action("diagrams.show.uml", "ShowUmlDiagram", "PROJECT_DIAGRAM"));
+            diagChildren.add(MenuItemConfig.action("diagrams.show.uml.popup", "ShowUmlDiagramPopup", "PROJECT_DIAGRAM"));
+            editorPopup.add(MenuItemConfig.group("editor.popup.diagrams", "Diagrams", true, diagChildren));
+
+            // Change Template Data Language
+            editorPopup.add(MenuItemConfig.action("file.change.template.lang", "Change Template Data Language"));
+
+            // XPathView.EditorPopup [popup] (Image 5)
+            List<MenuItemConfig> xpathChildren = new ArrayList<>();
+            xpathChildren.add(MenuItemConfig.separator());
+            xpathChildren.add(MenuItemConfig.action("xpath.evaluate", "Evaluate XPath\u2026"));
+            xpathChildren.add(MenuItemConfig.action("xpath.show.unique", "Show Unique XPath"));
+            xpathChildren.add(MenuItemConfig.action("xpath.file.associations", "File Associations"));
+            editorPopup.add(MenuItemConfig.group("xpath.editor.popup", "XPathView.EditorPopup", true, xpathChildren));
+
             roots.add(MenuItemConfig.group("root.editor.popup", "Editor Popup Menu", editorPopup));
 
             // 4. Editor Gutter Popup Menu
@@ -2574,7 +2931,28 @@ public final class AppSettingsStore {
                                 }
                             }
                         }
-                        break;
+                    } else if ("root.main.toolbar".equalsIgnoreCase(root.getId())) {
+                        boolean needsTbMigration = root.getChildren().stream()
+                                .noneMatch(c -> c.getChildren().stream().anyMatch(sub -> "toolbar.single.tool.window.bar".equalsIgnoreCase(sub.getId()) || "Single Tool Window Bar".equalsIgnoreCase(sub.getText())));
+                        if (needsTbMigration) {
+                            for (MenuItemConfig defRoot : defaultMenusAndToolbars()) {
+                                if ("root.main.toolbar".equalsIgnoreCase(defRoot.getId())) {
+                                    menusAndToolbars.set(i, defRoot.copy());
+                                    break;
+                                }
+                            }
+                        }
+                    } else if ("root.editor.popup".equalsIgnoreCase(root.getId())) {
+                        boolean needsPopupMigration = root.getChildren().stream()
+                                .noneMatch(c -> "editor.popup.menu.2".equalsIgnoreCase(c.getId()) && !c.getChildren().isEmpty());
+                        if (needsPopupMigration) {
+                            for (MenuItemConfig defRoot : defaultMenusAndToolbars()) {
+                                if ("root.editor.popup".equalsIgnoreCase(defRoot.getId())) {
+                                    menusAndToolbars.set(i, defRoot.copy());
+                                    break;
+                                }
+                            }
+                        }
                     }
                 }
             }

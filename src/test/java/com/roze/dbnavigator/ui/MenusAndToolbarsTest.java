@@ -119,7 +119,7 @@ public class MenusAndToolbarsTest {
     }
 
     @Test
-    @DisplayName("Verify Main Toolbar structure has Left, Center, and Right groups")
+    @DisplayName("Verify Main Toolbar structure has Left, Center, and Right groups matching DataGrip")
     public void testMainToolbarStructure() {
         MenuItemConfig toolbar = settings.getMenuConfig("root.main.toolbar");
         assertNotNull(toolbar);
@@ -132,6 +132,19 @@ public class MenusAndToolbarsTest {
         assertTrue(subGroups.contains("Center"));
         assertTrue(subGroups.contains("Right"));
 
+        // Left
+        MenuItemConfig leftGroup = toolbar.getChildren().stream()
+                .filter(g -> "Left".equals(g.getText()))
+                .findFirst().orElse(null);
+        assertNotNull(leftGroup);
+        List<String> leftActions = leftGroup.getChildren().stream()
+                .map(MenuItemConfig::getText)
+                .toList();
+        assertTrue(leftActions.contains("Project Widget"));
+        assertTrue(leftActions.contains("VCS Group"));
+        assertTrue(leftActions.contains("General Actions"));
+
+        // Center
         MenuItemConfig centerGroup = toolbar.getChildren().stream()
                 .filter(g -> "Center".equals(g.getText()))
                 .findFirst()
@@ -141,15 +154,25 @@ public class MenusAndToolbarsTest {
         List<String> centerActions = centerGroup.getChildren().stream()
                 .map(MenuItemConfig::getText)
                 .toList();
-        assertTrue(centerActions.contains("Database Explorer"));
-        assertTrue(centerActions.contains("Execute"));
-        assertTrue(centerActions.contains("New Query Console"));
-        assertTrue(centerActions.contains("Open SQL File"));
-        assertTrue(centerActions.contains("More Actions"));
+        assertTrue(centerActions.contains("Single Tool Window Bar"));
+        assertTrue(centerActions.stream().anyMatch(t -> t.contains("File Name Widget")));
+
+        // Right
+        MenuItemConfig rightGroup = toolbar.getChildren().stream()
+                .filter(g -> "Right".equals(g.getText()))
+                .findFirst().orElse(null);
+        assertNotNull(rightGroup);
+        List<String> rightActions = rightGroup.getChildren().stream()
+                .map(MenuItemConfig::getText)
+                .toList();
+        assertTrue(rightActions.contains("ExecutionTargetsToolbarGroup"));
+        assertTrue(rightActions.contains("AIAssistantHubPopupAction"));
+        assertTrue(rightActions.contains("Search Everywhere"));
+        assertTrue(rightActions.contains("IDE and Project Settings"));
     }
 
     @Test
-    @DisplayName("Verify Editor Popup Menu structure contains actions and folding group")
+    @DisplayName("Verify Editor Popup Menu structure contains DataGrip actions, submenus, and folding groups")
     public void testEditorPopupMenuStructure() {
         MenuItemConfig editorPopup = settings.getMenuConfig("root.editor.popup");
         assertNotNull(editorPopup);
@@ -157,16 +180,60 @@ public class MenusAndToolbarsTest {
         List<String> items = editorPopup.getChildren().stream()
                 .map(MenuItemConfig::getText)
                 .toList();
-        assertTrue(items.contains("Execute"));
-        assertTrue(items.contains("Explain Plan"));
+        assertTrue(items.contains("ShowIntentionsGroup"));
+        assertTrue(items.contains("LightEditModePopup"));
         assertTrue(items.contains("Cut"));
         assertTrue(items.contains("Copy"));
+        assertTrue(items.contains("Copy as Rich Text"));
         assertTrue(items.contains("Paste"));
-        assertTrue(items.contains("Reformat Code"));
-        assertTrue(items.contains("Folding"));
+        assertTrue(items.contains("Copy / Paste Special"));
+        assertTrue(items.contains("Copy JSON Pointer"));
+        assertTrue(items.contains("Column Selection Mode"));
+        assertTrue(items.contains("Markdown.EditorContextMenuGroup"));
+        assertTrue(items.contains("Editor Popup Menu Actions (1)"));
+        assertTrue(items.contains("EditorPopupMenu2"));
+        assertTrue(items.contains("EditorPopupMenu3"));
+        assertTrue(items.contains("Search with Google"));
+        assertTrue(items.contains("Editor Popup Menu Actions (2)"));
+        assertTrue(items.contains("Git"));
+        assertTrue(items.contains("Diagrams"));
+        assertTrue(items.contains("Change Template Data Language"));
+        assertTrue(items.contains("XPathView.EditorPopup"));
 
-        // Check Folding group sub-items
-        MenuItemConfig foldingGroup = editorPopup.getChildren().stream()
+        // Check Markdown group Table sub-items
+        MenuItemConfig mdGroup = editorPopup.getChildren().stream()
+                .filter(i -> "Markdown.EditorContextMenuGroup".equals(i.getText()))
+                .findFirst().orElse(null);
+        assertNotNull(mdGroup);
+        MenuItemConfig tableGroup = mdGroup.getChildren().stream()
+                .filter(i -> "Table".equals(i.getText()))
+                .findFirst().orElse(null);
+        assertNotNull(tableGroup);
+        List<String> tableActions = tableGroup.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(tableActions.contains("Insert Column Left"));
+        assertTrue(tableActions.contains("Column Alignment"));
+
+        // Check Editor Popup Menu Actions (1) -> EditorPopupMenu1.FindRefactor -> Go To and Folding
+        MenuItemConfig actions1 = editorPopup.getChildren().stream()
+                .filter(i -> "Editor Popup Menu Actions (1)".equals(i.getText()))
+                .findFirst().orElse(null);
+        assertNotNull(actions1);
+        assertTrue(actions1.getChildren().stream().anyMatch(i -> "Find in Files".equals(i.getText())));
+
+        MenuItemConfig findRefactor = actions1.getChildren().stream()
+                .filter(i -> "EditorPopupMenu1.FindRefactor".equals(i.getText()))
+                .findFirst().orElse(null);
+        assertNotNull(findRefactor);
+        assertTrue(findRefactor.getChildren().stream().anyMatch(i -> "Find Usages".equals(i.getText())));
+
+        MenuItemConfig goToGroup = findRefactor.getChildren().stream()
+                .filter(i -> "Go To".equals(i.getText()))
+                .findFirst().orElse(null);
+        assertNotNull(goToGroup);
+        assertTrue(goToGroup.getChildren().stream().anyMatch(i -> "Console.TableResult.Navigate.Group".equals(i.getText())));
+        assertTrue(goToGroup.getChildren().stream().anyMatch(i -> "Console.TableResult.Database.GoTo".equals(i.getText())));
+
+        MenuItemConfig foldingGroup = findRefactor.getChildren().stream()
                 .filter(i -> "Folding".equals(i.getText()))
                 .findFirst()
                 .orElse(null);
@@ -178,6 +245,149 @@ public class MenusAndToolbarsTest {
         assertTrue(foldActions.contains("Collapse"));
         assertTrue(foldActions.contains("Expand All"));
         assertTrue(foldActions.contains("Collapse All"));
+        assertTrue(foldActions.contains("Expand to Level"));
+        assertTrue(foldActions.contains("Expand All to Level"));
+        assertTrue(foldActions.contains("LanguageSpecificFoldingGroup"));
+        assertTrue(foldActions.contains("Toggle Folding"));
+        assertTrue(foldActions.contains("Fold Selection / Remove Region"));
+        assertTrue(foldActions.contains("Fold Code Block"));
+
+        // Check EditorPopupMenu2 -> SQL Scripts (Image 1)
+        MenuItemConfig menu2 = editorPopup.getChildren().stream()
+                .filter(i -> "EditorPopupMenu2".equals(i.getText()))
+                .findFirst().orElse(null);
+        assertNotNull(menu2);
+        MenuItemConfig sqlScripts = menu2.getChildren().stream()
+                .filter(i -> "SQL Scripts".equals(i.getText()))
+                .findFirst().orElse(null);
+        assertNotNull(sqlScripts);
+        List<String> sqlActions = sqlScripts.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(sqlActions.stream().anyMatch(t -> t.contains("SQL Generator")));
+        assertTrue(sqlActions.contains("Request and Copy Original DDL"));
+        assertTrue(sqlActions.contains("Generate DDL to Clipboard"));
+        assertTrue(sqlActions.contains("Generate DDL to Query File"));
+        assertTrue(sqlActions.contains("Context Templates"));
+        assertTrue(sqlActions.stream().anyMatch(t -> t.contains("Run SQL Script")));
+        assertTrue(sqlActions.contains("Regenerate definition"));
+        assertTrue(sqlActions.stream().anyMatch(t -> t.contains("Import to Database")));
+        assertTrue(sqlActions.contains("View as Table"));
+        assertTrue(sqlActions.contains("Edit as Table"));
+        assertTrue(sqlActions.contains("Change File Language"));
+        assertTrue(sqlActions.contains("Change SQL Dialect"));
+
+        // Check EditorPopupMenu3 -> Set Background Image (Image 1)
+        MenuItemConfig menu3 = editorPopup.getChildren().stream()
+                .filter(i -> "EditorPopupMenu3".equals(i.getText()))
+                .findFirst().orElse(null);
+        assertNotNull(menu3);
+        assertTrue(menu3.getChildren().stream().anyMatch(i -> "Set Background Image".equals(i.getText())));
+
+        // Check Editor Popup Menu Actions (2) (Images 2, 3, 4, 5)
+        MenuItemConfig actions2 = editorPopup.getChildren().stream()
+                .filter(i -> "Editor Popup Menu Actions (2)".equals(i.getText()))
+                .findFirst().orElse(null);
+        assertNotNull(actions2);
+        List<String> actions2Names = actions2.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(actions2Names.contains("Refactor"));
+        assertTrue(actions2Names.contains("Debug Actions"));
+        assertTrue(actions2Names.contains("Compile/Run Actions"));
+        assertTrue(actions2Names.contains("SplitRevealGroup"));
+        assertTrue(actions2Names.contains("VCS/LVCS Actions"));
+
+        // Refactor -> Extract/Introduce (Image 2)
+        MenuItemConfig refactorMenu = actions2.getChildren().stream()
+                .filter(i -> "Refactor".equals(i.getText())).findFirst().orElse(null);
+        assertNotNull(refactorMenu);
+        MenuItemConfig extractIntro = refactorMenu.getChildren().stream()
+                .filter(i -> "Extract/Introduce".equals(i.getText())).findFirst().orElse(null);
+        assertNotNull(extractIntro);
+        List<String> extractActions = extractIntro.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(extractActions.stream().anyMatch(t -> t.contains("Introduce Variable")));
+        assertTrue(extractActions.stream().anyMatch(t -> t.contains("Extract Routine")));
+        assertTrue(extractActions.contains("Subquery as CTE"));
+
+        // Debug Actions (Image 3)
+        MenuItemConfig debugActions = actions2.getChildren().stream()
+                .filter(i -> "Debug Actions".equals(i.getText())).findFirst().orElse(null);
+        assertNotNull(debugActions);
+        List<String> dbgNames = debugActions.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(dbgNames.stream().anyMatch(t -> t.contains("Evaluate Expression")));
+        assertTrue(dbgNames.contains("Run to Cursor"));
+        assertTrue(dbgNames.contains("EditorPopupMenuDebugHotSwap"));
+
+        // Compile/Run Actions -> Run Configurations -> RunContextGroup -> Console.Jdbc.RunContextGroup -> Explain Plan (Image 4)
+        MenuItemConfig compileRun = actions2.getChildren().stream()
+                .filter(i -> "Compile/Run Actions".equals(i.getText())).findFirst().orElse(null);
+        assertNotNull(compileRun);
+        MenuItemConfig runConfigs = compileRun.getChildren().stream()
+                .filter(i -> "Run Configurations".equals(i.getText())).findFirst().orElse(null);
+        assertNotNull(runConfigs);
+        MenuItemConfig runContext = runConfigs.getChildren().stream()
+                .filter(i -> "RunContextGroup".equals(i.getText())).findFirst().orElse(null);
+        assertNotNull(runContext);
+        MenuItemConfig jdbcRunContext = runContext.getChildren().stream()
+                .filter(i -> "Console.Jdbc.RunContextGroup".equals(i.getText())).findFirst().orElse(null);
+        assertNotNull(jdbcRunContext);
+        assertTrue(jdbcRunContext.getChildren().stream().anyMatch(i -> "Attach Data Source".equals(i.getText())));
+        MenuItemConfig explainPlan = jdbcRunContext.getChildren().stream()
+                .filter(i -> "Explain Plan".equals(i.getText())).findFirst().orElse(null);
+        assertNotNull(explainPlan);
+        List<String> planNames = explainPlan.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(planNames.contains("Explain Plan"));
+        assertTrue(planNames.contains("Explain Plan (Raw)"));
+        assertTrue(planNames.contains("Explain Analyse"));
+        assertTrue(planNames.contains("Explain Analyse (Raw)"));
+
+        // SplitRevealGroup (Image 4)
+        MenuItemConfig splitReveal = actions2.getChildren().stream()
+                .filter(i -> "SplitRevealGroup".equals(i.getText())).findFirst().orElse(null);
+        assertNotNull(splitReveal);
+        assertTrue(splitReveal.getChildren().stream().anyMatch(i -> "Open in Right Split".equals(i.getText())));
+        MenuItemConfig openIn = splitReveal.getChildren().stream()
+                .filter(i -> "Open In".equals(i.getText())).findFirst().orElse(null);
+        assertNotNull(openIn);
+        List<String> openInNames = openIn.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(openInNames.contains("Show in File Manager"));
+        assertTrue(openInNames.contains("Open in Browser"));
+        assertTrue(openInNames.contains("Open in Terminal"));
+
+        // VCS/LVCS Actions -> Local History (Image 5)
+        MenuItemConfig vcsLvcs = actions2.getChildren().stream()
+                .filter(i -> "VCS/LVCS Actions".equals(i.getText())).findFirst().orElse(null);
+        assertNotNull(vcsLvcs);
+        MenuItemConfig localHistory = vcsLvcs.getChildren().stream()
+                .filter(i -> "Local History".equals(i.getText())).findFirst().orElse(null);
+        assertNotNull(localHistory);
+        List<String> lhNames = localHistory.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(lhNames.stream().anyMatch(t -> t.contains("Show History")));
+        assertTrue(lhNames.contains("Recent Changes"));
+
+        // Git (Image 5)
+        MenuItemConfig git = editorPopup.getChildren().stream()
+                .filter(i -> "Git".equals(i.getText())).findFirst().orElse(null);
+        assertNotNull(git);
+        List<String> gitNames = git.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(gitNames.contains("Show Local Version"));
+        assertTrue(gitNames.contains("Compare with HEAD Version"));
+        assertTrue(gitNames.contains("Compare with Local Version"));
+        assertTrue(gitNames.contains("Compare HEAD, Staged and Local Versions"));
+
+        // Diagrams (Image 5)
+        MenuItemConfig diagrams = editorPopup.getChildren().stream()
+                .filter(i -> "Diagrams".equals(i.getText())).findFirst().orElse(null);
+        assertNotNull(diagrams);
+        List<String> diagNames = diagrams.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(diagNames.contains("ShowUmlDiagram"));
+        assertTrue(diagNames.contains("ShowUmlDiagramPopup"));
+
+        // XPathView.EditorPopup (Image 5)
+        MenuItemConfig xpath = editorPopup.getChildren().stream()
+                .filter(i -> "XPathView.EditorPopup".equals(i.getText())).findFirst().orElse(null);
+        assertNotNull(xpath);
+        List<String> xpathNames = xpath.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(xpathNames.stream().anyMatch(t -> t.contains("Evaluate XPath")));
+        assertTrue(xpathNames.contains("Show Unique XPath"));
+        assertTrue(xpathNames.contains("File Associations"));
     }
 
     @Test
