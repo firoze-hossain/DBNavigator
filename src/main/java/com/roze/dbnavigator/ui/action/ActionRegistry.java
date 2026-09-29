@@ -3736,6 +3736,577 @@ public final class ActionRegistry {
         manager.registerGroup(windowMenu);
         manager.registerGroup(helpMenu);
         manager.registerGroup(middleGroup);
+
+        registerMainToolbarActions(manager);
+        registerEditorPopupMenuActions(manager);
+    }
+
+    private static void registerMainToolbarActions(ActionManager manager) {
+        // Toolbar Left
+        AnAction projectWidget = AnAction.builder("toolbar.project.widget", "Project Widget")
+                .description("Focus or toggle Project / Schema Explorer")
+                .icon(FontAwesomeSolid.FOLDER, "#a9b7c6", 13)
+                .onAction(MainWindow::focusOrToggleSchemaExplorer)
+                .build();
+        AnAction vcsWidget = AnAction.builder("toolbar.vcs.widget", "VCS Widget")
+                .description("Toggle Version Control Tool Window")
+                .icon(FontAwesomeSolid.CODE_BRANCH, "#4a88c7", 13)
+                .onAction(MainWindow::toggleVersionControlToolWindow)
+                .build();
+        AnAction vcsMergeRebase = AnAction.builder("toolbar.vcs.merge.rebase.widget", "VCS Merge/Rebase Widget")
+                .description("VCS Merge and Rebase operations")
+                .icon(FontAwesomeSolid.CODE_BRANCH, "#6897bb", 13)
+                .onAction(MainWindow::showVcsOperationsPopup)
+                .build();
+        ActionGroup vcsGroup = new ActionGroup("toolbar.vcs.group", "VCS Group", true);
+        vcsGroup.addAll(vcsWidget, vcsMergeRebase);
+
+        ActionGroup generalActions = new ActionGroup("toolbar.general.actions.group", "General Actions", false);
+        generalActions.addSeparator();
+
+        // Toolbar Center
+        AnAction singleToolWindow = AnAction.builder("toolbar.single.tool.window.bar", "Single Tool Window Bar")
+                .description("Single Tool Window Bar")
+                .icon(FontAwesomeSolid.DESKTOP, "#a9b7c6", 13)
+                .onAction(MainWindow::toggleCompactMode)
+                .build();
+        AnAction fileNameWidget = AnAction.builder("toolbar.file.name.widget", "File Name Widget (when editor tabs are hidden or \\\"Always show full path\\\" is enabled)")
+                .description("Show File Name / Path")
+                .icon(FontAwesomeSolid.FILE_ALT, "#a9b7c6", 13)
+                .onAction(MainWindow::showFilePathPopup)
+                .build();
+
+        // Toolbar Right
+        ActionGroup executionTargets = new ActionGroup("toolbar.execution.targets.group", "ExecutionTargetsToolbarGroup", true,
+                FontAwesomeSolid.FOLDER, "#e0a44c", 13, "Execution Targets");
+        AnAction aiAssistant = AnAction.builder("toolbar.ai.assistant.action", "AIAssistantHubPopupAction")
+                .description("AI Assistant Hub")
+                .icon(FontAwesomeSolid.ROBOT, "#9876aa", 13)
+                .onAction(MainWindow::toggleAiAssistantToolWindow)
+                .build();
+        AnAction searchEverywhere = AnAction.builder("toolbar.search.everywhere", "Search Everywhere")
+                .description("Search Everywhere (Double Shift)")
+                .icon(FontAwesomeSolid.SEARCH, "#a9b7c6", 13)
+                .accelerator(new KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(MainWindow::showSearchEverywhere)
+                .build();
+        AnAction ideProjectSettings = AnAction.builder("toolbar.ide.project.settings", "IDE and Project Settings")
+                .description("Open Settings Dialog")
+                .icon(FontAwesomeSolid.COG, "#a9b7c6", 13)
+                .onAction(MainWindow::showSettingsDialog)
+                .build();
+
+        manager.registerAction(projectWidget);
+        manager.registerAction(vcsWidget);
+        manager.registerAction(vcsMergeRebase);
+        manager.registerGroup(vcsGroup);
+        manager.registerGroup(generalActions);
+        manager.registerAction(singleToolWindow);
+        manager.registerAction(fileNameWidget);
+        manager.registerGroup(executionTargets);
+        manager.registerAction(aiAssistant);
+        manager.registerAction(searchEverywhere);
+        manager.registerAction(ideProjectSettings);
+    }
+
+    private static void registerEditorPopupMenuActions(ActionManager manager) {
+        // ShowContextActions & ShowIntentionsGroup
+        AnAction showCtxActions = AnAction.builder("editor.popup.show.context.actions", "Show Context Actions")
+                .icon(FontAwesomeSolid.LIGHTBULB, "#ffc66d", 12)
+                .accelerator(new KeyCodeCombination(KeyCode.ENTER, KeyCombination.ALT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Show Context Actions"))
+                .build();
+        ActionGroup showIntentions = new ActionGroup("editor.popup.show.intentions", "ShowIntentionsGroup", false);
+        showIntentions.add(showCtxActions).addSeparator();
+
+        // Open File in Project... & LightEditModePopup
+        AnAction openFileInProj = AnAction.builder("editor.popup.open.file.in.project", "Open File in Project…")
+                .icon(FontAwesomeSolid.FOLDER_OPEN, "#e0a44c", 12)
+                .onAction(MainWindow::openSqlFile)
+                .build();
+        ActionGroup lightEditMode = new ActionGroup("editor.popup.light.edit.mode", "LightEditModePopup", false);
+        lightEditMode.add(openFileInProj).addSeparator();
+
+        // Copy / Paste Special
+        ActionGroup copyPasteSpecial = new ActionGroup("editor.popup.copy.paste.special", "Copy / Paste Special", true);
+        AnAction refAction = manager.getAction("edit.copy.reference");
+        if (refAction != null) copyPasteSpecial.add(refAction);
+        AnAction gitHostingAction = manager.getAction("edit.copy.git.hosting.link");
+        if (gitHostingAction != null) copyPasteSpecial.add(gitHostingAction);
+        AnAction plainAction = manager.getAction("edit.copy.plain");
+        if (plainAction != null) copyPasteSpecial.add(plainAction);
+        AnAction pastePlainAction = manager.getAction("edit.paste.plain");
+        if (pastePlainAction != null) copyPasteSpecial.add(pastePlainAction);
+        AnAction pasteHistAction = manager.getAction("edit.paste.history");
+        if (pasteHistAction != null) copyPasteSpecial.add(pasteHistAction);
+
+        // Column Selection Mode
+        AnAction colSelectionMode = AnAction.builder("edit.column.selection.mode", "Column Selection Mode")
+                .onAction(ctx -> ctx.setStatus("Column Selection Mode"))
+                .build();
+
+        // Markdown Table Actions & Groups
+        AnAction insColLeft = AnAction.builder("markdown.table.insert.col.left", "Insert Column Left")
+                .icon(FontAwesomeSolid.PLUS, "#57965c", 11)
+                .onAction(ctx -> ctx.setStatus("Insert Column Left"))
+                .build();
+        AnAction insColRight = AnAction.builder("markdown.table.insert.col.right", "Insert Column Right")
+                .icon(FontAwesomeSolid.PLUS, "#57965c", 11)
+                .onAction(ctx -> ctx.setStatus("Insert Column Right"))
+                .build();
+        AnAction insRowAbove = AnAction.builder("markdown.table.insert.row.above", "Insert Row Above")
+                .icon(FontAwesomeSolid.ARROW_UP, "#57965c", 11)
+                .onAction(ctx -> ctx.setStatus("Insert Row Above"))
+                .build();
+        AnAction insRowBelow = AnAction.builder("markdown.table.insert.row.below", "Insert Row Below")
+                .icon(FontAwesomeSolid.ARROW_DOWN, "#57965c", 11)
+                .onAction(ctx -> ctx.setStatus("Insert Row Below"))
+                .build();
+
+        AnAction alignLeft = AnAction.builder("markdown.table.align.left", "Align Left")
+                .icon(FontAwesomeSolid.ALIGN_LEFT, "#a9b7c6", 11)
+                .onAction(ctx -> ctx.setStatus("Align Left"))
+                .build();
+        AnAction alignCenter = AnAction.builder("markdown.table.align.center", "Align Center")
+                .icon(FontAwesomeSolid.ALIGN_CENTER, "#a9b7c6", 11)
+                .onAction(ctx -> ctx.setStatus("Align Center"))
+                .build();
+        AnAction alignRight = AnAction.builder("markdown.table.align.right", "Align Right")
+                .icon(FontAwesomeSolid.ALIGN_RIGHT, "#a9b7c6", 11)
+                .onAction(ctx -> ctx.setStatus("Align Right"))
+                .build();
+        ActionGroup setColAlign = new ActionGroup("markdown.table.set.col.alignment.group", "Set Column Alignment", true);
+        setColAlign.addAll(alignLeft, alignCenter, alignRight);
+
+        AnAction moveColLeft = AnAction.builder("markdown.table.move.col.left", "Move Column Left")
+                .icon(FontAwesomeSolid.ARROW_LEFT, "#a9b7c6", 11)
+                .onAction(ctx -> ctx.setStatus("Move Column Left"))
+                .build();
+        AnAction moveColRight = AnAction.builder("markdown.table.move.col.right", "Move Column Right")
+                .icon(FontAwesomeSolid.ARROW_RIGHT, "#a9b7c6", 11)
+                .onAction(ctx -> ctx.setStatus("Move Column Right"))
+                .build();
+        AnAction removeCol = AnAction.builder("markdown.table.remove.col", "Remove Column")
+                .icon(FontAwesomeSolid.TRASH, "#e06c75", 11)
+                .onAction(ctx -> ctx.setStatus("Remove Column"))
+                .build();
+        AnAction removeRow = AnAction.builder("markdown.table.remove.row", "Remove Row")
+                .icon(FontAwesomeSolid.TRASH, "#e06c75", 11)
+                .onAction(ctx -> ctx.setStatus("Remove Row"))
+                .build();
+
+        ActionGroup colAlignGroup = new ActionGroup("markdown.table.col.alignment.group", "Column Alignment", true);
+        colAlignGroup.add(setColAlign).addAll(moveColLeft, moveColRight).addSeparator().addAll(removeCol, removeRow);
+
+        AnAction insGeneric = AnAction.builder("markdown.table.insert", "Insert…")
+                .onAction(ctx -> ctx.setStatus("Insert…"))
+                .build();
+
+        ActionGroup tableGroup = new ActionGroup("markdown.table.group", "Table", true);
+        tableGroup.addAll(insColLeft, insColRight, insRowAbove, insRowBelow)
+                .addSeparator()
+                .add(colAlignGroup)
+                .add(insGeneric);
+
+        ActionGroup mdEditorGroup = new ActionGroup("editor.popup.markdown.group", "Markdown.EditorContextMenuGroup", false);
+        mdEditorGroup.addSeparator().add(tableGroup).addSeparator();
+
+        // Console Table Result Navigation Actions
+        AnAction navFirst = AnAction.builder("console.table.navigate.first", "First Page")
+                .icon(FontAwesomeSolid.FAST_BACKWARD, "#a9b7c6", 11)
+                .onAction(ctx -> ctx.setStatus("First Page"))
+                .build();
+        AnAction navPrev = AnAction.builder("console.table.navigate.prev", "Previous Page")
+                .icon(FontAwesomeSolid.STEP_BACKWARD, "#a9b7c6", 11)
+                .onAction(ctx -> ctx.setStatus("Previous Page"))
+                .build();
+        AnAction navNext = AnAction.builder("console.table.navigate.next", "Next Page")
+                .icon(FontAwesomeSolid.STEP_FORWARD, "#a9b7c6", 11)
+                .onAction(ctx -> ctx.setStatus("Next Page"))
+                .build();
+        AnAction navLast = AnAction.builder("console.table.navigate.last", "Last Page")
+                .icon(FontAwesomeSolid.FAST_FORWARD, "#a9b7c6", 11)
+                .onAction(ctx -> ctx.setStatus("Last Page"))
+                .build();
+        ActionGroup tblNavigateGroup = new ActionGroup("console.table.result.navigate.group", "Console.TableResult.Navigate.Group", false);
+        tblNavigateGroup.addAll(navFirst, navPrev, navNext, navLast).addSeparator();
+
+        AnAction editData = AnAction.builder("editor.edit.data", "Edit Data")
+                .icon(FontAwesomeSolid.TABLE, "#57965c", 11)
+                .onAction(ctx -> ctx.setStatus("Edit Data"))
+                .build();
+        AnAction selectInDbExplorer = AnAction.builder("editor.select.in.db.explorer", "Select in Database Explorer")
+                .onAction(MainWindow::focusOrToggleSchemaExplorer)
+                .build();
+        AnAction editorGotoRow = AnAction.builder("editor.goto.row", "Row…")
+                .onAction(ctx -> ctx.setStatus("Go to Row…"))
+                .build();
+
+        AnAction relatedRows = AnAction.builder("console.table.goto.related.rows", "Related Rows")
+                .icon(FontAwesomeSolid.TH, "#6897bb", 11)
+                .onAction(ctx -> ctx.setStatus("Related Rows"))
+                .build();
+        AnAction openUrl = AnAction.builder("console.table.goto.open.url", "Open URL")
+                .icon(FontAwesomeSolid.GLOBE, "#4a88c7", 11)
+                .onAction(ctx -> ctx.setStatus("Open URL"))
+                .build();
+        AnAction openFileUri = AnAction.builder("console.table.goto.open.file.uri", "Open File URI")
+                .icon(FontAwesomeSolid.FOLDER_OPEN, "#e0a44c", 11)
+                .onAction(MainWindow::openSqlFile)
+                .build();
+        AnAction referencingResult = AnAction.builder("console.table.goto.referencing.result", "Referencing Result")
+                .onAction(ctx -> ctx.setStatus("Referencing Result"))
+                .build();
+        ActionGroup dbGoToGroup = new ActionGroup("console.table.result.database.goto.group", "Console.TableResult.Database.GoTo", false);
+        dbGoToGroup.addAll(relatedRows, openUrl, openFileUri, referencingResult).addSeparator();
+
+        // Folding actions & levels
+        ActionGroup expToLevel = new ActionGroup("folding.expand.to.level.group", "Expand to Level", true);
+        for (int l = 1; l <= 5; l++) {
+            final int lvl = l;
+            expToLevel.add(AnAction.builder("folding.expand.to.level." + lvl, String.valueOf(lvl))
+                    .onAction(ctx -> ctx.setStatus("Expand to Level " + lvl)).build());
+        }
+        ActionGroup expAllToLevel = new ActionGroup("folding.expand.all.to.level.group", "Expand All to Level", true);
+        for (int l = 1; l <= 5; l++) {
+            final int lvl = l;
+            expAllToLevel.add(AnAction.builder("folding.expand.all.to.level." + lvl, String.valueOf(lvl))
+                    .onAction(ctx -> ctx.setStatus("Expand All to Level " + lvl)).build());
+        }
+
+        AnAction foldSelectionRem = AnAction.builder("folding.selection.remove.region", "Fold Selection / Remove Region")
+                .onAction(ctx -> ctx.setStatus("Fold Selection / Remove Region"))
+                .build();
+        AnAction foldBlock = AnAction.builder("folding.code.block", "Fold Code Block")
+                .onAction(ctx -> ctx.setStatus("Fold Code Block"))
+                .build();
+
+        ActionGroup foldLang = new ActionGroup("folding.language.specific.group", "LanguageSpecificFoldingGroup", false);
+        foldLang.add(AnAction.builder("folding.expand.doc.comments", "Expand Doc Comments").onAction(ctx -> ctx.setStatus("Expand Doc Comments")).build());
+        foldLang.add(AnAction.builder("folding.collapse.doc.comments", "Collapse Doc Comments").onAction(ctx -> ctx.setStatus("Collapse Doc Comments")).build());
+
+        AnAction foldExp = AnAction.builder("folding.expand", "Expand").onAction(ctx -> ctx.setStatus("Expand")).build();
+        AnAction foldExpRec = AnAction.builder("folding.expand.recursively", "Expand Recursively").onAction(ctx -> ctx.setStatus("Expand Recursively")).build();
+        AnAction foldExpAll = AnAction.builder("folding.expand.all", "Expand All").onAction(ctx -> ctx.setStatus("Expand All")).build();
+        AnAction foldCol = AnAction.builder("folding.collapse", "Collapse").onAction(ctx -> ctx.setStatus("Collapse")).build();
+        AnAction foldColRec = AnAction.builder("folding.collapse.recursively", "Collapse Recursively").onAction(ctx -> ctx.setStatus("Collapse Recursively")).build();
+        AnAction foldColAll = AnAction.builder("folding.collapse.all", "Collapse All").onAction(ctx -> ctx.setStatus("Collapse All")).build();
+        AnAction foldTog = AnAction.builder("folding.toggle", "Toggle Folding").onAction(ctx -> ctx.setStatus("Toggle Folding")).build();
+
+        ActionGroup editorFolding = new ActionGroup("editor.popup.folding", "Folding", true);
+        editorFolding.addAll(foldExp, foldExpRec, foldExpAll)
+                .addSeparator()
+                .addAll(foldCol, foldColRec, foldColAll)
+                .addSeparator()
+                .add(expToLevel)
+                .add(expAllToLevel)
+                .addSeparator()
+                .add(foldLang)
+                .addSeparator()
+                .add(foldTog)
+                .addSeparator()
+                .addAll(foldSelectionRem, foldBlock);
+
+        AnAction saveAsLiveTpl = AnAction.builder("tools.save.as.live.template", "Save as Live Template…")
+                .onAction(MainWindow::insertLiveTemplate)
+                .build();
+
+        ActionGroup editorGoTo = new ActionGroup("editor.popup.goto", "Go To", true);
+        editorGoTo.add(tblNavigateGroup);
+        AnAction jumpNav = manager.getAction("nav.jump.to.navbar");
+        if (jumpNav != null) editorGoTo.add(jumpNav);
+        AnAction gotoDecl = manager.getAction("nav.goto.declaration");
+        if (gotoDecl != null) editorGoTo.add(gotoDecl);
+        editorGoTo.addAll(editData, selectInDbExplorer);
+        AnAction gotoImpl = manager.getAction("nav.goto.implementation");
+        if (gotoImpl != null) editorGoTo.add(gotoImpl);
+        AnAction gotoType = manager.getAction("nav.goto.type.declaration");
+        if (gotoType != null) editorGoTo.add(gotoType);
+        AnAction gotoSuper = manager.getAction("nav.goto.super.method");
+        if (gotoSuper != null) editorGoTo.add(gotoSuper);
+        AnAction gotoRel = manager.getAction("nav.related.symbol");
+        if (gotoRel != null) editorGoTo.add(gotoRel);
+        AnAction gotoTest = manager.getAction("nav.goto.test");
+        if (gotoTest != null) editorGoTo.add(gotoTest);
+        AnAction jumpDdl = manager.getAction("editor.jump.ddl");
+        if (jumpDdl != null) editorGoTo.add(jumpDdl);
+        else {
+            editorGoTo.add(AnAction.builder("editor.jump.ddl", "DDL").onAction(ctx -> ctx.setStatus("DDL")).build());
+        }
+        editorGoTo.add(editorGotoRow);
+        editorGoTo.add(dbGoToGroup);
+
+        ActionGroup findRefactorGroup = new ActionGroup("editor.popup.find.refactor", "EditorPopupMenu1.FindRefactor", false);
+        AnAction findUsages = manager.getAction("edit.find.usages");
+        if (findUsages != null) findRefactorGroup.add(findUsages);
+        findRefactorGroup.add(editorGoTo).addSeparator().add(editorFolding).add(saveAsLiveTpl);
+        AnAction reformatCode = manager.getAction("code.reformat");
+        if (reformatCode != null) findRefactorGroup.add(reformatCode);
+
+        ActionGroup actions1Group = new ActionGroup("editor.popup.actions.1", "Editor Popup Menu Actions (1)", false);
+        AnAction findFiles = manager.getAction("edit.find.in.files");
+        if (findFiles != null) actions1Group.add(findFiles);
+        actions1Group.add(findRefactorGroup);
+
+        // EditorPopupMenu2 (Image 1)
+        ActionGroup sqlScriptsGroup = new ActionGroup("editor.sql.scripts", "SQL Scripts", true,
+                FontAwesomeSolid.FOLDER, "#e0a44c", 11, "SQL Scripts");
+        sqlScriptsGroup.add(AnAction.builder("editor.sql.generator", "SQL Generator…").icon(FontAwesomeSolid.TERMINAL, "#6897bb", 11).onAction(ctx -> ctx.setStatus("SQL Generator…")).build());
+        sqlScriptsGroup.addSeparator();
+        sqlScriptsGroup.add(AnAction.builder("editor.sql.request.copy.ddl", "Request and Copy Original DDL").icon(FontAwesomeSolid.SHARE_SQUARE, "#a9b7c6", 11).onAction(ctx -> ctx.setStatus("Request and Copy Original DDL")).build());
+        sqlScriptsGroup.add(AnAction.builder("editor.sql.generate.ddl.clipboard", "Generate DDL to Clipboard").icon(FontAwesomeSolid.COPY, "#a9b7c6", 11).onAction(ctx -> ctx.setStatus("Generate DDL to Clipboard")).build());
+        sqlScriptsGroup.add(AnAction.builder("editor.sql.generate.ddl.queryfile", "Generate DDL to Query File").icon(FontAwesomeSolid.FILE_CODE, "#a9b7c6", 11).onAction(MainWindow::openNewSqlFile).build());
+        sqlScriptsGroup.add(AnAction.builder("editor.sql.context.templates", "Context Templates").onAction(MainWindow::insertLiveTemplate).build());
+        sqlScriptsGroup.addSeparator();
+        sqlScriptsGroup.add(AnAction.builder("editor.sql.run.script", "Run SQL Script…").onAction(MainWindow::openSqlFile).build());
+        sqlScriptsGroup.add(AnAction.builder("editor.sql.regenerate.definition", "Regenerate definition").onAction(ctx -> ctx.setStatus("Regenerate definition")).build());
+        sqlScriptsGroup.add(AnAction.builder("editor.sql.import.to.database", "Import to Database…").icon(FontAwesomeSolid.UPLOAD, "#4a88c7", 11).onAction(ctx -> ctx.setStatus("Import to Database…")).build());
+        sqlScriptsGroup.add(AnAction.builder("editor.sql.view.as.table", "View as Table").icon(FontAwesomeSolid.TABLE, "#57965c", 11).onAction(ctx -> ctx.setStatus("View as Table")).build());
+        sqlScriptsGroup.add(AnAction.builder("editor.sql.edit.as.table", "Edit as Table").icon(FontAwesomeSolid.TABLE, "#57965c", 11).onAction(ctx -> ctx.setStatus("Edit as Table")).build());
+        sqlScriptsGroup.add(AnAction.builder("editor.sql.change.file.language", "Change File Language").onAction(ctx -> ctx.setStatus("Change File Language")).build());
+        sqlScriptsGroup.add(AnAction.builder("editor.sql.change.sql.dialect", "Change SQL Dialect").onAction(MainWindow::showSqlDialectsDialog).build());
+
+        ActionGroup editorPopupMenu2 = new ActionGroup("editor.popup.menu.2", "EditorPopupMenu2", true);
+        editorPopupMenu2.add(sqlScriptsGroup);
+
+        // EditorPopupMenu3 (Image 1)
+        ActionGroup editorPopupMenu3 = new ActionGroup("editor.popup.menu.3", "EditorPopupMenu3", true);
+        editorPopupMenu3.add(AnAction.builder("editor.popup.set.background.image", "Set Background Image").onAction(ctx -> ctx.setStatus("Set Background Image")).build());
+
+        AnAction searchWithGoogle = AnAction.builder("editor.search.with.google", "Search with Google")
+                .icon(FontAwesomeSolid.SEARCH, "#a9b7c6", 11)
+                .onAction(ctx -> ctx.setStatus("Search with Google"))
+                .build();
+
+        // Editor Popup Menu Actions (2) (Images 2, 3, 4, 5)
+        ActionGroup editorActions2 = new ActionGroup("editor.popup.actions.2", "Editor Popup Menu Actions (2)", false);
+        editorActions2.addSeparator();
+        editorActions2.add(AnAction.builder("editor.popup.rename", "Rename…").onAction(MainWindow::renameProject).build());
+
+        // Refactor [popup] (Image 2)
+        ActionGroup editorRefactor = new ActionGroup("editor.popup.refactor", "Refactor", true);
+        AnAction refactorThis = manager.getAction("refactor.this");
+        if (refactorThis != null) editorRefactor.add(refactorThis);
+        AnAction refactorRename = manager.getAction("refactor.rename");
+        if (refactorRename != null) editorRefactor.add(refactorRename);
+        AnAction refactorChangeSig = manager.getAction("refactor.change.signature");
+        if (refactorChangeSig != null) editorRefactor.add(refactorChangeSig);
+        AnAction refactorModObj = manager.getAction("refactor.modify.object");
+        if (refactorModObj != null) editorRefactor.add(refactorModObj);
+        editorRefactor.addSeparator();
+
+        // Extract/Introduce [popup] (Image 2)
+        ActionGroup extractIntro = new ActionGroup("editor.refactor.extract.introduce", "Extract/Introduce", true);
+        AnAction introVar = manager.getAction("refactor.introduce.variable");
+        if (introVar != null) extractIntro.add(introVar);
+        AnAction extRoutine = manager.getAction("refactor.extract.routine");
+        if (extRoutine != null) extractIntro.add(extRoutine);
+        AnAction tblAlias = manager.getAction("refactor.table.alias");
+        if (tblAlias != null) extractIntro.add(tblAlias);
+        AnAction introConst = manager.getAction("refactor.introduce.constant");
+        if (introConst != null) extractIntro.add(introConst);
+        AnAction introField = manager.getAction("refactor.introduce.field");
+        if (introField != null) extractIntro.add(introField);
+        AnAction introParam = manager.getAction("refactor.introduce.parameter");
+        if (introParam != null) extractIntro.add(introParam);
+        extractIntro.addSeparator();
+        AnAction introParamObj = manager.getAction("refactor.introduce.parameter.object");
+        if (introParamObj != null) extractIntro.add(introParamObj);
+        extractIntro.addSeparator();
+        AnAction extMethod = manager.getAction("refactor.extract.method");
+        if (extMethod != null) extractIntro.add(extMethod);
+        extractIntro.addSeparator();
+        AnAction extDelegate = manager.getAction("refactor.extract.delegate");
+        if (extDelegate != null) extractIntro.add(extDelegate);
+        AnAction incFile = manager.getAction("refactor.include.file");
+        if (incFile != null) extractIntro.add(incFile);
+        AnAction extInterface = manager.getAction("refactor.extract.interface");
+        if (extInterface != null) extractIntro.add(extInterface);
+        AnAction extSuperclass = manager.getAction("refactor.extract.superclass");
+        if (extSuperclass != null) extractIntro.add(extSuperclass);
+        AnAction extModule = manager.getAction("refactor.extract.module");
+        if (extModule != null) extractIntro.add(extModule);
+        AnAction subqueryCte = manager.getAction("refactor.subquery.cte");
+        if (subqueryCte != null) extractIntro.add(subqueryCte);
+
+        editorRefactor.add(extractIntro);
+        AnAction refactorInline = manager.getAction("refactor.inline");
+        if (refactorInline != null) editorRefactor.add(refactorInline);
+        editorRefactor.addSeparator();
+        AnAction refactorMove = manager.getAction("refactor.move");
+        if (refactorMove != null) editorRefactor.add(refactorMove);
+        AnAction refactorCopy = manager.getAction("refactor.copy");
+        if (refactorCopy != null) editorRefactor.add(refactorCopy);
+        AnAction refactorSafeDel = manager.getAction("refactor.safe.delete");
+        if (refactorSafeDel != null) editorRefactor.add(refactorSafeDel);
+        editorRefactor.addSeparator();
+        AnAction pullMembers = manager.getAction("refactor.pull.members.up");
+        if (pullMembers != null) editorRefactor.add(pullMembers);
+        AnAction pushMembers = manager.getAction("refactor.push.members.down");
+        if (pushMembers != null) editorRefactor.add(pushMembers);
+        AnAction invertBool = manager.getAction("refactor.invert.boolean");
+        if (invertBool != null) editorRefactor.add(invertBool);
+
+        editorActions2.add(editorRefactor);
+        editorActions2.add(AnAction.builder("editor.popup.generate", "Generate…").onAction(ctx -> ctx.setStatus("Generate…")).build());
+        editorActions2.addSeparator();
+
+        // Debug Actions (Image 3)
+        ActionGroup debugActionsGroup = new ActionGroup("editor.debug.actions", "Debug Actions", false);
+        debugActionsGroup.add(AnAction.builder("debug.copy.js.script.clipboard", "Copy JS Script to Clipboard").onAction(ctx -> ctx.setStatus("Copy JS Script to Clipboard")).build());
+        debugActionsGroup.add(AnAction.builder("debug.show.js.script", "Show JS Script").onAction(ctx -> ctx.setStatus("Show JS Script")).build());
+        debugActionsGroup.addSeparator();
+        debugActionsGroup.add(AnAction.builder("debug.evaluate.expression", "Evaluate Expression…").icon(FontAwesomeSolid.CALCULATOR, "#a9b7c6", 11).onAction(ctx -> ctx.setStatus("Evaluate Expression…")).build());
+        debugActionsGroup.add(AnAction.builder("debug.run.to.cursor", "Run to Cursor").onAction(ctx -> ctx.setStatus("Run to Cursor")).build());
+        debugActionsGroup.add(AnAction.builder("debug.force.run.to.cursor", "Force Run to Cursor").onAction(ctx -> ctx.setStatus("Force Run to Cursor")).build());
+        debugActionsGroup.add(AnAction.builder("debug.add.to.watches", "Add to Watches").onAction(ctx -> ctx.setStatus("Add to Watches")).build());
+        debugActionsGroup.add(AnAction.builder("debug.add.inline.watch", "Add Inline Watch").onAction(ctx -> ctx.setStatus("Add Inline Watch")).build());
+        debugActionsGroup.add(AnAction.builder("debug.evaluate.in.console", "Evaluate in Console").onAction(ctx -> ctx.setStatus("Evaluate in Console")).build());
+        debugActionsGroup.addSeparator();
+
+        ActionGroup debugHotSwap = new ActionGroup("editor.popup.debug.hotswap", "EditorPopupMenuDebugHotSwap", false);
+        debugHotSwap.add(AnAction.builder("debug.compile.reload.modified.files", "Compile and Reload Modified Files").onAction(ctx -> ctx.setStatus("Compile and Reload Modified Files")).build());
+        debugHotSwap.addSeparator();
+        debugActionsGroup.add(debugHotSwap);
+        editorActions2.add(debugActionsGroup);
+
+        // Compile/Run Actions (Image 3 & 4)
+        ActionGroup compileRunGroup = new ActionGroup("editor.compile.run.actions", "Compile/Run Actions", false);
+        ActionGroup runConfigsGroup = new ActionGroup("editor.run.configurations.group", "Run Configurations", false);
+        ActionGroup runContextGroup = new ActionGroup("editor.run.context.group", "RunContextGroup", false);
+
+        ActionGroup runContextInner = new ActionGroup("editor.run.context.group.inner", "RunContextGroupInner", false);
+        ActionGroup executorsGroup = new ActionGroup("editor.run.context.executors.group", "RunContextExecutorsGroup", false);
+        executorsGroup.add(AnAction.builder("run.context.configuration", "Run context configuration").icon(FontAwesomeSolid.PLAY, "#57965c", 11).onAction(ctx -> ctx.setStatus("Run context configuration")).build());
+        executorsGroup.add(AnAction.builder("debug.context.configuration", "Debug context configuration").icon(FontAwesomeSolid.BUG, "#e06c75", 11).onAction(ctx -> ctx.setStatus("Debug context configuration")).build());
+        runContextInner.add(executorsGroup);
+
+        ActionGroup moreRunDebug = new ActionGroup("editor.more.run.debug.group", "More Run/Debug", false);
+        moreRunDebug.add(AnAction.builder("run.coverage.context.configuration", "Run with Coverage context configuration").onAction(ctx -> ctx.setStatus("Run with Coverage context configuration")).build());
+        moreRunDebug.add(AnAction.builder("run.profiler.context.configuration", "Run with Profiler").onAction(ctx -> ctx.setStatus("Run with Profiler")).build());
+        moreRunDebug.add(AnAction.builder("run.create.configuration", "Create Run Configuration").onAction(ctx -> ctx.setStatus("Create Run Configuration")).build());
+        moreRunDebug.addSeparator();
+        moreRunDebug.add(AnAction.builder("run.context.configuration.secondary", "Run context configuration").icon(FontAwesomeSolid.PLAY, "#57965c", 11).onAction(ctx -> ctx.setStatus("Run context configuration")).build());
+        moreRunDebug.add(AnAction.builder("debug.context.configuration.secondary", "Debug context configuration").icon(FontAwesomeSolid.BUG, "#e06c75", 11).onAction(ctx -> ctx.setStatus("Debug context configuration")).build());
+        moreRunDebug.add(AnAction.builder("run.modify.configuration", "Modify Run Configuration…").onAction(ctx -> ctx.setStatus("Modify Run Configuration…")).build());
+        moreRunDebug.addSeparator();
+        runContextInner.add(moreRunDebug);
+
+        runContextGroup.add(runContextInner);
+        runContextGroup.addSeparator();
+
+        // Console.Jdbc.RunContextGroup (Image 4)
+        ActionGroup consoleJdbcRun = new ActionGroup("console.jdbc.run.context.group", "Console.Jdbc.RunContextGroup", false);
+        consoleJdbcRun.add(AnAction.builder("console.attach.data.source", "Attach Data Source").onAction(ctx -> ctx.setStatus("Attach Data Source")).build());
+        consoleJdbcRun.addSeparator();
+        consoleJdbcRun.add(AnAction.builder("console.recompile", "Recompile…").onAction(ctx -> ctx.setStatus("Recompile…")).build());
+
+        ActionGroup explainPlanGroup = new ActionGroup("console.explain.plan.group", "Explain Plan", true);
+        explainPlanGroup.add(AnAction.builder("console.explain.plan", "Explain Plan").onAction(ctx -> ctx.setStatus("Explain Plan")).build());
+        explainPlanGroup.add(AnAction.builder("console.explain.plan.raw", "Explain Plan (Raw)").onAction(ctx -> ctx.setStatus("Explain Plan (Raw)")).build());
+        explainPlanGroup.add(AnAction.builder("console.explain.analyse", "Explain Analyse").onAction(ctx -> ctx.setStatus("Explain Analyse")).build());
+        explainPlanGroup.add(AnAction.builder("console.explain.analyse.raw", "Explain Analyse (Raw)").onAction(ctx -> ctx.setStatus("Explain Analyse (Raw)")).build());
+        consoleJdbcRun.add(explainPlanGroup);
+
+        AnAction runAction = manager.getAction("middle.run");
+        if (runAction != null) consoleJdbcRun.add(runAction);
+        consoleJdbcRun.add(AnAction.builder("editor.execute.selection.single", "Execute Selection as Single Statement").icon(FontAwesomeSolid.PLAY, "#57965c", 11).onAction(MainWindow::executeCurrentStatement).build());
+        consoleJdbcRun.add(AnAction.builder("editor.export.data", "Export Data…").icon(FontAwesomeSolid.DOWNLOAD, "#4a88c7", 11).onAction(ctx -> ctx.setStatus("Export Data…")).build());
+        consoleJdbcRun.add(AnAction.builder("editor.debug", "Debug").icon(FontAwesomeSolid.BUG, "#e06c75", 11).onAction(ctx -> ctx.setStatus("Debug")).build());
+        consoleJdbcRun.add(AnAction.builder("editor.debug.routine", "Debug Routine…").icon(FontAwesomeSolid.BUG, "#e06c75", 11).onAction(ctx -> ctx.setStatus("Debug Routine…")).build());
+        consoleJdbcRun.addSeparator();
+        consoleJdbcRun.add(AnAction.builder("editor.migrate.consoles.to.queryfiles", "Migrate Query Consoles to Query Files…").onAction(ctx -> ctx.setStatus("Migrate Query Consoles to Query Files…")).build());
+        consoleJdbcRun.addSeparator();
+
+        runContextGroup.add(consoleJdbcRun);
+        runConfigsGroup.add(runContextGroup);
+        compileRunGroup.add(runConfigsGroup);
+        editorActions2.add(compileRunGroup);
+
+        // SplitRevealGroup (Image 4)
+        ActionGroup splitRevealGroup = new ActionGroup("editor.split.reveal.group", "SplitRevealGroup", false);
+        splitRevealGroup.add(AnAction.builder("editor.open.in.right.split", "Open in Right Split").icon(FontAwesomeSolid.COLUMNS, "#a9b7c6", 11).onAction(MainWindow::splitActiveTabRight).build());
+        splitRevealGroup.add(AnAction.builder("editor.open.in.split.chooser", "Open in Split with Chooser…").onAction(MainWindow::openInSplitWithChooser).build());
+
+        ActionGroup openInGroup = new ActionGroup("editor.open.in.group", "Open In", true,
+                FontAwesomeSolid.FOLDER, "#e0a44c", 11, "Open In");
+        openInGroup.add(AnAction.builder("editor.open.in.file.manager", "Show in File Manager").onAction(ctx -> ctx.setStatus("Show in File Manager")).build());
+        openInGroup.add(AnAction.builder("editor.open.in.associated.app", "Open in Associated Application").onAction(ctx -> ctx.setStatus("Open in Associated Application")).build());
+        openInGroup.add(AnAction.builder("editor.open.in.browser", "Open in Browser").icon(FontAwesomeSolid.GLOBE, "#4a88c7", 11).onAction(ctx -> ctx.setStatus("Open in Browser")).build());
+        openInGroup.add(AnAction.builder("editor.open.in.file.path", "File Path").onAction(MainWindow::showFilePathPopup).build());
+        openInGroup.add(AnAction.builder("editor.open.in.terminal", "Open in Terminal").icon(FontAwesomeSolid.TERMINAL, "#6897bb", 11).onAction(MainWindow::showTerminalToolWindow).build());
+        openInGroup.add(AnAction.builder("editor.open.in.terminal.second", "Open in Terminal").icon(FontAwesomeSolid.TERMINAL, "#6897bb", 11).onAction(MainWindow::showTerminalToolWindow).build());
+        openInGroup.add(AnAction.builder("git.hosting.open.in.browser.group", "Git.Hosting.Open.In.Browser.Group").onAction(ctx -> ctx.setStatus("Git.Hosting.Open.In.Browser.Group")).build());
+        splitRevealGroup.add(openInGroup);
+        splitRevealGroup.addSeparator();
+
+        editorActions2.add(splitRevealGroup);
+        editorActions2.addSeparator();
+
+        // VCS/LVCS Actions (Image 5)
+        ActionGroup vcsLvcsGroup = new ActionGroup("editor.vcs.lvcs.actions.group", "VCS/LVCS Actions", false);
+        ActionGroup localHistoryGroup = new ActionGroup("editor.local.history.group", "Local History", true);
+        localHistoryGroup.add(AnAction.builder("editor.local.history.show", "Show History…").onAction(MainWindow::showLocalHistoryForCurrentConsole).build());
+        localHistoryGroup.add(AnAction.builder("editor.local.history.show.selection", "Show History for Selection…").onAction(MainWindow::showHistoryForSelection).build());
+        localHistoryGroup.addSeparator();
+        localHistoryGroup.add(AnAction.builder("editor.local.history.show.project", "Show Project History…").onAction(MainWindow::showProjectHistoryDialog).build());
+        localHistoryGroup.add(AnAction.builder("editor.local.history.recent.changes", "Recent Changes").onAction(MainWindow::showRecentChangesDialog).build());
+        localHistoryGroup.add(AnAction.builder("editor.local.history.put.label", "Put Label…").onAction(MainWindow::showPutLabelDialog).build());
+        localHistoryGroup.add(AnAction.builder("editor.local.history.vcs.group", "Version Control Group").onAction(MainWindow::showVcsOperationsPopup).build());
+        vcsLvcsGroup.add(localHistoryGroup);
+        vcsLvcsGroup.addSeparator();
+
+        vcsLvcsGroup.add(AnAction.builder("editor.external.tools", "External Tools").onAction(ctx -> ctx.setStatus("External Tools")).build());
+        vcsLvcsGroup.add(AnAction.builder("editor.update.tag.emmet", "Update tag with Emmet").onAction(ctx -> ctx.setStatus("Update tag with Emmet")).build());
+
+        AnAction compareWithClip = AnAction.builder("diff.compare.clipboard", "Compare with Clipboard")
+                .icon(FontAwesomeSolid.EXCHANGE_ALT, "#6897bb", 11)
+                .onAction(ctx -> ctx.setStatus("Compare with Clipboard"))
+                .build();
+        AnAction showRevDiff = AnAction.builder("vcs.show.review.diff", "Show Review Diff")
+                .icon(FontAwesomeSolid.ARROW_RIGHT, "#4a88c7", 11)
+                .onAction(ctx -> ctx.setStatus("Show Review Diff"))
+                .build();
+        AnAction addRevComment = AnAction.builder("vcs.add.review.comment", "Add Review Comment")
+                .onAction(ctx -> ctx.setStatus("Add Review Comment"))
+                .build();
+        vcsLvcsGroup.addAll(compareWithClip, showRevDiff, addRevComment);
+
+        editorActions2.add(vcsLvcsGroup);
+
+        // Git [popup] (Image 5)
+        ActionGroup gitPopup = new ActionGroup("editor.popup.git", "Git", true);
+        gitPopup.add(AnAction.builder("git.show.local.version", "Show Local Version").onAction(ctx -> ctx.setStatus("Show Local Version")).build());
+        gitPopup.add(AnAction.builder("git.compare.with.head", "Compare with HEAD Version").onAction(ctx -> ctx.setStatus("Compare with HEAD Version")).build());
+        gitPopup.add(AnAction.builder("git.compare.with.local", "Compare with Local Version").onAction(ctx -> ctx.setStatus("Compare with Local Version")).build());
+        gitPopup.add(AnAction.builder("git.compare.head.staged.local", "Compare HEAD, Staged and Local Versions").onAction(ctx -> ctx.setStatus("Compare HEAD, Staged and Local Versions")).build());
+
+        // Diagrams [popup] (Image 5)
+        ActionGroup diagPopup = new ActionGroup("editor.popup.diagrams", "Diagrams", true);
+        diagPopup.add(AnAction.builder("diagrams.show.uml", "ShowUmlDiagram").icon(FontAwesomeSolid.PROJECT_DIAGRAM, "#a9b7c6", 11).onAction(MainWindow::showCurrentDiagram).build());
+        diagPopup.add(AnAction.builder("diagrams.show.uml.popup", "ShowUmlDiagramPopup").icon(FontAwesomeSolid.PROJECT_DIAGRAM, "#a9b7c6", 11).onAction(MainWindow::showCurrentDiagram).build());
+
+        // XPathView.EditorPopup [popup] (Image 5)
+        ActionGroup xpathPopup = new ActionGroup("xpath.editor.popup", "XPathView.EditorPopup", true);
+        xpathPopup.addSeparator();
+        xpathPopup.add(AnAction.builder("xpath.evaluate", "Evaluate XPath…").onAction(ctx -> ctx.setStatus("Evaluate XPath…")).build());
+        xpathPopup.add(AnAction.builder("xpath.show.unique", "Show Unique XPath").onAction(ctx -> ctx.setStatus("Show Unique XPath")).build());
+        xpathPopup.add(AnAction.builder("xpath.file.associations", "File Associations").onAction(ctx -> ctx.setStatus("File Associations")).build());
+
+        // Register groups and actions
+        manager.registerGroup(showIntentions);
+        manager.registerGroup(lightEditMode);
+        manager.registerGroup(copyPasteSpecial);
+        manager.registerAction(colSelectionMode);
+        manager.registerGroup(mdEditorGroup);
+        manager.registerGroup(actions1Group);
+        manager.registerGroup(editorPopupMenu2);
+        manager.registerGroup(editorPopupMenu3);
+        manager.registerAction(searchWithGoogle);
+        manager.registerGroup(editorActions2);
+        manager.registerGroup(gitPopup);
+        manager.registerGroup(diagPopup);
+        manager.registerGroup(xpathPopup);
     }
 
     public static List<ActionGroup> getMainMenuBarGroups(ActionManager manager) {
