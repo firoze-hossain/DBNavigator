@@ -432,6 +432,82 @@ public final class ActionRegistry {
                 .addSeparator()
                 .add(exit);
 
+        // DataGrip aligned File Menu actions & groups registration
+        manager.registerAction(AnAction.builder("file.open.actions", "File Open Actions").onAction(ctx -> {}).build());
+        manager.registerAction(AnAction.builder("file.new.generic.file", "File")
+                .icon(FontAwesomeSolid.FILE, "#a9b7c6", 11).onAction(MainWindow::openNewSqlFile).build());
+        manager.registerAction(AnAction.builder("file.new.directory.package", "Directory/Package")
+                .icon(FontAwesomeSolid.FOLDER, "#e0a44c", 11).onAction(MainWindow::createNewFolderDialog).build());
+        manager.registerAction(AnAction.builder("file.template.separator.group", "FileTemplateSeparatorGroup").onAction(ctx -> {}).build());
+        manager.registerAction(AnAction.builder("file.new.html", "HTML File")
+                .icon(FontAwesomeSolid.FILE_CODE, "#e0a44c", 11).onAction(ctx -> ctx.setStatus("Created HTML File")).build());
+        manager.registerAction(AnAction.builder("file.microservices.templates", "Microservices Templates").onAction(ctx -> ctx.setStatus("Microservices Templates")).build());
+        manager.registerAction(AnAction.builder("file.from.template", "From Template").onAction(ctx -> ctx.setStatus("From Template")).build());
+        manager.registerAction(AnAction.builder("file.xml.config.file", "XML Configuration File")
+                .icon(FontAwesomeSolid.CODE, "#a9b7c6", 11).onAction(ctx -> ctx.setStatus("XML Configuration File")).build());
+        manager.registerAction(AnAction.builder("file.new.queryfile.active", "Query File")
+                .icon(FontAwesomeSolid.TERMINAL, "#6897bb", 11).onAction(MainWindow::openNewQueryFile).build());
+        manager.registerAction(AnAction.builder("file.new.scratch.queryfile", "Scratch Query File")
+                .icon(FontAwesomeSolid.TERMINAL, "#6897bb", 11).onAction(MainWindow::openNewScratchFile).build());
+        manager.registerAction(AnAction.builder("file.new.add.ddl.object", "Add Ddl Object")
+                .icon(FontAwesomeSolid.DATABASE, "#57965c", 11).onAction(MainWindow::openDdlDataSourceDialog).build());
+        manager.registerAction(AnAction.builder("file.new.datasource.selection", "Add Data Source from Selection…")
+                .onAction(ctx -> ctx.setStatus("Add Data Source from Selection")).build());
+        manager.registerAction(AnAction.builder("file.new.datasource.path", "Data Source in Path")
+                .onAction(ctx -> ctx.setStatus("Data Source in Path")).build());
+        manager.registerAction(AnAction.builder("file.new.datasource.clipboard", "Import from Clipboard")
+                .onAction(ctx -> ctx.setStatus("Import from Clipboard")).build());
+        manager.registerAction(AnAction.builder("file.reopen.project", "Reopen Project")
+                .onAction(ctx -> ctx.setStatus("Reopen Project")).build());
+        manager.registerAction(AnAction.builder("file.manage.projects", "Manage Projects…")
+                .onAction(ctx -> ctx.setStatus("Manage Projects")).build());
+        manager.registerAction(AnAction.builder("file.close.project", "Close Project")
+                .onAction(ctx -> ctx.setStatus("Close Project")).build());
+        manager.registerAction(AnAction.builder("file.remote.dev", "Remote Development")
+                .icon(FontAwesomeSolid.DESKTOP, "#4a88c7", 11).onAction(ctx -> ctx.setStatus("Remote Development")).build());
+        manager.registerAction(AnAction.builder("file.remote.dev.daemon.action", "Remote Development…")
+                .onAction(ctx -> ctx.setStatus("Remote Development Daemon")).build());
+        manager.registerAction(AnAction.builder("file.project.structure", "Project Structure…")
+                .onAction(ctx -> ctx.setStatus("Project Structure")).build());
+        manager.registerAction(AnAction.builder("file.remove.bom", "Remove BOM")
+                .onAction(ctx -> ctx.setStatus("Remove BOM")).build());
+        manager.registerAction(AnAction.builder("file.add.bom", "Add BOM")
+                .onAction(ctx -> ctx.setStatus("Add BOM")).build());
+        manager.registerAction(AnAction.builder("file.associate.file.type", "Associate with File Type…")
+                .onAction(ctx -> ctx.setStatus("Associate with File Type")).build());
+        manager.registerAction(AnAction.builder("file.change.template.lang", "Change Template Data Language")
+                .onAction(ctx -> ctx.setStatus("Change Template Data Language")).build());
+        manager.registerAction(AnAction.builder("file.toggle.readonly", "Toggle Read-Only Attribute")
+                .onAction(ctx -> ctx.setStatus("Toggle Read-Only Attribute")).build());
+        manager.registerAction(AnAction.builder("file.line.sep.crlf", "CRLF - Windows (\r\n)")
+                .onAction(ctx -> ctx.setStatus("Line Separator: CRLF")).build());
+        manager.registerAction(AnAction.builder("file.line.sep.lf", "LF - Unix and macOS (\n)")
+                .onAction(ctx -> ctx.setStatus("Line Separator: LF")).build());
+        manager.registerAction(AnAction.builder("file.line.sep.cr", "CR - Classic Mac OS (\r)")
+                .onAction(ctx -> ctx.setStatus("Line Separator: CR")).build());
+        manager.registerAction(AnAction.builder("file.settings.import", "Import Settings…")
+                .onAction(ctx -> ctx.setStatus("Import Settings")).build());
+        manager.registerAction(AnAction.builder("file.settings.backup.sync", "Backup and Sync…")
+                .onAction(ctx -> ctx.setStatus("Backup and Sync")).build());
+        manager.registerAction(AnAction.builder("file.export.html", "Export Files or Selection to HTML…")
+                .onAction(ctx -> ctx.setStatus("Export to HTML")).build());
+
+        // Groups for File Menu hierarchy
+        manager.registerGroup(new ActionGroup("file.new.file.group", "New File", true));
+        manager.registerGroup(new ActionGroup("file.web.dev.templates", "Web Development Templates", true));
+        manager.registerGroup(new ActionGroup("file.web.dev.xml", "XML", true));
+        manager.registerGroup(new ActionGroup("file.new.db.group", "New", false));
+        manager.registerGroup(new ActionGroup("file.new.add.group", "Add", false));
+        manager.registerGroup(new ActionGroup("file.new.create.datasource", "Create Data Source", true));
+        manager.registerGroup(new ActionGroup("file.remote.dev.actions", "FileMenu.RemoteDevelopmentActions", false));
+        manager.registerGroup(new ActionGroup("file.remote.dev.daemon", "FileMenu.RemoteDevelopmentActions.Daemon", false));
+        manager.registerGroup(new ActionGroup("file.settings.actions", "Settings Actions", false));
+        manager.registerGroup(new ActionGroup("file.remove.bom.group", "RemoveBom.Group", false));
+        manager.registerGroup(new ActionGroup("file.add.bom.group", "AddBom.Group", false));
+        manager.registerGroup(new ActionGroup("file.line.separators", "Line Separators", true));
+        manager.registerGroup(new ActionGroup("file.local.history.main.group", "LocalHistory.MainMenuGroup", false));
+        manager.registerGroup(new ActionGroup("file.print.export.actions", "Print/Export Actions", false));
+
         // =========================================================================
         // 2. EDIT ACTIONS (Matching DataGrip)
         // =========================================================================
@@ -655,6 +731,227 @@ public final class ActionRegistry {
                 .addSeparator()
                 .addAll(toggleBookmark, showBookmarks);
 
+        // Additional DataGrip Edit Actions & Groups (Images 1, 2, 3)
+        AnAction copyPaths = AnAction.builder("edit.copy.paths", "Copy Paths")
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(MainWindow::copyPathOrReferenceCurrentEditor)
+                .build();
+        AnAction copyRich = AnAction.builder("edit.copy.rich", "Copy as Rich Text")
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(MainWindow::copyCurrentEditor)
+                .build();
+        AnAction copyJsonPointer = AnAction.builder("edit.copy.json.pointer", "Copy JSON Pointer")
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(ctx -> ctx.setStatus("JSON Pointer copied"))
+                .build();
+        AnAction copyPathAbs = AnAction.builder("edit.copy.path.absolute", "Absolute Path")
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(MainWindow::copyPathOrReferenceCurrentEditor)
+                .build();
+        AnAction copyPathFilename = AnAction.builder("edit.copy.path.filename", "File Name")
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(MainWindow::copyPathOrReferenceCurrentEditor)
+                .build();
+        AnAction copyPathLineNumber = AnAction.builder("edit.copy.path.line.number", "Path with Line Number")
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(MainWindow::copyPathOrReferenceCurrentEditor)
+                .build();
+        AnAction copyPathContentRoot = AnAction.builder("edit.copy.path.content.root", "Path from Content Root")
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(MainWindow::copyPathOrReferenceCurrentEditor)
+                .build();
+        AnAction copyPathSourceRoot = AnAction.builder("edit.copy.path.source.root", "Path from Source Root")
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(MainWindow::copyPathOrReferenceCurrentEditor)
+                .build();
+        AnAction copyPathRepoRoot = AnAction.builder("edit.copy.path.repo.root", "Path From Repository Root")
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(MainWindow::copyPathOrReferenceCurrentEditor)
+                .build();
+        AnAction copyGitHostingLink = AnAction.builder("edit.copy.git.hosting.link", "Git.Hosting.Copy.Link.Group")
+                .onAction(ctx -> ctx.setStatus("Git Hosting Link copied"))
+                .build();
+        AnAction copyToolboxUrl = AnAction.builder("edit.copy.toolbox.url", "Toolbox URL")
+                .icon(FontAwesomeSolid.CUBES, "#4a88c7", 11)
+                .onAction(ctx -> ctx.setStatus("Toolbox URL copied"))
+                .build();
+        AnAction pasteHistory = AnAction.builder("edit.paste.history", "Paste from History…")
+                .accelerator(new KeyCodeCombination(KeyCode.V, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN))
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(MainWindow::showRecentLocationsDialog)
+                .build();
+        AnAction pastePlain = AnAction.builder("edit.paste.plain", "Paste as Plain Text")
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(MainWindow::pasteCurrentEditor)
+                .build();
+
+        ActionGroup copyFileRefGroup = new ActionGroup("edit.copy.file.reference.group", "CopyFileReference", false);
+        copyFileRefGroup.addAll(copyPathAbs, copyPathFilename)
+                .addSeparator()
+                .addAll(copyPathLineNumber, copyPathContentRoot, copyPathSourceRoot, copyPathRepoRoot, copyGitHostingLink);
+        ActionGroup copyExtRefGroup = new ActionGroup("edit.copy.external.reference.group", "CopyExternalReferenceGroup", false);
+        copyExtRefGroup.add(copyToolboxUrl);
+        ActionGroup copyPathRefGroup = new ActionGroup("edit.copy.path.reference.group", "Copy Path/Reference…", true);
+        copyPathRefGroup.add(copyFileRefGroup).addSeparator().add(copyExtRefGroup).add(copyRef);
+        ActionGroup pasteGroup = new ActionGroup("edit.paste.group", "Paste", false);
+        pasteGroup.addAll(paste, pasteHistory, pastePlain);
+        ActionGroup cutCopyPasteActions = new ActionGroup("edit.cut.copy.paste.actions", "Cut/Copy/Paste Actions", false);
+        cutCopyPasteActions.addAll(cut, copy, copyPaths, copyPlain, copyRich, copyPathRefGroup, pasteGroup, copyJsonPointer);
+
+        manager.registerAction(copyPaths);
+        manager.registerAction(copyRich);
+        manager.registerAction(copyJsonPointer);
+        manager.registerAction(copyPathAbs);
+        manager.registerAction(copyPathFilename);
+        manager.registerAction(copyPathLineNumber);
+        manager.registerAction(copyPathContentRoot);
+        manager.registerAction(copyPathSourceRoot);
+        manager.registerAction(copyPathRepoRoot);
+        manager.registerAction(copyGitHostingLink);
+        manager.registerAction(copyToolboxUrl);
+        manager.registerAction(pasteHistory);
+        manager.registerAction(pastePlain);
+        manager.registerGroup(copyFileRefGroup);
+        manager.registerGroup(copyExtRefGroup);
+        manager.registerGroup(copyPathRefGroup);
+        manager.registerGroup(pasteGroup);
+        manager.registerGroup(cutCopyPasteActions);
+
+        // DataGrip Generate Actions & Groups
+        AnAction mdLink = AnAction.builder("edit.generate.markdown.link", "Create Link")
+                .icon(FontAwesomeSolid.LINK, "#4a88c7", 11)
+                .onAction(ctx -> ctx.setStatus("Create Link"))
+                .build();
+        AnAction mdTable = AnAction.builder("edit.generate.markdown.table", "Insert Table")
+                .icon(FontAwesomeSolid.TABLE, "#57965c", 11)
+                .onAction(ctx -> ctx.setStatus("Insert Table"))
+                .build();
+        AnAction mdImage = AnAction.builder("edit.generate.markdown.image", "Insert Image")
+                .icon(FontAwesomeSolid.IMAGE, "#e0a44c", 11)
+                .onAction(ctx -> ctx.setStatus("Insert Image"))
+                .build();
+        AnAction mdToc = AnAction.builder("edit.generate.markdown.toc", "Generate Table Of Contents")
+                .icon(FontAwesomeSolid.LIST, "#c77dbb", 11)
+                .onAction(ctx -> ctx.setStatus("Generate Table Of Contents"))
+                .build();
+        ActionGroup mdInsertGroup = new ActionGroup("edit.generate.markdown.group", "Markdown.InsertGroup", true);
+        mdInsertGroup.addAll(mdLink, mdTable, mdImage, mdToc);
+
+        AnAction genSqlGroup = AnAction.builder("edit.generate.sql.group", "SqlGenerateGroup")
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(MainWindow::generateSqlSnippet)
+                .build();
+        AnAction genXmlTag = AnAction.builder("edit.generate.xml.tag", "XML Tag…")
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(MainWindow::insertLiveTemplate)
+                .build();
+        AnAction genOverride = AnAction.builder("edit.generate.override.methods", "Override Methods…")
+                .onAction(ctx -> ctx.setStatus("Override Methods…"))
+                .build();
+        AnAction genImplement = AnAction.builder("edit.generate.implement.methods", "Implement Methods…")
+                .onAction(ctx -> ctx.setStatus("Implement Methods…"))
+                .build();
+        AnAction genDelegate = AnAction.builder("edit.generate.delegate.methods", "Delegate Methods…")
+                .onAction(ctx -> ctx.setStatus("Delegate Methods…"))
+                .build();
+        AnAction genTestCreators = AnAction.builder("edit.generate.test.creators.group", "GenerateFromTestCreatorsGroup")
+                .onAction(ctx -> ctx.setStatus("GenerateFromTestCreatorsGroup"))
+                .build();
+        ActionGroup generateInnerGroup = new ActionGroup("edit.generate.group", "Generate", false);
+        generateInnerGroup.addAll(genSqlGroup, genXmlTag, genOverride, genImplement, genDelegate, genTestCreators, mdInsertGroup);
+        ActionGroup generateRootGroup = new ActionGroup("edit.generate.root.group", "Generate…", true);
+        generateRootGroup.add(generateInnerGroup);
+
+        manager.registerAction(mdLink);
+        manager.registerAction(mdTable);
+        manager.registerAction(mdImage);
+        manager.registerAction(mdToc);
+        manager.registerAction(genSqlGroup);
+        manager.registerAction(genXmlTag);
+        manager.registerAction(genOverride);
+        manager.registerAction(genImplement);
+        manager.registerAction(genDelegate);
+        manager.registerAction(genTestCreators);
+        manager.registerGroup(mdInsertGroup);
+        manager.registerGroup(generateInnerGroup);
+        manager.registerGroup(generateRootGroup);
+
+        // DataGrip Refactor Actions & Groups
+        AnAction refactorExpandCols = AnAction.builder("edit.refactor.expand.column.list", "Expand Column List")
+                .onAction(ctx -> ctx.setStatus("Refactor: Expand Column List"))
+                .build();
+        AnAction refactorSubquery = AnAction.builder("edit.refactor.convert.subquery", "Convert to Subquery")
+                .onAction(ctx -> ctx.setStatus("Refactor: Convert to Subquery"))
+                .build();
+        AnAction refactorSubqueryCte = AnAction.builder("edit.refactor.subquery.cte", "Subquery as CTE")
+                .onAction(ctx -> ctx.setStatus("Refactor: Subquery as CTE"))
+                .build();
+        AnAction extractTableAlias = AnAction.builder("edit.refactor.table.alias", "Table alias…")
+                .onAction(ctx -> ctx.setStatus("Refactor: Table alias…"))
+                .build();
+        AnAction extractVariable = AnAction.builder("edit.refactor.introduce.variable", "Introduce Variable…")
+                .onAction(ctx -> ctx.setStatus("Refactor: Introduce Variable…"))
+                .build();
+        AnAction extractRoutine = AnAction.builder("edit.refactor.extract.routine", "Extract Routine…")
+                .onAction(ctx -> ctx.setStatus("Refactor: Extract Routine…"))
+                .build();
+        ActionGroup extractIntroduceGroup = new ActionGroup("edit.refactor.extract.introduce.group", "Extract/Introduce", true);
+        extractIntroduceGroup.addAll(extractTableAlias, extractVariable, extractRoutine);
+        AnAction qualifyId = AnAction.builder("edit.refactor.qualify.identifier", "Qualify Identifier")
+                .onAction(ctx -> ctx.setStatus("Refactor: Qualify Identifier"))
+                .build();
+        AnAction unqualifyId = AnAction.builder("edit.refactor.unqualify.identifier", "Unqualify Identifier")
+                .onAction(ctx -> ctx.setStatus("Refactor: Unqualify Identifier"))
+                .build();
+        AnAction quoteId = AnAction.builder("edit.refactor.quote.identifier", "Quote Identifier")
+                .onAction(ctx -> ctx.setStatus("Refactor: Quote Identifier"))
+                .build();
+        AnAction unquoteId = AnAction.builder("edit.refactor.unquote.identifier", "Unquote Identifier")
+                .onAction(ctx -> ctx.setStatus("Refactor: Unquote Identifier"))
+                .build();
+        AnAction flipExpr = AnAction.builder("edit.refactor.flip.expression", "Flip Expression")
+                .onAction(ctx -> ctx.setStatus("Refactor: Flip Expression"))
+                .build();
+        AnAction injectLang = AnAction.builder("edit.refactor.inject.language", "Inject Language or Reference")
+                .onAction(ctx -> ctx.setStatus("Refactor: Inject Language"))
+                .build();
+        AnAction uninjectLang = AnAction.builder("edit.refactor.uninject.language", "Uninject Language or Reference")
+                .onAction(ctx -> ctx.setStatus("Refactor: Uninject Language"))
+                .build();
+
+        manager.registerAction(refactorExpandCols);
+        manager.registerAction(refactorSubquery);
+        manager.registerAction(refactorSubqueryCte);
+        manager.registerAction(extractTableAlias);
+        manager.registerAction(extractVariable);
+        manager.registerAction(extractRoutine);
+        manager.registerGroup(extractIntroduceGroup);
+        manager.registerAction(qualifyId);
+        manager.registerAction(unqualifyId);
+        manager.registerAction(quoteId);
+        manager.registerAction(unquoteId);
+        manager.registerAction(flipExpr);
+        manager.registerAction(injectLang);
+        manager.registerAction(uninjectLang);
+
+        // DataGrip Selection Actions & Groups
+        AnAction columnSelectionMode = AnAction.builder("edit.selection.column.mode", "Column Selection Mode")
+                .onAction(ctx -> ctx.setStatus("Column Selection Mode"))
+                .build();
+        AnAction addCaretsEnds = AnAction.builder("edit.selection.add.carets.ends", "Add Carets to Ends of Selected Lines")
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(ctx -> ctx.setStatus("Add Carets to Ends of Selected Lines"))
+                .build();
+        ActionGroup selectWordGroup = new ActionGroup("edit.selection.word.actions", "Select Word Actions", false);
+        selectWordGroup.addAll(extendSelection, shrinkSelection);
+        ActionGroup editorSelectActions = new ActionGroup("edit.selection.editor.select.actions", "Editor Select Actions", false);
+        editorSelectActions.addAll(selectAll, addCaretsEnds, selectWordGroup);
+
+        manager.registerAction(columnSelectionMode);
+        manager.registerAction(addCaretsEnds);
+        manager.registerGroup(selectWordGroup);
+        manager.registerGroup(editorSelectActions);
+
         // =========================================================================
         // 3. VIEW ACTIONS (Matching DataGrip)
         // =========================================================================
@@ -758,6 +1055,7 @@ public final class ActionRegistry {
         toolWindowsGroup.addAll(twCommit, twDatabase, twFiles, twFind, twRun, twDebug, twProblems, twStructure, twServices, twVcs, twAi)
                 .addSeparator()
                 .addAll(twBackupSync, twBookmarks, twCoverage, twDbChanges, twHierarchy, twLearn, twNotifications, twTerminal, twTodo);
+        manager.registerGroup(toolWindowsGroup);
 
         // --- Submenu: View -> Appearance -> Main Menu ---
         ActionGroup mainMenuPlacementGroup = new ActionGroup("view.appearance.mainmenu", "Main Menu", true);
@@ -773,6 +1071,7 @@ public final class ActionRegistry {
                 .isSelected(ctx -> ctx.getMainMenuPlacement() == MainWindow.MainMenuPlacement.ABOVE_TOOLBAR)
                 .onToggle((ctx, sel) -> ctx.setMainMenuPlacement(MainWindow.MainMenuPlacement.ABOVE_TOOLBAR))
                 .build());
+        manager.registerGroup(mainMenuPlacementGroup);
 
         // --- Submenu: View -> Appearance -> Navigation Bar ---
         ActionGroup navBarGroup = new ActionGroup("view.appearance.navbar", "Navigation Bar", true);
@@ -788,6 +1087,7 @@ public final class ActionRegistry {
                 .isSelected(ctx -> ctx.getNavigationBarPlacement() == MainWindow.NavigationBarPlacement.DONT_SHOW)
                 .onToggle((ctx, sel) -> ctx.setNavigationBarPlacement(MainWindow.NavigationBarPlacement.DONT_SHOW))
                 .build());
+        manager.registerGroup(navBarGroup);
 
         // --- Submenu: View -> Appearance -> Status Bar Widgets ---
         ActionGroup sbWidgetsGroup = new ActionGroup("view.appearance.statusbar.widgets", "Status Bar Widgets", true);
@@ -869,6 +1169,7 @@ public final class ActionRegistry {
                 .isSelected(ctx -> ctx.isStatusBarWidgetActive("memory"))
                 .onToggle((ctx, sel) -> ctx.setStatusBarWidgetActive("memory", sel))
                 .build());
+        manager.registerGroup(sbWidgetsGroup);
 
         // --- Submenu: View -> Appearance ---
         ActionGroup appearanceGroup = new ActionGroup("view.appearance", "Appearance", true);
@@ -915,6 +1216,7 @@ public final class ActionRegistry {
                 .addAll(mainMenuPlacementGroup, toolbarToggle, navBarGroup, toolWindowBars)
                 .addSeparator()
                 .addAll(statusBarToggle, sbWidgetsGroup);
+        manager.registerGroup(appearanceGroup);
 
         // --- Main View Menu Items ---
         AnAction recentLocations = AnAction.builder("view.recent.locations", "Recent Locations")
@@ -960,6 +1262,130 @@ public final class ActionRegistry {
                 .addAll(recentLocations, recentFiles, recentChangedFiles, recentChanges)
                 .addSeparator()
                 .addAll(increaseFont, decreaseFont, resetFont);
+
+        // Additional DataGrip View Actions & Groups (Images 4, 5)
+        AnAction twFilesDataGrip = AnAction.builder("view.tool.files", "Files")
+                .icon(FontAwesomeSolid.FOLDER, "#e0a44c", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.DIGIT2, KeyCombination.ALT_DOWN))
+                .onAction(MainWindow::toggleFilesToolWindow)
+                .build();
+        AnAction twTerminalDataGrip = AnAction.builder("view.tool.terminal", "Terminal")
+                .icon(FontAwesomeSolid.TERMINAL, "#57965c", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.F12, KeyCombination.ALT_DOWN))
+                .onAction(MainWindow::showTerminalToolWindow)
+                .build();
+        ActionGroup dgToolWindows = new ActionGroup("view.tool.windows", "Tool Windows", true);
+        dgToolWindows.addAll(twDatabase, twFilesDataGrip, twTerminalDataGrip);
+        manager.registerAction(twFilesDataGrip);
+        manager.registerAction(twTerminalDataGrip);
+        manager.registerGroup(dgToolWindows);
+
+        AnAction dgTogglePres = AnAction.builder("view.toggle.presentation.mode", "Toggle Presentation Mode")
+                .onAction(MainWindow::togglePresentationMode).build();
+        AnAction dgToggleDistract = AnAction.builder("view.toggle.distraction.free.mode", "Toggle Distraction Free Mode")
+                .onAction(MainWindow::toggleDistractionFreeMode).build();
+        AnAction dgToggleFullScreen = AnAction.builder("view.toggle.fullscreen.mode", "Toggle Full Screen Mode")
+                .onAction(MainWindow::toggleFullScreen).build();
+        AnAction dgToggleZen = AnAction.builder("view.toggle.zen.mode", "Toggle Zen Mode")
+                .onAction(MainWindow::toggleZenMode).build();
+        AnAction dgCompact = AnAction.builder("view.compact.mode", "Compact Mode")
+                .onAction(MainWindow::toggleCompactMode).build();
+        ActionGroup dgFullScreenGroup = new ActionGroup("view.toggle.fullscreen.group", "ToggleFullScreenGroup", false);
+        dgFullScreenGroup.addSeparator()
+                .addAll(dgTogglePres, dgToggleDistract, dgToggleFullScreen, dgToggleZen)
+                .addSeparator()
+                .add(dgCompact);
+        manager.registerAction(dgTogglePres);
+        manager.registerAction(dgToggleDistract);
+        manager.registerAction(dgToggleFullScreen);
+        manager.registerAction(dgToggleZen);
+        manager.registerAction(dgCompact);
+        manager.registerGroup(dgFullScreenGroup);
+
+        AnAction dgZoomIde = AnAction.builder("view.zoom.ide", "Zoom IDE")
+                .onAction(MainWindow::showZoomIdeDialog).build();
+        manager.registerAction(dgZoomIde);
+
+        AnAction dgPresAssistant = AnAction.builder("view.toggle.presentation.assistant", "Presentation Assistant")
+                .onAction(MainWindow::togglePresentationAssistant).build();
+        AnAction dgToggleMainMenu = AnAction.builder("view.toggle.main.menu", "Main Menu")
+                .onAction(ctx -> ctx.setMainMenuPlacement(MainWindow.MainMenuPlacement.HAMBURGER)).build();
+        AnAction dgToggleMainMenuSep = AnAction.builder("view.toggle.main.menu.separate", "Main Menu")
+                .onAction(ctx -> ctx.setMainMenuPlacement(MainWindow.MainMenuPlacement.ABOVE_TOOLBAR)).build();
+        AnAction dgToggleToolbar = AnAction.builder("view.toggle.toolbar", "Toolbar")
+                .onAction(ctx -> ctx.setToolbarVisible(!ctx.isToolbarVisible())).build();
+        AnAction dgToggleToolbarClassic = AnAction.builder("view.toggle.toolbar.classic", "Toolbar Classic")
+                .onAction(ctx -> ctx.setToolbarVisible(!ctx.isToolbarVisible())).build();
+        AnAction dgToggleNavBar = AnAction.builder("view.toggle.navigation.bar", "Navigation Bar")
+                .onAction(ctx -> ctx.setNavigationBarPlacement(MainWindow.NavigationBarPlacement.TOP)).build();
+
+        AnAction dgTbToolbar = AnAction.builder("view.toolbar.actions.toolbar", "Toolbar")
+                .onAction(ctx -> ctx.setToolbarVisible(!ctx.isToolbarVisible())).build();
+        AnAction dgTbNavbar = AnAction.builder("view.toolbar.actions.navbar", "Navigation Bar")
+                .onAction(ctx -> ctx.setNavigationBarPlacement(MainWindow.NavigationBarPlacement.TOP)).build();
+        ActionGroup dgTbNavbarGroup = new ActionGroup("view.toolbar.actions.navbar.group", "Navigation Bar", true);
+        AnAction dgToggleTwBars = AnAction.builder("view.toggle.tool.window.bars", "Tool Window Bars")
+                .onAction(ctx -> ctx.setToolWindowBarsVisible(!ctx.isToolWindowBarsVisible())).build();
+        AnAction dgToggleStatusBar = AnAction.builder("view.toggle.status.bar", "Status Bar")
+                .onAction(ctx -> ctx.setStatusBarVisible(!ctx.isStatusBarVisible())).build();
+        ActionGroup dgSbWidgetsGroup = new ActionGroup("view.status.bar.widgets", "Status Bar Widgets", true);
+        AnAction dgSbStatusText = AnAction.builder("view.status.bar.widget.status.text", "Status Text")
+                .onAction(ctx -> ctx.setStatusBarWidgetActive("statusText", !ctx.isStatusBarWidgetActive("statusText"))).build();
+        dgSbWidgetsGroup.add(dgSbStatusText);
+        AnAction dgToggleMembers = AnAction.builder("view.toggle.members.in.nav.bar", "Members in Navigation Bar")
+                .onAction(ctx -> ctx.setStatus("Members in Navigation Bar")).build();
+
+        ActionGroup dgViewToolbarActions = new ActionGroup("view.toolbar.actions.group", "ViewToolbarActionsGroup", false);
+        dgViewToolbarActions.addAll(dgTbToolbar, dgTbNavbar, dgTbNavbarGroup, dgToggleTwBars, dgToggleStatusBar, dgSbWidgetsGroup, dgToggleMembers);
+
+        ActionGroup dgUiToggleActions = new ActionGroup("view.ui.toggle.actions", "UIToggleActions", false);
+        dgUiToggleActions.addSeparator()
+                .add(dgPresAssistant)
+                .addSeparator()
+                .addAll(dgToggleMainMenu, dgToggleMainMenuSep, dgToggleToolbar, dgToggleToolbarClassic, dgToggleNavBar, dgViewToolbarActions)
+                .addSeparator();
+
+        manager.registerAction(dgPresAssistant);
+        manager.registerAction(dgToggleMainMenu);
+        manager.registerAction(dgToggleMainMenuSep);
+        manager.registerAction(dgToggleToolbar);
+        manager.registerAction(dgToggleToolbarClassic);
+        manager.registerAction(dgToggleNavBar);
+        manager.registerAction(dgTbToolbar);
+        manager.registerAction(dgTbNavbar);
+        manager.registerGroup(dgTbNavbarGroup);
+        manager.registerAction(dgToggleTwBars);
+        manager.registerAction(dgToggleStatusBar);
+        manager.registerAction(dgSbStatusText);
+        manager.registerGroup(dgSbWidgetsGroup);
+        manager.registerAction(dgToggleMembers);
+        manager.registerGroup(dgViewToolbarActions);
+        manager.registerGroup(dgUiToggleActions);
+
+        AnAction dgRecentToggleChanged = AnAction.builder("view.recent.toggle.changed.only", "Toggle Changed Only Files")
+                .onAction(ctx -> ctx.setStatus("Toggle Changed Only Files")).build();
+        AnAction dgRecentIterateFiles = AnAction.builder("view.recent.iterate.files", "Iterate Recent Files")
+                .onAction(MainWindow::showRecentFilesDialog).build();
+        AnAction dgRecentToggleChanged2 = AnAction.builder("view.recent.toggle.changed.only.second", "Toggle Changed Only Files")
+                .onAction(ctx -> ctx.setStatus("Toggle Changed Only Files")).build();
+        AnAction dgRecentIterateFiles2 = AnAction.builder("view.recent.iterate.files.second", "Iterate Recent Files")
+                .onAction(MainWindow::showRecentFilesDialog).build();
+        AnAction dgRecentFiles2 = AnAction.builder("view.recent.files.second", "Recent Files")
+                .onAction(MainWindow::showRecentFilesDialog).build();
+        AnAction dgRecentlyChangedFiles2 = AnAction.builder("view.recently.changed.files.second", "Recently Changed Files")
+                .onAction(MainWindow::showRecentlyChangedFilesDialog).build();
+
+        ActionGroup dgViewRecentActions = new ActionGroup("view.recent.actions.group", "View Recent Actions Group", false);
+        dgViewRecentActions.addAll(recentFiles, dgRecentToggleChanged, dgRecentIterateFiles, recentChangedFiles, recentLocations,
+                dgRecentToggleChanged2, dgRecentIterateFiles2, dgRecentFiles2, dgRecentlyChangedFiles2, recentChanges);
+
+        manager.registerAction(dgRecentToggleChanged);
+        manager.registerAction(dgRecentIterateFiles);
+        manager.registerAction(dgRecentToggleChanged2);
+        manager.registerAction(dgRecentIterateFiles2);
+        manager.registerAction(dgRecentFiles2);
+        manager.registerAction(dgRecentlyChangedFiles2);
+        manager.registerGroup(dgViewRecentActions);
 
         // =========================================================================
         // 4. NAVIGATE ACTIONS (Matching DataGrip)
