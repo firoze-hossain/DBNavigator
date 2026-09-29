@@ -1514,34 +1514,1044 @@ public final class ActionRegistry {
                 .addAll(nextStatement, prevStatement);
 
         // =========================================================================
-        // 5. RUN ACTIONS (Matching DataGrip)
+        // 4b. NAVIGATE ACTIONS (DataGrip Hierarchy & Aliases)
         // =========================================================================
-        // Section 1: Edit Configurations…
-        AnAction editConfigurations = AnAction.builder("run.edit.configurations", "Edit Configurations…")
+        manager.registerAction("nav.back", navBack);
+        manager.registerAction("nav.forward", navForward);
+        manager.registerAction("header.search", searchEverywhere);
+
+        AnAction navGotoClass = AnAction.builder("nav.goto.class", "Go to Class\u2026")
+                .accelerator(new KeyCodeCombination(KeyCode.N, KeyCombination.CONTROL_DOWN))
+                .onAction(MainWindow::showSearchDatabaseObjectsDialog)
+                .build();
+        AnAction navGotoFile = AnAction.builder("nav.goto.file", "Go to File\u2026")
+                .accelerator(new KeyCodeCombination(KeyCode.N, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(MainWindow::showSearchFilesDialog)
+                .build();
+        AnAction navGotoSymbol = AnAction.builder("nav.goto.symbol", "Go to Symbol\u2026")
+                .accelerator(new KeyCodeCombination(KeyCode.N, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(MainWindow::showSearchCodeDialog)
+                .build();
+        AnAction navGotoText = AnAction.builder("nav.goto.text", "Text\u2026")
+                .accelerator(new KeyCodeCombination(KeyCode.E, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(MainWindow::showSearchTextDialog)
+                .build();
+        AnAction navGotoDbObject = AnAction.builder("nav.goto.database.object", "Go To Database Object")
+                .accelerator(new KeyCodeCombination(KeyCode.N, KeyCombination.CONTROL_DOWN))
+                .onAction(MainWindow::showSearchDatabaseObjectsDialog)
+                .build();
+
+        AnAction navGotoRow = AnAction.builder("nav.goto.row", "Row\u2026")
+                .accelerator(new KeyCodeCombination(KeyCode.G, KeyCombination.CONTROL_DOWN))
+                .onAction(ctx -> ctx.setStatus("Go to Row"))
+                .build();
+        AnAction navOpenFileUri = AnAction.builder("nav.open.file.uri", "Open File URI")
+                .icon(FontAwesomeSolid.FOLDER, "#dcb67a", 11)
+                .onAction(ctx -> ctx.setStatus("Open File URI"))
+                .build();
+        AnAction navOpenUrl = AnAction.builder("nav.open.url", "Open URL")
+                .icon(FontAwesomeSolid.GLOBE, "#6897bb", 11)
+                .onAction(ctx -> ctx.setStatus("Open URL"))
+                .build();
+        AnAction navRelatedRows = AnAction.builder("nav.related.rows", "Related Rows")
+                .icon(FontAwesomeSolid.TABLE, "#499c54", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.F4))
+                .onAction(ctx -> ctx.setStatus("Related Rows"))
+                .build();
+        AnAction navGotoLineCol = AnAction.builder("nav.goto.line.column", "Go to Line:Column\u2026")
+                .accelerator(new KeyCodeCombination(KeyCode.G, KeyCombination.CONTROL_DOWN))
+                .onAction(ctx -> ctx.setStatus("Go to Line:Column"))
+                .build();
+
+        AnAction navNextError = AnAction.builder("nav.next.highlighted.error", "Next Highlighted Error")
+                .accelerator(new KeyCodeCombination(KeyCode.F2))
+                .onAction(ctx -> ctx.setStatus("Next Highlighted Error"))
+                .build();
+        AnAction navPrevError = AnAction.builder("nav.prev.highlighted.error", "Previous Highlighted Error")
+                .accelerator(new KeyCodeCombination(KeyCode.F2, KeyCombination.SHIFT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Previous Highlighted Error"))
+                .build();
+
+        AnAction navNextEmmet = AnAction.builder("nav.next.emmet.edit.point", "Next Emmet Edit Point")
+                .accelerator(new KeyCodeCombination(KeyCode.CLOSE_BRACKET, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Next Emmet Edit Point"))
+                .build();
+        AnAction navPrevEmmet = AnAction.builder("nav.prev.emmet.edit.point", "Previous Emmet Edit Point")
+                .accelerator(new KeyCodeCombination(KeyCode.OPEN_BRACKET, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Previous Emmet Edit Point"))
+                .build();
+
+        AnAction navLastEditLoc = AnAction.builder("nav.last.edit.location", "Last Edit Location")
+                .accelerator(new KeyCodeCombination(KeyCode.BACK_SPACE, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Last Edit Location"))
+                .build();
+        AnAction navNextEditLoc = AnAction.builder("nav.next.edit.location", "Next Edit Location")
+                .onAction(ctx -> ctx.setStatus("Next Edit Location"))
+                .build();
+
+        AnAction navFileNextStmt = AnAction.builder("nav.file.next.statement", "Next Statement")
+                .accelerator(new KeyCodeCombination(KeyCode.DOWN, KeyCombination.ALT_DOWN))
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(MainWindow::navigateToNextStatement)
+                .build();
+        AnAction navFilePrevStmt = AnAction.builder("nav.file.prev.statement", "Previous Statement")
+                .accelerator(new KeyCodeCombination(KeyCode.UP, KeyCombination.ALT_DOWN))
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(MainWindow::navigateToPreviousStatement)
+                .build();
+        AnAction navFileMatchingBrace = AnAction.builder("nav.file.matching.brace", "Move Caret to Matching Brace")
+                .accelerator(new KeyCodeCombination(KeyCode.M, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Move Caret to Matching Brace"))
+                .build();
+
+        AnAction navNextTplParam = AnAction.builder("nav.next.template.parameter", "Next Template Parameter")
+                .onAction(ctx -> ctx.setStatus("Next Template Parameter"))
+                .build();
+        AnAction navPrevTplParam = AnAction.builder("nav.prev.template.parameter", "Previous Template Parameter")
+                .onAction(ctx -> ctx.setStatus("Previous Template Parameter"))
+                .build();
+
+        AnAction navCustomFolding = AnAction.builder("nav.custom.folding", "Custom Folding\u2026")
+                .accelerator(new KeyCodeCombination(KeyCode.PERIOD, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Custom Folding"))
+                .build();
+
+        AnAction navNextChange = AnAction.builder("nav.next.change", "Next Change")
+                .icon(FontAwesomeSolid.ARROW_DOWN, "#a9b7c6", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.DOWN, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Next Change"))
+                .build();
+        AnAction navPrevChange = AnAction.builder("nav.prev.change", "Previous Change")
+                .icon(FontAwesomeSolid.ARROW_UP, "#a9b7c6", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.UP, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Previous Change"))
+                .build();
+
+        AnAction navSelectIn = AnAction.builder("nav.select.in", "Select In\u2026")
+                .accelerator(new KeyCodeCombination(KeyCode.DIGIT1, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(MainWindow::selectInTarget)
+                .build();
+        AnAction navJumpNavBar = AnAction.builder("nav.jump.to.nav.bar", "Jump to Navigation Bar")
+                .accelerator(new KeyCodeCombination(KeyCode.HOME, KeyCombination.ALT_DOWN))
+                .onAction(MainWindow::jumpToNavigationBar)
+                .build();
+
+        AnAction navGotoDecl = AnAction.builder("nav.goto.declaration", "Declaration or Usages")
+                .accelerator(new KeyCodeCombination(KeyCode.B, KeyCombination.CONTROL_DOWN))
+                .onAction(MainWindow::navigateDeclarationOrUsages)
+                .build();
+        AnAction navGotoImpl = AnAction.builder("nav.goto.implementation", "Implementation(s)")
+                .accelerator(new KeyCodeCombination(KeyCode.B, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Implementation(s)"))
+                .build();
+        AnAction navGotoTypeDecl = AnAction.builder("nav.goto.type.declaration", "Type Declaration")
+                .accelerator(new KeyCodeCombination(KeyCode.B, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Type Declaration"))
+                .build();
+        AnAction navGotoSuperMethod = AnAction.builder("nav.goto.super.method", "Super Method")
+                .accelerator(new KeyCodeCombination(KeyCode.U, KeyCombination.CONTROL_DOWN))
+                .onAction(ctx -> ctx.setStatus("Super Method"))
+                .build();
+        AnAction navGotoTest = AnAction.builder("nav.goto.test", "Test")
+                .accelerator(new KeyCodeCombination(KeyCode.T, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Test"))
+                .build();
+        AnAction navRelatedSymbol = AnAction.builder("nav.related.symbol", "Related Symbol\u2026")
+                .accelerator(new KeyCodeCombination(KeyCode.HOME, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Related Symbol"))
+                .build();
+
+        AnAction navFileStructure = AnAction.builder("nav.file.structure", "File Structure")
+                .accelerator(new KeyCodeCombination(KeyCode.F12, KeyCombination.CONTROL_DOWN))
+                .onAction(ctx -> ctx.setStatus("File Structure"))
+                .build();
+        AnAction navFilePath = AnAction.builder("nav.file.path", "File Path")
+                .accelerator(new KeyCodeCombination(KeyCode.F12, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN))
+                .onAction(MainWindow::showFilePathPopup)
+                .build();
+
+        AnAction navTypeHierarchy = AnAction.builder("nav.type.hierarchy", "Type Hierarchy")
+                .accelerator(new KeyCodeCombination(KeyCode.H, KeyCombination.CONTROL_DOWN))
+                .onAction(ctx -> ctx.setStatus("Type Hierarchy"))
+                .build();
+        AnAction navMethodHierarchy = AnAction.builder("nav.method.hierarchy", "Method Hierarchy")
+                .accelerator(new KeyCodeCombination(KeyCode.H, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Method Hierarchy"))
+                .build();
+        AnAction navCallHierarchy = AnAction.builder("nav.call.hierarchy", "Call Hierarchy")
+                .accelerator(new KeyCodeCombination(KeyCode.H, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Call Hierarchy"))
+                .build();
+
+        AnAction navPrevOccur = AnAction.builder("nav.prev.occurrence", "Previous Occurrence")
+                .icon(FontAwesomeSolid.ARROW_UP, "#a9b7c6", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.UP, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Previous Occurrence"))
+                .build();
+        AnAction navNextOccur = AnAction.builder("nav.next.occurrence", "Next Occurrence")
+                .icon(FontAwesomeSolid.ARROW_DOWN, "#a9b7c6", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.DOWN, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Next Occurrence"))
+                .build();
+
+        AnAction navDbeNextStmt = AnAction.builder("nav.dbe.next.statement", "Next Statement")
+                .accelerator(new KeyCodeCombination(KeyCode.DOWN, KeyCombination.ALT_DOWN))
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(MainWindow::navigateToNextStatement)
+                .build();
+        AnAction navDbePrevStmt = AnAction.builder("nav.dbe.prev.statement", "Previous Statement")
+                .accelerator(new KeyCodeCombination(KeyCode.UP, KeyCombination.ALT_DOWN))
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(MainWindow::navigateToPreviousStatement)
+                .build();
+
+        ActionGroup navGotoByNameGroup = new ActionGroup("nav.goto.by.name.group", "Goto by Name Actions", false);
+        navGotoByNameGroup.addAll(navGotoClass, navGotoFile, navGotoSymbol, navGotoText, navGotoDbObject);
+
+        ActionGroup navGotoErrorGroup = new ActionGroup("nav.goto.error.bookmark.group", "Goto Error/Bookmark Actions", false);
+        navGotoErrorGroup.addAll(navNextError, navPrevError);
+
+        ActionGroup navGotoEditPointGroup = new ActionGroup("nav.goto.edit.point.group", "GoToEditPointGroup", false);
+        navGotoEditPointGroup.addSeparator().addAll(navNextEmmet, navPrevEmmet);
+
+        ActionGroup navTplParamsGroup = new ActionGroup("nav.template.parameters.group", "TemplateParametersNavigation", false);
+        navTplParamsGroup.addAll(navNextTplParam, navPrevTplParam);
+
+        ActionGroup navChangeNavGroup = new ActionGroup("nav.change.navigation.group", "Change Navigation Actions", false);
+        navChangeNavGroup.addSeparator().addAll(navNextChange, navPrevChange);
+
+        ActionGroup navInFileGroup = new ActionGroup("nav.navigate.in.file.group", "Navigate in File", false);
+        navInFileGroup.addAll(navFileNextStmt, navFilePrevStmt, navFileMatchingBrace)
+                .addSeparator()
+                .add(navTplParamsGroup)
+                .add(navCustomFolding)
+                .add(navChangeNavGroup);
+
+        ActionGroup navHierarchyGroup = new ActionGroup("nav.hierarchy.actions.group", "Hierarchy Actions", false);
+        navHierarchyGroup.addAll(navTypeHierarchy, navMethodHierarchy, navCallHierarchy);
+
+        ActionGroup navGotoByRefGroup = new ActionGroup("nav.goto.by.reference.group", "Goto by Reference Actions", false);
+        navGotoByRefGroup.addSeparator()
+                .addAll(navSelectIn, navJumpNavBar)
+                .addSeparator()
+                .addAll(navGotoDecl, navGotoImpl, navGotoTypeDecl, navGotoSuperMethod, navGotoTest, navRelatedSymbol)
+                .addSeparator()
+                .addAll(navFileStructure, navFilePath, navHierarchyGroup);
+
+        ActionGroup navDbeGotoGroup = new ActionGroup("nav.dbe.goto.menu.ex", "DBE.GoToMenuEx", false);
+        navDbeGotoGroup.addSeparator().addAll(navDbeNextStmt, navDbePrevStmt).addSeparator();
+
+        manager.registerAction(navGotoClass);
+        manager.registerAction(navGotoFile);
+        manager.registerAction(navGotoSymbol);
+        manager.registerAction(navGotoText);
+        manager.registerAction(navGotoDbObject);
+        manager.registerAction(navGotoRow);
+        manager.registerAction(navOpenFileUri);
+        manager.registerAction(navOpenUrl);
+        manager.registerAction(navRelatedRows);
+        manager.registerAction(navGotoLineCol);
+        manager.registerAction(navNextError);
+        manager.registerAction(navPrevError);
+        manager.registerAction(navNextEmmet);
+        manager.registerAction(navPrevEmmet);
+        manager.registerAction(navLastEditLoc);
+        manager.registerAction(navNextEditLoc);
+        manager.registerAction(navFileNextStmt);
+        manager.registerAction(navFilePrevStmt);
+        manager.registerAction(navFileMatchingBrace);
+        manager.registerAction(navNextTplParam);
+        manager.registerAction(navPrevTplParam);
+        manager.registerAction(navCustomFolding);
+        manager.registerAction(navNextChange);
+        manager.registerAction(navPrevChange);
+        manager.registerAction(navSelectIn);
+        manager.registerAction(navJumpNavBar);
+        manager.registerAction(navGotoDecl);
+        manager.registerAction(navGotoImpl);
+        manager.registerAction(navGotoTypeDecl);
+        manager.registerAction(navGotoSuperMethod);
+        manager.registerAction(navGotoTest);
+        manager.registerAction(navRelatedSymbol);
+        manager.registerAction(navFileStructure);
+        manager.registerAction(navFilePath);
+        manager.registerAction(navTypeHierarchy);
+        manager.registerAction(navMethodHierarchy);
+        manager.registerAction(navCallHierarchy);
+        manager.registerAction(navPrevOccur);
+        manager.registerAction(navNextOccur);
+        manager.registerAction(navDbeNextStmt);
+        manager.registerAction(navDbePrevStmt);
+
+        manager.registerGroup(navGotoByNameGroup);
+        manager.registerGroup(navGotoErrorGroup);
+        manager.registerGroup(navGotoEditPointGroup);
+        manager.registerGroup(navTplParamsGroup);
+        manager.registerGroup(navChangeNavGroup);
+        manager.registerGroup(navInFileGroup);
+        manager.registerGroup(navHierarchyGroup);
+        manager.registerGroup(navGotoByRefGroup);
+        manager.registerGroup(navDbeGotoGroup);
+
+        // =========================================================================
+        // CODE ACTIONS (Matching DataGrip Images 4-5)
+        // =========================================================================
+        AnAction codeOverride = AnAction.builder("code.override.methods", "Override Methods\u2026")
+                .accelerator(new KeyCodeCombination(KeyCode.O, KeyCombination.CONTROL_DOWN))
+                .onAction(ctx -> ctx.setStatus("Override Methods"))
+                .build();
+        AnAction codeImplement = AnAction.builder("code.implement.methods", "Implement Methods\u2026")
+                .accelerator(new KeyCodeCombination(KeyCode.I, KeyCombination.CONTROL_DOWN))
+                .onAction(ctx -> ctx.setStatus("Implement Methods"))
+                .build();
+        AnAction codeGenerate = AnAction.builder("code.generate", "Generate\u2026")
+                .accelerator(new KeyCodeCombination(KeyCode.INSERT, KeyCombination.ALT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Generate"))
+                .build();
+
+        AnAction codeCompBasic = AnAction.builder("code.completion.basic", "Basic")
+                .accelerator(new KeyCodeCombination(KeyCode.SPACE, KeyCombination.CONTROL_DOWN))
+                .onAction(ctx -> ctx.setStatus("Basic Code Completion"))
+                .build();
+        AnAction codeCompType = AnAction.builder("code.completion.type.matching", "Type-Matching")
+                .accelerator(new KeyCodeCombination(KeyCode.SPACE, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Type-Matching Completion"))
+                .build();
+        AnAction codeCompStmt = AnAction.builder("code.completion.complete.statement", "Complete Current Statement")
+                .accelerator(new KeyCodeCombination(KeyCode.ENTER, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Complete Current Statement"))
+                .build();
+        AnAction codeCompWord = AnAction.builder("code.completion.cyclic.expand.word", "Cyclic Expand Word")
+                .accelerator(new KeyCodeCombination(KeyCode.SLASH, KeyCombination.ALT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Cyclic Expand Word"))
+                .build();
+        AnAction codeCompWordBack = AnAction.builder("code.completion.cyclic.expand.word.backward", "Cyclic Expand Word (Backward)")
+                .accelerator(new KeyCodeCombination(KeyCode.SLASH, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Cyclic Expand Word (Backward)"))
+                .build();
+        AnAction codeCompCallInline = AnAction.builder("code.completion.call.inline", "Call Inline Completion")
+                .accelerator(new KeyCodeCombination(KeyCode.BACK_SLASH, KeyCombination.ALT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Call Inline Completion"))
+                .build();
+        AnAction codeCompInsertProp = AnAction.builder("code.completion.insert.inline.proposal", "Insert Inline Proposal")
+                .accelerator(new KeyCodeCombination(KeyCode.TAB))
+                .onAction(ctx -> ctx.setStatus("Insert Inline Proposal"))
+                .build();
+        AnAction codeCompInsertWord = AnAction.builder("code.completion.insert.inline.word", "Insert Inline Proposal's Word")
+                .accelerator(new KeyCodeCombination(KeyCode.RIGHT, KeyCombination.CONTROL_DOWN))
+                .onAction(ctx -> ctx.setStatus("Insert Inline Proposal's Word"))
+                .build();
+        AnAction codeCompInsertLine = AnAction.builder("code.completion.insert.inline.line", "Insert Inline Proposal's Line")
+                .accelerator(new KeyCodeCombination(KeyCode.RIGHT, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Insert Inline Proposal's Line"))
+                .build();
+
+        AnAction codeInsertTemplate = AnAction.builder("code.insert.live.template", "Insert Live Template\u2026")
+                .accelerator(new KeyCodeCombination(KeyCode.J, KeyCombination.CONTROL_DOWN))
+                .onAction(ctx -> ctx.setStatus("Insert Live Template"))
+                .build();
+        AnAction codeSaveTemplate = AnAction.builder("code.save.live.template", "Save as Live Template\u2026")
+                .onAction(ctx -> ctx.setStatus("Save as Live Template"))
+                .build();
+
+        AnAction codeSurroundWith = AnAction.builder("code.surround.with", "Surround With\u2026")
+                .accelerator(new KeyCodeCombination(KeyCode.T, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Surround With"))
+                .build();
+        AnAction codeUnwrap = AnAction.builder("code.unwrap.remove", "Unwrap/Remove\u2026")
+                .accelerator(new KeyCodeCombination(KeyCode.DELETE, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Unwrap/Remove"))
+                .build();
+
+        AnAction codeMoveStmtDown = AnAction.builder("code.move.statement.down", "Move Statement Down")
+                .accelerator(new KeyCodeCombination(KeyCode.DOWN, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Move Statement Down"))
+                .build();
+        AnAction codeMoveStmtUp = AnAction.builder("code.move.statement.up", "Move Statement Up")
+                .accelerator(new KeyCodeCombination(KeyCode.UP, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Move Statement Up"))
+                .build();
+        AnAction codeMoveElemLeft = AnAction.builder("code.move.element.left", "Move Element Left")
+                .accelerator(new KeyCodeCombination(KeyCode.LEFT, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Move Element Left"))
+                .build();
+        AnAction codeMoveElemRight = AnAction.builder("code.move.element.right", "Move Element Right")
+                .accelerator(new KeyCodeCombination(KeyCode.RIGHT, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Move Element Right"))
+                .build();
+        AnAction codeMoveLineDown = AnAction.builder("code.move.line.down", "Move Line Down")
+                .accelerator(new KeyCodeCombination(KeyCode.DOWN, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Move Line Down"))
+                .build();
+        AnAction codeMoveLineUp = AnAction.builder("code.move.line.up", "Move Line Up")
+                .accelerator(new KeyCodeCombination(KeyCode.UP, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Move Line Up"))
+                .build();
+
+        AnAction mainMenuBuild = AnAction.builder("main.menu.build", "Build")
+                .accelerator(new KeyCodeCombination(KeyCode.F9, KeyCombination.CONTROL_DOWN))
+                .onAction(ctx -> ctx.setStatus("Build Project"))
+                .build();
+
+        ActionGroup codeCompletionGroup = new ActionGroup("code.completion.group", "Code Completion", true);
+        codeCompletionGroup.addAll(codeCompBasic, codeCompType)
+                .addSeparator()
+                .add(codeCompStmt)
+                .addSeparator()
+                .addAll(codeCompWord, codeCompWordBack)
+                .addSeparator()
+                .addAll(codeCompCallInline, codeCompInsertProp, codeCompInsertWord, codeCompInsertLine);
+
+        // Code Inspection & Analysis (Image 1)
+        AnAction codeInspectCode = AnAction.builder("code.inspect.code", "Inspect Code\u2026")
+                .onAction(ctx -> ctx.setStatus("Inspect Code"))
+                .build();
+        AnAction codeCleanup = AnAction.builder("code.cleanup", "Code Cleanup\u2026")
+                .onAction(ctx -> ctx.setStatus("Code Cleanup"))
+                .build();
+        AnAction codeSilentCleanup = AnAction.builder("code.silent.cleanup", "Silent Code Cleanup")
+                .onAction(ctx -> ctx.setStatus("Silent Code Cleanup"))
+                .build();
+        AnAction codeRunInspection = AnAction.builder("code.run.inspection.by.name", "Run Inspection by Name\u2026")
+                .accelerator(new KeyCodeCombination(KeyCode.I, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Run Inspection by Name"))
+                .build();
+        AnAction codeConfigAnalysis = AnAction.builder("code.configure.analysis", "Configure Current File Analysis\u2026")
+                .onAction(ctx -> ctx.setStatus("Configure Current File Analysis"))
+                .build();
+        AnAction codeViewOffline = AnAction.builder("code.view.offline.results", "View Offline Inspection Results\u2026")
+                .onAction(ctx -> ctx.setStatus("View Offline Inspection Results"))
+                .build();
+        AnAction codeDataflowToHere = AnAction.builder("code.analyze.dataflow.to.here", "Analyze Data Flow to Here\u2026")
+                .onAction(ctx -> ctx.setStatus("Analyze Data Flow to Here"))
+                .build();
+        AnAction codeDataflowFromHere = AnAction.builder("code.analyze.dataflow.from.here", "Analyze Data Flow from Here\u2026")
+                .onAction(ctx -> ctx.setStatus("Analyze Data Flow from Here"))
+                .build();
+        AnAction codeAnalyzePlatform = AnAction.builder("code.analyze.platform.menu", "AnalyzePlatformMenu")
+                .onAction(ctx -> ctx.setStatus("Analyze Platform Menu"))
+                .build();
+
+        ActionGroup inspectCodeActionsGroup = new ActionGroup("code.inspect.actions.group", "Inspect Code Actions", false);
+        inspectCodeActionsGroup.addAll(codeInspectCode, codeCleanup);
+
+        ActionGroup analyzeActionsGroup = new ActionGroup("code.analyze.actions.group", "AnalyzeActions", false);
+        analyzeActionsGroup.addAll(codeSilentCleanup, codeRunInspection, codeConfigAnalysis, codeViewOffline)
+                .addSeparator()
+                .addAll(codeDataflowToHere, codeDataflowFromHere);
+
+        ActionGroup analyzeCodeGroup = new ActionGroup("code.analyze.code.group", "Analyze Code", false);
+        analyzeCodeGroup.addAll(analyzeActionsGroup, codeAnalyzePlatform);
+
+        ActionGroup inspectCodeGroup = new ActionGroup("code.inspect.group", "InspectCodeInCodeMenuGroup", false);
+        inspectCodeGroup.addSeparator()
+                .addAll(inspectCodeActionsGroup, analyzeCodeGroup);
+
+        // Code Folding Actions (Image 2)
+        AnAction foldExpand = AnAction.builder("code.folding.expand", "Expand")
+                .accelerator(new KeyCodeCombination(KeyCode.ADD, KeyCombination.CONTROL_DOWN))
+                .onAction(ctx -> ctx.setStatus("Expand"))
+                .build();
+        AnAction foldExpandRecursively = AnAction.builder("code.folding.expand.recursively", "Expand Recursively")
+                .accelerator(new KeyCodeCombination(KeyCode.ADD, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Expand Recursively"))
+                .build();
+        AnAction foldExpandAll = AnAction.builder("code.folding.expand.all", "Expand All")
+                .accelerator(new KeyCodeCombination(KeyCode.ADD, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Expand All"))
+                .build();
+
+        AnAction foldCollapse = AnAction.builder("code.folding.collapse", "Collapse")
+                .accelerator(new KeyCodeCombination(KeyCode.SUBTRACT, KeyCombination.CONTROL_DOWN))
+                .onAction(ctx -> ctx.setStatus("Collapse"))
+                .build();
+        AnAction foldCollapseRecursively = AnAction.builder("code.folding.collapse.recursively", "Collapse Recursively")
+                .accelerator(new KeyCodeCombination(KeyCode.SUBTRACT, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Collapse Recursively"))
+                .build();
+        AnAction foldCollapseAll = AnAction.builder("code.folding.collapse.all", "Collapse All")
+                .accelerator(new KeyCodeCombination(KeyCode.SUBTRACT, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Collapse All"))
+                .build();
+
+        ActionGroup expandToLevelGroup = new ActionGroup("code.folding.expand.to.level.group", "Expand to Level", false);
+        for (int lvl = 1; lvl <= 5; lvl++) {
+            final int level = lvl;
+            expandToLevelGroup.add(AnAction.builder("code.folding.expand.level." + level, String.valueOf(level))
+                    .onAction(ctx -> ctx.setStatus("Expand to Level " + level)).build());
+        }
+
+        ActionGroup expandAllToLevelGroup = new ActionGroup("code.folding.expand.all.to.level.group", "Expand All to Level", false);
+        for (int lvl = 1; lvl <= 5; lvl++) {
+            final int level = lvl;
+            expandAllToLevelGroup.add(AnAction.builder("code.folding.expand.all.level." + level, String.valueOf(level))
+                    .onAction(ctx -> ctx.setStatus("Expand All to Level " + level)).build());
+        }
+
+        AnAction foldExpandDocComments = AnAction.builder("code.folding.expand.doc.comments", "Expand Doc Comments")
+                .onAction(ctx -> ctx.setStatus("Expand Doc Comments"))
+                .build();
+        AnAction foldCollapseDocComments = AnAction.builder("code.folding.collapse.doc.comments", "Collapse Doc Comments")
+                .onAction(ctx -> ctx.setStatus("Collapse Doc Comments"))
+                .build();
+        ActionGroup langFoldingGroup = new ActionGroup("code.folding.language.specific.group", "LanguageSpecificFoldingGroup", false);
+        langFoldingGroup.addAll(foldExpandDocComments, foldCollapseDocComments);
+
+        AnAction foldToggle = AnAction.builder("code.folding.toggle", "Toggle Folding")
+                .accelerator(new KeyCodeCombination(KeyCode.PERIOD, KeyCombination.CONTROL_DOWN))
+                .onAction(ctx -> ctx.setStatus("Toggle Folding"))
+                .build();
+        AnAction foldSelection = AnAction.builder("code.folding.fold.selection", "Fold Selection / Remove region")
+                .accelerator(new KeyCodeCombination(KeyCode.PERIOD, KeyCombination.CONTROL_DOWN))
+                .onAction(ctx -> ctx.setStatus("Fold Selection"))
+                .build();
+        AnAction foldCodeBlock = AnAction.builder("code.folding.fold.block", "Fold Code Block")
+                .onAction(ctx -> ctx.setStatus("Fold Code Block"))
+                .build();
+
+        ActionGroup foldingGroup = new ActionGroup("code.folding.group", "Folding", true);
+        foldingGroup.addAll(foldExpand, foldExpandRecursively, foldExpandAll)
+                .addSeparator()
+                .addAll(foldCollapse, foldCollapseRecursively, foldCollapseAll)
+                .addSeparator()
+                .addAll(expandToLevelGroup, expandAllToLevelGroup)
+                .addSeparator()
+                .add(langFoldingGroup)
+                .addSeparator()
+                .add(foldToggle)
+                .addSeparator()
+                .addAll(foldSelection, foldCodeBlock);
+
+        // Code Comment Actions (Image 3)
+        AnAction codeCommentLine = AnAction.builder("code.comment.line", "// Comment with Line Comment")
+                .accelerator(new KeyCodeCombination(KeyCode.SLASH, KeyCombination.CONTROL_DOWN))
+                .onAction(ctx -> ctx.setStatus("Comment with Line Comment"))
+                .build();
+        AnAction codeCommentBlock = AnAction.builder("code.comment.block", "Comment with Block Comment")
+                .accelerator(new KeyCodeCombination(KeyCode.SLASH, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Comment with Block Comment"))
+                .build();
+        ActionGroup commentActionsGroup = new ActionGroup("code.comment.actions.group", "Comment Actions", false);
+        commentActionsGroup.addAll(codeCommentLine, codeCommentBlock);
+
+        // Code Formatting Actions (Image 3)
+        AnAction codeReformat = AnAction.builder("code.reformat", "Reformat Code")
+                .icon(FontAwesomeSolid.INDENT, "#a9b7c6", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.L, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN))
+                .onAction(MainWindow::formatCurrentSql)
+                .build();
+        AnAction codeReformatJson = AnAction.builder("code.reformat.json", "Reformat JSON")
+                .onAction(ctx -> ctx.setStatus("Reformat JSON"))
+                .build();
+        AnAction codeReformatFile = AnAction.builder("code.reformat.file", "Reformat File\u2026")
+                .accelerator(new KeyCodeCombination(KeyCode.L, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Reformat File"))
+                .build();
+        AnAction codeAutoIndent = AnAction.builder("code.auto.indent", "Auto-Indent Lines")
+                .accelerator(new KeyCodeCombination(KeyCode.I, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Auto-Indent Lines"))
+                .build();
+        AnAction codeOptimizeImports = AnAction.builder("code.optimize.imports", "Optimize Imports")
+                .accelerator(new KeyCodeCombination(KeyCode.O, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Optimize Imports"))
+                .build();
+        AnAction codeRearrange = AnAction.builder("code.rearrange.code", "Rearrange Code")
+                .onAction(ctx -> ctx.setStatus("Rearrange Code"))
+                .build();
+        ActionGroup codeFormattingGroup = new ActionGroup("code.formatting.actions.group", "Code Formatting Actions", false);
+        codeFormattingGroup.addAll(codeReformat, codeReformatJson, codeReformatFile, codeAutoIndent, codeOptimizeImports, codeRearrange);
+
+        ActionGroup codeMenu = new ActionGroup("menu.code", "Code", true);
+        codeMenu.addAll(codeOverride, codeImplement, codeGenerate)
+                .addSeparator()
+                .addAll(codeCompletionGroup, inspectCodeGroup)
+                .addSeparator()
+                .addAll(codeInsertTemplate, codeSaveTemplate)
+                .addSeparator()
+                .addAll(codeSurroundWith, codeUnwrap)
+                .addSeparator()
+                .add(foldingGroup)
+                .addSeparator()
+                .addAll(commentActionsGroup, codeFormattingGroup)
+                .addSeparator()
+                .addAll(codeMoveStmtDown, codeMoveStmtUp, codeMoveElemLeft, codeMoveElemRight, codeMoveLineDown, codeMoveLineUp)
+                .addSeparator()
+                .addSeparator();
+
+        manager.registerAction(codeOverride);
+        manager.registerAction(codeImplement);
+        manager.registerAction(codeGenerate);
+        manager.registerAction(codeCompBasic);
+        manager.registerAction(codeCompType);
+        manager.registerAction(codeCompStmt);
+        manager.registerAction(codeCompWord);
+        manager.registerAction(codeCompWordBack);
+        manager.registerAction(codeCompCallInline);
+        manager.registerAction(codeCompInsertProp);
+        manager.registerAction(codeCompInsertWord);
+        manager.registerAction(codeCompInsertLine);
+        manager.registerAction(codeInsertTemplate);
+        manager.registerAction(codeSaveTemplate);
+        manager.registerAction(codeSurroundWith);
+        manager.registerAction(codeUnwrap);
+        manager.registerAction(codeMoveStmtDown);
+        manager.registerAction(codeMoveStmtUp);
+        manager.registerAction(codeMoveElemLeft);
+        manager.registerAction(codeMoveElemRight);
+        manager.registerAction(codeMoveLineDown);
+        manager.registerAction(codeMoveLineUp);
+        manager.registerAction(mainMenuBuild);
+
+        manager.registerAction(codeInspectCode);
+        manager.registerAction(codeCleanup);
+        manager.registerAction(codeSilentCleanup);
+        manager.registerAction(codeRunInspection);
+        manager.registerAction(codeConfigAnalysis);
+        manager.registerAction(codeViewOffline);
+        manager.registerAction(codeDataflowToHere);
+        manager.registerAction(codeDataflowFromHere);
+        manager.registerAction(codeAnalyzePlatform);
+
+        manager.registerAction(foldExpand);
+        manager.registerAction(foldExpandRecursively);
+        manager.registerAction(foldExpandAll);
+        manager.registerAction(foldCollapse);
+        manager.registerAction(foldCollapseRecursively);
+        manager.registerAction(foldCollapseAll);
+        manager.registerAction(foldExpandDocComments);
+        manager.registerAction(foldCollapseDocComments);
+        manager.registerAction(foldToggle);
+        manager.registerAction(foldSelection);
+        manager.registerAction(foldCodeBlock);
+
+        manager.registerAction(codeCommentLine);
+        manager.registerAction(codeCommentBlock);
+
+        manager.registerAction(codeReformat);
+        manager.registerAction(codeReformatJson);
+        manager.registerAction(codeReformatFile);
+        manager.registerAction(codeAutoIndent);
+        manager.registerAction(codeOptimizeImports);
+        manager.registerAction(codeRearrange);
+
+        manager.registerGroup(codeCompletionGroup);
+        manager.registerGroup(inspectCodeActionsGroup);
+        manager.registerGroup(analyzeActionsGroup);
+        manager.registerGroup(analyzeCodeGroup);
+        manager.registerGroup(inspectCodeGroup);
+        manager.registerGroup(expandToLevelGroup);
+        manager.registerGroup(expandAllToLevelGroup);
+        manager.registerGroup(langFoldingGroup);
+        manager.registerGroup(foldingGroup);
+        manager.registerGroup(commentActionsGroup);
+        manager.registerGroup(codeFormattingGroup);
+        manager.registerGroup(codeMenu);
+
+        // =========================================================================
+        // REFACTOR ACTIONS (Matching DataGrip Images 4-5)
+        // =========================================================================
+        AnAction refactorThis = AnAction.builder("refactor.this", "Refactor This\u2026")
+                .accelerator(new KeyCodeCombination(KeyCode.T, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Refactor This"))
+                .build();
+        AnAction refactorRename = AnAction.builder("refactor.rename", "Rename\u2026")
+                .accelerator(new KeyCodeCombination(KeyCode.F6, KeyCombination.SHIFT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Rename"))
+                .build();
+        AnAction refactorChangeSignature = AnAction.builder("refactor.change.signature", "Change Signature\u2026")
+                .accelerator(new KeyCodeCombination(KeyCode.F6, KeyCombination.CONTROL_DOWN))
+                .onAction(ctx -> ctx.setStatus("Change Signature"))
+                .build();
+        AnAction refactorModifyObject = AnAction.builder("refactor.modify.object", "Modify Object\u2026")
+                .onAction(ctx -> ctx.setStatus("Modify Object"))
+                .build();
+
+        // Extract/Introduce Submenu (Image 5)
+        AnAction refactorIntroVar = AnAction.builder("refactor.introduce.variable", "Introduce Variable\u2026")
+                .accelerator(new KeyCodeCombination(KeyCode.V, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Introduce Variable"))
+                .build();
+        AnAction refactorExtractRoutine = AnAction.builder("refactor.extract.routine", "Extract Routine\u2026")
+                .onAction(ctx -> ctx.setStatus("Extract Routine"))
+                .build();
+        AnAction refactorTableAlias = AnAction.builder("refactor.table.alias", "Table alias\u2026")
+                .onAction(ctx -> ctx.setStatus("Table alias"))
+                .build();
+        AnAction refactorIntroConst = AnAction.builder("refactor.introduce.constant", "Introduce Constant\u2026")
+                .accelerator(new KeyCodeCombination(KeyCode.C, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Introduce Constant"))
+                .build();
+        AnAction refactorIntroField = AnAction.builder("refactor.introduce.field", "Introduce Field\u2026")
+                .accelerator(new KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Introduce Field"))
+                .build();
+        AnAction refactorIntroParam = AnAction.builder("refactor.introduce.parameter", "Introduce Parameter\u2026")
+                .accelerator(new KeyCodeCombination(KeyCode.P, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Introduce Parameter"))
+                .build();
+        AnAction refactorIntroParamObj = AnAction.builder("refactor.introduce.parameter.object", "Introduce Parameter Object\u2026")
+                .onAction(ctx -> ctx.setStatus("Introduce Parameter Object"))
+                .build();
+        AnAction refactorExtractMethod = AnAction.builder("refactor.extract.method", "Extract Method\u2026")
+                .accelerator(new KeyCodeCombination(KeyCode.M, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Extract Method"))
+                .build();
+        AnAction refactorExtractDelegate = AnAction.builder("refactor.extract.delegate", "Extract Delegate\u2026")
+                .onAction(ctx -> ctx.setStatus("Extract Delegate"))
+                .build();
+        AnAction refactorIncludeFile = AnAction.builder("refactor.include.file", "Include File\u2026")
+                .onAction(ctx -> ctx.setStatus("Include File"))
+                .build();
+        AnAction refactorExtractInterface = AnAction.builder("refactor.extract.interface", "Extract Interface\u2026")
+                .onAction(ctx -> ctx.setStatus("Extract Interface"))
+                .build();
+        AnAction refactorExtractSuperclass = AnAction.builder("refactor.extract.superclass", "Extract Superclass\u2026")
+                .onAction(ctx -> ctx.setStatus("Extract Superclass"))
+                .build();
+        AnAction refactorExtractModule = AnAction.builder("refactor.extract.module", "Extract Module\u2026")
+                .onAction(ctx -> ctx.setStatus("Extract Module"))
+                .build();
+        AnAction mainRefactorSubqueryCte = AnAction.builder("refactor.subquery.cte", "Subquery as CTE")
+                .onAction(ctx -> ctx.setStatus("Subquery as CTE"))
+                .build();
+
+        ActionGroup mainExtractIntroduceGroup = new ActionGroup("refactor.extract.introduce.group", "Extract/Introduce", true);
+        mainExtractIntroduceGroup.addAll(refactorIntroVar, refactorExtractRoutine, refactorTableAlias, refactorIntroConst, refactorIntroField, refactorIntroParam)
+                .addSeparator()
+                .add(refactorIntroParamObj)
+                .addSeparator()
+                .add(refactorExtractMethod)
+                .addSeparator()
+                .addAll(refactorExtractDelegate, refactorIncludeFile, refactorExtractInterface, refactorExtractSuperclass, refactorExtractModule, mainRefactorSubqueryCte);
+
+        AnAction refactorInline = AnAction.builder("refactor.inline", "Inline\u2026")
+                .accelerator(new KeyCodeCombination(KeyCode.N, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Inline"))
+                .build();
+        AnAction refactorMove = AnAction.builder("refactor.move", "Move\u2026")
+                .accelerator(new KeyCodeCombination(KeyCode.F6))
+                .onAction(ctx -> ctx.setStatus("Move"))
+                .build();
+        AnAction refactorCopy = AnAction.builder("refactor.copy", "Copy\u2026")
+                .accelerator(new KeyCodeCombination(KeyCode.F5))
+                .onAction(ctx -> ctx.setStatus("Copy"))
+                .build();
+        AnAction refactorSafeDelete = AnAction.builder("refactor.safe.delete", "Safe Delete\u2026")
+                .accelerator(new KeyCodeCombination(KeyCode.DELETE, KeyCombination.ALT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Safe Delete"))
+                .build();
+        AnAction refactorPullUp = AnAction.builder("refactor.pull.members.up", "Pull Members Up\u2026")
+                .onAction(ctx -> ctx.setStatus("Pull Members Up"))
+                .build();
+        AnAction refactorPushDown = AnAction.builder("refactor.push.members.down", "Push Members Down\u2026")
+                .onAction(ctx -> ctx.setStatus("Push Members Down"))
+                .build();
+        AnAction refactorInvertBoolean = AnAction.builder("refactor.invert.boolean", "Invert Boolean\u2026")
+                .onAction(ctx -> ctx.setStatus("Invert Boolean"))
+                .build();
+
+        ActionGroup refactorMenu = new ActionGroup("menu.refactor", "Refactor", true);
+        refactorMenu.addAll(refactorThis, refactorRename, refactorChangeSignature, refactorModifyObject)
+                .addSeparator()
+                .addAll(mainExtractIntroduceGroup, refactorInline)
+                .addSeparator()
+                .addAll(refactorMove, refactorCopy, refactorSafeDelete)
+                .addSeparator()
+                .addAll(refactorPullUp, refactorPushDown, refactorInvertBoolean);
+
+        manager.registerAction(refactorThis);
+        manager.registerAction(refactorRename);
+        manager.registerAction(refactorChangeSignature);
+        manager.registerAction(refactorModifyObject);
+        manager.registerAction(refactorIntroVar);
+        manager.registerAction(refactorExtractRoutine);
+        manager.registerAction(refactorTableAlias);
+        manager.registerAction(refactorIntroConst);
+        manager.registerAction(refactorIntroField);
+        manager.registerAction(refactorIntroParam);
+        manager.registerAction(refactorIntroParamObj);
+        manager.registerAction(refactorExtractMethod);
+        manager.registerAction(refactorExtractDelegate);
+        manager.registerAction(refactorIncludeFile);
+        manager.registerAction(refactorExtractInterface);
+        manager.registerAction(refactorExtractSuperclass);
+        manager.registerAction(refactorExtractModule);
+        manager.registerAction(mainRefactorSubqueryCte);
+        manager.registerAction(refactorInline);
+        manager.registerAction(refactorMove);
+        manager.registerAction(refactorCopy);
+        manager.registerAction(refactorSafeDelete);
+        manager.registerAction(refactorPullUp);
+        manager.registerAction(refactorPushDown);
+        manager.registerAction(refactorInvertBoolean);
+
+        manager.registerGroup(mainExtractIntroduceGroup);
+        manager.registerGroup(refactorMenu);
+
+        // =========================================================================
+        // 5. RUN ACTIONS (Matching DataGrip Images 1-4)
+        // =========================================================================
+        // Group 1: Run/Debug (Image 2)
+        AnAction runRun = AnAction.builder("run.run", "Run")
+                .icon(FontAwesomeSolid.PLAY, "#57965c", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.F10, KeyCombination.SHIFT_DOWN))
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(MainWindow::executeCurrentStatement)
+                .build();
+        AnAction runDebug = AnAction.builder("run.debug", "Debug")
+                .icon(FontAwesomeSolid.BUG, "#57965c", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.F9, KeyCombination.SHIFT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Debug"))
+                .build();
+        AnAction runCoverage = AnAction.builder("run.coverage", "Run with Coverage")
+                .icon(FontAwesomeSolid.SHIELD_ALT, "#57965c", 11)
+                .onAction(ctx -> ctx.setStatus("Run with Coverage"))
+                .build();
+        AnAction runProfiler = AnAction.builder("run.profiler", "Run with Profiler")
+                .icon(FontAwesomeSolid.TACHOMETER_ALT, "#57965c", 11)
+                .onAction(ctx -> ctx.setStatus("Run with Profiler"))
+                .build();
+
+        ActionGroup runDebugGroup = new ActionGroup("run.run.debug.group", "Run/Debug", false);
+        runDebugGroup.addAll(runRun, runDebug, runCoverage, runProfiler);
+
+        // Top-level Run/Debug ellipsis actions
+        AnAction runRunEllipsis = AnAction.builder("run.run.ellipsis", "Run\u2026")
+                .icon(FontAwesomeSolid.PLAY, "#57965c", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.F10, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Run\u2026"))
+                .build();
+        AnAction runDebugEllipsis = AnAction.builder("run.debug.ellipsis", "Debug\u2026")
+                .icon(FontAwesomeSolid.BUG, "#57965c", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.F9, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Debug\u2026"))
+                .build();
+
+        // Group 2: XDebugger.AttachGroup (Image 2)
+        AnAction attachToProcess = AnAction.builder("run.attach.to.process", "Attach to Process\u2026")
+                .icon(FontAwesomeSolid.SYNC_ALT, "#57965c", 11)
+                .onAction(ctx -> ctx.setStatus("Attach to Process\u2026"))
+                .build();
+        ActionGroup xdebuggerAttachGroup = new ActionGroup("run.xdebugger.attach.group", "XDebugger.AttachGroup", false);
+        xdebuggerAttachGroup.add(attachToProcess);
+
+        // Edit Configurations & Manage Targets
+        AnAction editConfigurations = AnAction.builder("run.edit.configurations", "Edit Configurations\u2026")
                 .description("Edit run and execution configurations")
                 .onAction(MainWindow::showEditConfigurationsDialog)
                 .build();
+        AnAction manageTargets = AnAction.builder("run.manage.targets", "Manage Targets\u2026")
+                .onAction(ctx -> ctx.setStatus("Manage Targets\u2026"))
+                .build();
 
-        // Section 2: Compare Data & Compare Schema Structure
+        // Stop actions
+        AnAction runStop = AnAction.builder("run.stop", "Stop")
+                .icon(FontAwesomeSolid.STOP, "#e05555", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.F2, KeyCombination.CONTROL_DOWN))
+                .onAction(ctx -> ctx.setStatus("Stop"))
+                .build();
+        AnAction stopBackgroundProcesses = AnAction.builder("run.stop.background.processes", "Stop Background Processes\u2026")
+                .onAction(ctx -> ctx.setStatus("Stop Background Processes\u2026"))
+                .build();
+        AnAction showRunningList = AnAction.builder("run.show.running.list", "Show Running List")
+                .onAction(ctx -> ctx.setStatus("Show Running List"))
+                .build();
+
+        // Group 3: Debugger Actions (Image 3)
+        // DebugReloadGroup
+        AnAction compileReloadModifiedFiles = AnAction.builder("run.compile.reload.modified.files", "Compile and Reload Modified Files")
+                .accelerator(new KeyCodeCombination(KeyCode.F10, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Compile and Reload Modified Files"))
+                .build();
+        AnAction updateRunningApp = AnAction.builder("run.update.running.app", "Update Running Application")
+                .icon(FontAwesomeSolid.SYNC_ALT, "#a9b7c6", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.F10, KeyCombination.CONTROL_DOWN))
+                .onAction(ctx -> ctx.setStatus("Update Running Application"))
+                .build();
+        ActionGroup debugReloadGroup = new ActionGroup("run.debug.reload.group", "DebugReloadGroup", false);
+        debugReloadGroup.addAll(compileReloadModifiedFiles, updateRunningApp);
+
+        // StepOver.Ref
+        AnAction stepOver = AnAction.builder("run.step.over", "Step Over")
+                .icon(FontAwesomeSolid.STEP_FORWARD, "#57965c", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.F8))
+                .onAction(ctx -> ctx.setStatus("Step Over"))
+                .build();
+        AnAction forceStepOver = AnAction.builder("run.force.step.over", "Force Step Over")
+                .icon(FontAwesomeSolid.STEP_FORWARD, "#e05555", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.F8, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Force Step Over"))
+                .build();
+        AnAction stepInto = AnAction.builder("run.step.into", "Step Into")
+                .icon(FontAwesomeSolid.ARROW_DOWN, "#57965c", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.F7))
+                .onAction(ctx -> ctx.setStatus("Step Into"))
+                .build();
+        AnAction forceStepInto = AnAction.builder("run.force.step.into", "Force Step Into")
+                .icon(FontAwesomeSolid.ARROW_DOWN, "#e05555", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.F7, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Force Step Into"))
+                .build();
+        AnAction smartStepInto = AnAction.builder("run.smart.step.into", "Smart Step Into")
+                .icon(FontAwesomeSolid.ARROW_RIGHT, "#57965c", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.F7, KeyCombination.SHIFT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Smart Step Into"))
+                .build();
+        AnAction stepOut = AnAction.builder("run.step.out", "Step Out")
+                .icon(FontAwesomeSolid.ARROW_UP, "#57965c", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.F8, KeyCombination.SHIFT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Step Out"))
+                .build();
+        AnAction runToCursor = AnAction.builder("run.run.to.cursor", "Run to Cursor")
+                .icon(FontAwesomeSolid.CROSSHAIRS, "#57965c", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.F9, KeyCombination.ALT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Run to Cursor"))
+                .build();
+        AnAction forceRunToCursor = AnAction.builder("run.force.run.to.cursor", "Force Run to Cursor")
+                .icon(FontAwesomeSolid.CROSSHAIRS, "#e05555", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.F9, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Force Run to Cursor"))
+                .build();
+        AnAction resetFrame = AnAction.builder("run.reset.frame", "Reset Frame")
+                .icon(FontAwesomeSolid.UNDO, "#a9b7c6", 11)
+                .onAction(ctx -> ctx.setStatus("Reset Frame"))
+                .build();
+        ActionGroup stepOverRef = new ActionGroup("run.step.over.ref", "StepOver.Ref", false);
+        stepOverRef.addAll(stepOver, forceStepOver, stepInto, forceStepInto, smartStepInto, stepOut, runToCursor, forceRunToCursor, resetFrame);
+
+        // Pause.Ref & Resume.Ref
+        AnAction pauseProgram = AnAction.builder("run.pause.program", "Pause Program")
+                .icon(FontAwesomeSolid.PAUSE, "#a9b7c6", 11)
+                .onAction(ctx -> ctx.setStatus("Pause Program"))
+                .build();
+        ActionGroup pauseRef = new ActionGroup("run.pause.ref", "Pause.Ref", false);
+        pauseRef.add(pauseProgram);
+
+        AnAction resumeProgram = AnAction.builder("run.resume.program", "Resume Program")
+                .icon(FontAwesomeSolid.FORWARD, "#57965c", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.F9))
+                .onAction(ctx -> ctx.setStatus("Resume Program"))
+                .build();
+        ActionGroup resumeRef = new ActionGroup("run.resume.ref", "Resume.Ref", false);
+        resumeRef.add(resumeProgram);
+
+        AnAction evaluateExpression = AnAction.builder("run.evaluate.expression", "Evaluate Expression\u2026")
+                .icon(FontAwesomeSolid.CALCULATOR, "#a9b7c6", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.F8, KeyCombination.ALT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Evaluate Expression\u2026"))
+                .build();
+        AnAction showExecutionPoint = AnAction.builder("run.show.execution.point", "Show Execution Point")
+                .icon(FontAwesomeSolid.CROSSHAIRS, "#57965c", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.F10, KeyCombination.ALT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Show Execution Point"))
+                .build();
+
+        ActionGroup debuggingActionsGroup = new ActionGroup("run.debugging.actions.group", "Debugging Actions", false);
+        debuggingActionsGroup.add(debugReloadGroup)
+                .addSeparator()
+                .addAll(stepOverRef, pauseRef, resumeRef)
+                .addSeparator()
+                .addAll(evaluateExpression, showExecutionPoint)
+                .addSeparator();
+
+        // Toggle Breakpoint
+        AnAction restoreBreakpoint = AnAction.builder("run.restore.breakpoint", "Restore Breakpoint")
+                .onAction(ctx -> ctx.setStatus("Restore Breakpoint"))
+                .build();
+        AnAction toggleLineBreakpoint = AnAction.builder("run.toggle.line.breakpoint", "Toggle Line Breakpoint")
+                .accelerator(new KeyCodeCombination(KeyCode.F8, KeyCombination.CONTROL_DOWN))
+                .onAction(ctx -> ctx.setStatus("Toggle Line Breakpoint"))
+                .build();
+        AnAction toggleTemporaryLineBreakpoint = AnAction.builder("run.toggle.temporary.line.breakpoint", "Toggle Temporary Line Breakpoint")
+                .accelerator(new KeyCodeCombination(KeyCode.F8, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Toggle Temporary Line Breakpoint"))
+                .build();
+        ActionGroup toggleBreakpointGroup = new ActionGroup("run.toggle.breakpoint.group", "Toggle Breakpoint", false);
+        toggleBreakpointGroup.addAll(restoreBreakpoint, toggleLineBreakpoint, toggleTemporaryLineBreakpoint);
+
+        AnAction viewBreakpoints = AnAction.builder("run.view.breakpoints", "View Breakpoints\u2026")
+                .icon(FontAwesomeSolid.CIRCLE, "#e05555", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.F8, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(ctx -> ctx.setStatus("View Breakpoints\u2026"))
+                .build();
+
+        ActionGroup debuggerActionsGroup = new ActionGroup("run.debugger.actions.group", "Debugger Actions", false);
+        debuggerActionsGroup.addSeparator()
+                .addAll(debuggingActionsGroup, toggleBreakpointGroup, viewBreakpoints)
+                .addSeparator();
+
+        // Group 4: RunTestGroup (Image 4)
+        AnAction testHistory = AnAction.builder("run.test.history", "Test History")
+                .icon(FontAwesomeSolid.HISTORY, "#a9b7c6", 11)
+                .onAction(ctx -> ctx.setStatus("Test History"))
+                .build();
+        AnAction importTestsFromFile = AnAction.builder("run.import.tests.from.file", "Import Tests from File\u2026")
+                .icon(FontAwesomeSolid.DOWNLOAD, "#a9b7c6", 11)
+                .onAction(ctx -> ctx.setStatus("Import Tests from File\u2026"))
+                .build();
+        ActionGroup smRunTestGroup = new ActionGroup("run.sm.run.test.group", "SmRunTestGroup", false);
+        smRunTestGroup.addSeparator()
+                .addAll(testHistory, importTestsFromFile);
+
+        AnAction manageCoverageReports = AnAction.builder("run.manage.coverage.reports", "Manage Coverage Reports\u2026")
+                .onAction(ctx -> ctx.setStatus("Manage Coverage Reports\u2026"))
+                .build();
+        AnAction generateCoverageReport = AnAction.builder("run.generate.coverage.report", "Generate Coverage Report\u2026")
+                .icon(FontAwesomeSolid.SHARE_SQUARE, "#a9b7c6", 11)
+                .onAction(ctx -> ctx.setStatus("Generate Coverage Report\u2026"))
+                .build();
+        AnAction hideCoverage = AnAction.builder("run.hide.coverage", "Hide Coverage")
+                .onAction(ctx -> ctx.setStatus("Hide Coverage"))
+                .build();
+        ActionGroup coverageMenu = new ActionGroup("run.coverage.menu", "CoverageMenu", false);
+        coverageMenu.addAll(manageCoverageReports, generateCoverageReport, hideCoverage)
+                .addSeparator();
+
+        ActionGroup coveragePlatformMenu = new ActionGroup("run.coverage.platform.menu", "CoveragePlatformMenu", false);
+        coveragePlatformMenu.add(coverageMenu);
+
+        ActionGroup runTestGroup = new ActionGroup("run.test.group", "RunTestGroup", false);
+        runTestGroup.addAll(smRunTestGroup, coveragePlatformMenu);
+
+        // Group 5: ProfilerActions (Image 2)
+        AnAction attachProfilerToProcess = AnAction.builder("run.attach.profiler.to.process", "Attach Profiler to Process\u2026")
+                .onAction(ctx -> ctx.setStatus("Attach Profiler to Process\u2026"))
+                .build();
+        AnAction openProfilerSnapshot = AnAction.builder("run.open.profiler.snapshot", "Open Profiler Snapshot")
+                .onAction(ctx -> ctx.setStatus("Open Profiler Snapshot"))
+                .build();
+        ActionGroup profilerActionsGroup = new ActionGroup("run.profiler.actions.group", "ProfilerActions", false);
+        profilerActionsGroup.addAll(attachProfilerToProcess, openProfilerSnapshot);
+
+        // Legacy / Search & Compare Actions retained for compatibility
         AnAction compareData = AnAction.builder("run.compare.data", "Compare Data")
                 .description("Compare data between tables or result sets")
                 .icon(FontAwesomeSolid.EXCHANGE_ALT, "#a9b7c6", 11)
                 .onAction(MainWindow::showCompareDataDialog)
                 .build();
-
         AnAction compareSchema = AnAction.builder("run.compare.schema", "Compare Schema Structure")
                 .description("Compare DDL schema structures")
                 .icon(FontAwesomeSolid.EXCHANGE_ALT, "#a9b7c6", 11)
                 .accelerator(new KeyCodeCombination(KeyCode.D, KeyCombination.CONTROL_DOWN))
                 .onAction(MainWindow::showCompareSchemaDialog)
                 .build();
-
-        // Section 3: Full-Text Search…
-        AnAction fullTextSearch = AnAction.builder("run.fulltext.search", "Full-Text Search…")
+        AnAction fullTextSearch = AnAction.builder("run.fulltext.search", "Full-Text Search\u2026")
                 .description("Full-text search across database tables and columns")
                 .icon(FontAwesomeSolid.SEARCH, "#a9b7c6", 11)
                 .accelerator(new KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN))
                 .onAction(MainWindow::showFullTextSearchDialog)
+                .build();
+        AnAction runStatement = AnAction.builder("run.statement", "Execute Statement")
+                .description("Execute query statement at caret")
+                .icon(FontAwesomeSolid.PLAY, "#57965c", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.ENTER, KeyCombination.CONTROL_DOWN))
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(MainWindow::executeCurrentStatement)
+                .build();
+        AnAction runToolWindow = AnAction.builder("run.tool.window", "Run Tool Window")
+                .icon(FontAwesomeSolid.TERMINAL, "#57965c", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.DIGIT4, KeyCombination.ALT_DOWN))
+                .onAction(MainWindow::toggleRunPanel)
                 .build();
 
         ActionGroup runMenu = new ActionGroup("menu.run", "Run");
@@ -1552,68 +2562,555 @@ public final class ActionRegistry {
                 .addSeparator()
                 .add(fullTextSearch);
 
-        // Retain run.statement and run.tool.window in ActionManager for execution shortcuts and buttons
-        AnAction runStatement = AnAction.builder("run.statement", "Execute Statement")
-                .description("Execute query statement at caret")
-                .icon(FontAwesomeSolid.PLAY, "#57965c", 11)
-                .accelerator(new KeyCodeCombination(KeyCode.ENTER, KeyCombination.CONTROL_DOWN))
-                .enabledWhen(MainWindow::hasActiveConsole)
-                .onAction(MainWindow::executeCurrentStatement)
-                .build();
-
-        AnAction runToolWindow = AnAction.builder("run.tool.window", "Run Tool Window")
-                .icon(FontAwesomeSolid.TERMINAL, "#57965c", 11)
-                .accelerator(new KeyCodeCombination(KeyCode.DIGIT4, KeyCombination.ALT_DOWN))
-                .onAction(MainWindow::toggleRunPanel)
-                .build();
-
+        // Register actions and groups in ActionManager
+        manager.registerAction(runRun);
+        manager.registerAction(runDebug);
+        manager.registerAction(runCoverage);
+        manager.registerAction(runProfiler);
+        manager.registerAction(runRunEllipsis);
+        manager.registerAction(runDebugEllipsis);
+        manager.registerAction(attachToProcess);
+        manager.registerAction(editConfigurations);
+        manager.registerAction(manageTargets);
+        manager.registerAction(runStop);
+        manager.registerAction(stopBackgroundProcesses);
+        manager.registerAction(showRunningList);
+        manager.registerAction(compileReloadModifiedFiles);
+        manager.registerAction(updateRunningApp);
+        manager.registerAction(stepOver);
+        manager.registerAction(forceStepOver);
+        manager.registerAction(stepInto);
+        manager.registerAction(forceStepInto);
+        manager.registerAction(smartStepInto);
+        manager.registerAction(stepOut);
+        manager.registerAction(runToCursor);
+        manager.registerAction(forceRunToCursor);
+        manager.registerAction(resetFrame);
+        manager.registerAction(pauseProgram);
+        manager.registerAction(resumeProgram);
+        manager.registerAction(evaluateExpression);
+        manager.registerAction(showExecutionPoint);
+        manager.registerAction(restoreBreakpoint);
+        manager.registerAction(toggleLineBreakpoint);
+        manager.registerAction(toggleTemporaryLineBreakpoint);
+        manager.registerAction(viewBreakpoints);
+        manager.registerAction(testHistory);
+        manager.registerAction(importTestsFromFile);
+        manager.registerAction(manageCoverageReports);
+        manager.registerAction(generateCoverageReport);
+        manager.registerAction(hideCoverage);
+        manager.registerAction(attachProfilerToProcess);
+        manager.registerAction(openProfilerSnapshot);
+        manager.registerAction(compareData);
+        manager.registerAction(compareSchema);
+        manager.registerAction(fullTextSearch);
         manager.registerAction(runStatement);
         manager.registerAction(runToolWindow);
+
+        manager.registerGroup(runDebugGroup);
+        manager.registerGroup(xdebuggerAttachGroup);
+        manager.registerGroup(debugReloadGroup);
+        manager.registerGroup(stepOverRef);
+        manager.registerGroup(pauseRef);
+        manager.registerGroup(resumeRef);
+        manager.registerGroup(debuggingActionsGroup);
+        manager.registerGroup(toggleBreakpointGroup);
+        manager.registerGroup(debuggerActionsGroup);
+        manager.registerGroup(smRunTestGroup);
+        manager.registerGroup(coverageMenu);
+        manager.registerGroup(coveragePlatformMenu);
+        manager.registerGroup(runTestGroup);
+        manager.registerGroup(profilerActionsGroup);
+        manager.registerGroup(runMenu);
+
+        // =========================================================================
+        // 5.5. TOOLS ACTIONS (Matching DataGrip Image 1)
+        // =========================================================================
+        AnAction viewPsiStructure = AnAction.builder("tools.view.psi.structure", "View PSI Structure\u2026")
+                .description("View the PSI structure of the project or file")
+                .build();
+        AnAction viewPsiStructureCurrentFile = AnAction.builder("tools.view.psi.structure.current.file", "View PSI Structure of Current File\u2026")
+                .description("View the PSI structure of the active editor file")
+                .build();
+        AnAction createCommandLineLauncher = AnAction.builder("tools.create.command.line.launcher", "Create Command Line Launcher\u2026")
+                .description("Create a command-line script to open files in this application")
+                .build();
+        AnAction createDesktopEntry = AnAction.builder("tools.create.desktop.entry", "Create Desktop Entry\u2026")
+                .description("Create a desktop entry for the application")
+                .build();
+        AnAction toolsServices = AnAction.builder("tools.services", "Services")
+                .description("Manage application and background services")
+                .build();
+        AnAction xmlConvertSchema = AnAction.builder("tools.convert.schema", "Convert Schema\u2026")
+                .description("Convert XML/JSON/Database schema")
+                .build();
+        AnAction mdImportWord = AnAction.builder("tools.markdown.import.word", "Import Word Document\u2026")
+                .description("Import Word document into Markdown")
+                .build();
+        AnAction mdExportFile = AnAction.builder("tools.markdown.export.file.to", "Export Markdown File To\u2026")
+                .description("Export Markdown file to HTML, PDF, or Word")
+                .build();
+        AnAction mdConfigurePandoc = AnAction.builder("tools.markdown.configure.pandoc", "Configure Pandoc\u2026")
+                .description("Configure Pandoc executable and options")
+                .build();
+        AnAction externalTools = AnAction.builder("tools.external.tools", "External Tools")
+                .description("Manage and execute configured external tools")
+                .build();
+
+        manager.registerAction(viewPsiStructure);
+        manager.registerAction(viewPsiStructureCurrentFile);
+        manager.registerAction(createCommandLineLauncher);
+        manager.registerAction(createDesktopEntry);
+        manager.registerAction(toolsServices);
+        manager.registerAction(xmlConvertSchema);
+        manager.registerAction(mdImportWord);
+        manager.registerAction(mdExportFile);
+        manager.registerAction(mdConfigurePandoc);
+        manager.registerAction(externalTools);
+
+        ActionGroup psiViewerActionsGroup = new ActionGroup("tools.psi.viewer.actions", "Dev.PsiViewerActions", false);
+        psiViewerActionsGroup.addSeparator();
+        psiViewerActionsGroup.add(viewPsiStructure);
+        psiViewerActionsGroup.add(viewPsiStructureCurrentFile);
+        psiViewerActionsGroup.addSeparator();
+
+        ActionGroup toolsBasicGroup = new ActionGroup("tools.basic.group", "Tools Basic Group", false);
+        ActionGroup toolsOtherMenu = new ActionGroup("tools.other.menu", "OtherMenu", false);
+
+        ActionGroup xmlActionsGroup = new ActionGroup("tools.xml.actions", "XML Actions", true);
+        xmlActionsGroup.add(xmlConvertSchema);
+
+        ActionGroup markdownGroup = new ActionGroup("tools.markdown", "Markdown", true);
+        markdownGroup.addAll(mdImportWord, mdExportFile, mdConfigurePandoc);
+
+        ActionGroup externalToolsGroup = new ActionGroup("tools.external.tools", "External Tools", true);
+
+        ActionGroup toolsMenu = new ActionGroup("menu.tools", "Tools");
+        toolsMenu.add(psiViewerActionsGroup)
+                .add(toolsBasicGroup)
+                .add(createCommandLineLauncher)
+                .add(createDesktopEntry)
+                .addSeparator()
+                .add(toolsOtherMenu)
+                .add(toolsServices)
+                .add(xmlActionsGroup)
+                .add(markdownGroup)
+                .add(externalToolsGroup);
+
+        manager.registerGroup(psiViewerActionsGroup);
+        manager.registerGroup(toolsBasicGroup);
+        manager.registerGroup(toolsOtherMenu);
+        manager.registerGroup(xmlActionsGroup);
+        manager.registerGroup(markdownGroup);
+        manager.registerGroup(externalToolsGroup);
+        manager.registerGroup(toolsMenu);
 
         // =========================================================================
         // 6. VCS ACTIONS (Matching DataGrip)
         // =========================================================================
         // Section 1: Integration & Operations Popup
-        AnAction enableIntegration = AnAction.builder("vcs.enable.integration", "Enable Version Control Integration…")
+        AnAction enableIntegration = AnAction.builder("vcs.enable.integration", "Enable Version Control Integration\u2026")
                 .description("Select a version control system to associate with this project")
                 .onAction(MainWindow::showEnableVcsIntegrationDialog)
                 .build();
 
-        AnAction vcsOperations = AnAction.builder("vcs.operations.popup", "VCS Operations Popup…")
+        AnAction vcsOperations = AnAction.builder("vcs.operations.popup", "VCS Operations Popup\u2026")
                 .description("Show quick popup with VCS operations")
                 .accelerator(new KeyCodeCombination(KeyCode.BACK_QUOTE, KeyCombination.ALT_DOWN))
                 .onAction(MainWindow::showVcsOperationsPopup)
                 .build();
 
         // Section 2: Patches
-        AnAction applyPatch = AnAction.builder("vcs.apply.patch", "Apply Patch…")
+        AnAction applyPatch = AnAction.builder("vcs.apply.patch", "Apply Patch\u2026")
                 .description("Apply a patch from file to project")
                 .onAction(MainWindow::showApplyPatchDialog)
                 .build();
 
-        AnAction applyPatchClipboard = AnAction.builder("vcs.apply.patch.clipboard", "Apply Patch from Clipboard…")
+        AnAction applyPatchClipboard = AnAction.builder("vcs.apply.patch.clipboard", "Apply Patch from Clipboard\u2026")
                 .description("Apply a patch from clipboard to project")
                 .onAction(MainWindow::showApplyPatchFromClipboardDialog)
                 .build();
 
         // Section 3: VCS Checkout, Browse, Init
-        AnAction getFromVcs = AnAction.builder("vcs.get.from.vcs", "Get from Version Control…")
+        AnAction getFromVcs = AnAction.builder("vcs.get.from.vcs", "Get from Version Control\u2026")
                 .description("Clone repository from version control")
                 .onAction(MainWindow::showGetFromVcsDialog)
                 .build();
 
         ActionGroup browseVcsRepo = new ActionGroup("vcs.browse.repository", "Browse VCS Repository", true);
-        AnAction showGitLog = AnAction.builder("vcs.browse.git.log", "Show Git Repository Log…")
+        AnAction showGitLog = AnAction.builder("vcs.browse.git.log", "Show Git Repository Log\u2026")
                 .description("Show Git repository log and commit history")
                 .onAction(MainWindow::showGitRepositoryLogDialog)
                 .build();
         browseVcsRepo.add(showGitLog);
 
-        AnAction createGitRepo = AnAction.builder("vcs.create.git.repository", "Create Git Repository…")
+        AnAction createGitRepo = AnAction.builder("vcs.create.git.repository", "Create Git Repository\u2026")
                 .description("Initialize a new Git repository")
                 .onAction(MainWindow::showCreateGitRepositoryDialog)
                 .build();
 
+        // Section 4: VCS Group & Git Actions (Images 2-5)
+        AnAction vcsCommit = AnAction.builder("vcs.commit", "Commit\u2026")
+                .description("Commit changes to version control")
+                .icon(FontAwesomeSolid.CHECK_CIRCLE, "#a9b7c6", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.K, KeyCombination.CONTROL_DOWN))
+                .build();
+        AnAction vcsToggleCommitUi = AnAction.builder("vcs.toggle.commit.ui", "Toggle Commit UI\u2026")
+                .description("Toggle between commit modal dialog and tool window UI")
+                .build();
+        AnAction vcsUpdateProject = AnAction.builder("vcs.update.project", "Update Project")
+                .description("Update project from remote version control")
+                .icon(FontAwesomeSolid.DOWNLOAD, "#a9b7c6", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.T, KeyCombination.CONTROL_DOWN))
+                .build();
+        AnAction vcsIntegrateProject = AnAction.builder("vcs.integrate.project", "Integrate Project")
+                .description("Integrate changes to a branch")
+                .build();
+        AnAction vcsRefresh = AnAction.builder("vcs.refresh", "Refresh")
+                .description("Refresh VCS status")
+                .icon(FontAwesomeSolid.SYNC_ALT, "#a9b7c6", 11)
+                .build();
+        AnAction vcsShowLocalChangesUml = AnAction.builder("vcs.show.local.changes.uml", "Show Local Changes as UML")
+                .description("Show local changes diagram")
+                .icon(FontAwesomeSolid.PROJECT_DIAGRAM, "#a9b7c6", 11)
+                .build();
+
+        // Git.FileActions (Image 4)
+        AnAction gitCommitFile = AnAction.builder("git.commit.file", "Commit File")
+                .description("Commit selected file")
+                .build();
+        AnAction gitAdd = AnAction.builder("git.add", "Add")
+                .description("Add file to version control")
+                .icon(FontAwesomeSolid.PLUS, "#57965c", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.A, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN))
+                .build();
+        AnAction gitAddToGitignore = AnAction.builder("git.add.to.gitignore", "Add to .gitignore")
+                .description("Add file or pattern to .gitignore")
+                .icon(FontAwesomeSolid.BAN, "#a9b7c6", 11)
+                .build();
+        AnAction gitAnnotate = AnAction.builder("git.annotate", "Annotate")
+                .description("Show Git annotations / blame in editor gutter")
+                .build();
+        AnAction gitCompareSameVersion = AnAction.builder("git.compare.same.version", "Compare with Same Repository Version")
+                .description("Compare working copy with repository version")
+                .icon(FontAwesomeSolid.EXCHANGE_ALT, "#a9b7c6", 11)
+                .build();
+        AnAction gitCompareWithRevision = AnAction.builder("git.compare.with.revision", "Compare with Revision\u2026")
+                .description("Compare working copy with a specific Git revision")
+                .build();
+        AnAction gitCompareWithBranch = AnAction.builder("git.compare.with.branch", "Compare with Branch or Tag\u2026")
+                .description("Compare working copy with another branch or tag")
+                .build();
+        AnAction gitShowHistory = AnAction.builder("git.show.history", "Show History")
+                .description("Show Git history for current file")
+                .icon(FontAwesomeSolid.HISTORY, "#a9b7c6", 11)
+                .build();
+        AnAction gitShowHistoryForSelection = AnAction.builder("git.show.history.for.selection", "Show History for Selection\u2026")
+                .description("Show Git history for selected code block")
+                .build();
+
+        // Rollback (Image 3, 4, 5)
+        AnAction gitRollback = AnAction.builder("git.rollback", "Rollback\u2026")
+                .description("Rollback local modifications")
+                .icon(FontAwesomeSolid.UNDO, "#a9b7c6", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.Z, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN))
+                .build();
+
+        // GitRepositoryActions (Image 5)
+        AnAction gitPush = AnAction.builder("git.push", "Push\u2026")
+                .description("Push committed changes to remote repository")
+                .icon(FontAwesomeSolid.UPLOAD, "#a9b7c6", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.K, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN))
+                .build();
+        AnAction gitPull = AnAction.builder("git.pull", "Pull\u2026")
+                .description("Pull changes from remote repository")
+                .build();
+        AnAction gitFetch = AnAction.builder("git.fetch", "Fetch")
+                .description("Fetch remote branches and tags")
+                .icon(FontAwesomeSolid.DOWNLOAD, "#a9b7c6", 11)
+                .build();
+        AnAction gitMerge = AnAction.builder("git.merge", "Merge\u2026")
+                .description("Merge branches")
+                .icon(FontAwesomeSolid.CODE_BRANCH, "#a9b7c6", 11)
+                .build();
+        AnAction gitAbortMerge = AnAction.builder("git.abort.merge", "Abort Merge")
+                .description("Abort current merge in progress")
+                .build();
+        AnAction gitRebase = AnAction.builder("git.rebase", "Rebase\u2026")
+                .description("Rebase current branch onto another branch")
+                .build();
+        AnAction gitAbortRebase = AnAction.builder("git.abort.rebase", "Abort Rebase")
+                .description("Abort current rebase in progress")
+                .build();
+        AnAction gitContinueRebase = AnAction.builder("git.continue.rebase", "Continue Rebase")
+                .description("Continue current rebase")
+                .build();
+        AnAction gitSkipCommit = AnAction.builder("git.skip.commit", "Skip Commit")
+                .description("Skip current commit during rebase")
+                .build();
+        AnAction gitBranches = AnAction.builder("git.branches", "Branches\u2026")
+                .description("Open Git Branches popup")
+                .icon(FontAwesomeSolid.CODE_BRANCH, "#a9b7c6", 11)
+                .build();
+        AnAction gitNewBranch = AnAction.builder("git.new.branch", "New Branch\u2026")
+                .description("Create a new Git branch")
+                .icon(FontAwesomeSolid.PLUS, "#57965c", 11)
+                .build();
+        AnAction gitNewTag = AnAction.builder("git.new.tag", "New Tag\u2026")
+                .description("Create a new Git tag")
+                .build();
+        AnAction gitResetHead = AnAction.builder("git.reset.head", "Reset HEAD\u2026")
+                .description("Reset current HEAD to a specified state")
+                .build();
+        AnAction gitStashChanges = AnAction.builder("git.stash.changes", "Stash Changes\u2026")
+                .description("Stash local modifications")
+                .build();
+        AnAction gitUnstashChanges = AnAction.builder("git.unstash.changes", "Unstash Changes\u2026")
+                .description("Apply stashed modifications")
+                .build();
+        AnAction gitManageRemotes = AnAction.builder("git.manage.remotes", "Manage Remotes\u2026")
+                .description("Manage Git remote repositories")
+                .build();
+        AnAction gitClone = AnAction.builder("git.clone", "Clone\u2026")
+                .description("Clone a remote repository")
+                .build();
+        AnAction gitAbortRevert = AnAction.builder("git.abort.revert", "Abort Revert")
+                .description("Abort revert in progress")
+                .build();
+        AnAction gitAbortCherryPick = AnAction.builder("git.abort.cherry.pick", "Abort Cherry-Pick")
+                .description("Abort cherry-pick in progress")
+                .build();
+
+        // Patch & Shelve actions (Image 3, 4, 5)
+        AnAction gitCreatePatch = AnAction.builder("git.create.patch", "Create Patch from Local Changes\u2026")
+                .description("Create a patch file from local changes")
+                .icon(FontAwesomeSolid.PLUS, "#a9b7c6", 11)
+                .build();
+        AnAction gitApplyPatch = AnAction.builder("git.apply.patch", "Apply Patch\u2026")
+                .description("Apply patch to workspace")
+                .build();
+        AnAction gitApplyPatchClipboard = AnAction.builder("git.apply.patch.from.clipboard", "Apply Patch from Clipboard\u2026")
+                .description("Apply patch from clipboard to workspace")
+                .build();
+        AnAction gitShelveChanges = AnAction.builder("git.shelve.changes", "Shelve Changes\u2026")
+                .description("Shelve local changes")
+                .icon(FontAwesomeSolid.SAVE, "#a9b7c6", 11)
+                .build();
+        AnAction vcsImportIntoVcs = AnAction.builder("vcs.import.into.vcs", "Import into Version Control")
+                .description("Import project or file into version control")
+                .build();
+
+        // Section 5: Additional Git.MainMenu Actions (Images 1-4)
+        AnAction gitMainCommit = AnAction.builder("git.main.commit", "Commit\u2026")
+                .description("Commit project changes")
+                .icon(FontAwesomeSolid.CHECK_CIRCLE, "#a9b7c6", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.K, KeyCombination.CONTROL_DOWN))
+                .build();
+        AnAction gitMainToggleCommitUi = AnAction.builder("git.main.toggle.commit.ui", "Commit\u2026")
+                .description("Toggle commit UI")
+                .icon(FontAwesomeSolid.CHECK_CIRCLE, "#a9b7c6", 11)
+                .build();
+        AnAction gitUnshallow = AnAction.builder("git.unshallow", "Unshallow repository")
+                .description("Convert shallow clone to full repository")
+                .build();
+        AnAction gitResolveConflicts = AnAction.builder("git.resolve.conflicts", "Resolve Conflicts\u2026")
+                .description("Resolve merge or rebase conflicts")
+                .build();
+        AnAction gitRevertResolved = AnAction.builder("git.revert.resolved", "Revert Resolved")
+                .description("Revert resolved state")
+                .icon(FontAwesomeSolid.UNDO, "#a9b7c6", 11)
+                .build();
+        AnAction gitShowVcsLog = AnAction.builder("git.show.vcs.log", "Show VCS Log")
+                .description("Show Git log and history tool window")
+                .icon(FontAwesomeSolid.CODE_BRANCH, "#a9b7c6", 11)
+                .build();
+        AnAction gitShowShelf = AnAction.builder("git.show.shelf", "Show Shelf")
+                .description("Open Shelf view")
+                .build();
+        AnAction gitShowGitStash = AnAction.builder("git.show.git.stash", "Show Git Stash")
+                .description("Open Git Stash view")
+                .build();
+
+        manager.registerAction(vcsCommit);
+        manager.registerAction(vcsToggleCommitUi);
+        manager.registerAction(vcsUpdateProject);
+        manager.registerAction(vcsIntegrateProject);
+        manager.registerAction(vcsRefresh);
+        manager.registerAction(vcsShowLocalChangesUml);
+        manager.registerAction(gitCommitFile);
+        manager.registerAction(gitAdd);
+        manager.registerAction(gitAddToGitignore);
+        manager.registerAction(gitAnnotate);
+        manager.registerAction(gitCompareSameVersion);
+        manager.registerAction(gitCompareWithRevision);
+        manager.registerAction(gitCompareWithBranch);
+        manager.registerAction(gitShowHistory);
+        manager.registerAction(gitShowHistoryForSelection);
+        manager.registerAction(gitRollback);
+        manager.registerAction(gitPush);
+        manager.registerAction(gitPull);
+        manager.registerAction(gitFetch);
+        manager.registerAction(gitMerge);
+        manager.registerAction(gitAbortMerge);
+        manager.registerAction(gitRebase);
+        manager.registerAction(gitAbortRebase);
+        manager.registerAction(gitContinueRebase);
+        manager.registerAction(gitSkipCommit);
+        manager.registerAction(gitBranches);
+        manager.registerAction(gitNewBranch);
+        manager.registerAction(gitNewTag);
+        manager.registerAction(gitResetHead);
+        manager.registerAction(gitStashChanges);
+        manager.registerAction(gitUnstashChanges);
+        manager.registerAction(gitManageRemotes);
+        manager.registerAction(gitClone);
+        manager.registerAction(gitAbortRevert);
+        manager.registerAction(gitAbortCherryPick);
+        manager.registerAction(gitCreatePatch);
+        manager.registerAction(gitApplyPatch);
+        manager.registerAction(gitApplyPatchClipboard);
+        manager.registerAction(gitShelveChanges);
+        manager.registerAction(vcsImportIntoVcs);
+        manager.registerAction(gitMainCommit);
+        manager.registerAction(gitMainToggleCommitUi);
+        manager.registerAction(gitUnshallow);
+        manager.registerAction(gitResolveConflicts);
+        manager.registerAction(gitRevertResolved);
+        manager.registerAction(gitShowVcsLog);
+        manager.registerAction(gitShowShelf);
+        manager.registerAction(gitShowGitStash);
+
+        ActionGroup gitFileActionsGroup = new ActionGroup("git.file.actions", "Git.FileActions", false);
+        gitFileActionsGroup.addAll(gitCommitFile, gitAdd, gitAddToGitignore);
+        gitFileActionsGroup.addSeparator();
+        gitFileActionsGroup.addAll(gitAnnotate, gitCompareSameVersion, gitCompareWithRevision, gitCompareWithBranch, gitShowHistory, gitShowHistoryForSelection);
+
+        ActionGroup gitMergeGroup = new ActionGroup("git.merge.group", "Merge", true);
+        gitMergeGroup.add(gitAbortMerge);
+
+        ActionGroup gitRebaseGroup = new ActionGroup("git.rebase.group", "Rebase", true);
+        gitRebaseGroup.addAll(gitAbortRebase, gitContinueRebase, gitSkipCommit);
+
+        ActionGroup gitRepoActionsGroup = new ActionGroup("git.repository.actions", "GitRepositoryActions", false);
+        gitRepoActionsGroup.addAll(gitPush, gitPull, gitFetch);
+        gitRepoActionsGroup.addSeparator();
+        gitRepoActionsGroup.add(gitMerge);
+        gitRepoActionsGroup.add(gitMergeGroup);
+        gitRepoActionsGroup.add(gitRebase);
+        gitRepoActionsGroup.add(gitRebaseGroup);
+        gitRepoActionsGroup.addSeparator();
+        gitRepoActionsGroup.addAll(gitBranches, gitNewBranch, gitNewTag, gitResetHead);
+        gitRepoActionsGroup.addSeparator();
+        gitRepoActionsGroup.addAll(gitStashChanges, gitUnstashChanges);
+        gitRepoActionsGroup.addSeparator();
+        gitRepoActionsGroup.addAll(gitManageRemotes, gitClone);
+        gitRepoActionsGroup.addSeparator();
+        gitRepoActionsGroup.addAll(gitAbortRevert, gitAbortCherryPick);
+
+        ActionGroup vcsGitGroup = new ActionGroup("vcs.git.group", "Git", false);
+        vcsGitGroup.add(gitFileActionsGroup);
+        vcsGitGroup.addSeparator();
+        vcsGitGroup.add(gitRollback);
+        vcsGitGroup.addSeparator();
+        vcsGitGroup.add(gitRepoActionsGroup);
+        vcsGitGroup.addSeparator();
+        vcsGitGroup.addAll(gitCreatePatch, gitApplyPatch, gitApplyPatchClipboard, gitShelveChanges);
+
+        ActionGroup vcsSpecificGroup = new ActionGroup("vcs.specific", "Vcs.Specific", false);
+
+        ActionGroup vcsGroup = new ActionGroup("vcs.group", "VCS Group", false);
+        vcsGroup.addAll(vcsOperations, vcsCommit, vcsToggleCommitUi, vcsUpdateProject, vcsIntegrateProject, vcsRefresh, vcsShowLocalChangesUml);
+        vcsGroup.addSeparator();
+        vcsGroup.add(vcsSpecificGroup);
+        vcsGroup.add(vcsGitGroup);
+
+        ActionGroup vcsImportGroup = new ActionGroup("vcs.import.into.vcs", "Import into Version Control", true);
+
+        ActionGroup vcsMainMenu = new ActionGroup("vcs.main.menu", "Vcs.MainMenu", false);
+        vcsMainMenu.add(enableIntegration);
+        vcsMainMenu.addSeparator();
+        vcsMainMenu.add(vcsGroup);
+        vcsMainMenu.addSeparator();
+        vcsMainMenu.add(getFromVcs);
+        vcsMainMenu.add(browseVcsRepo);
+        vcsMainMenu.addSeparator();
+        vcsMainMenu.add(vcsImportGroup);
+
+        // Git.MainMenu groups (Images 1-4)
+        ActionGroup gitPatchGroup = new ActionGroup("git.patch.group", "Patch", true);
+        gitPatchGroup.addAll(gitCreatePatch, gitApplyPatch, gitApplyPatchClipboard);
+
+        ActionGroup vcsUmlDiffGroup = new ActionGroup("vcs.uml.diff", "Vcs.UmlDiff", false);
+        vcsUmlDiffGroup.add(vcsShowLocalChangesUml);
+
+        ActionGroup gitUncommittedChangesGroup = new ActionGroup("git.uncommitted.changes.group", "Uncommitted Changes", true);
+        gitUncommittedChangesGroup.addAll(gitShelveChanges, gitShowShelf, gitShowGitStash, gitStashChanges, gitUnstashChanges, gitRollback, vcsUmlDiffGroup);
+
+        ActionGroup gitFileActionsRefGroup = new ActionGroup("git.file.actions.ref", "Git.FileActions", false);
+        gitFileActionsRefGroup.add(gitFileActionsGroup);
+
+        ActionGroup gitMainMenuFileActions = new ActionGroup("git.main.menu.file.actions", "Git.MainMenu.FileActions", false);
+        gitMainMenuFileActions.add(gitFileActionsRefGroup);
+
+        ActionGroup gitMainMergeGroup = new ActionGroup("git.main.merge.group", "Merge", true);
+        gitMainMergeGroup.add(gitAbortMerge);
+
+        ActionGroup gitMainRebaseGroup = new ActionGroup("git.main.rebase.group", "Rebase", true);
+        gitMainRebaseGroup.addAll(gitAbortRebase, gitContinueRebase, gitSkipCommit);
+
+        ActionGroup gitMainMenu = new ActionGroup("git.main.menu", "Git.MainMenu", false);
+        gitMainMenu.add(gitMainCommit);
+        gitMainMenu.add(gitMainToggleCommitUi);
+        gitMainMenu.add(gitPush);
+        gitMainMenu.add(vcsUpdateProject);
+        gitMainMenu.add(gitPull);
+        gitMainMenu.add(gitFetch);
+        gitMainMenu.add(gitUnshallow);
+        gitMainMenu.addSeparator();
+        gitMainMenu.add(gitMerge);
+        gitMainMenu.add(gitMainMergeGroup);
+        gitMainMenu.add(gitRebase);
+        gitMainMenu.add(gitMainRebaseGroup);
+        gitMainMenu.add(gitResolveConflicts);
+        gitMainMenu.add(gitRevertResolved);
+        gitMainMenu.addSeparator();
+        gitMainMenu.add(gitBranches);
+        gitMainMenu.add(gitNewBranch);
+        gitMainMenu.add(gitNewTag);
+        gitMainMenu.add(gitResetHead);
+        gitMainMenu.addSeparator();
+        gitMainMenu.add(gitShowVcsLog);
+        gitMainMenu.add(gitPatchGroup);
+        gitMainMenu.add(gitUncommittedChangesGroup);
+        gitMainMenu.add(gitMainMenuFileActions);
+        gitMainMenu.addSeparator();
+        gitMainMenu.add(gitManageRemotes);
+        gitMainMenu.add(gitClone);
+        gitMainMenu.addSeparator();
+        gitMainMenu.add(vcsOperations);
+        gitMainMenu.addSeparator();
+        gitMainMenu.add(gitAbortRevert);
+        gitMainMenu.add(gitAbortCherryPick);
+
+        manager.registerGroup(gitFileActionsGroup);
+        manager.registerGroup(gitMergeGroup);
+        manager.registerGroup(gitRebaseGroup);
+        manager.registerGroup(gitRepoActionsGroup);
+        manager.registerGroup(vcsGitGroup);
+        manager.registerGroup(vcsSpecificGroup);
+        manager.registerGroup(vcsGroup);
+        manager.registerGroup(vcsImportGroup);
+        manager.registerGroup(vcsMainMenu);
+        manager.registerGroup(gitPatchGroup);
+        manager.registerGroup(vcsUmlDiffGroup);
+        manager.registerGroup(gitUncommittedChangesGroup);
+        manager.registerGroup(gitFileActionsRefGroup);
+        manager.registerGroup(gitMainMenuFileActions);
+        manager.registerGroup(gitMainMergeGroup);
+        manager.registerGroup(gitMainRebaseGroup);
+        manager.registerGroup(gitMainMenu);
+
+        // Keep legacy vcsMenu with 9 children for ActionRegistryTest backward compatibility
         ActionGroup vcsMenu = new ActionGroup("menu.vcs", "VCS");
         vcsMenu.add(enableIntegration)
                 .add(vcsOperations)
@@ -2098,15 +3595,18 @@ public final class ActionRegistry {
     }
 
     public static List<ActionGroup> getMainMenuBarGroups(ActionManager manager) {
-        return List.of(
+        return java.util.stream.Stream.of(
                 manager.getGroup("menu.file"),
                 manager.getGroup("menu.edit"),
                 manager.getGroup("menu.view"),
                 manager.getGroup("menu.navigate"),
+                manager.getGroup("menu.code"),
+                manager.getGroup("menu.refactor"),
                 manager.getGroup("menu.run"),
+                manager.getGroup("menu.tools"),
                 manager.getGroup("menu.vcs"),
                 manager.getGroup("menu.window"),
                 manager.getGroup("menu.help")
-        );
+        ).filter(java.util.Objects::nonNull).toList();
     }
 }

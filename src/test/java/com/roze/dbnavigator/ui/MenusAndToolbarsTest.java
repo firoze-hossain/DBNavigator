@@ -79,6 +79,7 @@ public class MenusAndToolbarsTest {
         assertTrue(topMenus.contains("Code"));
         assertTrue(topMenus.contains("Refactor"));
         assertTrue(topMenus.contains("Run"));
+        assertTrue(topMenus.contains("Tools"));
         assertTrue(topMenus.contains("Git"));
         assertTrue(topMenus.contains("Window"));
         assertTrue(topMenus.contains("Help"));
@@ -831,6 +832,772 @@ public class MenusAndToolbarsTest {
         assertTrue(recentIds.contains("view.recently.changed.files"));
         assertTrue(recentIds.contains("view.recent.locations"));
         assertTrue(recentIds.contains("view.recent.changes"));
+    }
+
+    @Test
+    @DisplayName("Verify Navigate Menu completeness matching DataGrip Images 1-3")
+    public void testNavigateMenuCompletenessMatchingDataGrip() {
+        MenuItemConfig mainMenu = settings.getMenuConfig("root.main.menu");
+        MenuItemConfig navMenu = mainMenu.getChildren().stream()
+                .filter(m -> "Navigate".equals(m.getText()) || "menu.navigate".equals(m.getId()))
+                .findFirst()
+                .orElseThrow();
+
+        List<String> navIds = navMenu.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(navIds.contains("nav.back"), "Should contain Back");
+        assertTrue(navIds.contains("nav.forward"), "Should contain Forward");
+        assertTrue(navIds.contains("header.search"), "Should contain Search Everywhere");
+        assertTrue(navIds.contains("nav.goto.by.name.group"), "Should contain Goto by Name Actions group");
+        assertTrue(navIds.contains("nav.goto.row"), "Should contain Row...");
+        assertTrue(navIds.contains("nav.open.file.uri"), "Should contain Open File URI");
+        assertTrue(navIds.contains("nav.open.url"), "Should contain Open URL");
+        assertTrue(navIds.contains("nav.related.rows"), "Should contain Related Rows");
+        assertTrue(navIds.contains("nav.goto.line.column"), "Should contain Go to Line:Column...");
+        assertTrue(navIds.contains("nav.goto.error.bookmark.group"), "Should contain Goto Error/Bookmark Actions");
+        assertTrue(navIds.contains("nav.goto.edit.point.group"), "Should contain GoToEditPointGroup");
+        assertTrue(navIds.contains("nav.last.edit.location"), "Should contain Last Edit Location");
+        assertTrue(navIds.contains("nav.next.edit.location"), "Should contain Next Edit Location");
+        assertTrue(navIds.contains("nav.navigate.in.file.group"), "Should contain Navigate in File");
+        assertTrue(navIds.contains("nav.goto.by.reference.group"), "Should contain Goto by Reference Actions");
+        assertTrue(navIds.contains("nav.prev.occurrence"), "Should contain Previous Occurrence");
+        assertTrue(navIds.contains("nav.next.occurrence"), "Should contain Next Occurrence");
+        assertTrue(navIds.contains("nav.dbe.goto.menu.ex"), "Should contain DBE.GoToMenuEx");
+
+        // Verify Goto by Name Actions subgroup (Image 1)
+        MenuItemConfig gotoByName = navMenu.getChildren().stream()
+                .filter(c -> "nav.goto.by.name.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertFalse(gotoByName.isPopup());
+        List<String> byNameIds = gotoByName.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(byNameIds.contains("nav.goto.class"));
+        assertTrue(byNameIds.contains("nav.goto.file"));
+        assertTrue(byNameIds.contains("nav.goto.symbol"));
+        assertTrue(byNameIds.contains("nav.goto.text"));
+        assertTrue(byNameIds.contains("nav.goto.database.object"));
+
+        // Verify Goto Error/Bookmark Actions subgroup (Image 1)
+        MenuItemConfig gotoError = navMenu.getChildren().stream()
+                .filter(c -> "nav.goto.error.bookmark.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertFalse(gotoError.isPopup());
+        List<String> errorIds = gotoError.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(errorIds.contains("nav.next.highlighted.error"));
+        assertTrue(errorIds.contains("nav.prev.highlighted.error"));
+
+        // Verify GoToEditPointGroup (Image 1)
+        MenuItemConfig editPoint = navMenu.getChildren().stream()
+                .filter(c -> "nav.goto.edit.point.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertFalse(editPoint.isPopup());
+        List<String> epIds = editPoint.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(epIds.contains("nav.next.emmet.edit.point"));
+        assertTrue(epIds.contains("nav.prev.emmet.edit.point"));
+
+        // Verify Navigate in File subgroup (Image 2)
+        MenuItemConfig navInFile = navMenu.getChildren().stream()
+                .filter(c -> "nav.navigate.in.file.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertFalse(navInFile.isPopup());
+        List<String> fileIds = navInFile.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(fileIds.contains("nav.file.next.statement"));
+        assertTrue(fileIds.contains("nav.file.prev.statement"));
+        assertTrue(fileIds.contains("nav.file.matching.brace"));
+        assertTrue(fileIds.contains("nav.template.parameters.group"));
+        assertTrue(fileIds.contains("nav.custom.folding"));
+        assertTrue(fileIds.contains("nav.change.navigation.group"));
+
+        // Verify TemplateParametersNavigation & Change Navigation Actions (Image 2)
+        MenuItemConfig tplParams = navInFile.getChildren().stream()
+                .filter(c -> "nav.template.parameters.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> tplIds = tplParams.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(tplIds.contains("nav.next.template.parameter"));
+        assertTrue(tplIds.contains("nav.prev.template.parameter"));
+
+        MenuItemConfig changeNav = navInFile.getChildren().stream()
+                .filter(c -> "nav.change.navigation.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> changeIds = changeNav.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(changeIds.contains("nav.next.change"));
+        assertTrue(changeIds.contains("nav.prev.change"));
+
+        // Verify Goto by Reference Actions subgroup (Images 2-3)
+        MenuItemConfig gotoByRef = navMenu.getChildren().stream()
+                .filter(c -> "nav.goto.by.reference.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertFalse(gotoByRef.isPopup());
+        List<String> refIds = gotoByRef.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(refIds.contains("nav.select.in"));
+        assertTrue(refIds.contains("nav.jump.to.nav.bar"));
+        assertTrue(refIds.contains("nav.goto.declaration"));
+        assertTrue(refIds.contains("nav.goto.implementation"));
+        assertTrue(refIds.contains("nav.goto.type.declaration"));
+        assertTrue(refIds.contains("nav.goto.super.method"));
+        assertTrue(refIds.contains("nav.goto.test"));
+        assertTrue(refIds.contains("nav.related.symbol"));
+        assertTrue(refIds.contains("nav.file.structure"));
+        assertTrue(refIds.contains("nav.file.path"));
+        assertTrue(refIds.contains("nav.hierarchy.actions.group"));
+
+        // Verify Hierarchy Actions
+        MenuItemConfig hierarchyGroup = gotoByRef.getChildren().stream()
+                .filter(c -> "nav.hierarchy.actions.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> hierIds = hierarchyGroup.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(hierIds.contains("nav.type.hierarchy"));
+        assertTrue(hierIds.contains("nav.method.hierarchy"));
+        assertTrue(hierIds.contains("nav.call.hierarchy"));
+
+        // Verify DBE.GoToMenuEx (Image 3)
+        MenuItemConfig dbeGoto = navMenu.getChildren().stream()
+                .filter(c -> "nav.dbe.goto.menu.ex".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertFalse(dbeGoto.isPopup());
+        List<String> dbeIds = dbeGoto.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(dbeIds.contains("nav.dbe.next.statement"));
+        assertTrue(dbeIds.contains("nav.dbe.prev.statement"));
+    }
+
+    @Test
+    @DisplayName("Verify Code Menu and Build completeness matching DataGrip Images 4-5")
+    public void testCodeMenuCompletenessMatchingDataGrip() {
+        MenuItemConfig mainMenu = settings.getMenuConfig("root.main.menu");
+
+        // Verify Build exists on Main Menu (Image 4)
+        MenuItemConfig buildItem = mainMenu.getChildren().stream()
+                .filter(m -> "Build".equals(m.getText()) || "main.menu.build".equals(m.getId()))
+                .findFirst()
+                .orElse(null);
+        assertNotNull(buildItem, "Build should exist on Main Menu between Refactor and Run");
+
+        // Verify Code Menu
+        MenuItemConfig codeMenu = mainMenu.getChildren().stream()
+                .filter(m -> "Code".equals(m.getText()) || "menu.code".equals(m.getId()))
+                .findFirst()
+                .orElseThrow();
+
+        List<String> codeIds = codeMenu.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(codeIds.contains("code.override.methods"), "Should contain Override Methods...");
+        assertTrue(codeIds.contains("code.implement.methods"), "Should contain Implement Methods...");
+        assertTrue(codeIds.contains("code.generate"), "Should contain Generate...");
+        assertTrue(codeIds.contains("code.completion.group"), "Should contain Code Completion group");
+        assertTrue(codeIds.contains("code.inspect.group"), "Should contain InspectCodeInCodeMenuGroup");
+        assertTrue(codeIds.contains("code.insert.live.template"), "Should contain Insert Live Template...");
+        assertTrue(codeIds.contains("code.save.live.template"), "Should contain Save as Live Template...");
+        assertTrue(codeIds.contains("code.surround.with"), "Should contain Surround With...");
+        assertTrue(codeIds.contains("code.unwrap.remove"), "Should contain Unwrap/Remove...");
+        assertTrue(codeIds.contains("code.folding.group"), "Should contain Folding group");
+        assertTrue(codeIds.contains("code.comment.actions.group"), "Should contain Comment Actions group");
+        assertTrue(codeIds.contains("code.formatting.actions.group"), "Should contain Code Formatting Actions group");
+        assertTrue(codeIds.contains("code.move.statement.down"), "Should contain Move Statement Down");
+        assertTrue(codeIds.contains("code.move.statement.up"), "Should contain Move Statement Up");
+        assertTrue(codeIds.contains("code.move.element.left"), "Should contain Move Element Left");
+        assertTrue(codeIds.contains("code.move.element.right"), "Should contain Move Element Right");
+        assertTrue(codeIds.contains("code.move.line.down"), "Should contain Move Line Down");
+        assertTrue(codeIds.contains("code.move.line.up"), "Should contain Move Line Up");
+
+        // Verify Code Completion submenu (Image 5)
+        MenuItemConfig completionGroup = codeMenu.getChildren().stream()
+                .filter(c -> "code.completion.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertTrue(completionGroup.isPopup(), "Code Completion should be popup submenu");
+        List<String> compIds = completionGroup.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(compIds.contains("code.completion.basic"));
+        assertTrue(compIds.contains("code.completion.type.matching"));
+        assertTrue(compIds.contains("code.completion.complete.statement"));
+        assertTrue(compIds.contains("code.completion.cyclic.expand.word"));
+        assertTrue(compIds.contains("code.completion.cyclic.expand.word.backward"));
+        assertTrue(compIds.contains("code.completion.call.inline"));
+        assertTrue(compIds.contains("code.completion.insert.inline.proposal"));
+        assertTrue(compIds.contains("code.completion.insert.inline.word"));
+        assertTrue(compIds.contains("code.completion.insert.inline.line"));
+
+        // Verify InspectCodeInCodeMenuGroup (Image 1)
+        MenuItemConfig inspect = codeMenu.getChildren().stream()
+                .filter(c -> "code.inspect.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertFalse(inspect.isPopup(), "InspectCodeInCodeMenuGroup is non-popup group");
+        MenuItemConfig inspectActions = inspect.getChildren().stream()
+                .filter(c -> "code.inspect.actions.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> inspectActionIds = inspectActions.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(inspectActionIds.contains("code.inspect.code"));
+        assertTrue(inspectActionIds.contains("code.cleanup"));
+
+        MenuItemConfig analyzeCode = inspect.getChildren().stream()
+                .filter(c -> "code.analyze.code.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        MenuItemConfig analyzeActions = analyzeCode.getChildren().stream()
+                .filter(c -> "code.analyze.actions.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> analyzeActionIds = analyzeActions.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(analyzeActionIds.contains("code.silent.cleanup"));
+        assertTrue(analyzeActionIds.contains("code.run.inspection.by.name"));
+        assertTrue(analyzeActionIds.contains("code.configure.analysis"));
+        assertTrue(analyzeActionIds.contains("code.view.offline.results"));
+        assertTrue(analyzeActionIds.contains("code.analyze.dataflow.to.here"));
+        assertTrue(analyzeActionIds.contains("code.analyze.dataflow.from.here"));
+        assertTrue(analyzeCode.getChildren().stream().anyMatch(c -> "code.analyze.platform.menu".equals(c.getId())));
+
+        // Verify Folding submenu (Image 2)
+        MenuItemConfig folding = codeMenu.getChildren().stream()
+                .filter(c -> "code.folding.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertTrue(folding.isPopup(), "Folding should be a popup submenu");
+        List<String> foldChildIds = folding.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(foldChildIds.contains("code.folding.expand"));
+        assertTrue(foldChildIds.contains("code.folding.expand.recursively"));
+        assertTrue(foldChildIds.contains("code.folding.expand.all"));
+        assertTrue(foldChildIds.contains("code.folding.collapse"));
+        assertTrue(foldChildIds.contains("code.folding.collapse.recursively"));
+        assertTrue(foldChildIds.contains("code.folding.collapse.all"));
+        assertTrue(foldChildIds.contains("code.folding.toggle"));
+        assertTrue(foldChildIds.contains("code.folding.fold.selection"));
+        assertTrue(foldChildIds.contains("code.folding.fold.block"));
+
+        MenuItemConfig expandToLevel = folding.getChildren().stream()
+                .filter(c -> "code.folding.expand.to.level.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertEquals(5, expandToLevel.getChildren().size());
+        assertTrue(expandToLevel.getChildren().stream().allMatch(c -> c.getId().startsWith("code.folding.expand.level.")));
+
+        MenuItemConfig expandAllToLevel = folding.getChildren().stream()
+                .filter(c -> "code.folding.expand.all.to.level.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertEquals(5, expandAllToLevel.getChildren().size());
+        assertTrue(expandAllToLevel.getChildren().stream().allMatch(c -> c.getId().startsWith("code.folding.expand.all.level.")));
+
+        MenuItemConfig langFolding = folding.getChildren().stream()
+                .filter(c -> "code.folding.language.specific.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> langFoldIds = langFolding.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(langFoldIds.contains("code.folding.expand.doc.comments"));
+        assertTrue(langFoldIds.contains("code.folding.collapse.doc.comments"));
+
+        // Verify Comment Actions (Image 3)
+        MenuItemConfig comments = codeMenu.getChildren().stream()
+                .filter(c -> "code.comment.actions.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertFalse(comments.isPopup(), "Comment Actions is non-popup group");
+        List<String> commentIds = comments.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(commentIds.contains("code.comment.line"));
+        assertTrue(commentIds.contains("code.comment.block"));
+
+        // Verify Code Formatting Actions (Image 3)
+        MenuItemConfig formatting = codeMenu.getChildren().stream()
+                .filter(c -> "code.formatting.actions.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertFalse(formatting.isPopup(), "Code Formatting Actions is non-popup group");
+        List<String> formatIds = formatting.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(formatIds.contains("code.reformat"));
+        assertTrue(formatIds.contains("code.reformat.json"));
+        assertTrue(formatIds.contains("code.reformat.file"));
+        assertTrue(formatIds.contains("code.auto.indent"));
+        assertTrue(formatIds.contains("code.optimize.imports"));
+        assertTrue(formatIds.contains("code.rearrange.code"));
+    }
+
+    @Test
+    @DisplayName("Verify Refactor Menu completeness matching DataGrip Images 4-5")
+    public void testRefactorMenuCompletenessMatchingDataGrip() {
+        MenuItemConfig mainMenu = settings.getMenuConfig("root.main.menu");
+        MenuItemConfig refactorMenu = mainMenu.getChildren().stream()
+                .filter(m -> "Refactor".equals(m.getText()) || "menu.refactor".equals(m.getId()))
+                .findFirst()
+                .orElseThrow();
+        assertTrue(refactorMenu.isPopup(), "Refactor should be a popup menu");
+
+        List<String> refactorIds = refactorMenu.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(refactorIds.contains("refactor.this"), "Should contain Refactor This...");
+        assertTrue(refactorIds.contains("refactor.rename"), "Should contain Rename...");
+        assertTrue(refactorIds.contains("refactor.change.signature"), "Should contain Change Signature...");
+        assertTrue(refactorIds.contains("refactor.modify.object"), "Should contain Modify Object...");
+        assertTrue(refactorIds.contains("refactor.extract.introduce.group"), "Should contain Extract/Introduce popup submenu");
+        assertTrue(refactorIds.contains("refactor.inline"), "Should contain Inline...");
+        assertTrue(refactorIds.contains("refactor.move"), "Should contain Move...");
+        assertTrue(refactorIds.contains("refactor.copy"), "Should contain Copy...");
+        assertTrue(refactorIds.contains("refactor.safe.delete"), "Should contain Safe Delete...");
+        assertTrue(refactorIds.contains("refactor.pull.members.up"), "Should contain Pull Members Up...");
+        assertTrue(refactorIds.contains("refactor.push.members.down"), "Should contain Push Members Down...");
+        assertTrue(refactorIds.contains("refactor.invert.boolean"), "Should contain Invert Boolean...");
+
+        // Verify Extract/Introduce submenu (Image 5)
+        MenuItemConfig extractIntro = refactorMenu.getChildren().stream()
+                .filter(c -> "refactor.extract.introduce.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertTrue(extractIntro.isPopup(), "Extract/Introduce should be popup submenu");
+        List<String> extractIds = extractIntro.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(extractIds.contains("refactor.introduce.variable"));
+        assertTrue(extractIds.contains("refactor.extract.routine"));
+        assertTrue(extractIds.contains("refactor.table.alias"));
+        assertTrue(extractIds.contains("refactor.introduce.constant"));
+        assertTrue(extractIds.contains("refactor.introduce.field"));
+        assertTrue(extractIds.contains("refactor.introduce.parameter"));
+        assertTrue(extractIds.contains("refactor.introduce.parameter.object"));
+        assertTrue(extractIds.contains("refactor.extract.method"));
+        assertTrue(extractIds.contains("refactor.extract.delegate"));
+        assertTrue(extractIds.contains("refactor.include.file"));
+        assertTrue(extractIds.contains("refactor.extract.interface"));
+        assertTrue(extractIds.contains("refactor.extract.superclass"));
+        assertTrue(extractIds.contains("refactor.extract.module"));
+        assertTrue(extractIds.contains("refactor.subquery.cte"));
+    }
+
+    @Test
+    @DisplayName("Verify ActionCatalog contains Navigate, Code, and Refactor under Main Menu")
+    public void testActionCatalogNavigateAndCodeCategories() {
+        ActionManager manager = ActionManager.getInstance();
+        List<ActionManager.ActionCatalogCategory> catalog = manager.getActionCatalog();
+        ActionManager.ActionCatalogCategory mainMenuCat = catalog.stream()
+                .filter(c -> "Main Menu".equals(c.getName()))
+                .findFirst().orElseThrow();
+
+        List<String> subNames = mainMenuCat.getSubCategories().stream()
+                .map(ActionManager.ActionCatalogCategory::getName)
+                .toList();
+
+        assertTrue(subNames.contains("Navigate"), "Main Menu must contain Navigate subcategory");
+        assertTrue(subNames.contains("Code"), "Main Menu must contain Code subcategory");
+        assertTrue(subNames.contains("Refactor"), "Main Menu must contain Refactor subcategory");
+
+        ActionManager.ActionCatalogCategory navCat = mainMenuCat.getSubCategories().stream()
+                .filter(c -> "Navigate".equals(c.getName()))
+                .findFirst().orElseThrow();
+        List<String> navEntryIds = navCat.getEntries().stream()
+                .map(ActionManager.ActionCatalogEntry::getId)
+                .toList();
+        assertTrue(navEntryIds.contains("nav.back"));
+        assertTrue(navEntryIds.contains("nav.forward"));
+        assertTrue(navEntryIds.contains("nav.goto.class"));
+        assertTrue(navEntryIds.contains("nav.goto.file"));
+        assertTrue(navEntryIds.contains("nav.related.rows"));
+
+        ActionManager.ActionCatalogCategory codeCat = mainMenuCat.getSubCategories().stream()
+                .filter(c -> "Code".equals(c.getName()))
+                .findFirst().orElseThrow();
+        List<String> codeEntryIds = codeCat.getEntries().stream()
+                .map(ActionManager.ActionCatalogEntry::getId)
+                .toList();
+        assertTrue(codeEntryIds.contains("code.override.methods"));
+        assertTrue(codeEntryIds.contains("code.implement.methods"));
+        assertTrue(codeEntryIds.contains("code.completion.basic"));
+        assertTrue(codeEntryIds.contains("code.completion.call.inline"));
+        assertTrue(codeEntryIds.contains("code.inspect.code"));
+        assertTrue(codeEntryIds.contains("code.folding.expand"));
+        assertTrue(codeEntryIds.contains("code.comment.line"));
+        assertTrue(codeEntryIds.contains("code.reformat"));
+
+        ActionManager.ActionCatalogCategory refactorCat = mainMenuCat.getSubCategories().stream()
+                .filter(c -> "Refactor".equals(c.getName()))
+                .findFirst().orElseThrow();
+        List<String> refactorEntryIds = refactorCat.getEntries().stream()
+                .map(ActionManager.ActionCatalogEntry::getId)
+                .toList();
+        assertTrue(refactorEntryIds.contains("refactor.this"));
+        assertTrue(refactorEntryIds.contains("refactor.rename"));
+        assertTrue(refactorEntryIds.contains("refactor.change.signature"));
+        assertTrue(refactorEntryIds.contains("refactor.introduce.variable"));
+        assertTrue(refactorEntryIds.contains("refactor.extract.routine"));
+        assertTrue(refactorEntryIds.contains("refactor.safe.delete"));
+
+        assertTrue(subNames.contains("Run"), "Main Menu must contain Run subcategory");
+        ActionManager.ActionCatalogCategory runCat = mainMenuCat.getSubCategories().stream()
+                .filter(c -> "Run".equals(c.getName()))
+                .findFirst().orElseThrow();
+        List<String> runEntryIds = runCat.getEntries().stream()
+                .map(ActionManager.ActionCatalogEntry::getId)
+                .toList();
+        assertTrue(runEntryIds.contains("run.run"));
+        assertTrue(runEntryIds.contains("run.debug"));
+        assertTrue(runEntryIds.contains("run.coverage"));
+        assertTrue(runEntryIds.contains("run.profiler"));
+        assertTrue(runEntryIds.contains("run.step.over"));
+        assertTrue(runEntryIds.contains("run.view.breakpoints"));
+        assertTrue(runEntryIds.contains("run.test.history"));
+
+        assertTrue(subNames.contains("Tools"), "Main Menu must contain Tools subcategory");
+        ActionManager.ActionCatalogCategory toolsCat = mainMenuCat.getSubCategories().stream()
+                .filter(c -> "Tools".equals(c.getName()))
+                .findFirst().orElseThrow();
+        List<String> toolsEntryIds = toolsCat.getEntries().stream()
+                .map(ActionManager.ActionCatalogEntry::getId)
+                .toList();
+        assertTrue(toolsEntryIds.contains("tools.view.psi.structure"));
+        assertTrue(toolsEntryIds.contains("tools.create.command.line.launcher"));
+        assertTrue(toolsEntryIds.contains("tools.services"));
+        assertTrue(toolsEntryIds.contains("tools.convert.schema"));
+        assertTrue(toolsEntryIds.contains("tools.markdown.import.word"));
+
+        assertTrue(subNames.contains("Git"), "Main Menu must contain Git subcategory");
+        ActionManager.ActionCatalogCategory gitCat = mainMenuCat.getSubCategories().stream()
+                .filter(c -> "Git".equals(c.getName()))
+                .findFirst().orElseThrow();
+        List<String> gitEntryIds = gitCat.getEntries().stream()
+                .map(ActionManager.ActionCatalogEntry::getId)
+                .toList();
+        assertTrue(gitEntryIds.contains("vcs.commit"));
+        assertTrue(gitEntryIds.contains("vcs.update.project"));
+        assertTrue(gitEntryIds.contains("git.commit.file"));
+        assertTrue(gitEntryIds.contains("git.add"));
+        assertTrue(gitEntryIds.contains("git.rollback"));
+        assertTrue(gitEntryIds.contains("git.push"));
+        assertTrue(gitEntryIds.contains("git.branches"));
+    }
+
+    @Test
+    @DisplayName("Verify Run Menu completeness matching DataGrip Images 1-4")
+    public void testRunMenuCompletenessMatchingDataGrip() {
+        MenuItemConfig mainMenu = settings.getMenuConfig("root.main.menu");
+        MenuItemConfig runMenu = mainMenu.getChildren().stream()
+                .filter(m -> "Run".equals(m.getText()) || "menu.run".equals(m.getId()))
+                .findFirst()
+                .orElseThrow();
+        assertTrue(runMenu.isPopup(), "Run should be a popup menu");
+
+        List<String> runIds = runMenu.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(runIds.contains("run.run.debug.group"), "Should contain Run/Debug group");
+        assertTrue(runIds.contains("run.run.ellipsis"), "Should contain Run...");
+        assertTrue(runIds.contains("run.debug.ellipsis"), "Should contain Debug...");
+        assertTrue(runIds.contains("run.xdebugger.attach.group"), "Should contain XDebugger.AttachGroup");
+        assertTrue(runIds.contains("run.edit.configurations"), "Should contain Edit Configurations...");
+        assertTrue(runIds.contains("run.manage.targets"), "Should contain Manage Targets...");
+        assertTrue(runIds.contains("run.stop"), "Should contain Stop");
+        assertTrue(runIds.contains("run.stop.background.processes"), "Should contain Stop Background Processes...");
+        assertTrue(runIds.contains("run.show.running.list"), "Should contain Show Running List");
+        assertTrue(runIds.contains("run.debugger.actions.group"), "Should contain Debugger Actions group");
+        assertTrue(runIds.contains("run.test.group"), "Should contain RunTestGroup");
+        assertTrue(runIds.contains("run.profiler.actions.group"), "Should contain ProfilerActions group");
+
+        // Verify Run/Debug group (Image 2)
+        MenuItemConfig runDebugGroup = runMenu.getChildren().stream()
+                .filter(c -> "run.run.debug.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> runDebugIds = runDebugGroup.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(runDebugIds.contains("run.run"));
+        assertTrue(runDebugIds.contains("run.debug"));
+        assertTrue(runDebugIds.contains("run.coverage"));
+        assertTrue(runDebugIds.contains("run.profiler"));
+
+        // Verify XDebugger.AttachGroup (Image 2)
+        MenuItemConfig attachGroup = runMenu.getChildren().stream()
+                .filter(c -> "run.xdebugger.attach.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertTrue(attachGroup.getChildren().stream().anyMatch(c -> "run.attach.to.process".equals(c.getId())));
+
+        // Verify Debugger Actions (Image 3)
+        MenuItemConfig debuggerActions = runMenu.getChildren().stream()
+                .filter(c -> "run.debugger.actions.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> dbgIds = debuggerActions.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(dbgIds.contains("run.debugging.actions.group"));
+        assertTrue(dbgIds.contains("run.toggle.breakpoint.group"));
+        assertTrue(dbgIds.contains("run.view.breakpoints"));
+
+        // Debugging Actions
+        MenuItemConfig debuggingActions = debuggerActions.getChildren().stream()
+                .filter(c -> "run.debugging.actions.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> dbgActIds = debuggingActions.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(dbgActIds.contains("run.debug.reload.group"));
+        assertTrue(dbgActIds.contains("run.step.over.ref"));
+        assertTrue(dbgActIds.contains("run.pause.ref"));
+        assertTrue(dbgActIds.contains("run.resume.ref"));
+        assertTrue(dbgActIds.contains("run.evaluate.expression"));
+        assertTrue(dbgActIds.contains("run.show.execution.point"));
+
+        // StepOver.Ref
+        MenuItemConfig stepOverRef = debuggingActions.getChildren().stream()
+                .filter(c -> "run.step.over.ref".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> stepIds = stepOverRef.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(stepIds.contains("run.step.over"));
+        assertTrue(stepIds.contains("run.force.step.over"));
+        assertTrue(stepIds.contains("run.step.into"));
+        assertTrue(stepIds.contains("run.force.step.into"));
+        assertTrue(stepIds.contains("run.smart.step.into"));
+        assertTrue(stepIds.contains("run.step.out"));
+        assertTrue(stepIds.contains("run.run.to.cursor"));
+        assertTrue(stepIds.contains("run.force.run.to.cursor"));
+        assertTrue(stepIds.contains("run.reset.frame"));
+
+        // Toggle Breakpoint group
+        MenuItemConfig toggleBreakpoint = debuggerActions.getChildren().stream()
+                .filter(c -> "run.toggle.breakpoint.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> bpIds = toggleBreakpoint.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(bpIds.contains("run.restore.breakpoint"));
+        assertTrue(bpIds.contains("run.toggle.line.breakpoint"));
+        assertTrue(bpIds.contains("run.toggle.temporary.line.breakpoint"));
+
+        // Verify RunTestGroup (Image 4)
+        MenuItemConfig runTestGroup = runMenu.getChildren().stream()
+                .filter(c -> "run.test.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        MenuItemConfig smRunTestGroup = runTestGroup.getChildren().stream()
+                .filter(c -> "run.sm.run.test.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> smIds = smRunTestGroup.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(smIds.contains("run.test.history"));
+        assertTrue(smIds.contains("run.import.tests.from.file"));
+
+        MenuItemConfig coveragePlatform = runTestGroup.getChildren().stream()
+                .filter(c -> "run.coverage.platform.menu".equals(c.getId()))
+                .findFirst().orElseThrow();
+        MenuItemConfig coverageMenu = coveragePlatform.getChildren().stream()
+                .filter(c -> "run.coverage.menu".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> covIds = coverageMenu.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(covIds.contains("run.manage.coverage.reports"));
+        assertTrue(covIds.contains("run.generate.coverage.report"));
+        assertTrue(covIds.contains("run.hide.coverage"));
+
+        // Verify ProfilerActions (Image 2)
+        MenuItemConfig profilerGroup = runMenu.getChildren().stream()
+                .filter(c -> "run.profiler.actions.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> profIds = profilerGroup.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(profIds.contains("run.attach.profiler.to.process"));
+        assertTrue(profIds.contains("run.open.profiler.snapshot"));
+    }
+
+    @Test
+    @DisplayName("Verify Tools Menu completeness matching DataGrip Image 1")
+    public void testToolsMenuCompletenessMatchingDataGrip() {
+        MenuItemConfig mainMenu = settings.getMenuConfig("root.main.menu");
+        MenuItemConfig toolsMenu = mainMenu.getChildren().stream()
+                .filter(m -> "Tools".equals(m.getText()) || "menu.tools".equals(m.getId()))
+                .findFirst()
+                .orElseThrow();
+        assertTrue(toolsMenu.isPopup(), "Tools should be a popup menu");
+
+        List<String> toolsIds = toolsMenu.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(toolsIds.contains("tools.psi.viewer.actions"), "Should contain Dev.PsiViewerActions");
+        assertTrue(toolsIds.contains("tools.basic.group"), "Should contain Tools Basic Group");
+        assertTrue(toolsIds.contains("tools.create.command.line.launcher"), "Should contain Create Command Line Launcher...");
+        assertTrue(toolsIds.contains("tools.create.desktop.entry"), "Should contain Create Desktop Entry...");
+        assertTrue(toolsIds.contains("tools.other.menu"), "Should contain OtherMenu");
+        assertTrue(toolsIds.contains("tools.services"), "Should contain Services");
+        assertTrue(toolsIds.contains("tools.xml.actions"), "Should contain XML Actions");
+        assertTrue(toolsIds.contains("tools.markdown"), "Should contain Markdown");
+        assertTrue(toolsIds.contains("tools.external.tools"), "Should contain External Tools");
+
+        // Dev.PsiViewerActions
+        MenuItemConfig psiViewer = toolsMenu.getChildren().stream()
+                .filter(c -> "tools.psi.viewer.actions".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> psiIds = psiViewer.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(psiIds.contains("tools.view.psi.structure"));
+        assertTrue(psiIds.contains("tools.view.psi.structure.current.file"));
+
+        // XML Actions
+        MenuItemConfig xmlActions = toolsMenu.getChildren().stream()
+                .filter(c -> "tools.xml.actions".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> xmlIds = xmlActions.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(xmlIds.contains("tools.convert.schema"));
+
+        // Markdown
+        MenuItemConfig markdown = toolsMenu.getChildren().stream()
+                .filter(c -> "tools.markdown".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> mdIds = markdown.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(mdIds.contains("tools.markdown.import.word"));
+        assertTrue(mdIds.contains("tools.markdown.export.file.to"));
+        assertTrue(mdIds.contains("tools.markdown.configure.pandoc"));
+    }
+
+    @Test
+    @DisplayName("Verify Git Menu completeness matching DataGrip Images 2-5")
+    public void testGitMenuCompletenessMatchingDataGrip() {
+        MenuItemConfig mainMenu = settings.getMenuConfig("root.main.menu");
+        MenuItemConfig gitMenu = mainMenu.getChildren().stream()
+                .filter(m -> "Git".equals(m.getText()) || "menu.vcs".equals(m.getId()))
+                .findFirst()
+                .orElseThrow();
+        assertTrue(gitMenu.isPopup(), "Git should be a popup menu");
+
+        List<String> topIds = gitMenu.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(topIds.contains("vcs.main.menu"), "Should contain Vcs.MainMenu");
+        assertTrue(topIds.contains("git.main.menu"), "Should contain Git.MainMenu");
+
+        // Vcs.MainMenu (Image 2)
+        MenuItemConfig vcsMainMenu = gitMenu.getChildren().stream()
+                .filter(c -> "vcs.main.menu".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> vcsMainIds = vcsMainMenu.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(vcsMainIds.contains("vcs.enable.integration"));
+        assertTrue(vcsMainIds.contains("vcs.group"));
+        assertTrue(vcsMainIds.contains("vcs.get.from.vcs"));
+        assertTrue(vcsMainIds.contains("vcs.browse.repository"));
+        assertTrue(vcsMainIds.contains("vcs.import.into.vcs"));
+
+        // VCS Group (Image 3)
+        MenuItemConfig vcsGroup = vcsMainMenu.getChildren().stream()
+                .filter(c -> "vcs.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> vcsGroupIds = vcsGroup.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(vcsGroupIds.contains("vcs.operations.popup"));
+        assertTrue(vcsGroupIds.contains("vcs.commit"));
+        assertTrue(vcsGroupIds.contains("vcs.toggle.commit.ui"));
+        assertTrue(vcsGroupIds.contains("vcs.update.project"));
+        assertTrue(vcsGroupIds.contains("vcs.integrate.project"));
+        assertTrue(vcsGroupIds.contains("vcs.refresh"));
+        assertTrue(vcsGroupIds.contains("vcs.show.local.changes.uml"));
+        assertTrue(vcsGroupIds.contains("vcs.specific"));
+        assertTrue(vcsGroupIds.contains("vcs.git.group"));
+
+        // Git inside VCS Group (Image 3, 4, 5)
+        MenuItemConfig vcsGit = vcsGroup.getChildren().stream()
+                .filter(c -> "vcs.git.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> vcsGitIds = vcsGit.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(vcsGitIds.contains("git.file.actions"));
+        assertTrue(vcsGitIds.contains("git.rollback"));
+        assertTrue(vcsGitIds.contains("git.repository.actions"));
+        assertTrue(vcsGitIds.contains("git.create.patch"));
+        assertTrue(vcsGitIds.contains("git.apply.patch"));
+        assertTrue(vcsGitIds.contains("git.apply.patch.from.clipboard"));
+        assertTrue(vcsGitIds.contains("git.shelve.changes"));
+
+        // Git.FileActions (Image 4)
+        MenuItemConfig fileActions = vcsGit.getChildren().stream()
+                .filter(c -> "git.file.actions".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> fileActionIds = fileActions.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(fileActionIds.contains("git.commit.file"));
+        assertTrue(fileActionIds.contains("git.add"));
+        assertTrue(fileActionIds.contains("git.add.to.gitignore"));
+        assertTrue(fileActionIds.contains("git.annotate"));
+        assertTrue(fileActionIds.contains("git.compare.same.version"));
+        assertTrue(fileActionIds.contains("git.compare.with.revision"));
+        assertTrue(fileActionIds.contains("git.compare.with.branch"));
+        assertTrue(fileActionIds.contains("git.show.history"));
+        assertTrue(fileActionIds.contains("git.show.history.for.selection"));
+
+        // GitRepositoryActions (Image 5)
+        MenuItemConfig repoActions = vcsGit.getChildren().stream()
+                .filter(c -> "git.repository.actions".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> repoActionIds = repoActions.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(repoActionIds.contains("git.push"));
+        assertTrue(repoActionIds.contains("git.pull"));
+        assertTrue(repoActionIds.contains("git.fetch"));
+        assertTrue(repoActionIds.contains("git.merge"));
+        assertTrue(repoActionIds.contains("git.merge.group"));
+        assertTrue(repoActionIds.contains("git.rebase"));
+        assertTrue(repoActionIds.contains("git.rebase.group"));
+        assertTrue(repoActionIds.contains("git.branches"));
+        assertTrue(repoActionIds.contains("git.new.branch"));
+        assertTrue(repoActionIds.contains("git.new.tag"));
+        assertTrue(repoActionIds.contains("git.reset.head"));
+        assertTrue(repoActionIds.contains("git.stash.changes"));
+        assertTrue(repoActionIds.contains("git.unstash.changes"));
+        assertTrue(repoActionIds.contains("git.manage.remotes"));
+        assertTrue(repoActionIds.contains("git.clone"));
+        assertTrue(repoActionIds.contains("git.abort.revert"));
+        assertTrue(repoActionIds.contains("git.abort.cherry.pick"));
+
+        // Merge group & Rebase group
+        MenuItemConfig mergeGroup = repoActions.getChildren().stream()
+                .filter(c -> "git.merge.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertTrue(mergeGroup.getChildren().stream().anyMatch(c -> "git.abort.merge".equals(c.getId())));
+
+        MenuItemConfig rebaseGroup = repoActions.getChildren().stream()
+                .filter(c -> "git.rebase.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> rebaseIds = rebaseGroup.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(rebaseIds.contains("git.abort.rebase"));
+        assertTrue(rebaseIds.contains("git.continue.rebase"));
+        assertTrue(rebaseIds.contains("git.skip.commit"));
+
+        // Image 1: Browse VCS Repository and Import into Version Control children
+        MenuItemConfig browseVcs = vcsMainMenu.getChildren().stream()
+                .filter(c -> "vcs.browse.repository".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertTrue(browseVcs.getChildren().stream().anyMatch(c -> "vcs.browse.git.log".equals(c.getId())));
+
+        MenuItemConfig importVcs = vcsMainMenu.getChildren().stream()
+                .filter(c -> "vcs.import.into.vcs".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertTrue(importVcs.getChildren().stream().anyMatch(c -> "vcs.create.git.repository".equals(c.getId())));
+
+        // Images 1-4: Git.MainMenu verification
+        MenuItemConfig gitMainMenu = gitMenu.getChildren().stream()
+                .filter(c -> "git.main.menu".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> gitMainIds = gitMainMenu.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(gitMainIds.contains("git.main.commit"));
+        assertTrue(gitMainIds.contains("git.main.toggle.commit.ui"));
+        assertTrue(gitMainIds.contains("git.push"));
+        assertTrue(gitMainIds.contains("vcs.update.project"));
+        assertTrue(gitMainIds.contains("git.pull"));
+        assertTrue(gitMainIds.contains("git.fetch"));
+        assertTrue(gitMainIds.contains("git.unshallow"));
+        assertTrue(gitMainIds.contains("git.merge"));
+        assertTrue(gitMainIds.contains("git.main.merge.group"));
+        assertTrue(gitMainIds.contains("git.rebase"));
+        assertTrue(gitMainIds.contains("git.main.rebase.group"));
+        assertTrue(gitMainIds.contains("git.resolve.conflicts"));
+        assertTrue(gitMainIds.contains("git.revert.resolved"));
+        assertTrue(gitMainIds.contains("git.branches"));
+        assertTrue(gitMainIds.contains("git.new.branch"));
+        assertTrue(gitMainIds.contains("git.new.tag"));
+        assertTrue(gitMainIds.contains("git.reset.head"));
+        assertTrue(gitMainIds.contains("git.show.vcs.log"));
+        assertTrue(gitMainIds.contains("git.patch.group"));
+        assertTrue(gitMainIds.contains("git.uncommitted.changes.group"));
+        assertTrue(gitMainIds.contains("git.main.menu.file.actions"));
+        assertTrue(gitMainIds.contains("git.manage.remotes"));
+        assertTrue(gitMainIds.contains("git.clone"));
+        assertTrue(gitMainIds.contains("vcs.operations.popup"));
+        assertTrue(gitMainIds.contains("git.abort.revert"));
+        assertTrue(gitMainIds.contains("git.abort.cherry.pick"));
+
+        // Image 3: Patch group under Git.MainMenu
+        MenuItemConfig patchGroup = gitMainMenu.getChildren().stream()
+                .filter(c -> "git.patch.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> patchIds = patchGroup.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(patchIds.contains("git.create.patch"));
+        assertTrue(patchIds.contains("git.apply.patch"));
+        assertTrue(patchIds.contains("git.apply.patch.from.clipboard"));
+
+        // Image 4: Uncommitted Changes group under Git.MainMenu
+        MenuItemConfig uncommittedGroup = gitMainMenu.getChildren().stream()
+                .filter(c -> "git.uncommitted.changes.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> uncommittedIds = uncommittedGroup.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(uncommittedIds.contains("git.shelve.changes"));
+        assertTrue(uncommittedIds.contains("git.show.shelf"));
+        assertTrue(uncommittedIds.contains("git.show.git.stash"));
+        assertTrue(uncommittedIds.contains("git.stash.changes"));
+        assertTrue(uncommittedIds.contains("git.unstash.changes"));
+        assertTrue(uncommittedIds.contains("git.rollback"));
+        assertTrue(uncommittedIds.contains("vcs.uml.diff"));
+
+        MenuItemConfig umlDiff = uncommittedGroup.getChildren().stream()
+                .filter(c -> "vcs.uml.diff".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertTrue(umlDiff.getChildren().stream().anyMatch(c -> "vcs.show.local.changes.uml".equals(c.getId())));
+
+        // Image 4: Git.MainMenu.FileActions > Git.FileActions
+        MenuItemConfig gitMainMenuFileActions = gitMainMenu.getChildren().stream()
+                .filter(c -> "git.main.menu.file.actions".equals(c.getId()))
+                .findFirst().orElseThrow();
+        MenuItemConfig fileActionsRef = gitMainMenuFileActions.getChildren().stream()
+                .filter(c -> "git.file.actions.ref".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> refIds = fileActionsRef.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(refIds.contains("git.commit.file"));
+        assertTrue(refIds.contains("git.add"));
+        assertTrue(refIds.contains("git.add.to.gitignore"));
+        assertTrue(refIds.contains("git.annotate"));
+        assertTrue(refIds.contains("git.compare.same.version"));
+        assertTrue(refIds.contains("git.compare.with.revision"));
+        assertTrue(refIds.contains("git.compare.with.branch"));
+        assertTrue(refIds.contains("git.show.history"));
+        assertTrue(refIds.contains("git.show.history.for.selection"));
     }
 }
 
