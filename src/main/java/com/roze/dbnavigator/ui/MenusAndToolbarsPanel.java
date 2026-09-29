@@ -103,9 +103,6 @@ public class MenusAndToolbarsPanel {
                     setText(item.getText());
                     setTextFill(javafx.scene.paint.Color.web("#dfdfe0"));
                     Node icon = ActionManager.createIconNode(item.getIconName(), item.getIconPath(), 13);
-                    if (icon == null) {
-                        icon = Icons.of(FontAwesomeSolid.FOLDER, "#dcb67a", 13);
-                    }
                     setGraphic(icon);
                     setStyle("-fx-font-weight: normal;");
                 } else {
@@ -117,9 +114,6 @@ public class MenusAndToolbarsPanel {
                         if (registered != null && registered.getIcon() != null) {
                             icon = Icons.of(registered.getIcon(), registered.getIconColor() != null ? registered.getIconColor() : "#a9b7c6", 13);
                         }
-                    }
-                    if (icon == null) {
-                        icon = Icons.of(FontAwesomeSolid.COG, "#6c707e", 11);
                     }
                     setGraphic(icon);
                     setStyle("-fx-font-weight: normal;");
@@ -392,9 +386,6 @@ public class MenusAndToolbarsPanel {
                             FontAwesomeSolid fa = FontAwesomeSolid.valueOf(entry.getIconName().toUpperCase().replace('-', '_'));
                             icon = Icons.of(fa, "#a9b7c6", 12);
                         } catch (Exception ignored) {}
-                    }
-                    if (icon == null) {
-                        icon = Icons.of(FontAwesomeSolid.COG, "#6c707e", 10);
                     }
                     setGraphic(icon);
                     setStyle("");

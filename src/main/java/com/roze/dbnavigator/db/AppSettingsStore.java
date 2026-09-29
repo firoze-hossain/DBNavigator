@@ -1058,54 +1058,570 @@ public final class AppSettingsStore {
             viewMenu.add(MenuItemConfig.action("view.font.reset", "Reset Font Size in All Editors"));
             mainMenuChildren.add(MenuItemConfig.group("menu.view", "View", true, viewMenu));
 
-            // Navigate
+            // -------------------------------------------------------------
+            // Main Menu > Navigate (Exact match to DataGrip Images 1, 2, 3)
+            // -------------------------------------------------------------
+            // Image 1: Goto by Name Actions
+            List<MenuItemConfig> gotoByNameChildren = new ArrayList<>();
+            gotoByNameChildren.add(MenuItemConfig.action("nav.goto.class", "Go to Class\u2026"));
+            gotoByNameChildren.add(MenuItemConfig.action("nav.goto.file", "Go to File\u2026"));
+            gotoByNameChildren.add(MenuItemConfig.action("nav.goto.symbol", "Go to Symbol\u2026"));
+            gotoByNameChildren.add(MenuItemConfig.action("nav.goto.text", "Text\u2026"));
+            gotoByNameChildren.add(MenuItemConfig.action("nav.goto.database.object", "Go To Database Object"));
+
+            // Image 2: Goto Error/Bookmark Actions
+            List<MenuItemConfig> gotoErrorChildren = new ArrayList<>();
+            gotoErrorChildren.add(MenuItemConfig.action("nav.next.highlighted.error", "Next Highlighted Error"));
+            gotoErrorChildren.add(MenuItemConfig.action("nav.prev.highlighted.error", "Previous Highlighted Error"));
+
+            // Image 2: GoToEditPointGroup
+            List<MenuItemConfig> gotoEditPointChildren = new ArrayList<>();
+            gotoEditPointChildren.add(MenuItemConfig.separator());
+            gotoEditPointChildren.add(MenuItemConfig.action("nav.next.emmet.edit.point", "Next Emmet Edit Point"));
+            gotoEditPointChildren.add(MenuItemConfig.action("nav.prev.emmet.edit.point", "Previous Emmet Edit Point"));
+
+            // Image 2: Navigate in File -> TemplateParametersNavigation
+            List<MenuItemConfig> templateNavChildren = new ArrayList<>();
+            templateNavChildren.add(MenuItemConfig.action("nav.next.template.parameter", "Next Live Template Parameter"));
+            templateNavChildren.add(MenuItemConfig.action("nav.prev.template.parameter", "Previous Live Template Parameter"));
+
+            // Image 2: Navigate in File -> Change Navigation Actions
+            List<MenuItemConfig> changeNavChildren = new ArrayList<>();
+            changeNavChildren.add(MenuItemConfig.separator());
+            changeNavChildren.add(MenuItemConfig.action("nav.next.change", "Next Change", "ARROW_DOWN"));
+            changeNavChildren.add(MenuItemConfig.action("nav.prev.change", "Previous Change", "ARROW_UP"));
+
+            List<MenuItemConfig> navInFileChildren = new ArrayList<>();
+            navInFileChildren.add(MenuItemConfig.action("nav.file.next.statement", "Next Statement"));
+            navInFileChildren.add(MenuItemConfig.action("nav.file.prev.statement", "Previous Statement"));
+            navInFileChildren.add(MenuItemConfig.action("nav.file.matching.brace", "Move Caret to Matching Brace"));
+            navInFileChildren.add(MenuItemConfig.separator());
+            navInFileChildren.add(MenuItemConfig.group("nav.template.parameters.group", "TemplateParametersNavigation", false, templateNavChildren));
+            navInFileChildren.add(MenuItemConfig.action("nav.custom.folding", "Custom Folding\u2026"));
+            navInFileChildren.add(MenuItemConfig.group("nav.change.navigation.group", "Change Navigation Actions", false, changeNavChildren));
+
+            // Image 3: Goto by Reference Actions -> Hierarchy Actions
+            List<MenuItemConfig> hierarchyChildren = new ArrayList<>();
+            hierarchyChildren.add(MenuItemConfig.action("nav.type.hierarchy", "Type Hierarchy"));
+            hierarchyChildren.add(MenuItemConfig.action("nav.method.hierarchy", "Method Hierarchy"));
+            hierarchyChildren.add(MenuItemConfig.action("nav.call.hierarchy", "Call Hierarchy"));
+
+            List<MenuItemConfig> gotoByRefChildren = new ArrayList<>();
+            gotoByRefChildren.add(MenuItemConfig.separator());
+            gotoByRefChildren.add(MenuItemConfig.action("nav.select.in", "Select In\u2026"));
+            gotoByRefChildren.add(MenuItemConfig.action("nav.jump.to.nav.bar", "Jump to Navigation Bar"));
+            gotoByRefChildren.add(MenuItemConfig.separator());
+            gotoByRefChildren.add(MenuItemConfig.action("nav.goto.declaration", "Go to Declaration or Usages"));
+            gotoByRefChildren.add(MenuItemConfig.action("nav.goto.implementation", "Go to Implementation(s)"));
+            gotoByRefChildren.add(MenuItemConfig.action("nav.goto.type.declaration", "Go to Type Declaration"));
+            gotoByRefChildren.add(MenuItemConfig.action("nav.goto.super.method", "Go to Super Method"));
+            gotoByRefChildren.add(MenuItemConfig.action("nav.goto.test", "Go to Test"));
+            gotoByRefChildren.add(MenuItemConfig.action("nav.related.symbol", "Related Symbol\u2026"));
+            gotoByRefChildren.add(MenuItemConfig.separator());
+            gotoByRefChildren.add(MenuItemConfig.action("nav.file.structure", "File Structure"));
+            gotoByRefChildren.add(MenuItemConfig.action("nav.file.path", "File Path"));
+            gotoByRefChildren.add(MenuItemConfig.group("nav.hierarchy.actions.group", "Hierarchy Actions", false, hierarchyChildren));
+
+            // Image 3: DBE.GoToMenuEx
+            List<MenuItemConfig> dbeGotoChildren = new ArrayList<>();
+            dbeGotoChildren.add(MenuItemConfig.separator());
+            dbeGotoChildren.add(MenuItemConfig.action("nav.dbe.next.statement", "Next Statement"));
+            dbeGotoChildren.add(MenuItemConfig.action("nav.dbe.prev.statement", "Previous Statement"));
+            dbeGotoChildren.add(MenuItemConfig.separator());
+
+            // Full Navigate Menu assembling Images 1-3
             List<MenuItemConfig> navMenu = new ArrayList<>();
-            navMenu.add(MenuItemConfig.action("nav.back", "Back"));
-            navMenu.add(MenuItemConfig.action("nav.forward", "Forward"));
+            navMenu.add(MenuItemConfig.action("nav.back", "Back", "ARROW_LEFT"));
+            navMenu.add(MenuItemConfig.action("nav.forward", "Forward", "ARROW_RIGHT"));
             navMenu.add(MenuItemConfig.separator());
-            navMenu.add(MenuItemConfig.action("nav.search.everywhere", "Search Everywhere\u2026"));
-            navMenu.add(MenuItemConfig.action("nav.class", "Class\u2026"));
-            navMenu.add(MenuItemConfig.action("nav.file", "File\u2026"));
-            navMenu.add(MenuItemConfig.action("nav.symbol", "Symbol\u2026"));
-            navMenu.add(MenuItemConfig.action("nav.db.object", "Database Object\u2026"));
+            navMenu.add(MenuItemConfig.action("header.search", "Search Everywhere", "SEARCH"));
             navMenu.add(MenuItemConfig.separator());
-            navMenu.add(MenuItemConfig.action("nav.declaration", "Declaration or Usages"));
-            navMenu.add(MenuItemConfig.action("nav.implementation", "Implementation"));
-            mainMenuChildren.add(MenuItemConfig.group("menu.navigate", "Navigate", navMenu));
+            navMenu.add(MenuItemConfig.group("nav.goto.by.name.group", "Goto by Name Actions", false, gotoByNameChildren));
+            navMenu.add(MenuItemConfig.action("nav.goto.row", "Row\u2026"));
+            navMenu.add(MenuItemConfig.action("nav.open.file.uri", "Open File URI", "FOLDER"));
+            navMenu.add(MenuItemConfig.action("nav.open.url", "Open URL", "GLOBE"));
+            navMenu.add(MenuItemConfig.action("nav.related.rows", "Related Rows", "TABLE"));
+            navMenu.add(MenuItemConfig.action("nav.goto.line.column", "Go to Line:Column\u2026"));
+            navMenu.add(MenuItemConfig.separator());
+            navMenu.add(MenuItemConfig.group("nav.goto.error.bookmark.group", "Goto Error/Bookmark Actions", false, gotoErrorChildren));
+            navMenu.add(MenuItemConfig.group("nav.goto.edit.point.group", "GoToEditPointGroup", false, gotoEditPointChildren));
+            navMenu.add(MenuItemConfig.action("nav.last.edit.location", "Last Edit Location"));
+            navMenu.add(MenuItemConfig.action("nav.next.edit.location", "Next Edit Location"));
+            navMenu.add(MenuItemConfig.separator());
+            navMenu.add(MenuItemConfig.group("nav.navigate.in.file.group", "Navigate in File", false, navInFileChildren));
+            navMenu.add(MenuItemConfig.group("nav.goto.by.reference.group", "Goto by Reference Actions", false, gotoByRefChildren));
+            navMenu.add(MenuItemConfig.separator());
+            navMenu.add(MenuItemConfig.action("nav.prev.occurrence", "Previous Occurrence", "ARROW_UP"));
+            navMenu.add(MenuItemConfig.action("nav.next.occurrence", "Next Occurrence", "ARROW_DOWN"));
+            navMenu.add(MenuItemConfig.separator());
+            navMenu.add(MenuItemConfig.group("nav.dbe.goto.menu.ex", "DBE.GoToMenuEx", false, dbeGotoChildren));
+            mainMenuChildren.add(MenuItemConfig.group("menu.navigate", "Navigate", true, navMenu));
 
-            // Code
+            // -------------------------------------------------------------
+            // Main Menu > Code (Exact match to DataGrip Images 4, 5)
+            // -------------------------------------------------------------
+            // Image 5: Code Completion (Submenu popup)
+            List<MenuItemConfig> codeCompletionChildren = new ArrayList<>();
+            codeCompletionChildren.add(MenuItemConfig.action("code.completion.basic", "Basic"));
+            codeCompletionChildren.add(MenuItemConfig.action("code.completion.type.matching", "Type-Matching"));
+            codeCompletionChildren.add(MenuItemConfig.separator());
+            codeCompletionChildren.add(MenuItemConfig.action("code.completion.complete.statement", "Complete Current Statement"));
+            codeCompletionChildren.add(MenuItemConfig.separator());
+            codeCompletionChildren.add(MenuItemConfig.action("code.completion.cyclic.expand.word", "Cyclic Expand Word"));
+            codeCompletionChildren.add(MenuItemConfig.action("code.completion.cyclic.expand.word.backward", "Cyclic Expand Word (Backward)"));
+            codeCompletionChildren.add(MenuItemConfig.separator());
+            codeCompletionChildren.add(MenuItemConfig.action("code.completion.call.inline", "Call Inline Completion"));
+            codeCompletionChildren.add(MenuItemConfig.action("code.completion.insert.inline.proposal", "Insert Inline Proposal"));
+            codeCompletionChildren.add(MenuItemConfig.action("code.completion.insert.inline.word", "Insert Inline Proposal's Word"));
+            codeCompletionChildren.add(MenuItemConfig.action("code.completion.insert.inline.line", "Insert Inline Proposal's Line"));
+
+            // Image 1: InspectCodeInCodeMenuGroup
+            List<MenuItemConfig> inspectCodeActionsChildren = new ArrayList<>();
+            inspectCodeActionsChildren.add(MenuItemConfig.action("code.inspect.code", "Inspect Code\u2026"));
+            inspectCodeActionsChildren.add(MenuItemConfig.action("code.cleanup", "Code Cleanup\u2026"));
+
+            List<MenuItemConfig> analyzeActionsChildren = new ArrayList<>();
+            analyzeActionsChildren.add(MenuItemConfig.action("code.silent.cleanup", "Silent Code Cleanup"));
+            analyzeActionsChildren.add(MenuItemConfig.action("code.run.inspection.by.name", "Run Inspection by Name\u2026"));
+            analyzeActionsChildren.add(MenuItemConfig.action("code.configure.analysis", "Configure Current File Analysis\u2026"));
+            analyzeActionsChildren.add(MenuItemConfig.action("code.view.offline.results", "View Offline Inspection Results\u2026"));
+            analyzeActionsChildren.add(MenuItemConfig.separator());
+            analyzeActionsChildren.add(MenuItemConfig.action("code.analyze.dataflow.to.here", "Analyze Data Flow to Here\u2026"));
+            analyzeActionsChildren.add(MenuItemConfig.action("code.analyze.dataflow.from.here", "Analyze Data Flow from Here\u2026"));
+
+            List<MenuItemConfig> analyzeCodeChildren = new ArrayList<>();
+            analyzeCodeChildren.add(MenuItemConfig.group("code.analyze.actions.group", "AnalyzeActions", false, analyzeActionsChildren));
+            analyzeCodeChildren.add(MenuItemConfig.action("code.analyze.platform.menu", "AnalyzePlatformMenu"));
+
+            List<MenuItemConfig> inspectCodeChildren = new ArrayList<>();
+            inspectCodeChildren.add(MenuItemConfig.separator());
+            inspectCodeChildren.add(MenuItemConfig.group("code.inspect.actions.group", "Inspect Code Actions", false, inspectCodeActionsChildren));
+            inspectCodeChildren.add(MenuItemConfig.group("code.analyze.code.group", "Analyze Code", false, analyzeCodeChildren));
+
+            // Image 2: Folding (Popup submenu)
+            List<MenuItemConfig> expandToLevelChildren = new ArrayList<>();
+            expandToLevelChildren.add(MenuItemConfig.action("code.folding.expand.level.1", "1"));
+            expandToLevelChildren.add(MenuItemConfig.action("code.folding.expand.level.2", "2"));
+            expandToLevelChildren.add(MenuItemConfig.action("code.folding.expand.level.3", "3"));
+            expandToLevelChildren.add(MenuItemConfig.action("code.folding.expand.level.4", "4"));
+            expandToLevelChildren.add(MenuItemConfig.action("code.folding.expand.level.5", "5"));
+
+            List<MenuItemConfig> expandAllToLevelChildren = new ArrayList<>();
+            expandAllToLevelChildren.add(MenuItemConfig.action("code.folding.expand.all.level.1", "1"));
+            expandAllToLevelChildren.add(MenuItemConfig.action("code.folding.expand.all.level.2", "2"));
+            expandAllToLevelChildren.add(MenuItemConfig.action("code.folding.expand.all.level.3", "3"));
+            expandAllToLevelChildren.add(MenuItemConfig.action("code.folding.expand.all.level.4", "4"));
+            expandAllToLevelChildren.add(MenuItemConfig.action("code.folding.expand.all.level.5", "5"));
+
+            List<MenuItemConfig> langFoldingChildren = new ArrayList<>();
+            langFoldingChildren.add(MenuItemConfig.action("code.folding.expand.doc.comments", "Expand Doc Comments"));
+            langFoldingChildren.add(MenuItemConfig.action("code.folding.collapse.doc.comments", "Collapse Doc Comments"));
+
+            List<MenuItemConfig> foldingChildren = new ArrayList<>();
+            foldingChildren.add(MenuItemConfig.action("code.folding.expand", "Expand"));
+            foldingChildren.add(MenuItemConfig.action("code.folding.expand.recursively", "Expand Recursively"));
+            foldingChildren.add(MenuItemConfig.action("code.folding.expand.all", "Expand All"));
+            foldingChildren.add(MenuItemConfig.separator());
+            foldingChildren.add(MenuItemConfig.action("code.folding.collapse", "Collapse"));
+            foldingChildren.add(MenuItemConfig.action("code.folding.collapse.recursively", "Collapse Recursively"));
+            foldingChildren.add(MenuItemConfig.action("code.folding.collapse.all", "Collapse All"));
+            foldingChildren.add(MenuItemConfig.separator());
+            foldingChildren.add(MenuItemConfig.group("code.folding.expand.to.level.group", "Expand to Level", false, expandToLevelChildren));
+            foldingChildren.add(MenuItemConfig.group("code.folding.expand.all.to.level.group", "Expand All to Level", false, expandAllToLevelChildren));
+            foldingChildren.add(MenuItemConfig.separator());
+            foldingChildren.add(MenuItemConfig.group("code.folding.language.specific.group", "LanguageSpecificFoldingGroup", false, langFoldingChildren));
+            foldingChildren.add(MenuItemConfig.separator());
+            foldingChildren.add(MenuItemConfig.action("code.folding.toggle", "Toggle Folding"));
+            foldingChildren.add(MenuItemConfig.separator());
+            foldingChildren.add(MenuItemConfig.action("code.folding.fold.selection", "Fold Selection / Remove region"));
+            foldingChildren.add(MenuItemConfig.action("code.folding.fold.block", "Fold Code Block"));
+
+            // Image 3: Comment Actions
+            List<MenuItemConfig> commentActionsChildren = new ArrayList<>();
+            commentActionsChildren.add(MenuItemConfig.action("code.comment.line", "// Comment with Line Comment"));
+            commentActionsChildren.add(MenuItemConfig.action("code.comment.block", "Comment with Block Comment"));
+
+            // Image 3: Code Formatting Actions
+            List<MenuItemConfig> codeFormattingChildren = new ArrayList<>();
+            codeFormattingChildren.add(MenuItemConfig.action("code.reformat", "Reformat Code", "INDENT"));
+            codeFormattingChildren.add(MenuItemConfig.action("code.reformat.json", "Reformat JSON"));
+            codeFormattingChildren.add(MenuItemConfig.action("code.reformat.file", "Reformat File\u2026"));
+            codeFormattingChildren.add(MenuItemConfig.action("code.auto.indent", "Auto-Indent Lines"));
+            codeFormattingChildren.add(MenuItemConfig.action("code.optimize.imports", "Optimize Imports"));
+            codeFormattingChildren.add(MenuItemConfig.action("code.rearrange.code", "Rearrange Code"));
+
+            // Full Code Menu assembling Images 1-5
             List<MenuItemConfig> codeMenu = new ArrayList<>();
-            codeMenu.add(MenuItemConfig.action("code.reformat", "Reformat Code"));
-            codeMenu.add(MenuItemConfig.action("code.indent", "Auto-Indent Lines"));
-            codeMenu.add(MenuItemConfig.action("code.comment.line", "Comment with Line Comment"));
-            codeMenu.add(MenuItemConfig.action("code.comment.block", "Comment with Block Comment"));
-            mainMenuChildren.add(MenuItemConfig.group("menu.code", "Code", codeMenu));
+            codeMenu.add(MenuItemConfig.action("code.override.methods", "Override Methods\u2026"));
+            codeMenu.add(MenuItemConfig.action("code.implement.methods", "Implement Methods\u2026"));
+            codeMenu.add(MenuItemConfig.action("code.generate", "Generate\u2026"));
+            codeMenu.add(MenuItemConfig.separator());
+            codeMenu.add(MenuItemConfig.group("code.completion.group", "Code Completion", true, codeCompletionChildren));
+            codeMenu.add(MenuItemConfig.group("code.inspect.group", "InspectCodeInCodeMenuGroup", false, inspectCodeChildren));
+            codeMenu.add(MenuItemConfig.separator());
+            codeMenu.add(MenuItemConfig.action("code.insert.live.template", "Insert Live Template\u2026"));
+            codeMenu.add(MenuItemConfig.action("code.save.live.template", "Save as Live Template\u2026"));
+            codeMenu.add(MenuItemConfig.separator());
+            codeMenu.add(MenuItemConfig.action("code.surround.with", "Surround With\u2026"));
+            codeMenu.add(MenuItemConfig.action("code.unwrap.remove", "Unwrap/Remove\u2026"));
+            codeMenu.add(MenuItemConfig.separator());
+            codeMenu.add(MenuItemConfig.group("code.folding.group", "Folding", true, foldingChildren));
+            codeMenu.add(MenuItemConfig.separator());
+            codeMenu.add(MenuItemConfig.group("code.comment.actions.group", "Comment Actions", false, commentActionsChildren));
+            codeMenu.add(MenuItemConfig.group("code.formatting.actions.group", "Code Formatting Actions", false, codeFormattingChildren));
+            codeMenu.add(MenuItemConfig.separator());
+            codeMenu.add(MenuItemConfig.action("code.move.statement.down", "Move Statement Down"));
+            codeMenu.add(MenuItemConfig.action("code.move.statement.up", "Move Statement Up"));
+            codeMenu.add(MenuItemConfig.action("code.move.element.left", "Move Element Left"));
+            codeMenu.add(MenuItemConfig.action("code.move.element.right", "Move Element Right"));
+            codeMenu.add(MenuItemConfig.action("code.move.line.down", "Move Line Down"));
+            codeMenu.add(MenuItemConfig.action("code.move.line.up", "Move Line Up"));
+            codeMenu.add(MenuItemConfig.separator());
+            codeMenu.add(MenuItemConfig.separator());
+            mainMenuChildren.add(MenuItemConfig.group("menu.code", "Code", true, codeMenu));
 
-            // Refactor
+            // -------------------------------------------------------------
+            // Main Menu > Refactor (Exact match to DataGrip Images 4, 5)
+            // -------------------------------------------------------------
+            List<MenuItemConfig> refactorExtractIntroduceChildren = new ArrayList<>();
+            refactorExtractIntroduceChildren.add(MenuItemConfig.action("refactor.introduce.variable", "Introduce Variable\u2026"));
+            refactorExtractIntroduceChildren.add(MenuItemConfig.action("refactor.extract.routine", "Extract Routine\u2026"));
+            refactorExtractIntroduceChildren.add(MenuItemConfig.action("refactor.table.alias", "Table alias\u2026"));
+            refactorExtractIntroduceChildren.add(MenuItemConfig.action("refactor.introduce.constant", "Introduce Constant\u2026"));
+            refactorExtractIntroduceChildren.add(MenuItemConfig.action("refactor.introduce.field", "Introduce Field\u2026"));
+            refactorExtractIntroduceChildren.add(MenuItemConfig.action("refactor.introduce.parameter", "Introduce Parameter\u2026"));
+            refactorExtractIntroduceChildren.add(MenuItemConfig.separator());
+            refactorExtractIntroduceChildren.add(MenuItemConfig.action("refactor.introduce.parameter.object", "Introduce Parameter Object\u2026"));
+            refactorExtractIntroduceChildren.add(MenuItemConfig.separator());
+            refactorExtractIntroduceChildren.add(MenuItemConfig.action("refactor.extract.method", "Extract Method\u2026"));
+            refactorExtractIntroduceChildren.add(MenuItemConfig.separator());
+            refactorExtractIntroduceChildren.add(MenuItemConfig.action("refactor.extract.delegate", "Extract Delegate\u2026"));
+            refactorExtractIntroduceChildren.add(MenuItemConfig.action("refactor.include.file", "Include File\u2026"));
+            refactorExtractIntroduceChildren.add(MenuItemConfig.action("refactor.extract.interface", "Extract Interface\u2026"));
+            refactorExtractIntroduceChildren.add(MenuItemConfig.action("refactor.extract.superclass", "Extract Superclass\u2026"));
+            refactorExtractIntroduceChildren.add(MenuItemConfig.action("refactor.extract.module", "Extract Module\u2026"));
+            refactorExtractIntroduceChildren.add(MenuItemConfig.action("refactor.subquery.cte", "Subquery as CTE"));
+
             List<MenuItemConfig> refactorMenu = new ArrayList<>();
+            refactorMenu.add(MenuItemConfig.action("refactor.this", "Refactor This\u2026"));
             refactorMenu.add(MenuItemConfig.action("refactor.rename", "Rename\u2026"));
-            refactorMenu.add(MenuItemConfig.action("refactor.signature", "Change Signature\u2026"));
-            refactorMenu.add(MenuItemConfig.action("refactor.extract", "Extract/Introduce"));
-            mainMenuChildren.add(MenuItemConfig.group("menu.refactor", "Refactor", refactorMenu));
+            refactorMenu.add(MenuItemConfig.action("refactor.change.signature", "Change Signature\u2026"));
+            refactorMenu.add(MenuItemConfig.action("refactor.modify.object", "Modify Object\u2026"));
+            refactorMenu.add(MenuItemConfig.separator());
+            refactorMenu.add(MenuItemConfig.group("refactor.extract.introduce.group", "Extract/Introduce", true, refactorExtractIntroduceChildren));
+            refactorMenu.add(MenuItemConfig.action("refactor.inline", "Inline\u2026"));
+            refactorMenu.add(MenuItemConfig.separator());
+            refactorMenu.add(MenuItemConfig.action("refactor.move", "Move\u2026"));
+            refactorMenu.add(MenuItemConfig.action("refactor.copy", "Copy\u2026"));
+            refactorMenu.add(MenuItemConfig.action("refactor.safe.delete", "Safe Delete\u2026"));
+            refactorMenu.add(MenuItemConfig.separator());
+            refactorMenu.add(MenuItemConfig.action("refactor.pull.members.up", "Pull Members Up\u2026"));
+            refactorMenu.add(MenuItemConfig.action("refactor.push.members.down", "Push Members Down\u2026"));
+            refactorMenu.add(MenuItemConfig.action("refactor.invert.boolean", "Invert Boolean\u2026"));
+            mainMenuChildren.add(MenuItemConfig.group("menu.refactor", "Refactor", true, refactorMenu));
 
-            // Run
+            // Build (Image 4)
+            mainMenuChildren.add(MenuItemConfig.action("main.menu.build", "Build"));
+
+            // -------------------------------------------------------------
+            // Main Menu > Run (Exact match to DataGrip Images 1-4)
+            // -------------------------------------------------------------
+            // Image 2: Run/Debug (Group)
+            List<MenuItemConfig> runDebugChildren = new ArrayList<>();
+            runDebugChildren.add(MenuItemConfig.action("run.run", "Run", "PLAY"));
+            runDebugChildren.add(MenuItemConfig.action("run.debug", "Debug", "BUG"));
+            runDebugChildren.add(MenuItemConfig.action("run.coverage", "Run with Coverage", "SHIELD"));
+            runDebugChildren.add(MenuItemConfig.action("run.profiler", "Run with Profiler", "TACHOMETER"));
+
+            // Image 2: XDebugger.AttachGroup (Group)
+            List<MenuItemConfig> attachGroupChildren = new ArrayList<>();
+            attachGroupChildren.add(MenuItemConfig.action("run.attach.to.process", "Attach to Process\u2026", "RETWEET"));
+
+            // Image 3: Debugger Actions > Debugging Actions
+            // DebugReloadGroup
+            List<MenuItemConfig> debugReloadChildren = new ArrayList<>();
+            debugReloadChildren.add(MenuItemConfig.action("run.compile.reload.modified.files", "Compile and Reload Modified Files"));
+            debugReloadChildren.add(MenuItemConfig.action("run.update.running.app", "Update Running Application", "REFRESH"));
+
+            // StepOver.Ref
+            List<MenuItemConfig> stepOverChildren = new ArrayList<>();
+            stepOverChildren.add(MenuItemConfig.action("run.step.over", "Step Over", "STEP_FORWARD"));
+            stepOverChildren.add(MenuItemConfig.action("run.force.step.over", "Force Step Over", "STEP_FORWARD"));
+            stepOverChildren.add(MenuItemConfig.action("run.step.into", "Step Into", "ARROW_DOWN"));
+            stepOverChildren.add(MenuItemConfig.action("run.force.step.into", "Force Step Into", "ANGLE_DOUBLE_DOWN"));
+            stepOverChildren.add(MenuItemConfig.action("run.smart.step.into", "Smart Step Into", "ARROW_RIGHT"));
+            stepOverChildren.add(MenuItemConfig.action("run.step.out", "Step Out", "ARROW_UP"));
+            stepOverChildren.add(MenuItemConfig.action("run.run.to.cursor", "Run to Cursor", "CROSSHAIRS"));
+            stepOverChildren.add(MenuItemConfig.action("run.force.run.to.cursor", "Force Run to Cursor", "CROSSHAIRS"));
+            stepOverChildren.add(MenuItemConfig.action("run.reset.frame", "Reset Frame", "UNDO"));
+
+            // Pause.Ref
+            List<MenuItemConfig> pauseChildren = new ArrayList<>();
+            pauseChildren.add(MenuItemConfig.action("run.pause.program", "Pause Program", "PAUSE"));
+
+            // Resume.Ref
+            List<MenuItemConfig> resumeChildren = new ArrayList<>();
+            resumeChildren.add(MenuItemConfig.action("run.resume.program", "Resume Program", "FORWARD"));
+
+            // Debugging Actions group assembling the above
+            List<MenuItemConfig> debuggingActionsChildren = new ArrayList<>();
+            debuggingActionsChildren.add(MenuItemConfig.group("run.debug.reload.group", "DebugReloadGroup", false, debugReloadChildren));
+            debuggingActionsChildren.add(MenuItemConfig.separator());
+            debuggingActionsChildren.add(MenuItemConfig.group("run.step.over.ref", "StepOver.Ref", false, stepOverChildren));
+            debuggingActionsChildren.add(MenuItemConfig.group("run.pause.ref", "Pause.Ref", false, pauseChildren));
+            debuggingActionsChildren.add(MenuItemConfig.group("run.resume.ref", "Resume.Ref", false, resumeChildren));
+            debuggingActionsChildren.add(MenuItemConfig.separator());
+            debuggingActionsChildren.add(MenuItemConfig.action("run.evaluate.expression", "Evaluate Expression\u2026", "CALCULATOR"));
+            debuggingActionsChildren.add(MenuItemConfig.action("run.show.execution.point", "Show Execution Point", "CROSSHAIRS"));
+            debuggingActionsChildren.add(MenuItemConfig.separator());
+
+            // Image 3: Toggle Breakpoint group
+            List<MenuItemConfig> toggleBreakpointChildren = new ArrayList<>();
+            toggleBreakpointChildren.add(MenuItemConfig.action("run.restore.breakpoint", "Restore Breakpoint"));
+            toggleBreakpointChildren.add(MenuItemConfig.action("run.toggle.line.breakpoint", "Toggle Line Breakpoint"));
+            toggleBreakpointChildren.add(MenuItemConfig.action("run.toggle.temporary.line.breakpoint", "Toggle Temporary Line Breakpoint"));
+
+            // Debugger Actions group assembling Debugging Actions + Toggle Breakpoint + View Breakpoints...
+            List<MenuItemConfig> debuggerActionsChildren = new ArrayList<>();
+            debuggerActionsChildren.add(MenuItemConfig.separator());
+            debuggerActionsChildren.add(MenuItemConfig.group("run.debugging.actions.group", "Debugging Actions", false, debuggingActionsChildren));
+            debuggerActionsChildren.add(MenuItemConfig.group("run.toggle.breakpoint.group", "Toggle Breakpoint", false, toggleBreakpointChildren));
+            debuggerActionsChildren.add(MenuItemConfig.action("run.view.breakpoints", "View Breakpoints\u2026", "CIRCLE"));
+            debuggerActionsChildren.add(MenuItemConfig.separator());
+
+            // Image 4: RunTestGroup > SmRunTestGroup & CoveragePlatformMenu
+            List<MenuItemConfig> smRunTestChildren = new ArrayList<>();
+            smRunTestChildren.add(MenuItemConfig.separator());
+            smRunTestChildren.add(MenuItemConfig.action("run.test.history", "Test History", "HISTORY"));
+            smRunTestChildren.add(MenuItemConfig.action("run.import.tests.from.file", "Import Tests from File\u2026", "DOWNLOAD"));
+
+            List<MenuItemConfig> coverageMenuChildren = new ArrayList<>();
+            coverageMenuChildren.add(MenuItemConfig.action("run.manage.coverage.reports", "Manage Coverage Reports\u2026"));
+            coverageMenuChildren.add(MenuItemConfig.action("run.generate.coverage.report", "Generate Coverage Report\u2026", "SHARE_SQUARE"));
+            coverageMenuChildren.add(MenuItemConfig.action("run.hide.coverage", "Hide Coverage"));
+            coverageMenuChildren.add(MenuItemConfig.separator());
+
+            List<MenuItemConfig> coveragePlatformChildren = new ArrayList<>();
+            coveragePlatformChildren.add(MenuItemConfig.group("run.coverage.menu", "CoverageMenu", false, coverageMenuChildren));
+
+            List<MenuItemConfig> runTestGroupChildren = new ArrayList<>();
+            runTestGroupChildren.add(MenuItemConfig.group("run.sm.run.test.group", "SmRunTestGroup", false, smRunTestChildren));
+            runTestGroupChildren.add(MenuItemConfig.group("run.coverage.platform.menu", "CoveragePlatformMenu", false, coveragePlatformChildren));
+
+            // Image 2: ProfilerActions
+            List<MenuItemConfig> profilerActionsChildren = new ArrayList<>();
+            profilerActionsChildren.add(MenuItemConfig.action("run.attach.profiler.to.process", "Attach Profiler to Process\u2026"));
+            profilerActionsChildren.add(MenuItemConfig.action("run.open.profiler.snapshot", "Open Profiler Snapshot"));
+
+            // Full Run Menu assembling Images 1-4
             List<MenuItemConfig> runMenu = new ArrayList<>();
-            runMenu.add(MenuItemConfig.action("middle.run", "Execute"));
-            runMenu.add(MenuItemConfig.action("run.execute.query", "Execute Query\u2026"));
-            runMenu.add(MenuItemConfig.action("run.run", "Run\u2026"));
-            runMenu.add(MenuItemConfig.action("run.debug", "Debug\u2026"));
-            runMenu.add(MenuItemConfig.action("run.stop", "Stop"));
-            mainMenuChildren.add(MenuItemConfig.group("menu.run", "Run", runMenu));
+            runMenu.add(MenuItemConfig.group("run.run.debug.group", "Run/Debug", false, runDebugChildren));
+            runMenu.add(MenuItemConfig.separator());
+            runMenu.add(MenuItemConfig.action("run.run.ellipsis", "Run\u2026", "PLAY"));
+            runMenu.add(MenuItemConfig.action("run.debug.ellipsis", "Debug\u2026", "BUG"));
+            runMenu.add(MenuItemConfig.group("run.xdebugger.attach.group", "XDebugger.AttachGroup", false, attachGroupChildren));
+            runMenu.add(MenuItemConfig.action("run.edit.configurations", "Edit Configurations\u2026"));
+            runMenu.add(MenuItemConfig.action("run.manage.targets", "Manage Targets\u2026"));
+            runMenu.add(MenuItemConfig.separator());
+            runMenu.add(MenuItemConfig.action("run.stop", "Stop", "STOP"));
+            runMenu.add(MenuItemConfig.action("run.stop.background.processes", "Stop Background Processes\u2026"));
+            runMenu.add(MenuItemConfig.action("run.show.running.list", "Show Running List"));
+            runMenu.add(MenuItemConfig.group("run.debugger.actions.group", "Debugger Actions", false, debuggerActionsChildren));
+            runMenu.add(MenuItemConfig.group("run.test.group", "RunTestGroup", false, runTestGroupChildren));
+            runMenu.add(MenuItemConfig.group("run.profiler.actions.group", "ProfilerActions", false, profilerActionsChildren));
+            mainMenuChildren.add(MenuItemConfig.group("menu.run", "Run", true, runMenu));
 
-            // Git
+            // Tools Menu (Image 1)
+            List<MenuItemConfig> psiViewerChildren = new ArrayList<>();
+            psiViewerChildren.add(MenuItemConfig.separator());
+            psiViewerChildren.add(MenuItemConfig.action("tools.view.psi.structure", "View PSI Structure\u2026"));
+            psiViewerChildren.add(MenuItemConfig.action("tools.view.psi.structure.current.file", "View PSI Structure of Current File\u2026"));
+            psiViewerChildren.add(MenuItemConfig.separator());
+
+            List<MenuItemConfig> xmlActionsChildren = new ArrayList<>();
+            xmlActionsChildren.add(MenuItemConfig.action("tools.convert.schema", "Convert Schema\u2026"));
+
+            List<MenuItemConfig> toolsMarkdownChildren = new ArrayList<>();
+            toolsMarkdownChildren.add(MenuItemConfig.action("tools.markdown.import.word", "Import Word Document\u2026"));
+            toolsMarkdownChildren.add(MenuItemConfig.action("tools.markdown.export.file.to", "Export Markdown File To\u2026"));
+            toolsMarkdownChildren.add(MenuItemConfig.action("tools.markdown.configure.pandoc", "Configure Pandoc\u2026"));
+
+            List<MenuItemConfig> toolsMenu = new ArrayList<>();
+            toolsMenu.add(MenuItemConfig.group("tools.psi.viewer.actions", "Dev.PsiViewerActions", false, psiViewerChildren));
+            toolsMenu.add(MenuItemConfig.group("tools.basic.group", "Tools Basic Group", false, List.of()));
+            toolsMenu.add(MenuItemConfig.action("tools.create.command.line.launcher", "Create Command Line Launcher\u2026"));
+            toolsMenu.add(MenuItemConfig.action("tools.create.desktop.entry", "Create Desktop Entry\u2026"));
+            toolsMenu.add(MenuItemConfig.separator());
+            toolsMenu.add(MenuItemConfig.group("tools.other.menu", "OtherMenu", false, List.of()));
+            toolsMenu.add(MenuItemConfig.action("tools.services", "Services"));
+            toolsMenu.add(MenuItemConfig.group("tools.xml.actions", "XML Actions", true, xmlActionsChildren));
+            toolsMenu.add(MenuItemConfig.group("tools.markdown", "Markdown", true, toolsMarkdownChildren));
+            toolsMenu.add(MenuItemConfig.group("tools.external.tools", "External Tools", true, List.of()));
+            mainMenuChildren.add(MenuItemConfig.group("menu.tools", "Tools", true, toolsMenu));
+
+            // Git Menu (Images 2-5)
+            // Image 4: Git.FileActions
+            List<MenuItemConfig> gitFileActionsChildren = new ArrayList<>();
+            gitFileActionsChildren.add(MenuItemConfig.action("git.commit.file", "Commit File"));
+            gitFileActionsChildren.add(MenuItemConfig.action("git.add", "Add", "PLUS"));
+            gitFileActionsChildren.add(MenuItemConfig.action("git.add.to.gitignore", "Add to .gitignore", "BAN"));
+            gitFileActionsChildren.add(MenuItemConfig.separator());
+            gitFileActionsChildren.add(MenuItemConfig.action("git.annotate", "Annotate"));
+            gitFileActionsChildren.add(MenuItemConfig.action("git.compare.same.version", "Compare with Same Repository Version", "COMPARE"));
+            gitFileActionsChildren.add(MenuItemConfig.action("git.compare.with.revision", "Compare with Revision\u2026"));
+            gitFileActionsChildren.add(MenuItemConfig.action("git.compare.with.branch", "Compare with Branch or Tag\u2026"));
+            gitFileActionsChildren.add(MenuItemConfig.action("git.show.history", "Show History", "HISTORY"));
+            gitFileActionsChildren.add(MenuItemConfig.action("git.show.history.for.selection", "Show History for Selection\u2026"));
+
+            // Image 5: GitRepositoryActions
+            List<MenuItemConfig> mergeGroupChildren = new ArrayList<>();
+            mergeGroupChildren.add(MenuItemConfig.action("git.abort.merge", "Abort Merge"));
+
+            List<MenuItemConfig> rebaseGroupChildren = new ArrayList<>();
+            rebaseGroupChildren.add(MenuItemConfig.action("git.abort.rebase", "Abort Rebase"));
+            rebaseGroupChildren.add(MenuItemConfig.action("git.continue.rebase", "Continue Rebase"));
+            rebaseGroupChildren.add(MenuItemConfig.action("git.skip.commit", "Skip Commit"));
+
+            List<MenuItemConfig> gitRepoActionsChildren = new ArrayList<>();
+            gitRepoActionsChildren.add(MenuItemConfig.action("git.push", "Push\u2026", "UPLOAD"));
+            gitRepoActionsChildren.add(MenuItemConfig.action("git.pull", "Pull\u2026"));
+            gitRepoActionsChildren.add(MenuItemConfig.action("git.fetch", "Fetch", "DOWNLOAD"));
+            gitRepoActionsChildren.add(MenuItemConfig.separator());
+            gitRepoActionsChildren.add(MenuItemConfig.action("git.merge", "Merge\u2026", "BRANCHES"));
+            gitRepoActionsChildren.add(MenuItemConfig.group("git.merge.group", "Merge", true, mergeGroupChildren));
+            gitRepoActionsChildren.add(MenuItemConfig.action("git.rebase", "Rebase\u2026"));
+            gitRepoActionsChildren.add(MenuItemConfig.group("git.rebase.group", "Rebase", true, rebaseGroupChildren));
+            gitRepoActionsChildren.add(MenuItemConfig.separator());
+            gitRepoActionsChildren.add(MenuItemConfig.action("git.branches", "Branches\u2026", "BRANCHES"));
+            gitRepoActionsChildren.add(MenuItemConfig.action("git.new.branch", "New Branch\u2026", "PLUS"));
+            gitRepoActionsChildren.add(MenuItemConfig.action("git.new.tag", "New Tag\u2026"));
+            gitRepoActionsChildren.add(MenuItemConfig.action("git.reset.head", "Reset HEAD\u2026"));
+            gitRepoActionsChildren.add(MenuItemConfig.separator());
+            gitRepoActionsChildren.add(MenuItemConfig.action("git.stash.changes", "Stash Changes\u2026"));
+            gitRepoActionsChildren.add(MenuItemConfig.action("git.unstash.changes", "Unstash Changes\u2026"));
+            gitRepoActionsChildren.add(MenuItemConfig.separator());
+            gitRepoActionsChildren.add(MenuItemConfig.action("git.manage.remotes", "Manage Remotes\u2026"));
+            gitRepoActionsChildren.add(MenuItemConfig.action("git.clone", "Clone\u2026"));
+            gitRepoActionsChildren.add(MenuItemConfig.separator());
+            gitRepoActionsChildren.add(MenuItemConfig.action("git.abort.revert", "Abort Revert"));
+            gitRepoActionsChildren.add(MenuItemConfig.action("git.abort.cherry.pick", "Abort Cherry-Pick"));
+
+            // Image 3: Git group inside VCS Group
+            List<MenuItemConfig> vcsGitGroupChildren = new ArrayList<>();
+            vcsGitGroupChildren.add(MenuItemConfig.group("git.file.actions", "Git.FileActions", false, gitFileActionsChildren));
+            vcsGitGroupChildren.add(MenuItemConfig.separator());
+            vcsGitGroupChildren.add(MenuItemConfig.action("git.rollback", "Rollback\u2026", "UNDO"));
+            vcsGitGroupChildren.add(MenuItemConfig.separator());
+            vcsGitGroupChildren.add(MenuItemConfig.group("git.repository.actions", "GitRepositoryActions", false, gitRepoActionsChildren));
+            vcsGitGroupChildren.add(MenuItemConfig.separator());
+            vcsGitGroupChildren.add(MenuItemConfig.action("git.create.patch", "Create Patch from Local Changes\u2026", "PLUS"));
+            vcsGitGroupChildren.add(MenuItemConfig.action("git.apply.patch", "Apply Patch\u2026"));
+            vcsGitGroupChildren.add(MenuItemConfig.action("git.apply.patch.from.clipboard", "Apply Patch from Clipboard\u2026"));
+            vcsGitGroupChildren.add(MenuItemConfig.action("git.shelve.changes", "Shelve Changes\u2026", "SAVE"));
+
+            // Image 3: VCS Group
+            List<MenuItemConfig> vcsGroupChildren = new ArrayList<>();
+            vcsGroupChildren.add(MenuItemConfig.action("vcs.operations.popup", "VCS Operations Popup\u2026"));
+            vcsGroupChildren.add(MenuItemConfig.action("vcs.commit", "Commit\u2026", "CHECK_CIRCLE"));
+            vcsGroupChildren.add(MenuItemConfig.action("vcs.toggle.commit.ui", "Toggle Commit UI\u2026"));
+            vcsGroupChildren.add(MenuItemConfig.action("vcs.update.project", "Update Project", "DOWNLOAD"));
+            vcsGroupChildren.add(MenuItemConfig.action("vcs.integrate.project", "Integrate Project"));
+            vcsGroupChildren.add(MenuItemConfig.action("vcs.refresh", "Refresh", "REFRESH"));
+            vcsGroupChildren.add(MenuItemConfig.action("vcs.show.local.changes.uml", "Show Local Changes as UML", "DIAGRAM"));
+            vcsGroupChildren.add(MenuItemConfig.separator());
+            vcsGroupChildren.add(MenuItemConfig.group("vcs.specific", "Vcs.Specific", false, List.of()));
+            vcsGroupChildren.add(MenuItemConfig.group("vcs.git.group", "Git", false, vcsGitGroupChildren));
+
+            // Image 1: Browse VCS Repository and Import into Version Control
+            List<MenuItemConfig> browseVcsRepoChildren = new ArrayList<>();
+            browseVcsRepoChildren.add(MenuItemConfig.action("vcs.browse.git.log", "Show Git Repository Log\u2026"));
+
+            List<MenuItemConfig> importVcsChildren = new ArrayList<>();
+            importVcsChildren.add(MenuItemConfig.action("vcs.create.git.repository", "Create Git Repository\u2026"));
+
+            // Image 2: Vcs.MainMenu
+            List<MenuItemConfig> vcsMainMenuChildren = new ArrayList<>();
+            vcsMainMenuChildren.add(MenuItemConfig.action("vcs.enable.integration", "Enable Version Control Integration\u2026"));
+            vcsMainMenuChildren.add(MenuItemConfig.separator());
+            vcsMainMenuChildren.add(MenuItemConfig.group("vcs.group", "VCS Group", false, vcsGroupChildren));
+            vcsMainMenuChildren.add(MenuItemConfig.separator());
+            vcsMainMenuChildren.add(MenuItemConfig.action("vcs.get.from.vcs", "Get from Version Control\u2026"));
+            vcsMainMenuChildren.add(MenuItemConfig.group("vcs.browse.repository", "Browse VCS Repository", true, browseVcsRepoChildren));
+            vcsMainMenuChildren.add(MenuItemConfig.separator());
+            vcsMainMenuChildren.add(MenuItemConfig.group("vcs.import.into.vcs", "Import into Version Control", true, importVcsChildren));
+
+            // Git.MainMenu (Images 1-4)
+            // Image 3: Patch group under Git.MainMenu
+            List<MenuItemConfig> patchGroupChildren = new ArrayList<>();
+            patchGroupChildren.add(MenuItemConfig.action("git.create.patch", "Create Patch from Local Changes\u2026", "PLUS"));
+            patchGroupChildren.add(MenuItemConfig.action("git.apply.patch", "Apply Patch\u2026"));
+            patchGroupChildren.add(MenuItemConfig.action("git.apply.patch.from.clipboard", "Apply Patch from Clipboard\u2026"));
+
+            // Image 4: Uncommitted Changes group under Git.MainMenu
+            List<MenuItemConfig> umlDiffChildren = new ArrayList<>();
+            umlDiffChildren.add(MenuItemConfig.action("vcs.show.local.changes.uml", "Show Local Changes as UML", "DIAGRAM"));
+
+            List<MenuItemConfig> uncommittedChangesChildren = new ArrayList<>();
+            uncommittedChangesChildren.add(MenuItemConfig.action("git.shelve.changes", "Shelve Changes\u2026", "SAVE"));
+            uncommittedChangesChildren.add(MenuItemConfig.action("git.show.shelf", "Show Shelf"));
+            uncommittedChangesChildren.add(MenuItemConfig.action("git.show.git.stash", "Show Git Stash"));
+            uncommittedChangesChildren.add(MenuItemConfig.action("git.stash.changes", "Stash Changes\u2026"));
+            uncommittedChangesChildren.add(MenuItemConfig.action("git.unstash.changes", "Unstash Changes\u2026"));
+            uncommittedChangesChildren.add(MenuItemConfig.action("git.rollback", "Rollback\u2026", "UNDO"));
+            uncommittedChangesChildren.add(MenuItemConfig.group("vcs.uml.diff", "Vcs.UmlDiff", false, umlDiffChildren));
+
+            // Image 4: Git.MainMenu.FileActions > Git.FileActions
+            List<MenuItemConfig> gitMainMenuFileActionsChildren = new ArrayList<>();
+            gitMainMenuFileActionsChildren.add(MenuItemConfig.group("git.file.actions.ref", "Git.FileActions", false, gitFileActionsChildren));
+
+            // Merge & Rebase popup groups for Git.MainMenu
+            List<MenuItemConfig> gitMainMergeChildren = new ArrayList<>();
+            gitMainMergeChildren.add(MenuItemConfig.action("git.abort.merge", "Abort Merge"));
+
+            List<MenuItemConfig> gitMainRebaseChildren = new ArrayList<>();
+            gitMainRebaseChildren.add(MenuItemConfig.action("git.abort.rebase", "Abort Rebase"));
+            gitMainRebaseChildren.add(MenuItemConfig.action("git.continue.rebase", "Continue Rebase"));
+            gitMainRebaseChildren.add(MenuItemConfig.action("git.skip.commit", "Skip Commit"));
+
+            List<MenuItemConfig> gitMainMenuChildren = new ArrayList<>();
+            gitMainMenuChildren.add(MenuItemConfig.action("git.main.commit", "Commit\u2026", "CHECK_CIRCLE"));
+            gitMainMenuChildren.add(MenuItemConfig.action("git.main.toggle.commit.ui", "Commit\u2026", "CHECK_CIRCLE"));
+            gitMainMenuChildren.add(MenuItemConfig.action("git.push", "Push\u2026", "UPLOAD"));
+            gitMainMenuChildren.add(MenuItemConfig.action("vcs.update.project", "Update Project", "DOWNLOAD"));
+            gitMainMenuChildren.add(MenuItemConfig.action("git.pull", "Pull\u2026"));
+            gitMainMenuChildren.add(MenuItemConfig.action("git.fetch", "Fetch", "DOWNLOAD"));
+            gitMainMenuChildren.add(MenuItemConfig.action("git.unshallow", "Unshallow repository"));
+            gitMainMenuChildren.add(MenuItemConfig.separator());
+            gitMainMenuChildren.add(MenuItemConfig.action("git.merge", "Merge\u2026", "BRANCHES"));
+            gitMainMenuChildren.add(MenuItemConfig.group("git.main.merge.group", "Merge", true, gitMainMergeChildren));
+            gitMainMenuChildren.add(MenuItemConfig.action("git.rebase", "Rebase\u2026"));
+            gitMainMenuChildren.add(MenuItemConfig.group("git.main.rebase.group", "Rebase", true, gitMainRebaseChildren));
+            gitMainMenuChildren.add(MenuItemConfig.action("git.resolve.conflicts", "Resolve Conflicts\u2026"));
+            gitMainMenuChildren.add(MenuItemConfig.action("git.revert.resolved", "Revert Resolved", "UNDO"));
+            gitMainMenuChildren.add(MenuItemConfig.separator());
+            gitMainMenuChildren.add(MenuItemConfig.action("git.branches", "Branches\u2026", "BRANCHES"));
+            gitMainMenuChildren.add(MenuItemConfig.action("git.new.branch", "New Branch\u2026", "PLUS"));
+            gitMainMenuChildren.add(MenuItemConfig.action("git.new.tag", "New Tag\u2026"));
+            gitMainMenuChildren.add(MenuItemConfig.action("git.reset.head", "Reset HEAD\u2026"));
+            gitMainMenuChildren.add(MenuItemConfig.separator());
+            gitMainMenuChildren.add(MenuItemConfig.action("git.show.vcs.log", "Show VCS Log", "BRANCHES"));
+            gitMainMenuChildren.add(MenuItemConfig.group("git.patch.group", "Patch", true, patchGroupChildren));
+            gitMainMenuChildren.add(MenuItemConfig.group("git.uncommitted.changes.group", "Uncommitted Changes", true, uncommittedChangesChildren));
+            gitMainMenuChildren.add(MenuItemConfig.group("git.main.menu.file.actions", "Git.MainMenu.FileActions", false, gitMainMenuFileActionsChildren));
+            gitMainMenuChildren.add(MenuItemConfig.separator());
+            gitMainMenuChildren.add(MenuItemConfig.action("git.manage.remotes", "Manage Remotes\u2026"));
+            gitMainMenuChildren.add(MenuItemConfig.action("git.clone", "Clone\u2026"));
+            gitMainMenuChildren.add(MenuItemConfig.separator());
+            gitMainMenuChildren.add(MenuItemConfig.action("vcs.operations.popup", "VCS Operations Popup\u2026"));
+            gitMainMenuChildren.add(MenuItemConfig.separator());
+            gitMainMenuChildren.add(MenuItemConfig.action("git.abort.revert", "Abort Revert"));
+            gitMainMenuChildren.add(MenuItemConfig.action("git.abort.cherry.pick", "Abort Cherry-Pick"));
+
+            // Git top-level menu assembling Images 1-4
             List<MenuItemConfig> gitMenu = new ArrayList<>();
-            gitMenu.add(MenuItemConfig.action("vcs.commit", "Commit\u2026"));
-            gitMenu.add(MenuItemConfig.action("vcs.push", "Push\u2026"));
-            gitMenu.add(MenuItemConfig.action("vcs.update", "Update Project\u2026"));
-            gitMenu.add(MenuItemConfig.action("vcs.pull", "Pull\u2026"));
-            gitMenu.add(MenuItemConfig.action("vcs.branches", "Branches\u2026"));
-            gitMenu.add(MenuItemConfig.action("vcs.merge", "Merge\u2026"));
-            mainMenuChildren.add(MenuItemConfig.group("menu.vcs", "Git", gitMenu));
+            gitMenu.add(MenuItemConfig.group("vcs.main.menu", "Vcs.MainMenu", false, vcsMainMenuChildren));
+            gitMenu.add(MenuItemConfig.group("git.main.menu", "Git.MainMenu", false, gitMainMenuChildren));
+            mainMenuChildren.add(MenuItemConfig.group("menu.vcs", "Git", true, gitMenu));
 
             // Window
             List<MenuItemConfig> winMenu = new ArrayList<>();
@@ -1740,6 +2256,24 @@ public final class AppSettingsStore {
                         MenuItemConfig viewMenu = root.getChildren().stream()
                                 .filter(c -> "menu.view".equalsIgnoreCase(c.getId()) || "View".equalsIgnoreCase(c.getText()))
                                 .findFirst().orElse(null);
+                        MenuItemConfig navMenu = root.getChildren().stream()
+                                .filter(c -> "menu.navigate".equalsIgnoreCase(c.getId()) || "Navigate".equalsIgnoreCase(c.getText()))
+                                .findFirst().orElse(null);
+                        MenuItemConfig codeMenu = root.getChildren().stream()
+                                .filter(c -> "menu.code".equalsIgnoreCase(c.getId()) || "Code".equalsIgnoreCase(c.getText()))
+                                .findFirst().orElse(null);
+                        MenuItemConfig refactorMenu = root.getChildren().stream()
+                                .filter(c -> "menu.refactor".equalsIgnoreCase(c.getId()) || "Refactor".equalsIgnoreCase(c.getText()))
+                                .findFirst().orElse(null);
+                        MenuItemConfig runMenu = root.getChildren().stream()
+                                .filter(c -> "menu.run".equalsIgnoreCase(c.getId()) || "Run".equalsIgnoreCase(c.getText()))
+                                .findFirst().orElse(null);
+                        MenuItemConfig toolsMenu = root.getChildren().stream()
+                                .filter(c -> "menu.tools".equalsIgnoreCase(c.getId()) || "Tools".equalsIgnoreCase(c.getText()))
+                                .findFirst().orElse(null);
+                        MenuItemConfig vcsMenu = root.getChildren().stream()
+                                .filter(c -> "menu.vcs".equalsIgnoreCase(c.getId()) || "Git".equalsIgnoreCase(c.getText()) || "VCS".equalsIgnoreCase(c.getText()))
+                                .findFirst().orElse(null);
 
                         boolean needsMigration = false;
                         if (fileMenu != null && fileMenu.getChildren().stream().noneMatch(c -> "file.open.actions".equalsIgnoreCase(c.getId()))) {
@@ -1750,6 +2284,43 @@ public final class AppSettingsStore {
                         }
                         if (viewMenu != null && viewMenu.getChildren().stream().noneMatch(c -> "view.recent.actions.group".equalsIgnoreCase(c.getId()))) {
                             needsMigration = true;
+                        }
+                        if (navMenu != null && navMenu.getChildren().stream().noneMatch(c -> "nav.goto.by.name.group".equalsIgnoreCase(c.getId()))) {
+                            needsMigration = true;
+                        }
+                        if (codeMenu != null) {
+                            boolean hasExpandedInspect = codeMenu.getChildren().stream()
+                                    .filter(c -> "code.inspect.group".equalsIgnoreCase(c.getId()))
+                                    .anyMatch(g -> !g.getChildren().isEmpty());
+                            boolean hasExpandedFormatting = codeMenu.getChildren().stream()
+                                    .filter(c -> "code.formatting.actions.group".equalsIgnoreCase(c.getId()))
+                                    .anyMatch(g -> !g.getChildren().isEmpty());
+                            if (!hasExpandedInspect || !hasExpandedFormatting) {
+                                needsMigration = true;
+                            }
+                        }
+                        if (refactorMenu != null && refactorMenu.getChildren().stream().noneMatch(c -> "refactor.this".equalsIgnoreCase(c.getId()))) {
+                            needsMigration = true;
+                        }
+                        if (runMenu != null && runMenu.getChildren().stream().noneMatch(c -> "run.run.debug.group".equalsIgnoreCase(c.getId()))) {
+                            needsMigration = true;
+                        }
+                        if (!root.getChildren().isEmpty()) {
+                            if (fileMenu != null && toolsMenu == null) {
+                                needsMigration = true;
+                            }
+                            if (toolsMenu != null && toolsMenu.getChildren().stream().noneMatch(c -> "tools.psi.viewer.actions".equalsIgnoreCase(c.getId()))) {
+                                needsMigration = true;
+                            }
+                            if (vcsMenu != null) {
+                                boolean hasVcsMain = vcsMenu.getChildren().stream().anyMatch(c -> "vcs.main.menu".equalsIgnoreCase(c.getId()));
+                                boolean hasExpandedGitMain = vcsMenu.getChildren().stream()
+                                        .filter(c -> "git.main.menu".equalsIgnoreCase(c.getId()))
+                                        .anyMatch(g -> !g.getChildren().isEmpty());
+                                if (!hasVcsMain || !hasExpandedGitMain) {
+                                    needsMigration = true;
+                                }
+                            }
                         }
                         if (needsMigration) {
                             for (MenuItemConfig defRoot : defaultMenusAndToolbars()) {
