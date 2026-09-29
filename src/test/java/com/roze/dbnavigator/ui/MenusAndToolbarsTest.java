@@ -476,6 +476,49 @@ public class MenusAndToolbarsTest {
         assertTrue(gutterItems.contains("Remove other breakpoints"));
         assertTrue(gutterItems.contains("Disable other breakpoints"));
 
+        // Gutter VCS
+        MenuItemConfig gutterVcs = gutter.getChildren().stream()
+                .filter(c -> "EditorGutterVcsPopupMenu".equals(c.getText())).findFirst().orElse(null);
+        assertNotNull(gutterVcs);
+        assertFalse(gutterVcs.isPopup());
+        List<String> vcsActions = gutterVcs.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(vcsActions.contains("Annotate"));
+
+        // Gutter Bookmarks
+        MenuItemConfig gutterBm = gutter.getChildren().stream()
+                .filter(c -> "popup@BookmarkContextMenu".equals(c.getText())).findFirst().orElse(null);
+        assertNotNull(gutterBm);
+        assertFalse(gutterBm.isPopup());
+        List<String> bmActions = gutterBm.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(bmActions.contains("Add Bookmark to Another List"));
+        assertTrue(bmActions.contains("Rename Bookmark\u2026"));
+        assertTrue(bmActions.contains("Toggle Bookmark"));
+        assertTrue(bmActions.contains("Remove Mnemonic"));
+        assertTrue(bmActions.contains("Toggle Bookmark Mnemonic\u2026"));
+
+        // Gutter Appearance & Breadcrumbs
+        MenuItemConfig appearance = gutter.getChildren().stream()
+                .filter(c -> "Appearance".equals(c.getText())).findFirst().orElse(null);
+        assertNotNull(appearance);
+        assertTrue(appearance.isPopup());
+        List<String> appActions = appearance.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(appActions.contains("Show Line Numbers"));
+        assertTrue(appActions.contains("Breakpoints Over Line Numbers"));
+        assertTrue(appActions.contains("Show Indent Guides"));
+        assertTrue(appActions.contains("Show Sticky Lines"));
+        assertTrue(appActions.contains("Breadcrumbs"));
+        assertTrue(appActions.contains("Configure Gutter Icons\u2026"));
+
+        MenuItemConfig breadcrumbs = appearance.getChildren().stream()
+                .filter(c -> "Breadcrumbs".equals(c.getText())).findFirst().orElse(null);
+        assertNotNull(breadcrumbs);
+        assertTrue(breadcrumbs.isPopup());
+        List<String> bcActions = breadcrumbs.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(bcActions.contains("Top"));
+        assertTrue(bcActions.contains("Bottom"));
+        assertTrue(bcActions.contains("Don't Show"));
+
+        // Tab Popup Menu
         MenuItemConfig tabPopup = settings.getMenuConfig("root.editor.tab.popup");
         assertNotNull(tabPopup);
         List<String> tabItems = tabPopup.getChildren().stream().map(MenuItemConfig::getText).toList();
@@ -484,15 +527,197 @@ public class MenusAndToolbarsTest {
         assertTrue(tabItems.contains("Copy Reference"));
         assertTrue(tabItems.contains("Copy JSON Pointer"));
         assertTrue(tabItems.contains("Change Template Data Language"));
+        assertTrue(tabItems.contains("Copy Path/Reference\u2026"));
+        assertTrue(tabItems.contains("Show Diff in Separate Window"));
+        assertTrue(tabItems.contains("Show All Files in One Diff View"));
         assertTrue(tabItems.contains("Vcs.Diff.EditorTabs.Group"));
         assertTrue(tabItems.contains("Split Right"));
+        assertTrue(tabItems.contains("Split and Move Right"));
         assertTrue(tabItems.contains("Split Down"));
+        assertTrue(tabItems.contains("Split and Move Down"));
+        assertTrue(tabItems.contains("Move to Opposite Group"));
+        assertTrue(tabItems.contains("Open in Opposite Group"));
+        assertTrue(tabItems.contains("Change Splitter Orientation"));
+        assertTrue(tabItems.contains("Unsplit"));
+        assertTrue(tabItems.contains("Unsplit All"));
         assertTrue(tabItems.contains("Pin Active Tab"));
         assertTrue(tabItems.contains("Keep Tab Open"));
         assertTrue(tabItems.contains("Open Tab in New Window"));
         assertTrue(tabItems.contains("Configure Editor Tabs\u2026"));
         assertTrue(tabItems.contains("Reopen Closed Tab"));
+        assertTrue(tabItems.contains("Database.EditorTabPopupMenu"));
         assertTrue(tabItems.contains("Bookmarks"));
+        assertTrue(tabItems.contains("Editor Tab Popup Menu Actions (1)"));
+
+        // Editor Close Actions
+        MenuItemConfig closeActions = tabPopup.getChildren().stream()
+                .filter(c -> "Editor Close Actions".equals(c.getText())).findFirst().orElse(null);
+        assertNotNull(closeActions);
+        assertFalse(closeActions.isPopup());
+        List<String> closeItems = closeActions.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(closeItems.contains("Close Tab"));
+        assertTrue(closeItems.contains("Close Other Tabs"));
+        assertTrue(closeItems.contains("Close All Tabs"));
+        assertTrue(closeItems.contains("Close Unmodified Tabs"));
+        assertTrue(closeItems.contains("Close All but Pinned"));
+        assertTrue(closeItems.contains("Close Tabs to the Left"));
+        assertTrue(closeItems.contains("Close Tabs to the Right"));
+        assertTrue(closeItems.contains("Close All Read-Only Tabs"));
+        assertTrue(closeItems.contains("Open as Editor Tab"));
+
+        // Copy Path/Reference...
+        MenuItemConfig copyPathRef = tabPopup.getChildren().stream()
+                .filter(c -> "Copy Path/Reference\u2026".equals(c.getText())).findFirst().orElse(null);
+        assertNotNull(copyPathRef);
+        assertTrue(copyPathRef.isPopup());
+        MenuItemConfig copyFileRef = copyPathRef.getChildren().stream()
+                .filter(c -> "CopyFileReference".equals(c.getText())).findFirst().orElse(null);
+        assertNotNull(copyFileRef);
+        List<String> fileRefActions = copyFileRef.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(fileRefActions.contains("Absolute Path"));
+        assertTrue(fileRefActions.contains("File Name"));
+        assertTrue(fileRefActions.contains("Path with Line Number"));
+        assertTrue(fileRefActions.contains("Path from Content Root"));
+        assertTrue(fileRefActions.contains("Path from Source Root"));
+        assertTrue(fileRefActions.contains("Path From Repository Root"));
+        assertTrue(fileRefActions.contains("Git.Hosting.Copy.Link.Group"));
+
+        MenuItemConfig copyExtRef = copyPathRef.getChildren().stream()
+                .filter(c -> "CopyExternalReferenceGroup".equals(c.getText())).findFirst().orElse(null);
+        assertNotNull(copyExtRef);
+        assertTrue(copyExtRef.getChildren().stream().anyMatch(c -> "Toolbox URL".equals(c.getText())));
+
+        // Database.EditorTabPopupMenu & Bookmarks
+        MenuItemConfig dbTabPopup = tabPopup.getChildren().stream()
+                .filter(c -> "Database.EditorTabPopupMenu".equals(c.getText())).findFirst().orElse(null);
+        assertNotNull(dbTabPopup);
+        assertTrue(dbTabPopup.getChildren().stream().anyMatch(c -> "Shorten Tab Titles".equals(c.getText())));
+
+        MenuItemConfig tabBm = tabPopup.getChildren().stream()
+                .filter(c -> "Bookmarks".equals(c.getText())).findFirst().orElse(null);
+        assertNotNull(tabBm);
+        List<String> tabBmActions = tabBm.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(tabBmActions.contains("Add Bookmark to Another List"));
+        assertTrue(tabBmActions.contains("Rename Bookmark\u2026"));
+        assertTrue(tabBmActions.contains("Toggle Bookmark"));
+
+        // Editor Tab Popup Menu Actions (1)
+        MenuItemConfig tabActions1 = tabPopup.getChildren().stream()
+                .filter(c -> "Editor Tab Popup Menu Actions (1)".equals(c.getText())).findFirst().orElse(null);
+        assertNotNull(tabActions1);
+        List<String> a1Items = tabActions1.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(a1Items.contains("Change File Language"));
+        assertTrue(a1Items.contains("Associate with File Type\u2026"));
+        assertTrue(a1Items.contains("Mark File As"));
+        assertTrue(a1Items.contains("Run Configurations"));
+
+        MenuItemConfig markFileAs = tabActions1.getChildren().stream()
+                .filter(c -> "Mark File As".equals(c.getText())).findFirst().orElse(null);
+        assertNotNull(markFileAs);
+        assertTrue(markFileAs.isPopup());
+        List<String> markActions = markFileAs.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(markActions.contains("Override File Type"));
+        assertTrue(markActions.contains("Revert File Type Override"));
+
+        MenuItemConfig runConfigs = tabActions1.getChildren().stream()
+                .filter(c -> "Run Configurations".equals(c.getText())).findFirst().orElse(null);
+        assertNotNull(runConfigs);
+        MenuItemConfig runContext = runConfigs.getChildren().stream()
+                .filter(c -> "RunContextGroup".equals(c.getText())).findFirst().orElse(null);
+        assertNotNull(runContext);
+        MenuItemConfig runContextInner = runContext.getChildren().stream()
+                .filter(c -> "RunContextGroupInner".equals(c.getText())).findFirst().orElse(null);
+        assertNotNull(runContextInner);
+        MenuItemConfig executors = runContextInner.getChildren().stream()
+                .filter(c -> "RunContextExecutorsGroup".equals(c.getText())).findFirst().orElse(null);
+        assertNotNull(executors);
+        List<String> execActions = executors.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(execActions.contains("Run context configuration"));
+        assertTrue(execActions.contains("Debug context configuration"));
+
+        MenuItemConfig moreRunDebug = runContextInner.getChildren().stream()
+                .filter(c -> "More Run/Debug".equals(c.getText())).findFirst().orElse(null);
+        assertNotNull(moreRunDebug);
+        List<String> moreActions = moreRunDebug.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(moreActions.contains("Run with Coverage context configuration"));
+        assertTrue(moreActions.contains("Run with Profiler"));
+        assertTrue(moreActions.contains("Create Run Configuration"));
+        assertTrue(moreActions.contains("Modify Run Configuration\u2026"));
+
+        MenuItemConfig consoleJdbc = runContext.getChildren().stream()
+                .filter(c -> "Console.Jdbc.RunContextGroup".equals(c.getText())).findFirst().orElse(null);
+        assertNotNull(consoleJdbc);
+        List<String> jdbcActions = consoleJdbc.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(jdbcActions.contains("Attach Data Source"));
+        assertTrue(jdbcActions.contains("Recompile\u2026"));
+        assertTrue(jdbcActions.contains("Explain Plan"));
+        assertTrue(jdbcActions.contains("Execute"));
+        assertTrue(jdbcActions.contains("Execute Selection as Single Statement"));
+        assertTrue(jdbcActions.contains("Export Data\u2026"));
+        assertTrue(jdbcActions.contains("Debug"));
+        assertTrue(jdbcActions.contains("Debug Routine\u2026"));
+        assertTrue(jdbcActions.contains("Migrate Query Consoles to Query Files\u2026"));
+
+        MenuItemConfig explainPlan = consoleJdbc.getChildren().stream()
+                .filter(c -> "Explain Plan".equals(c.getText())).findFirst().orElse(null);
+        assertNotNull(explainPlan);
+        assertTrue(explainPlan.isPopup());
+        List<String> expActions = explainPlan.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(expActions.contains("Explain Plan"));
+        assertTrue(expActions.contains("Explain Plan (Raw)"));
+        assertTrue(expActions.contains("Explain Analyse"));
+        assertTrue(expActions.contains("Explain Analyse (Raw)"));
+
+        // SplitRevealGroup
+        MenuItemConfig splitReveal = tabActions1.getChildren().stream()
+                .filter(c -> "SplitRevealGroup".equals(c.getText())).findFirst().orElse(null);
+        assertNotNull(splitReveal);
+        assertFalse(splitReveal.isPopup());
+        List<String> srActions = splitReveal.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(srActions.contains("Open in Right Split"));
+        assertTrue(srActions.contains("Open in Split with Chooser\u2026"));
+        assertTrue(srActions.contains("Open In"));
+
+        MenuItemConfig openIn = splitReveal.getChildren().stream()
+                .filter(c -> "Open In".equals(c.getText())).findFirst().orElse(null);
+        assertNotNull(openIn);
+        assertTrue(openIn.isPopup());
+        List<String> openInActions = openIn.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(openInActions.contains("Show in File Manager"));
+        assertTrue(openInActions.contains("Open in Associated Application"));
+        assertTrue(openInActions.contains("Open in Browser"));
+        assertTrue(openInActions.contains("File Path"));
+        assertTrue(openInActions.contains("Open in Terminal"));
+        assertTrue(openInActions.contains("Git.Hosting.Open.In.Browser.Group"));
+
+        // VCS/LVCS Actions
+        MenuItemConfig vcsLvcs = tabActions1.getChildren().stream()
+                .filter(c -> "VCS/LVCS Actions".equals(c.getText())).findFirst().orElse(null);
+        assertNotNull(vcsLvcs);
+        assertFalse(vcsLvcs.isPopup());
+        List<String> vlActions = vcsLvcs.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(vlActions.contains("Local History"));
+        assertTrue(vlActions.contains("External Tools"));
+        assertTrue(vlActions.contains("Rename File\u2026"));
+
+        MenuItemConfig localHistory = vcsLvcs.getChildren().stream()
+                .filter(c -> "Local History".equals(c.getText())).findFirst().orElse(null);
+        assertNotNull(localHistory);
+        assertTrue(localHistory.isPopup());
+        List<String> lhActions = localHistory.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(lhActions.contains("Show History\u2026"));
+        assertTrue(lhActions.contains("Show History for Selection\u2026"));
+        assertTrue(lhActions.contains("Show Project History\u2026"));
+        assertTrue(lhActions.contains("Recent Changes"));
+        assertTrue(lhActions.contains("Put Label\u2026"));
+        assertTrue(lhActions.contains("Version Control Group"));
+
+        // Catalog categories verification
+        ActionManager manager = ActionManager.getInstance();
+        List<ActionManager.ActionCatalogCategory> catalog = manager.getActionCatalog();
+        List<String> catNames = catalog.stream().map(ActionManager.ActionCatalogCategory::getName).toList();
+        assertTrue(catNames.contains("Editor Gutter Popup Menu"));
+        assertTrue(catNames.contains("Editor Tab Popup Menu"));
     }
 
     @Test
