@@ -3224,4 +3224,16 @@ public class MainWindow {
     public void deleteLeftoverDirectories() {
         setStatus("Cleaned leftover cache and temporary IDE directories");
     }
+
+    public void configureNewUi() {
+        setStatus("Configure the New UI: Open Appearance settings");
+    }
+
+    public void runMemoryTester() {
+        setStatus("Memory tester started");
+    }
+
+    public void showRegistrationDialog() {
+        setStatus("License and registration management");
+    }
 }

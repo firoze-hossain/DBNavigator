@@ -3631,6 +3631,54 @@ public final class ActionRegistry {
                 .addSeparator()
                 .addAll(checkUpdates, about);
 
+        // Additional Help actions and sub-groups matching DataGrip
+        AnAction configureNewUi = AnAction.builder("help.configure.new.ui", "Configure the New UI")
+                .onAction(MainWindow::configureNewUi)
+                .build();
+        manager.registerAction(configureNewUi);
+
+        AnAction runMemoryTester = AnAction.builder("help.diagnostic.run.memory.tester", "Run Memory Tester…")
+                .onAction(MainWindow::runMemoryTester)
+                .build();
+        manager.registerAction(runMemoryTester);
+
+        AnAction registerLicense = AnAction.builder("help.registration.register", "Register…")
+                .onAction(MainWindow::showRegistrationDialog)
+                .build();
+        manager.registerAction(registerLicense);
+
+        ActionGroup productivityGroup = new ActionGroup("help.productivity.features", "ProductivityFeatures", true);
+        productivityGroup.addAll(tipOfDay).addSeparator().add(myProductivity);
+        manager.registerGroup(productivityGroup);
+
+        ActionGroup asyncGroup = new ActionGroup("help.diagnostic.async.group", "AsyncGroup", false);
+        asyncGroup.addSeparator().addAll(cpuProfiling, AnAction.builder("help.diagnostic.start.async.profiler", "Start Async Profiler").onAction(MainWindow::startAsyncProfiler).build());
+        manager.registerGroup(asyncGroup);
+
+        ActionGroup startProfileGroup = new ActionGroup("help.diagnostic.start.profile.group", "StartProfileGroup", false);
+        startProfileGroup.add(asyncGroup);
+        manager.registerGroup(startProfileGroup);
+
+        ActionGroup asyncDiagGroup = new ActionGroup("help.diagnostic.async.diagnostic.group", "AsyncDiagnosticGroup", false);
+        asyncDiagGroup.add(AnAction.builder("help.diagnostic.profile.indexing", "Profile Indexing").onAction(MainWindow::profileIndexing).build());
+        manager.registerGroup(asyncDiagGroup);
+
+        ActionGroup diagGroup = new ActionGroup("help.diagnostic.diagnostic.group", "DiagnosticGroup", false);
+        diagGroup.addSeparator().add(captureMemory).addSeparator().add(asyncDiagGroup);
+        manager.registerGroup(diagGroup);
+
+        ActionGroup indexingDiagGroup = new ActionGroup("help.diagnostic.indexing.diagnostic.group", "IndexingDiagnosticGroup", false);
+        indexingDiagGroup.add(AnAction.builder("help.diagnostic.open.indexing.diagnostics", "Open Indexing Diagnostics").onAction(MainWindow::openIndexingDiagnostics).build());
+        manager.registerGroup(indexingDiagGroup);
+
+        ActionGroup registrationGroup = new ActionGroup("help.registration.actions", "Registration Actions", true);
+        registrationGroup.add(registerLicense);
+        manager.registerGroup(registrationGroup);
+
+        ActionGroup learnGroup = new ActionGroup("help.learn.group", "LearnGroup", false);
+        learnGroup.add(learnFeatures);
+        manager.registerGroup(learnGroup);
+
         // =========================================================================
         // 9. MIDDLE HEADER ACTIONS (4 ICONS + THREE DOTS ...)
         // =========================================================================
