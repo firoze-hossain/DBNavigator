@@ -2995,6 +2995,58 @@ public class MainWindow {
         setStatus("Previous Project Window");
     }
 
+    public void mergeAllProjectWindows() {
+        setStatus("Merged all project windows");
+    }
+
+    public void minimizeWindow() {
+        if (stage != null) {
+            stage.setIconified(true);
+        }
+        setStatus("Window minimized");
+    }
+
+    public void zoomWindow() {
+        if (stage != null) {
+            stage.setMaximized(!stage.isMaximized());
+        }
+        setStatus("Window zoom toggled");
+    }
+
+    public void openActiveToolWindowAsEditorTab() {
+        setStatus("Opened active tool window as editor tab");
+    }
+
+    public void pinActiveToolWindowTab() {
+        setStatus("Pinned active tool window tab");
+    }
+
+    public void dockActiveToolWindow() {
+        setStatus("Docked active tool window");
+    }
+
+    public void showListOfTabs() {
+        setStatus("Showing list of tabs");
+    }
+
+    public void showHiddenTabs() {
+        setStatus("Showing hidden tabs");
+    }
+
+    public void splitAndMoveRight() {
+        splitActiveTabRight();
+        setStatus("Split and moved right");
+    }
+
+    public void splitAndMoveDown() {
+        splitActiveTabDown();
+        setStatus("Split and moved down");
+    }
+
+    public void openInSplitWithChooser() {
+        setStatus("Open in Split with Chooser");
+    }
+
     public void showActiveProjectWindow() {
         stage.toFront();
         setStatus("Project: default");

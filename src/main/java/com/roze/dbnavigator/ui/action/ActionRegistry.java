@@ -3347,7 +3347,27 @@ public final class ActionRegistry {
                         .onAction(MainWindow::toggleAutoShowProcesses).build()
         );
 
+        // Background Tasks (DataGrip Image 3)
+        AnAction bgTasksShow = AnAction.builder("window.background.tasks.show", "Show")
+                .onAction(MainWindow::showProcesses).build();
+        AnAction bgTasksAutoShow = AnAction.builder("window.background.tasks.auto.show", "Auto Show")
+                .onAction(MainWindow::toggleAutoShowProcesses).build();
+        ActionGroup bgTasksGroup = new ActionGroup("window.background.tasks", "Background Tasks", true);
+        bgTasksGroup.addAll(bgTasksShow, bgTasksAutoShow);
+        manager.registerGroup(bgTasksGroup);
+
         // Top-Level Window Menu
+        AnAction minimizeAction = AnAction.builder("window.minimize", "Minimize")
+                .accelerator(new KeyCodeCombination(KeyCode.M, KeyCombination.CONTROL_DOWN))
+                .onAction(MainWindow::minimizeWindow)
+                .build();
+        manager.registerAction(minimizeAction);
+
+        AnAction zoomAction = AnAction.builder("window.zoom", "Zoom")
+                .onAction(MainWindow::zoomWindow)
+                .build();
+        manager.registerAction(zoomAction);
+
         AnAction nextProjectWindow = AnAction.builder("window.next.project", "Next Project Window")
                 .accelerator(new KeyCodeCombination(KeyCode.CLOSE_BRACKET, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN))
                 .onAction(MainWindow::nextProjectWindow)
@@ -3362,6 +3382,82 @@ public final class ActionRegistry {
                 .onAction(MainWindow::showActiveProjectWindow)
                 .build();
 
+        // Additional Tool Window Layouts actions (Image 2)
+        AnAction layoutList = AnAction.builder("window.layouts.list", "Tool Window Layout List").build();
+        AnAction restoreCurrentLayout = AnAction.builder("window.layouts.restore.current", "Restore Current Layout")
+                .accelerator(new KeyCodeCombination(KeyCode.F12, KeyCombination.SHIFT_DOWN))
+                .onAction(MainWindow::restoreCurrentLayout).build();
+        AnAction saveChangesCurrentLayout = AnAction.builder("window.layouts.save.changes.current", "Save Changes in Current Layout")
+                .onAction(MainWindow::saveChangesIntoCurrentLayout).build();
+        manager.registerAction(layoutList);
+        manager.registerAction(restoreCurrentLayout);
+        manager.registerAction(saveChangesCurrentLayout);
+
+        // Additional Active Tool Window actions (Image 3)
+        AnAction openAsEditorTabTw = AnAction.builder("window.toolwindow.open.as.editor.tab", "Open as Editor Tab")
+                .icon(FontAwesomeSolid.SHARE_SQUARE, "#a9b7c6", 11)
+                .onAction(MainWindow::openActiveToolWindowAsEditorTab).build();
+        AnAction pinActiveTwTab = AnAction.builder("window.toolwindow.pin.tab", "Pin Active Tool Window Tab")
+                .onAction(MainWindow::pinActiveToolWindowTab).build();
+        AnAction dockTw = AnAction.builder("window.toolwindow.dock", "Dock")
+                .onAction(MainWindow::dockActiveToolWindow).build();
+        AnAction showListOfTabs = AnAction.builder("window.toolwindow.show.list.of.tabs", "Show List of Tabs")
+                .onAction(MainWindow::showListOfTabs).build();
+        manager.registerAction(openAsEditorTabTw);
+        manager.registerAction(pinActiveTwTab);
+        manager.registerAction(dockTw);
+        manager.registerAction(showListOfTabs);
+
+        // Additional Editor Tabs actions & Editor Close Actions (Image 4)
+        AnAction showHiddenTabs = AnAction.builder("window.editor.show.hidden.tabs", "Show Hidden Tabs")
+                .onAction(MainWindow::showHiddenTabs).build();
+        AnAction editorOpenAsEditorTab = AnAction.builder("window.editor.open.as.editor.tab", "Open as Editor Tab")
+                .icon(FontAwesomeSolid.SHARE_SQUARE, "#a9b7c6", 11)
+                .onAction(MainWindow::openActiveToolWindowAsEditorTab).build();
+        manager.registerAction(showHiddenTabs);
+        manager.registerAction(editorOpenAsEditorTab);
+
+        ActionGroup editorCloseActionsGroup = new ActionGroup("window.editor.close.actions", "Editor Close Actions", true);
+        editorCloseActionsGroup.addAll(closeTab, closeOtherTabs, closeAllTabs, closeUnmodified, closeAllButPinned,
+                closeTabsLeft, closeTabsRight, closeAllReadOnly, editorOpenAsEditorTab);
+        manager.registerGroup(editorCloseActionsGroup);
+
+        // Split with Chooser Navigation actions & group (Image 5)
+        AnAction splitAndMoveRight = AnAction.builder("window.split.and.move.right", "Split and Move Right")
+                .onAction(MainWindow::splitAndMoveRight).build();
+        AnAction splitAndMoveDown = AnAction.builder("window.split.and.move.down", "Split and Move Down")
+                .onAction(MainWindow::splitAndMoveDown).build();
+        AnAction splitChooserOpen = AnAction.builder("window.split.chooser.open", "Open in Split with Chooser…")
+                .onAction(MainWindow::openInSplitWithChooser).build();
+        manager.registerAction(splitAndMoveRight);
+        manager.registerAction(splitAndMoveDown);
+        manager.registerAction(splitChooserOpen);
+
+        AnAction splitNext = AnAction.builder("window.split.next", "Next Split").build();
+        AnAction splitPrev = AnAction.builder("window.split.prev", "Previous Split").build();
+        AnAction exitChooser = AnAction.builder("window.split.exit.chooser", "Exit Chooser").build();
+        AnAction chooserSplit = AnAction.builder("window.split.chooser.split", "Split").build();
+        AnAction chooserDuplicate = AnAction.builder("window.split.chooser.duplicate", "Duplicate").build();
+        AnAction chooserWithoutSplit = AnAction.builder("window.split.chooser.without.split", "Without Split").build();
+        AnAction switchUp = AnAction.builder("window.split.switch.up", "Use Top Split or Switch Up").build();
+        AnAction switchLeft = AnAction.builder("window.split.switch.left", "Use Left Split or Switch Left").build();
+        AnAction switchDown = AnAction.builder("window.split.switch.down", "Use down Split or Switch Down").build();
+        AnAction switchRight = AnAction.builder("window.split.switch.right", "Use Right Split or Switch Right").build();
+
+        ActionGroup splitChooserNavGroup = new ActionGroup("window.editor.split.chooser.navigation", "Split with Chooser Navigation", true);
+        splitChooserNavGroup.addAll(splitNext, splitPrev, exitChooser, chooserSplit, chooserDuplicate, chooserWithoutSplit,
+                switchUp, switchLeft, switchDown, switchRight);
+        manager.registerGroup(splitChooserNavGroup);
+
+        // Open Project Windows group (Image 2)
+        AnAction mergeAllProj = AnAction.builder("window.project.merge.all", "Merge All Project Windows")
+                .onAction(MainWindow::mergeAllProjectWindows).build();
+        manager.registerAction(mergeAllProj);
+        ActionGroup openProjectWindowsGroup = new ActionGroup("window.open.project.windows", "Open Project Windows", true);
+        openProjectWindowsGroup.addAll(nextProjectWindow, prevProjectWindow, mergeAllProj);
+        manager.registerGroup(openProjectWindowsGroup);
+
+        // Legacy Window menu structure for ActionRegistryTest
         ActionGroup windowMenu = new ActionGroup("menu.window", "Window");
         windowMenu.addAll(layoutsSubmenu, activeToolWindowSubmenu, editorTabsSubmenu, notificationsSubmenu, processesSubmenu)
                 .addSeparator()

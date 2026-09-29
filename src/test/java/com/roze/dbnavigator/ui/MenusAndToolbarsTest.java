@@ -1599,5 +1599,178 @@ public class MenusAndToolbarsTest {
         assertTrue(refIds.contains("git.show.history"));
         assertTrue(refIds.contains("git.show.history.for.selection"));
     }
+
+    @Test
+    @DisplayName("Verify Window Menu completeness matching DataGrip Images 1-5")
+    public void testWindowMenuCompletenessMatchingDataGrip() {
+        MenuItemConfig mainMenu = settings.getMenuConfig("root.main.menu");
+        MenuItemConfig windowMenu = mainMenu.getChildren().stream()
+                .filter(m -> "Window".equals(m.getText()) || "menu.window".equals(m.getId()))
+                .findFirst()
+                .orElseThrow();
+        assertTrue(windowMenu.isPopup(), "Window should be a popup menu");
+
+        // Image 1: Window Top-Level items
+        List<String> winIds = windowMenu.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(winIds.contains("window.minimize"));
+        assertTrue(winIds.contains("window.zoom"));
+        assertTrue(winIds.contains("window.layouts"));
+        assertTrue(winIds.contains("window.active.tool.window"));
+        assertTrue(winIds.contains("window.editor.tabs"));
+        assertTrue(winIds.contains("window.notifications"));
+        assertTrue(winIds.contains("window.background.tasks"));
+        assertTrue(winIds.contains("window.open.project.windows"));
+
+        // Image 2: Tool Window Layouts submenu
+        MenuItemConfig layouts = windowMenu.getChildren().stream()
+                .filter(c -> "window.layouts".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertTrue(layouts.isPopup());
+        assertEquals("Tool Window Layouts", layouts.getText());
+        List<String> layoutIds = layouts.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(layoutIds.contains("window.layouts.default"));
+        assertTrue(layoutIds.contains("window.layouts.list"));
+        assertTrue(layoutIds.contains("window.layouts.restore.current"));
+        assertTrue(layoutIds.contains("window.layouts.save.changes.current"));
+        assertTrue(layoutIds.contains("window.layouts.save.as.new"));
+
+        // Image 2: Open Project Windows submenu
+        MenuItemConfig openProj = windowMenu.getChildren().stream()
+                .filter(c -> "window.open.project.windows".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertTrue(openProj.isPopup());
+        assertEquals("Open Project Windows", openProj.getText());
+        List<String> openProjIds = openProj.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(openProjIds.contains("window.next.project"));
+        assertTrue(openProjIds.contains("window.prev.project"));
+        assertTrue(openProjIds.contains("window.project.merge.all"));
+
+        // Image 3: Active Tool Window submenu & Resize popup
+        MenuItemConfig activeTw = windowMenu.getChildren().stream()
+                .filter(c -> "window.active.tool.window".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertTrue(activeTw.isPopup());
+        List<String> activeTwIds = activeTw.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(activeTwIds.contains("window.toolwindow.hide.active"));
+        assertTrue(activeTwIds.contains("window.toolwindow.hide.side"));
+        assertTrue(activeTwIds.contains("window.toolwindow.hide.all"));
+        assertTrue(activeTwIds.contains("window.toolwindow.open.as.editor.tab"));
+        assertTrue(activeTwIds.contains("window.toolwindow.pin.tab"));
+        assertTrue(activeTwIds.contains("window.toolwindow.close.active.tab"));
+        assertTrue(activeTwIds.contains("window.toolwindow.jump.last"));
+        assertTrue(activeTwIds.contains("window.toolwindow.maximize"));
+        assertTrue(activeTwIds.contains("window.toolwindow.dock"));
+        assertTrue(activeTwIds.contains("window.toolwindow.view.mode"));
+        assertTrue(activeTwIds.contains("window.toolwindow.move.to"));
+        assertTrue(activeTwIds.contains("window.toolwindow.group.tabs"));
+        assertTrue(activeTwIds.contains("window.toolwindow.show.list.of.tabs"));
+        assertTrue(activeTwIds.contains("window.toolwindow.resize"));
+
+        MenuItemConfig resize = activeTw.getChildren().stream()
+                .filter(c -> "window.toolwindow.resize".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertTrue(resize.isPopup());
+        List<String> resizeIds = resize.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(resizeIds.contains("window.tw.resize.left"));
+        assertTrue(resizeIds.contains("window.tw.resize.right"));
+        assertTrue(resizeIds.contains("window.tw.resize.top"));
+        assertTrue(resizeIds.contains("window.tw.resize.bottom"));
+
+        // Image 3: Notifications & Background Tasks submenus
+        MenuItemConfig notifications = windowMenu.getChildren().stream()
+                .filter(c -> "window.notifications".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertTrue(notifications.isPopup());
+        List<String> notifIds = notifications.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(notifIds.contains("window.notifications.close.first"));
+        assertTrue(notifIds.contains("window.notifications.close.all"));
+
+        MenuItemConfig bgTasks = windowMenu.getChildren().stream()
+                .filter(c -> "window.background.tasks".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertTrue(bgTasks.isPopup());
+        assertEquals("Background Tasks", bgTasks.getText());
+        List<String> bgTaskIds = bgTasks.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(bgTaskIds.contains("window.background.tasks.show"));
+        assertTrue(bgTaskIds.contains("window.background.tasks.auto.show"));
+
+        // Images 4 & 5: Editor Tabs submenu, Editor Close Actions, Split with Chooser Navigation
+        MenuItemConfig editorTabs = windowMenu.getChildren().stream()
+                .filter(c -> "window.editor.tabs".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertTrue(editorTabs.isPopup());
+        List<String> tabIds = editorTabs.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(tabIds.contains("window.editor.next.tab"));
+        assertTrue(tabIds.contains("window.editor.prev.tab"));
+        assertTrue(tabIds.contains("window.editor.pin.tab"));
+        assertTrue(tabIds.contains("window.editor.keep.tab.open"));
+        assertTrue(tabIds.contains("window.editor.show.hidden.tabs"));
+        assertTrue(tabIds.contains("window.editor.close.actions"));
+        assertTrue(tabIds.contains("window.reopen.tab"));
+        assertTrue(tabIds.contains("window.split.right"));
+        assertTrue(tabIds.contains("window.split.and.move.right"));
+        assertTrue(tabIds.contains("window.split.down"));
+        assertTrue(tabIds.contains("window.split.and.move.down"));
+        assertTrue(tabIds.contains("window.split.chooser.open"));
+        assertTrue(tabIds.contains("window.editor.split.chooser.navigation"));
+        assertTrue(tabIds.contains("window.editor.stretch.top"));
+        assertTrue(tabIds.contains("window.editor.stretch.left"));
+        assertTrue(tabIds.contains("window.editor.stretch.bottom"));
+        assertTrue(tabIds.contains("window.editor.stretch.right"));
+        assertTrue(tabIds.contains("window.editor.change.splitter.orientation"));
+        assertTrue(tabIds.contains("window.editor.maximize.splits"));
+        assertTrue(tabIds.contains("window.editor.unsplit"));
+        assertTrue(tabIds.contains("window.unsplit.all"));
+        assertTrue(tabIds.contains("window.editor.goto.next.splitter"));
+        assertTrue(tabIds.contains("window.editor.goto.prev.splitter"));
+        assertTrue(tabIds.contains("window.editor.configure.tabs"));
+
+        // Image 4: Editor Close Actions popup
+        MenuItemConfig closeActions = editorTabs.getChildren().stream()
+                .filter(c -> "window.editor.close.actions".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertTrue(closeActions.isPopup());
+        List<String> closeIds = closeActions.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(closeIds.contains("window.close.tab"));
+        assertTrue(closeIds.contains("window.close.other.tabs"));
+        assertTrue(closeIds.contains("window.close.all.tabs"));
+        assertTrue(closeIds.contains("window.close.unmodified.tabs"));
+        assertTrue(closeIds.contains("window.close.all.but.pinned"));
+        assertTrue(closeIds.contains("window.close.tabs.left"));
+        assertTrue(closeIds.contains("window.close.tabs.right"));
+        assertTrue(closeIds.contains("window.close.all.readonly"));
+        assertTrue(closeIds.contains("window.editor.open.as.editor.tab"));
+
+        // Image 5: Split with Chooser Navigation popup
+        MenuItemConfig splitChooserNav = editorTabs.getChildren().stream()
+                .filter(c -> "window.editor.split.chooser.navigation".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertTrue(splitChooserNav.isPopup());
+        List<String> splitNavIds = splitChooserNav.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(splitNavIds.contains("window.split.next"));
+        assertTrue(splitNavIds.contains("window.split.prev"));
+        assertTrue(splitNavIds.contains("window.split.exit.chooser"));
+        assertTrue(splitNavIds.contains("window.split.chooser.split"));
+        assertTrue(splitNavIds.contains("window.split.chooser.duplicate"));
+        assertTrue(splitNavIds.contains("window.split.chooser.without.split"));
+        assertTrue(splitNavIds.contains("window.split.switch.up"));
+        assertTrue(splitNavIds.contains("window.split.switch.left"));
+        assertTrue(splitNavIds.contains("window.split.switch.down"));
+        assertTrue(splitNavIds.contains("window.split.switch.right"));
+
+        // Verify ActionCatalog contains Window category and entries
+        ActionManager actionManager = ActionManager.getInstance();
+        var catalog = actionManager.getActionCatalog();
+        var mainMenuCat = catalog.stream().filter(c -> "Main Menu".equals(c.getName())).findFirst().orElseThrow();
+        var windowCat = mainMenuCat.getSubCategories().stream().filter(c -> "Window".equals(c.getName())).findFirst().orElseThrow();
+        assertFalse(windowCat.getEntries().isEmpty());
+        List<String> catalogIds = windowCat.getEntries().stream().map(ActionManager.ActionCatalogEntry::getId).toList();
+        assertTrue(catalogIds.contains("window.minimize"));
+        assertTrue(catalogIds.contains("window.zoom"));
+        assertTrue(catalogIds.contains("window.layouts.default"));
+        assertTrue(catalogIds.contains("window.editor.open.as.editor.tab"));
+        assertTrue(catalogIds.contains("window.background.tasks.show"));
+        assertTrue(catalogIds.contains("window.project.merge.all"));
+    }
 }
 
