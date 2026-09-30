@@ -9,6 +9,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -1096,7 +1097,7 @@ public class MenusAndToolbarsTest {
         assertTrue(navBarItems.contains("Toolbar Run Actions"));
         assertTrue(navBarItems.contains("NavBarVcsGroup"));
         assertTrue(navBarItems.contains("NavBarToolBarOthers"));
-        assertTrue(navBarItems.contains("@ AIAssistantHubPopupAction"));
+        assertTrue(navBarItems.contains("AIAssistantHubPopupAction") || navBarItems.contains("@ AIAssistantHubPopupAction"));
         assertTrue(navBarItems.contains("Search Everywhere"));
         assertTrue(navBarItems.contains("IDE and Project Settings"));
 
@@ -1122,16 +1123,23 @@ public class MenusAndToolbarsTest {
         assertTrue(dbgItems.contains("Resume.Ref"));
         assertTrue(dbgItems.contains("Pause.Ref"));
         assertTrue(dbgItems.contains("StepOver.Ref"));
-        assertTrue(dbgItems.contains("Step Into"));
-        assertTrue(dbgItems.contains("Step Out"));
-        assertTrue(dbgItems.contains("View Breakpoints\u2026"));
-        assertTrue(dbgItems.contains("Mute Breakpoints"));
+
+        MenuItemConfig stepOverRef = debugToolbar.getChildren().stream()
+                .filter(c -> "debug.stepover.ref".equals(c.getId()))
+                .findFirst().orElse(null);
+        List<String> stepItems = stepOverRef != null
+                ? stepOverRef.getChildren().stream().map(MenuItemConfig::getText).toList()
+                : List.of();
+        assertTrue(dbgItems.contains("Step Into") || stepItems.contains("Step Into"));
+        assertTrue(dbgItems.contains("Step Out") || stepItems.contains("Step Out"));
+        assertTrue(dbgItems.contains("View Breakpoints\u2026") || stepItems.contains("View Breakpoints\u2026"));
+        assertTrue(dbgItems.contains("Mute Breakpoints") || stepItems.contains("Mute Breakpoints"));
 
         MenuItemConfig watches = settings.getMenuConfig("root.debug.watches.toolbar");
         assertNotNull(watches);
         List<String> watchItems = watches.getChildren().stream().map(MenuItemConfig::getText).toList();
-        assertTrue(watchItems.contains("+ New Watch\u2026"));
-        assertTrue(watchItems.contains("\u2014 Remove Watch"));
+        assertTrue(watchItems.contains("+ New Watch\u2026") || watchItems.contains("New Watch\u2026"));
+        assertTrue(watchItems.contains("\u2014 Remove Watch") || watchItems.contains("Remove Watch"));
         assertTrue(watchItems.contains("Move Watch Up"));
         assertTrue(watchItems.contains("Move Watch Down"));
         assertTrue(watchItems.contains("Duplicate Watch"));
@@ -1148,7 +1156,14 @@ public class MenusAndToolbarsTest {
         assertTrue(histItems.contains("Show All Affected Files"));
         assertTrue(histItems.contains("View Options"));
         assertTrue(histItems.contains("VcsHistoryActionsGroup.Toolbar"));
-        assertTrue(histItems.contains("Resume Indexing"));
+
+        MenuItemConfig vcsHistToolbar = history.getChildren().stream()
+                .filter(c -> "vcs.history.actions.group.toolbar".equals(c.getId()))
+                .findFirst().orElse(null);
+        List<String> vcsHistItems = vcsHistToolbar != null
+                ? vcsHistToolbar.getChildren().stream().map(MenuItemConfig::getText).toList()
+                : List.of();
+        assertTrue(histItems.contains("Resume Indexing") || vcsHistItems.contains("Resume Indexing"));
 
         MenuItemConfig codeToolbar = settings.getMenuConfig("root.floating.code.toolbar");
         assertNotNull(codeToolbar);
@@ -2686,5 +2701,981 @@ public class MenusAndToolbarsTest {
         assertTrue(catalogIds.contains("help.updates"));
         assertTrue(catalogIds.contains("help.about"));
     }
+
+    @Test
+    @DisplayName("Verify Scope View Popup Menu structure, sub-groups, and action catalog matching DataGrip (Images 1-5)")
+    public void testScopeViewPopupMenuStructureAndOrderMatchingDataGrip() {
+        MenuItemConfig scopeViewRoot = settings.getMenuConfig("root.scope.view.popup");
+        assertNotNull(scopeViewRoot, "root.scope.view.popup should exist");
+        assertEquals("Scope View Popup Menu", scopeViewRoot.getText());
+
+        MenuItemConfig projPopup = scopeViewRoot.getChildren().stream()
+                .filter(c -> "scope.project.view.popup".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertEquals("Project View Popup Menu", projPopup.getText());
+        assertTrue(projPopup.isPopup());
+
+        List<String> items = projPopup.getChildren().stream().map(MenuItemConfig::getText).toList();
+
+        // Image 1 & 2: Top-level entries
+        assertTrue(items.contains("Attach Directory to Project\u2026"));
+        assertTrue(items.contains("New"));
+        assertTrue(items.contains("Associate with File Type\u2026"));
+        assertTrue(items.contains("Restore Default Extensions"));
+        assertTrue(items.contains("Cut/Copy/Paste Actions"));
+        assertTrue(items.contains("FileEditor.ImportToDatabase.Group"));
+        assertTrue(items.contains("Edit Source"));
+        assertTrue(items.contains("ChangesView.ApplyPatch.LangGroup"));
+        assertTrue(items.contains("Find Usages"));
+        assertTrue(items.contains("Find in Files\u2026"));
+        assertTrue(items.contains("Replace in Files\u2026"));
+        assertTrue(items.contains("InspectCodeActionInPopupMenus"));
+        assertTrue(items.contains("Rename\u2026"));
+        assertTrue(items.contains("Project View Popup Refactoring Group"));
+        assertTrue(items.contains("<anonymous-group-0>"));
+        assertTrue(items.contains("Project View Popup Menu Modify Group"));
+        assertTrue(items.contains("Project View Popup Menu Run Group"));
+        assertTrue(items.contains("SplitRevealGroup"));
+        assertTrue(items.contains("VCS/LVCS Actions"));
+        assertTrue(items.contains("Cache Recovery"));
+        assertTrue(items.contains("Reload from Disk"));
+        assertTrue(items.contains("Go to Link Target"));
+        assertTrue(items.contains("Compare Files"));
+        assertTrue(items.contains("Compare File with Editor"));
+        assertTrue(items.contains("External Tools"));
+        assertTrue(items.contains("Project View Popup Menu Settings Group"));
+        assertTrue(items.contains("Set Background Image"));
+        assertTrue(items.contains("Diagrams"));
+        assertTrue(items.contains("Jump to External Editor"));
+        assertTrue(items.contains("Convert to PNG"));
+        assertTrue(items.contains("File Associations"));
+
+        // Image 3: New Submenu
+        MenuItemConfig newGroup = projPopup.getChildren().stream()
+                .filter(c -> "project.new".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertTrue(newGroup.isPopup());
+        List<String> newGroupTexts = newGroup.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(newGroupTexts.contains("DBE.NewFile"));
+        assertTrue(newGroupTexts.contains("Web Development Templates"));
+        assertTrue(newGroupTexts.contains("DatabaseView.NewGroup"));
+
+        MenuItemConfig dbeNewFile = newGroup.getChildren().stream()
+                .filter(c -> "project.new.dbe.file".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> dbeChildren = dbeNewFile.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(dbeChildren.contains("SQL File"));
+        assertTrue(dbeChildren.contains("File"));
+        assertTrue(dbeChildren.contains("Scratch File"));
+        assertTrue(dbeChildren.contains("Directory/Package"));
+        assertTrue(dbeChildren.contains("FileTemplateSeparatorGroup"));
+
+        MenuItemConfig webDevTemplates = newGroup.getChildren().stream()
+                .filter(c -> "file.web.dev.templates".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> webDevChildren = webDevTemplates.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(webDevChildren.contains("XML"));
+        assertTrue(webDevChildren.contains("Microservices Templates"));
+        assertTrue(webDevChildren.contains("From Template"));
+        assertTrue(webDevChildren.contains("XML Configuration File"));
+
+        MenuItemConfig dbViewNewGroup = newGroup.getChildren().stream()
+                .filter(c -> "project.databaseview.new.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> dbViewChildren = dbViewNewGroup.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(dbViewChildren.contains("DatabaseView.AddActionGroup"));
+        assertTrue(dbViewChildren.contains("Create Data Source"));
+
+        MenuItemConfig dbAddAction = dbViewNewGroup.getChildren().stream()
+                .filter(c -> "project.databaseview.add.action.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertTrue(dbAddAction.getChildren().stream().map(MenuItemConfig::getText).toList().contains("Query Console"));
+        assertTrue(dbAddAction.getChildren().stream().map(MenuItemConfig::getText).toList().contains("DatabaseView.Ddl.AddObject"));
+
+        MenuItemConfig createDs = dbViewNewGroup.getChildren().stream()
+                .filter(c -> "file.new.create.datasource".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> createDsChildren = createDs.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(createDsChildren.contains("Data Source from URL"));
+        assertTrue(createDsChildren.contains("Data Source from Path"));
+        assertTrue(createDsChildren.contains("Add Data Source from Selection\u2026"));
+        assertTrue(createDsChildren.contains("Data Source in Path"));
+        assertTrue(createDsChildren.contains("Import from Clipboard"));
+        assertTrue(createDsChildren.contains("Driver"));
+
+        // Image 4: Cut/Copy/Paste Actions
+        MenuItemConfig ccpGroup = projPopup.getChildren().stream()
+                .filter(c -> "project.cut.copy.paste".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> ccpTexts = ccpGroup.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(ccpTexts.contains("Cut"));
+        assertTrue(ccpTexts.contains("Copy"));
+        assertTrue(ccpTexts.contains("Copy Paths"));
+        assertTrue(ccpTexts.contains("Copy as Plain Text"));
+        assertTrue(ccpTexts.contains("Copy as Rich Text"));
+        assertTrue(ccpTexts.contains("Copy Path/Reference\u2026"));
+        assertTrue(ccpTexts.contains("Paste"));
+        assertTrue(ccpTexts.contains("Copy JSON Pointer"));
+
+        MenuItemConfig copyPathRef = ccpGroup.getChildren().stream()
+                .filter(c -> "project.copy.path.ref.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        MenuItemConfig copyFileRef = copyPathRef.getChildren().stream()
+                .filter(c -> "project.copy.file.ref".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> copyFileRefTexts = copyFileRef.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(copyFileRefTexts.contains("Absolute Path"));
+        assertTrue(copyFileRefTexts.contains("File Name"));
+        assertTrue(copyFileRefTexts.contains("Path With Line Number"));
+        assertTrue(copyFileRefTexts.contains("Path From Content Root"));
+        assertTrue(copyFileRefTexts.contains("Path From Source Root"));
+        assertTrue(copyFileRefTexts.contains("Path From Repository Root"));
+        assertTrue(copyFileRefTexts.contains("Git.Hosting.Copy.Link.Group"));
+
+        MenuItemConfig copyExtRef = copyPathRef.getChildren().stream()
+                .filter(c -> "project.copy.ext.ref".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertTrue(copyExtRef.getChildren().stream().map(MenuItemConfig::getText).toList().contains("Toolbox URL"));
+
+        MenuItemConfig fileEditorImport = projPopup.getChildren().stream()
+                .filter(c -> "fileeditor.import.to.database.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertTrue(fileEditorImport.getChildren().stream().map(MenuItemConfig::getText).toList().contains("Import to Database\u2026"));
+
+        MenuItemConfig changesViewApplyPatch = projPopup.getChildren().stream()
+                .filter(c -> "changesview.applypatch.langgroup".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertTrue(changesViewApplyPatch.getChildren().stream().map(MenuItemConfig::getText).toList().contains("Apply Patch\u2026"));
+
+        // Image 5: InspectCodeActionInPopupMenus
+        MenuItemConfig inspectCode = projPopup.getChildren().stream()
+                .filter(c -> "project.inspect.code.action".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertTrue(inspectCode.getChildren().stream().map(MenuItemConfig::getText).toList().contains("Inspect Code\u2026"));
+
+        // Image 5: Project View Popup Refactoring Group
+        MenuItemConfig refactorGroup = projPopup.getChildren().stream()
+                .filter(c -> "project.refactoring.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        MenuItemConfig refactorSubmenu = refactorGroup.getChildren().stream()
+                .filter(c -> "project.refactor.submenu".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> refactorSubmenuTexts = refactorSubmenu.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(refactorSubmenuTexts.contains("Refactor This\u2026"));
+        assertTrue(refactorSubmenuTexts.contains("Rename\u2026"));
+        assertTrue(refactorSubmenuTexts.contains("Change Signature\u2026"));
+        assertTrue(refactorSubmenuTexts.contains("Modify Object\u2026"));
+        assertTrue(refactorSubmenuTexts.contains("Extract/Introduce"));
+        assertTrue(refactorSubmenuTexts.contains("Inline\u2026"));
+        assertTrue(refactorSubmenuTexts.contains("Move\u2026"));
+
+        MenuItemConfig extractIntro = refactorSubmenu.getChildren().stream()
+                .filter(c -> "project.refactor.extract.introduce".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> extractTexts = extractIntro.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(extractTexts.contains("Introduce Variable\u2026"));
+        assertTrue(extractTexts.contains("Extract Routine\u2026"));
+        assertTrue(extractTexts.contains("Table alias\u2026"));
+        assertTrue(extractTexts.contains("Introduce Constant\u2026"));
+        assertTrue(extractTexts.contains("Introduce Field\u2026"));
+        assertTrue(extractTexts.contains("Introduce Parameter\u2026"));
+        assertTrue(extractTexts.contains("Introduce Parameter Object\u2026"));
+        assertTrue(extractTexts.contains("Extract Method\u2026"));
+        assertTrue(extractTexts.contains("Extract Delegate\u2026"));
+        assertTrue(extractTexts.contains("Include File\u2026"));
+        assertTrue(extractTexts.contains("Extract Interface\u2026"));
+        assertTrue(extractTexts.contains("Extract Superclass\u2026"));
+        assertTrue(extractTexts.contains("Extract Module\u2026"));
+        assertTrue(extractTexts.contains("Subquery as CTE"));
+
+        // Verify Image 1-3 detailed sub-structures in Scope View Popup Menu:
+        // Bookmarks in <anonymous-group-0>
+        MenuItemConfig anon0 = projPopup.getChildren().stream()
+                .filter(c -> "project.anonymous.group.0".equals(c.getId()))
+                .findFirst().orElseThrow();
+        MenuItemConfig bookmarks = anon0.getChildren().stream()
+                .filter(c -> "project.bookmarks".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> bookmarkItems = bookmarks.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(bookmarkItems.contains("Add Bookmark to Another List"));
+        assertTrue(bookmarkItems.contains("Rename Bookmark\u2026"));
+        assertTrue(bookmarkItems.contains("Toggle Bookmark"));
+
+        // Modify Group
+        MenuItemConfig modGroup = projPopup.getChildren().stream()
+                .filter(c -> "project.modify.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> modItems = modGroup.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(modItems.contains("Reformat Code"));
+        assertTrue(modItems.contains("Reformat JSON"));
+        assertTrue(modItems.contains("Optimize Imports"));
+        assertTrue(modItems.contains("Delete"));
+        assertTrue(modItems.contains("Change File Language"));
+        assertTrue(modItems.contains("Change SQL Dialect"));
+        assertTrue(modItems.contains("Mark File as"));
+
+        // Run Group
+        MenuItemConfig runGroup = projPopup.getChildren().stream()
+                .filter(c -> "project.run.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> runGroupChildren = runGroup.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(runGroupChildren.contains("Run Configurations"));
+        assertTrue(runGroupChildren.contains("Console.Jdbc.RunContextGroup"));
+
+        MenuItemConfig consoleJdbc = runGroup.getChildren().stream()
+                .filter(c -> "console.jdbc.run.context.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> consoleJdbcTexts = consoleJdbc.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(consoleJdbcTexts.contains("Attach Data Source"));
+        assertTrue(consoleJdbcTexts.contains("Recompile\u2026"));
+        assertTrue(consoleJdbcTexts.contains("Explain Plan"));
+        assertTrue(consoleJdbcTexts.contains("Execute"));
+        assertTrue(consoleJdbcTexts.contains("Export Data\u2026"));
+        assertTrue(consoleJdbcTexts.contains("Debug"));
+        assertTrue(consoleJdbcTexts.contains("Debug Routine\u2026"));
+
+        // VCS/LVCS Actions
+        MenuItemConfig vcsLvcs = projPopup.getChildren().stream()
+                .filter(c -> "project.vcs.lvcs.actions".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> vcsLvcsTexts = vcsLvcs.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(vcsLvcsTexts.contains("Local History"));
+        assertTrue(vcsLvcsTexts.contains("Version Control Group"));
+
+        MenuItemConfig localHist = vcsLvcs.getChildren().stream()
+                .filter(c -> "editor.local.history.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> localHistTexts = localHist.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(localHistTexts.contains("Show History\u2026"));
+        assertTrue(localHistTexts.contains("Show History for Selection\u2026"));
+        assertTrue(localHistTexts.contains("Show Project History\u2026"));
+        assertTrue(localHistTexts.contains("Recent Changes"));
+        assertTrue(localHistTexts.contains("Put Label\u2026"));
+
+        // Diagrams
+        MenuItemConfig diagrams = projPopup.getChildren().stream()
+                .filter(c -> "project.diagrams".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> diagTexts = diagrams.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(diagTexts.contains("Show Diagram\u2026"));
+        assertTrue(diagTexts.contains("Show Diagram Popup\u2026"));
+        assertTrue(diagTexts.contains("Show Local Changes as UML"));
+
+        // Verify ActionCatalog contains Scope View Popup Menu category
+        ActionManager actionManager = ActionManager.getInstance();
+        var catalog = actionManager.getActionCatalog();
+        var scopeCat = catalog.stream().filter(c -> "Scope View Popup Menu".equals(c.getName())).findFirst().orElseThrow();
+        assertFalse(scopeCat.getEntries().isEmpty());
+        List<String> catalogIds = scopeCat.getEntries().stream().map(ActionManager.ActionCatalogEntry::getId).toList();
+        assertTrue(catalogIds.contains("file.attach.directory"));
+        assertTrue(catalogIds.contains("file.new.sqlfile"));
+        assertTrue(catalogIds.contains("edit.cut"));
+        assertTrue(catalogIds.contains("edit.copy"));
+        assertTrue(catalogIds.contains("edit.paste"));
+        assertTrue(catalogIds.contains("refactor.rename"));
+        assertTrue(catalogIds.contains("refactor.this"));
+        assertTrue(catalogIds.contains("code.inspect.code"));
+        assertTrue(catalogIds.contains("project.cache.recovery"));
+        assertTrue(catalogIds.contains("project.reload.from.disk"));
+        assertTrue(catalogIds.contains("diagrams.show.uml"));
+
+        // Verify Auto-migration for root.scope.view.popup
+        MenuItemConfig staleScopePopup = MenuItemConfig.group("root.scope.view.popup", "Scope View Popup Menu", List.of(
+                MenuItemConfig.group("scope.project.view.popup", "Project View Popup Menu", List.of())
+        ));
+        List<MenuItemConfig> testMenus = new ArrayList<>(settings.getMenusAndToolbars());
+        for (int i = 0; i < testMenus.size(); i++) {
+            if ("root.scope.view.popup".equalsIgnoreCase(testMenus.get(i).getId())) {
+                testMenus.set(i, staleScopePopup);
+                break;
+            }
+        }
+        settings.setMenusAndToolbars(testMenus);
+        List<MenuItemConfig> migrated = settings.getMenusAndToolbars();
+        MenuItemConfig migratedScope = migrated.stream()
+                .filter(r -> "root.scope.view.popup".equalsIgnoreCase(r.getId()))
+                .findFirst().orElseThrow();
+        MenuItemConfig migratedInner = migratedScope.getChildren().stream()
+                .filter(c -> "scope.project.view.popup".equalsIgnoreCase(c.getId()))
+                .findFirst().orElseThrow();
+        assertFalse(migratedInner.getChildren().isEmpty(), "Stale empty scope popup must be migrated with full children");
+    }
+
+    @Test
+    @DisplayName("Verify Navigation Bar Popup Menu structure, sub-groups, and action catalog matching DataGrip (Images 4-5)")
+    public void testNavigationBarPopupMenuStructureAndOrderMatchingDataGrip() {
+        MenuItemConfig navBarRoot = settings.getMenuConfig("root.navigation.bar.popup");
+        assertNotNull(navBarRoot, "root.navigation.bar.popup should exist");
+        assertEquals("Navigation Bar Popup Menu", navBarRoot.getText());
+
+        List<String> items = navBarRoot.getChildren().stream().map(MenuItemConfig::getText).toList();
+
+        // Image 4: Top-level entries
+        assertTrue(items.contains("New"));
+        assertTrue(items.contains("Associate with File Type\u2026"));
+        assertTrue(items.contains("Cut/Copy/Paste Actions"));
+        assertTrue(items.contains("Jump to Source"));
+        assertTrue(items.contains("ChangesView.ApplyPatch.LangGroup"));
+        assertTrue(items.contains("Navigation Bar"));
+        assertTrue(items.contains("Members in Navigation Bar"));
+        assertTrue(items.contains("Find Usages"));
+        assertTrue(items.contains("Find in Files\u2026"));
+        assertTrue(items.contains("Replace in Files\u2026"));
+        assertTrue(items.contains("Rename\u2026"));
+        assertTrue(items.contains("Project View Popup Refactoring Group"));
+        assertTrue(items.contains("Project View Popup Menu Modify Group"));
+        assertTrue(items.contains("Project View Popup Menu Run Group"));
+        assertTrue(items.contains("SplitRevealGroup"));
+        assertTrue(items.contains("VCS/LVCS Actions"));
+        assertTrue(items.contains("Reload from Disk"));
+        assertTrue(items.contains("External Tools"));
+        assertTrue(items.contains("Project View Popup Menu Settings Group"));
+        assertTrue(items.contains("Diagrams"));
+
+        // Verify Jump to Source has EDIT icon, Reload from Disk has SYNC icon
+        MenuItemConfig jumpSource = navBarRoot.getChildren().stream()
+                .filter(c -> "navbar.jump.source".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertEquals("EDIT", jumpSource.getIconName());
+
+        MenuItemConfig reloadDisk = navBarRoot.getChildren().stream()
+                .filter(c -> "navbar.reload.disk".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertEquals("SYNC", reloadDisk.getIconName());
+
+        // Image 5: New Submenu
+        MenuItemConfig newGroup = navBarRoot.getChildren().stream()
+                .filter(c -> "navbar.new".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertTrue(newGroup.isPopup());
+        List<String> newGroupTexts = newGroup.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(newGroupTexts.contains("DBE.NewFile"));
+        assertTrue(newGroupTexts.contains("Web Development Templates"));
+        assertTrue(newGroupTexts.contains("DatabaseView.NewGroup"));
+
+        // DBE.NewFile
+        MenuItemConfig dbeNewFile = newGroup.getChildren().stream()
+                .filter(c -> "project.new.dbe.file".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> dbeChildren = dbeNewFile.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(dbeChildren.contains("SQL File"));
+        assertTrue(dbeChildren.contains("File"));
+        assertTrue(dbeChildren.contains("Scratch File"));
+        assertTrue(dbeChildren.contains("Directory/Package"));
+        assertTrue(dbeChildren.contains("FileTemplateSeparatorGroup"));
+
+        // Web Development Templates
+        MenuItemConfig webDevTemplates = newGroup.getChildren().stream()
+                .filter(c -> "file.web.dev.templates".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> webDevChildren = webDevTemplates.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(webDevChildren.contains("XML"));
+        assertTrue(webDevChildren.contains("Microservices Templates"));
+        assertTrue(webDevChildren.contains("From Template"));
+        assertTrue(webDevChildren.contains("XML Configuration File"));
+
+        // DatabaseView.NewGroup
+        MenuItemConfig dbViewNewGroup = newGroup.getChildren().stream()
+                .filter(c -> "project.databaseview.new.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> dbViewChildren = dbViewNewGroup.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(dbViewChildren.contains("DatabaseView.AddActionGroup"));
+        assertTrue(dbViewChildren.contains("Create Data Source"));
+
+        MenuItemConfig dbAddAction = dbViewNewGroup.getChildren().stream()
+                .filter(c -> "project.databaseview.add.action.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertTrue(dbAddAction.getChildren().stream().map(MenuItemConfig::getText).toList().contains("Query Console"));
+        assertTrue(dbAddAction.getChildren().stream().map(MenuItemConfig::getText).toList().contains("DatabaseView.Ddl.AddObject"));
+
+        MenuItemConfig createDs = dbViewNewGroup.getChildren().stream()
+                .filter(c -> "file.new.create.datasource".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> createDsChildren = createDs.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(createDsChildren.contains("Data Source from URL"));
+        assertTrue(createDsChildren.contains("Data Source from Path"));
+        assertTrue(createDsChildren.contains("Add Data Source from Selection\u2026"));
+        assertTrue(createDsChildren.contains("Data Source in Path"));
+        assertTrue(createDsChildren.contains("Import from Clipboard"));
+        assertTrue(createDsChildren.contains("Driver"));
+
+        // Cut/Copy/Paste Actions
+        MenuItemConfig ccpGroup = navBarRoot.getChildren().stream()
+                .filter(c -> "navbar.cut.copy.paste".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> ccpTexts = ccpGroup.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(ccpTexts.contains("Cut"));
+        assertTrue(ccpTexts.contains("Copy"));
+        assertTrue(ccpTexts.contains("Copy Paths"));
+        assertTrue(ccpTexts.contains("Copy as Plain Text"));
+        assertTrue(ccpTexts.contains("Copy as Rich Text"));
+        MenuItemConfig copyPathRef = ccpGroup.getChildren().stream()
+                .filter(c -> "project.copy.path.ref.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertEquals(4, copyPathRef.getChildren().size());
+        assertEquals("project.copy.file.ref", copyPathRef.getChildren().get(0).getId());
+        assertEquals(MenuItemConfig.Type.SEPARATOR, copyPathRef.getChildren().get(1).getType());
+        assertEquals("project.copy.ext.ref", copyPathRef.getChildren().get(2).getId());
+        assertEquals("project.copy.ref.action", copyPathRef.getChildren().get(3).getId());
+
+        // Refactoring Submenu
+        MenuItemConfig refactorGroup = navBarRoot.getChildren().stream()
+                .filter(c -> "navbar.refactoring.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        MenuItemConfig refactorSubmenu = refactorGroup.getChildren().stream()
+                .filter(c -> "project.refactor.submenu".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> refactorSubmenuTexts = refactorSubmenu.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(refactorSubmenuTexts.contains("Refactor This\u2026"));
+        assertTrue(refactorSubmenuTexts.contains("Rename\u2026"));
+        assertTrue(refactorSubmenuTexts.contains("Change Signature\u2026"));
+        assertTrue(refactorSubmenuTexts.contains("Modify Object\u2026"));
+        assertTrue(refactorSubmenuTexts.contains("Extract/Introduce"));
+        assertTrue(refactorSubmenuTexts.contains("Inline\u2026"));
+        assertTrue(refactorSubmenuTexts.contains("Move\u2026"));
+
+        // Modify Group
+        MenuItemConfig modGroup = navBarRoot.getChildren().stream()
+                .filter(c -> "navbar.modify.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> modTexts = modGroup.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(modTexts.contains("Reformat Code"));
+        assertTrue(modTexts.contains("Reformat JSON"));
+        assertTrue(modTexts.contains("Optimize Imports"));
+        assertTrue(modTexts.contains("Delete"));
+        assertTrue(modTexts.contains("Change File Language"));
+        assertTrue(modTexts.contains("Change SQL Dialect"));
+        assertTrue(modTexts.contains("Mark File as"));
+
+        // Run Group
+        MenuItemConfig runGroup = navBarRoot.getChildren().stream()
+                .filter(c -> "navbar.run.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> runTexts = runGroup.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(runTexts.contains("Run Configurations"));
+        assertTrue(runTexts.contains("Console.Jdbc.RunContextGroup"));
+
+        // SplitRevealGroup
+        MenuItemConfig splitGroup = navBarRoot.getChildren().stream()
+                .filter(c -> "navbar.split.reveal.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> splitTexts = splitGroup.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(splitTexts.contains("Open in Right Split"));
+        assertTrue(splitTexts.contains("Open in Split with Chooser\u2026"));
+        assertTrue(splitTexts.contains("Open In"));
+
+        // VCS/LVCS Actions
+        MenuItemConfig vcsGroup = navBarRoot.getChildren().stream()
+                .filter(c -> "navbar.vcs.lvcs.actions".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> vcsTexts = vcsGroup.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(vcsTexts.contains("Local History"));
+        assertTrue(vcsTexts.contains("Version Control Group"));
+
+        // Diagrams (Image 5)
+        MenuItemConfig diagramsGroup = navBarRoot.getChildren().stream()
+                .filter(c -> "navbar.diagrams".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> diagTexts = diagramsGroup.getChildren().stream().map(MenuItemConfig::getText).toList();
+        assertTrue(diagTexts.contains("Show Diagram\u2026"));
+        assertTrue(diagTexts.contains("Show Diagram Popup\u2026"));
+        assertTrue(diagTexts.contains("Show Local Changes as UML"));
+        assertEquals(3, diagramsGroup.getChildren().size());
+
+        // Action Catalog
+        ActionManager actionManager = ActionManager.getInstance();
+        var catalog = actionManager.getActionCatalog();
+        var navBarCat = catalog.stream().filter(c -> "Navigation Bar Popup Menu".equals(c.getName())).findFirst().orElseThrow();
+        assertFalse(navBarCat.getEntries().isEmpty());
+        List<String> catIds = navBarCat.getEntries().stream().map(ActionManager.ActionCatalogEntry::getId).toList();
+        assertTrue(catIds.contains("file.new.sqlfile"));
+        assertTrue(catIds.contains("navbar.associate.file.type"));
+        assertTrue(catIds.contains("edit.cut"));
+        assertTrue(catIds.contains("edit.copy"));
+        assertTrue(catIds.contains("edit.paste"));
+        assertTrue(catIds.contains("navbar.jump.source"));
+        assertTrue(catIds.contains("navbar.navigation.bar"));
+        assertTrue(catIds.contains("navbar.members.navigation.bar"));
+        assertTrue(catIds.contains("refactor.rename"));
+        assertTrue(catIds.contains("code.reformat"));
+        assertTrue(catIds.contains("navbar.reload.disk"));
+        assertTrue(catIds.contains("navbar.external.tools"));
+        assertTrue(catIds.contains("diagrams.show.uml"));
+
+        // Verify Auto-migration for root.navigation.bar.popup
+        MenuItemConfig staleNavBarPopup = MenuItemConfig.group("root.navigation.bar.popup", "Navigation Bar Popup Menu", List.of(
+                MenuItemConfig.group("navbar.new", "New", List.of())
+        ));
+        List<MenuItemConfig> testMenus = new ArrayList<>(settings.getMenusAndToolbars());
+        for (int i = 0; i < testMenus.size(); i++) {
+            if ("root.navigation.bar.popup".equalsIgnoreCase(testMenus.get(i).getId())) {
+                testMenus.set(i, staleNavBarPopup);
+                break;
+            }
+        }
+        settings.setMenusAndToolbars(testMenus);
+        List<MenuItemConfig> migrated = settings.getMenusAndToolbars();
+        MenuItemConfig migratedNavBar = migrated.stream()
+                .filter(r -> "root.navigation.bar.popup".equalsIgnoreCase(r.getId()))
+                .findFirst().orElseThrow();
+        MenuItemConfig migratedNew = migratedNavBar.getChildren().stream()
+                .filter(c -> "navbar.new".equalsIgnoreCase(c.getId()))
+                .findFirst().orElseThrow();
+        assertFalse(migratedNew.getChildren().isEmpty(), "Stale empty navbar popup must be migrated with full children");
+    }
+
+    @Test
+    @DisplayName("Verify Navigation Bar Toolbar hierarchy, groups, icons, catalog, and auto-migration matching DataGrip Image 1")
+    public void testNavigationBarToolbarStructureAndOrderMatchingDataGrip() {
+        MenuItemConfig navToolbar = settings.getMenuConfig("root.navigation.bar.toolbar");
+        assertNotNull(navToolbar);
+        assertEquals("Navigation Bar Toolbar", navToolbar.getText());
+
+        List<MenuItemConfig> children = navToolbar.getChildren();
+        assertFalse(children.isEmpty());
+
+        // 1. Toolbar Run Actions group
+        MenuItemConfig runActions = children.stream()
+                .filter(c -> "navbar.toolbar.run.actions".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertEquals("Toolbar Run Actions", runActions.getText());
+        assertFalse(runActions.isPopup());
+
+        List<MenuItemConfig> runChildren = runActions.getChildren();
+        assertEquals("navbar.select.run.debug.config", runChildren.get(0).getId());
+        assertEquals("Select Run/Debug Configuration", runChildren.get(0).getText());
+
+        // Run/Debug popup group
+        MenuItemConfig runDebugGrp = runChildren.get(1);
+        assertEquals("navbar.toolbar.run.debug.group", runDebugGrp.getId());
+        assertEquals("Run/Debug", runDebugGrp.getText());
+        assertTrue(runDebugGrp.isPopup());
+        List<MenuItemConfig> rdChildren = runDebugGrp.getChildren();
+        assertEquals("middle.run", rdChildren.get(0).getId());
+        assertEquals("Run", rdChildren.get(0).getText());
+        assertEquals("PLAY", rdChildren.get(0).getIconName());
+        assertEquals("debug.start", rdChildren.get(1).getId());
+        assertEquals("Debug", rdChildren.get(1).getText());
+        assertEquals("BUG", rdChildren.get(1).getIconName());
+        assertEquals("run.coverage.context.configuration", rdChildren.get(2).getId());
+        assertEquals("Run with Coverage", rdChildren.get(2).getText());
+        assertEquals("SHIELD_ALT", rdChildren.get(2).getIconName());
+        assertEquals("run.profiler.context.configuration", rdChildren.get(3).getId());
+        assertEquals("Run with Profiler", rdChildren.get(3).getText());
+        assertEquals("TACHOMETER_ALT", rdChildren.get(3).getIconName());
+
+        assertEquals("debug.stop", runChildren.get(2).getId());
+        assertEquals("Stop", runChildren.get(2).getText());
+        assertEquals("STOP", runChildren.get(2).getIconName());
+        assertEquals(MenuItemConfig.Type.SEPARATOR, runChildren.get(3).getType());
+
+        // 2. NavBarVcsGroup
+        MenuItemConfig vcsGroup = children.stream()
+                .filter(c -> "navbar.vcs.group".equals(c.getId()))
+                .findFirst().orElseThrow();
+        assertEquals("NavBarVcsGroup", vcsGroup.getText());
+        assertFalse(vcsGroup.isPopup());
+
+        MenuItemConfig vcsActions = vcsGroup.getChildren().get(0);
+        assertEquals("navbar.vcs.actions", vcsActions.getId());
+        assertEquals("VcsNavBarToolbarActions", vcsActions.getText());
+        List<MenuItemConfig> vcsItems = vcsActions.getChildren();
+        assertEquals("navbar.vcs.label", vcsItems.get(0).getId());
+        assertEquals("vcs.update.project", vcsItems.get(1).getId());
+        assertEquals("DOWNLOAD", vcsItems.get(1).getIconName());
+        assertEquals("vcs.commit.primary", vcsItems.get(2).getId());
+        assertEquals("CHECK", vcsItems.get(2).getIconName());
+        assertEquals("vcs.commit.secondary", vcsItems.get(3).getId());
+        assertEquals("CHECK", vcsItems.get(3).getIconName());
+        assertEquals("vcs.toggle.commit.ui", vcsItems.get(4).getId());
+        assertEquals("vcs.push", vcsItems.get(5).getId());
+        assertEquals("UPLOAD", vcsItems.get(5).getIconName());
+        assertEquals("vcs.show.history", vcsItems.get(6).getId());
+        assertEquals("HISTORY", vcsItems.get(6).getIconName());
+        assertEquals("vcs.rollback", vcsItems.get(7).getId());
+        assertEquals("UNDO", vcsItems.get(7).getIconName());
+        assertEquals(MenuItemConfig.Type.SEPARATOR, vcsItems.get(8).getType());
+
+        // Separator, Others, Separator, AIAssistantHubPopupAction, Search Everywhere, IDE and Project Settings
+        assertTrue(children.stream().anyMatch(c -> "navbar.toolbar.others".equals(c.getId())));
+        MenuItemConfig aiAction = children.stream().filter(c -> "navbar.ai.assistant".equals(c.getId())).findFirst().orElseThrow();
+        assertEquals("AIAssistantHubPopupAction", aiAction.getText());
+        assertEquals("ROBOT", aiAction.getIconName());
+
+        MenuItemConfig searchAction = children.stream().filter(c -> "nav.search.everywhere".equals(c.getId())).findFirst().orElseThrow();
+        assertEquals("Search Everywhere", searchAction.getText());
+        assertEquals("SEARCH", searchAction.getIconName());
+
+        MenuItemConfig settingsAction = children.stream().filter(c -> "file.settings".equals(c.getId())).findFirst().orElseThrow();
+        assertEquals("IDE and Project Settings", settingsAction.getText());
+
+        // Action catalog check
+        ActionManager actionManager = ActionManager.getInstance();
+        var cat = actionManager.getActionCatalog().stream()
+                .filter(c -> "Navigation Bar Toolbar".equals(c.getName()))
+                .findFirst().orElseThrow();
+        assertFalse(cat.getEntries().isEmpty());
+        List<String> entryIds = cat.getEntries().stream().map(ActionManager.ActionCatalogEntry::getId).toList();
+        assertTrue(entryIds.contains("middle.run"));
+        assertTrue(entryIds.contains("debug.start"));
+        assertTrue(entryIds.contains("navbar.ai.assistant"));
+        assertTrue(entryIds.contains("nav.search.everywhere"));
+
+        // Auto-migration test
+        MenuItemConfig staleTb = MenuItemConfig.group("root.navigation.bar.toolbar", "Navigation Bar Toolbar", List.of(
+                MenuItemConfig.group("navbar.toolbar.run.actions", "Toolbar Run Actions", List.of())
+        ));
+        List<MenuItemConfig> testList = new ArrayList<>(settings.getMenusAndToolbars());
+        for (int i = 0; i < testList.size(); i++) {
+            if ("root.navigation.bar.toolbar".equalsIgnoreCase(testList.get(i).getId())) {
+                testList.set(i, staleTb);
+                break;
+            }
+        }
+        settings.setMenusAndToolbars(testList);
+        MenuItemConfig migrated = settings.getMenusAndToolbars().stream()
+                .filter(r -> "root.navigation.bar.toolbar".equalsIgnoreCase(r.getId()))
+                .findFirst().orElseThrow();
+        MenuItemConfig migRun = migrated.getChildren().stream()
+                .filter(c -> "navbar.toolbar.run.actions".equalsIgnoreCase(c.getId()))
+                .findFirst().orElseThrow();
+        assertFalse(migRun.getChildren().isEmpty(), "Stale navbar toolbar must be migrated with full children");
+    }
+
+    @Test
+    @DisplayName("Verify Debug Header More Popup hierarchy, icons, catalog, and auto-migration matching DataGrip Image 2")
+    public void testDebugHeaderMorePopupStructureAndOrderMatchingDataGrip() {
+        MenuItemConfig debugMore = settings.getMenuConfig("root.debug.header.more.popup");
+        assertNotNull(debugMore);
+        assertEquals("Debug Header More Popup", debugMore.getText());
+
+        List<MenuItemConfig> items = debugMore.getChildren();
+        assertEquals(11, items.size());
+
+        assertEquals("debug.force.step.over", items.get(0).getId());
+        assertEquals("Force Step Over", items.get(0).getText());
+        assertEquals("STEP_FORWARD", items.get(0).getIconName());
+
+        assertEquals("debug.force.step.into", items.get(1).getId());
+        assertEquals("Force Step Into", items.get(1).getText());
+        assertEquals("ARROW_DOWN", items.get(1).getIconName());
+
+        assertEquals("debug.smart.step.into", items.get(2).getId());
+        assertEquals("Smart Step Into", items.get(2).getText());
+        assertEquals("ARROW_RIGHT", items.get(2).getIconName());
+
+        assertEquals(MenuItemConfig.Type.SEPARATOR, items.get(3).getType());
+
+        assertEquals("debug.run.to.cursor", items.get(4).getId());
+        assertEquals("Run to Cursor", items.get(4).getText());
+        assertEquals("PLAY", items.get(4).getIconName());
+
+        assertEquals("debug.force.run.to.cursor", items.get(5).getId());
+        assertEquals("Force Run to Cursor", items.get(5).getText());
+        assertEquals("PLAY", items.get(5).getIconName());
+
+        assertEquals(MenuItemConfig.Type.SEPARATOR, items.get(6).getType());
+
+        assertEquals("debug.show.point", items.get(7).getId());
+        assertEquals("Show Execution Point", items.get(7).getText());
+        assertEquals("BARS", items.get(7).getIconName());
+
+        assertEquals(MenuItemConfig.Type.SEPARATOR, items.get(8).getType());
+
+        assertEquals("debug.evaluate.expression", items.get(9).getId());
+        assertEquals("Evaluate Expression\u2026", items.get(9).getText());
+        assertEquals("CALCULATOR", items.get(9).getIconName());
+
+        assertEquals("debug.reset.frame", items.get(10).getId());
+        assertEquals("Reset Frame", items.get(10).getText());
+        assertEquals("UNDO", items.get(10).getIconName());
+
+        // Action catalog check
+        ActionManager actionManager = ActionManager.getInstance();
+        var cat = actionManager.getActionCatalog().stream()
+                .filter(c -> "Debug Header More Popup".equals(c.getName()))
+                .findFirst().orElseThrow();
+        assertEquals(8, cat.getEntries().size());
+
+        // Auto-migration test
+        MenuItemConfig staleMore = MenuItemConfig.group("root.debug.header.more.popup", "Debug Header More Popup", List.of(
+                MenuItemConfig.action("debug.run.to.cursor", "Run to Cursor")
+        ));
+        List<MenuItemConfig> testList = new ArrayList<>(settings.getMenusAndToolbars());
+        for (int i = 0; i < testList.size(); i++) {
+            if ("root.debug.header.more.popup".equalsIgnoreCase(testList.get(i).getId())) {
+                testList.set(i, staleMore);
+                break;
+            }
+        }
+        settings.setMenusAndToolbars(testList);
+        MenuItemConfig migrated = settings.getMenusAndToolbars().stream()
+                .filter(r -> "root.debug.header.more.popup".equalsIgnoreCase(r.getId()))
+                .findFirst().orElseThrow();
+        assertTrue(migrated.getChildren().size() >= 10, "Stale debug more popup must be migrated with full children");
+    }
+
+    @Test
+    @DisplayName("Verify Debug Header Toolbar hierarchy, nested StepOver.Ref, icons, catalog, and auto-migration matching DataGrip Image 3")
+    public void testDebugHeaderToolbarStructureAndOrderMatchingDataGrip() {
+        MenuItemConfig debugTb = settings.getMenuConfig("root.debug.header.toolbar");
+        assertNotNull(debugTb);
+        assertEquals("Debug Header Toolbar", debugTb.getText());
+
+        List<MenuItemConfig> items = debugTb.getChildren();
+        assertEquals(8, items.size());
+
+        assertEquals("middle.run", items.get(0).getId());
+        assertEquals("Run", items.get(0).getText());
+        assertEquals("PLAY", items.get(0).getIconName());
+
+        assertEquals("debug.start", items.get(1).getId());
+        assertEquals("Debug", items.get(1).getText());
+        assertEquals("BUG", items.get(1).getIconName());
+
+        assertEquals("debug.rerun", items.get(2).getId());
+        assertEquals("Rerun", items.get(2).getText());
+
+        assertEquals("debug.stop", items.get(3).getId());
+        assertEquals("Stop", items.get(3).getText());
+        assertEquals("STOP", items.get(3).getIconName());
+
+        assertEquals(MenuItemConfig.Type.SEPARATOR, items.get(4).getType());
+
+        // Resume.Ref
+        MenuItemConfig resumeRef = items.get(5);
+        assertEquals("debug.resume.ref", resumeRef.getId());
+        assertEquals("Resume.Ref", resumeRef.getText());
+        assertFalse(resumeRef.isPopup());
+        assertEquals("debug.resume.program", resumeRef.getChildren().get(0).getId());
+        assertEquals("Resume Program", resumeRef.getChildren().get(0).getText());
+        assertEquals("PLAY", resumeRef.getChildren().get(0).getIconName());
+
+        // Pause.Ref
+        MenuItemConfig pauseRef = items.get(6);
+        assertEquals("debug.pause.ref", pauseRef.getId());
+        assertEquals("Pause.Ref", pauseRef.getText());
+        assertFalse(pauseRef.isPopup());
+        assertEquals("debug.pause.program", pauseRef.getChildren().get(0).getId());
+        assertEquals("Pause Program", pauseRef.getChildren().get(0).getText());
+        assertEquals("PAUSE", pauseRef.getChildren().get(0).getIconName());
+
+        // StepOver.Ref
+        MenuItemConfig stepOverRef = items.get(7);
+        assertEquals("debug.stepover.ref", stepOverRef.getId());
+        assertEquals("StepOver.Ref", stepOverRef.getText());
+        assertFalse(stepOverRef.isPopup());
+        List<MenuItemConfig> stepChildren = stepOverRef.getChildren();
+        assertEquals(6, stepChildren.size());
+        assertEquals("debug.step.over", stepChildren.get(0).getId());
+        assertEquals("Step Over", stepChildren.get(0).getText());
+        assertEquals("STEP_FORWARD", stepChildren.get(0).getIconName());
+
+        assertEquals("debug.step.into", stepChildren.get(1).getId());
+        assertEquals("Step Into", stepChildren.get(1).getText());
+        assertEquals("ARROW_DOWN", stepChildren.get(1).getIconName());
+
+        assertEquals("debug.step.out", stepChildren.get(2).getId());
+        assertEquals("Step Out", stepChildren.get(2).getText());
+        assertEquals("ARROW_UP", stepChildren.get(2).getIconName());
+
+        assertEquals(MenuItemConfig.Type.SEPARATOR, stepChildren.get(3).getType());
+
+        assertEquals("debug.view.breakpoints", stepChildren.get(4).getId());
+        assertEquals("View Breakpoints\u2026", stepChildren.get(4).getText());
+        assertEquals("CIRCLE", stepChildren.get(4).getIconName());
+
+        assertEquals("debug.mute.breakpoints", stepChildren.get(5).getId());
+        assertEquals("Mute Breakpoints", stepChildren.get(5).getText());
+        assertEquals("BAN", stepChildren.get(5).getIconName());
+
+        // Action catalog check
+        ActionManager actionManager = ActionManager.getInstance();
+        var cat = actionManager.getActionCatalog().stream()
+                .filter(c -> "Debug Header Toolbar".equals(c.getName()))
+                .findFirst().orElseThrow();
+        assertEquals(11, cat.getEntries().size());
+
+        // Auto-migration test
+        MenuItemConfig staleDbgTb = MenuItemConfig.group("root.debug.header.toolbar", "Debug Header Toolbar", List.of(
+                MenuItemConfig.action("middle.run", "Run")
+        ));
+        List<MenuItemConfig> testList = new ArrayList<>(settings.getMenusAndToolbars());
+        for (int i = 0; i < testList.size(); i++) {
+            if ("root.debug.header.toolbar".equalsIgnoreCase(testList.get(i).getId())) {
+                testList.set(i, staleDbgTb);
+                break;
+            }
+        }
+        settings.setMenusAndToolbars(testList);
+        MenuItemConfig migrated = settings.getMenusAndToolbars().stream()
+                .filter(r -> "root.debug.header.toolbar".equalsIgnoreCase(r.getId()))
+                .findFirst().orElseThrow();
+        MenuItemConfig migStep = migrated.getChildren().stream()
+                .filter(c -> "debug.stepover.ref".equalsIgnoreCase(c.getId()))
+                .findFirst().orElseThrow();
+        assertEquals(6, migStep.getChildren().size(), "Stale debug toolbar must be migrated with StepOver.Ref full children");
+    }
+
+    @Test
+    @DisplayName("Verify Debug Watches Toolbar hierarchy, icons, catalog, and auto-migration matching DataGrip Image 4")
+    public void testDebugWatchesToolbarStructureAndOrderMatchingDataGrip() {
+        MenuItemConfig watches = settings.getMenuConfig("root.debug.watches.toolbar");
+        assertNotNull(watches);
+        assertEquals("Debug Watches Toolbar", watches.getText());
+
+        List<MenuItemConfig> items = watches.getChildren();
+        assertEquals(5, items.size());
+
+        assertEquals("watches.new", items.get(0).getId());
+        assertEquals("New Watch\u2026", items.get(0).getText());
+        assertEquals("PLUS", items.get(0).getIconName());
+
+        assertEquals("watches.remove", items.get(1).getId());
+        assertEquals("Remove Watch", items.get(1).getText());
+        assertEquals("MINUS", items.get(1).getIconName());
+
+        assertEquals("watches.move.up", items.get(2).getId());
+        assertEquals("Move Watch Up", items.get(2).getText());
+        assertEquals("ARROW_UP", items.get(2).getIconName());
+
+        assertEquals("watches.move.down", items.get(3).getId());
+        assertEquals("Move Watch Down", items.get(3).getText());
+        assertEquals("ARROW_DOWN", items.get(3).getIconName());
+
+        assertEquals("watches.duplicate", items.get(4).getId());
+        assertEquals("Duplicate Watch", items.get(4).getText());
+        assertEquals("COPY", items.get(4).getIconName());
+
+        // Action catalog check
+        ActionManager actionManager = ActionManager.getInstance();
+        var cat = actionManager.getActionCatalog().stream()
+                .filter(c -> "Debug Watches Toolbar".equals(c.getName()))
+                .findFirst().orElseThrow();
+        assertEquals(5, cat.getEntries().size());
+
+        // Auto-migration test
+        MenuItemConfig staleWatches = MenuItemConfig.group("root.debug.watches.toolbar", "Debug Watches Toolbar", List.of(
+                MenuItemConfig.action("watches.unknown", "Unknown")
+        ));
+        List<MenuItemConfig> testList = new ArrayList<>(settings.getMenusAndToolbars());
+        for (int i = 0; i < testList.size(); i++) {
+            if ("root.debug.watches.toolbar".equalsIgnoreCase(testList.get(i).getId())) {
+                testList.set(i, staleWatches);
+                break;
+            }
+        }
+        settings.setMenusAndToolbars(testList);
+        MenuItemConfig migrated = settings.getMenusAndToolbars().stream()
+                .filter(r -> "root.debug.watches.toolbar".equalsIgnoreCase(r.getId()))
+                .findFirst().orElseThrow();
+        assertEquals("watches.new", migrated.getChildren().get(0).getId(), "Stale watches toolbar must be migrated");
+    }
+
+    @Test
+    @DisplayName("Verify File History Toolbar hierarchy, View Options submenus, icons, catalog, and auto-migration matching DataGrip Image 5")
+    public void testFileHistoryToolbarStructureAndOrderMatchingDataGrip() {
+        MenuItemConfig histTb = settings.getMenuConfig("root.file.history.toolbar");
+        assertNotNull(histTb);
+        assertEquals("File History Toolbar", histTb.getText());
+
+        List<MenuItemConfig> items = histTb.getChildren();
+        assertEquals(6, items.size());
+
+        assertEquals("vcs.history.refresh", items.get(0).getId());
+        assertEquals("Refresh", items.get(0).getText());
+        assertEquals("SYNC", items.get(0).getIconName());
+
+        assertEquals("vcs.history.diff", items.get(1).getId());
+        assertEquals("Show Diff", items.get(1).getText());
+        assertEquals("EXCHANGE_ALT", items.get(1).getIconName());
+
+        assertEquals("vcs.history.show.affected.files", items.get(2).getId());
+        assertEquals("Show All Affected Files", items.get(2).getText());
+        assertEquals("LIST", items.get(2).getIconName());
+
+        assertEquals(MenuItemConfig.Type.SEPARATOR, items.get(3).getType());
+
+        // View Options group
+        MenuItemConfig viewOptions = items.get(4);
+        assertEquals("vcs.history.view.options", viewOptions.getId());
+        assertEquals("View Options", viewOptions.getText());
+        assertTrue(viewOptions.isPopup());
+        List<MenuItemConfig> voChildren = viewOptions.getChildren();
+        assertEquals(5, voChildren.size());
+        assertEquals(MenuItemConfig.Type.SEPARATOR, voChildren.get(0).getType());
+        assertEquals("vcs.history.commit.timestamp", voChildren.get(1).getId());
+        assertEquals("Commit Timestamp", voChildren.get(1).getText());
+        assertEquals("vcs.history.columns", voChildren.get(2).getId());
+        assertEquals("Columns", voChildren.get(2).getText());
+
+        // Configure Layout group
+        MenuItemConfig configLayout = voChildren.get(3);
+        assertEquals("vcs.history.configure.layout", configLayout.getId());
+        assertEquals("Configure Layout", configLayout.getText());
+        assertTrue(configLayout.isPopup());
+        List<MenuItemConfig> clChildren = configLayout.getChildren();
+        assertEquals(4, clChildren.size());
+        assertEquals(MenuItemConfig.Type.SEPARATOR, clChildren.get(0).getType());
+        assertEquals("vcs.history.show.details", clChildren.get(1).getId());
+        assertEquals("Show Details", clChildren.get(1).getText());
+        assertEquals("vcs.history.show.diff.preview", clChildren.get(2).getId());
+        assertEquals("Show Diff Preview", clChildren.get(2).getText());
+
+        // Diff Preview Location group
+        MenuItemConfig diffPreviewLoc = clChildren.get(3);
+        assertEquals("vcs.history.diff.preview.location", diffPreviewLoc.getId());
+        assertEquals("Diff Preview Location", diffPreviewLoc.getText());
+        assertTrue(diffPreviewLoc.isPopup());
+        List<MenuItemConfig> dplChildren = diffPreviewLoc.getChildren();
+        assertEquals(2, dplChildren.size());
+        assertEquals("vcs.history.diff.preview.bottom", dplChildren.get(0).getId());
+        assertEquals("Bottom", dplChildren.get(0).getText());
+        assertEquals("vcs.history.diff.preview.right", dplChildren.get(1).getId());
+        assertEquals("Right", dplChildren.get(1).getText());
+
+        assertEquals(MenuItemConfig.Type.SEPARATOR, voChildren.get(4).getType());
+
+        // VcsHistoryActionsGroup.Toolbar
+        MenuItemConfig vcsHistGrp = items.get(5);
+        assertEquals("vcs.history.actions.group.toolbar", vcsHistGrp.getId());
+        assertEquals("VcsHistoryActionsGroup.Toolbar", vcsHistGrp.getText());
+        assertFalse(vcsHistGrp.isPopup());
+        List<MenuItemConfig> vhgChildren = vcsHistGrp.getChildren();
+        assertEquals(2, vhgChildren.size());
+        assertEquals("git.hosting.open.in.browser.group", vhgChildren.get(0).getId());
+        assertEquals("Git.Hosting.Open.In.Browser.Group", vhgChildren.get(0).getText());
+        assertEquals("vcs.history.resume.indexing", vhgChildren.get(1).getId());
+        assertEquals("Resume Indexing", vhgChildren.get(1).getText());
+        assertEquals("PLAY", vhgChildren.get(1).getIconName());
+
+        // Action catalog check
+        ActionManager actionManager = ActionManager.getInstance();
+        var cat = actionManager.getActionCatalog().stream()
+                .filter(c -> "File History Toolbar".equals(c.getName()))
+                .findFirst().orElseThrow();
+        assertEquals(11, cat.getEntries().size());
+
+        // Auto-migration test
+        MenuItemConfig staleHist = MenuItemConfig.group("root.file.history.toolbar", "File History Toolbar", List.of(
+                MenuItemConfig.group("vcs.history.view.options", "View Options", List.of())
+        ));
+        List<MenuItemConfig> testList = new ArrayList<>(settings.getMenusAndToolbars());
+        for (int i = 0; i < testList.size(); i++) {
+            if ("root.file.history.toolbar".equalsIgnoreCase(testList.get(i).getId())) {
+                testList.set(i, staleHist);
+                break;
+            }
+        }
+        settings.setMenusAndToolbars(testList);
+        MenuItemConfig migrated = settings.getMenusAndToolbars().stream()
+                .filter(r -> "root.file.history.toolbar".equalsIgnoreCase(r.getId()))
+                .findFirst().orElseThrow();
+        MenuItemConfig migVo = migrated.getChildren().stream()
+                .filter(c -> "vcs.history.view.options".equalsIgnoreCase(c.getId()))
+                .findFirst().orElseThrow();
+        assertFalse(migVo.getChildren().isEmpty(), "Stale file history toolbar must be migrated with full children");
+    }
 }
+
 
