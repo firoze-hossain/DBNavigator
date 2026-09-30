@@ -1527,7 +1527,71 @@ public class ActionManager {
         sqlFloatingCat.addEntry(new ActionCatalogEntry("editor.explain.plan", "Explain Plan", "PROJECT_DIAGRAM", MenuItemConfig.Type.ACTION));
         rootCategories.add(sqlFloatingCat);
 
-        // 25. Other
+        // 25. VCS Local Changes Toolbar
+        ActionCatalogCategory vcsLocalCat = new ActionCatalogCategory("VCS Local Changes Toolbar");
+        vcsLocalCat.addEntry(new ActionCatalogEntry("vcs.local.refresh", "Refresh", "SYNC", MenuItemConfig.Type.ACTION));
+        vcsLocalCat.addEntry(new ActionCatalogEntry("vcs.local.commit", "Commit\u2026", "CODE_BRANCH", MenuItemConfig.Type.ACTION));
+        vcsLocalCat.addEntry(new ActionCatalogEntry("vcs.local.toggle.commit.ui", "Toggle Commit UI\u2026", "CODE_BRANCH", MenuItemConfig.Type.ACTION));
+        vcsLocalCat.addEntry(new ActionCatalogEntry("vcs.local.rollback", "Rollback\u2026", "UNDO", MenuItemConfig.Type.ACTION));
+        vcsLocalCat.addEntry(new ActionCatalogEntry("vcs.local.show.diff", "Show Diff", "ARROW_RIGHT", MenuItemConfig.Type.ACTION));
+        vcsLocalCat.addEntry(new ActionCatalogEntry("vcs.local.changelists.new", "New Changelist\u2026", "PLUS", MenuItemConfig.Type.ACTION));
+        vcsLocalCat.addEntry(new ActionCatalogEntry("vcs.local.changelists.edit", "Edit Changelist\u2026", "EDIT", MenuItemConfig.Type.ACTION));
+        vcsLocalCat.addEntry(new ActionCatalogEntry("vcs.local.changelists.delete", "Delete Changelist", "MINUS", MenuItemConfig.Type.ACTION));
+        vcsLocalCat.addEntry(new ActionCatalogEntry("vcs.local.changelists.set.active", "Set Active Changelist", "CHECK_SQUARE", MenuItemConfig.Type.ACTION));
+        vcsLocalCat.addEntry(new ActionCatalogEntry("vcs.local.changelists.move", "Move to Another Changelist\u2026", null, MenuItemConfig.Type.ACTION));
+        vcsLocalCat.addEntry(new ActionCatalogEntry("vcs.local.shelve.silently", "Shelve Silently", "DOWNLOAD", MenuItemConfig.Type.ACTION));
+        rootCategories.add(vcsLocalCat);
+
+        // 26. VCS Log Changes Browser Toolbar
+        ActionCatalogCategory vcsLogChangesCat = new ActionCatalogCategory("VCS Log Changes Browser Toolbar");
+        vcsLogChangesCat.addEntry(new ActionCatalogEntry("vcs.repository.changes.browser.revert", "Revert Selected Changes", "UNDO", MenuItemConfig.Type.ACTION));
+        vcsLogChangesCat.addEntry(new ActionCatalogEntry("vcs.repository.changes.browser.history.up.to.here", "History Up to Here", "HISTORY", MenuItemConfig.Type.ACTION));
+        vcsLogChangesCat.addEntry(new ActionCatalogEntry("vcs.log.show.affected.changes", "Show Only Affected Changes", "FOLDER", MenuItemConfig.Type.ACTION));
+        vcsLogChangesCat.addEntry(new ActionCatalogEntry("vcs.log.changes.group.by.directory", "Directory", null, MenuItemConfig.Type.ACTION));
+        vcsLogChangesCat.addEntry(new ActionCatalogEntry("vcs.log.changes.group.by.repository", "Repository", null, MenuItemConfig.Type.ACTION));
+        vcsLogChangesCat.addEntry(new ActionCatalogEntry("vcs.log.changes.filter.by", "Filter By", "FILTER", MenuItemConfig.Type.ACTION));
+        vcsLogChangesCat.addEntry(new ActionCatalogEntry("vcs.log.changes.show.details", "Show Details", null, MenuItemConfig.Type.ACTION));
+        vcsLogChangesCat.addEntry(new ActionCatalogEntry("vcs.log.changes.show.diff.preview", "Show Diff Preview", null, MenuItemConfig.Type.ACTION));
+        vcsLogChangesCat.addEntry(new ActionCatalogEntry("vcs.log.changes.diff.preview.bottom", "Bottom", null, MenuItemConfig.Type.ACTION));
+        vcsLogChangesCat.addEntry(new ActionCatalogEntry("vcs.log.changes.diff.preview.right", "Right", null, MenuItemConfig.Type.ACTION));
+        rootCategories.add(vcsLogChangesCat);
+
+        // 27. VCS Log Toolbar
+        ActionCatalogCategory vcsLogTbCat = new ActionCatalogCategory("VCS Log Toolbar");
+        vcsLogTbCat.addEntry(new ActionCatalogEntry("vcs.log.resume.indexing", "Resume Indexing", "PLAY", MenuItemConfig.Type.ACTION));
+        vcsLogTbCat.addEntry(new ActionCatalogEntry("vcs.log.refresh", "Refresh", "SYNC", MenuItemConfig.Type.ACTION));
+        vcsLogTbCat.addEntry(new ActionCatalogEntry("vcs.log.cherry.pick", "Cherry-Pick", "CODE_BRANCH", MenuItemConfig.Type.ACTION));
+        vcsLogTbCat.addEntry(new ActionCatalogEntry("vcs.log.view.options.root.names", "Root Names", null, MenuItemConfig.Type.ACTION));
+        vcsLogTbCat.addEntry(new ActionCatalogEntry("vcs.log.view.options.compact.references", "Compact References View", null, MenuItemConfig.Type.ACTION));
+        vcsLogTbCat.addEntry(new ActionCatalogEntry("vcs.log.view.options.tag.names", "Tag Names", null, MenuItemConfig.Type.ACTION));
+        vcsLogTbCat.addEntry(new ActionCatalogEntry("vcs.log.view.options.long.edges", "Long Edges", null, MenuItemConfig.Type.ACTION));
+        vcsLogTbCat.addEntry(new ActionCatalogEntry("vcs.log.view.options.commit.timestamp", "Commit Timestamp", null, MenuItemConfig.Type.ACTION));
+        vcsLogTbCat.addEntry(new ActionCatalogEntry("vcs.log.view.options.references.on.left", "References on the Left", null, MenuItemConfig.Type.ACTION));
+        vcsLogTbCat.addEntry(new ActionCatalogEntry("vcs.log.view.options.columns", "Columns", null, MenuItemConfig.Type.ACTION));
+        vcsLogTbCat.addEntry(new ActionCatalogEntry("vcs.log.highlighters.action.group", "Vcs.Log.HighlightersActionGroup", null, MenuItemConfig.Type.ACTION));
+        vcsLogTbCat.addEntry(new ActionCatalogEntry("vcs.log.git.not.cherry.picked.commits", "Not Cherry-Picked Commits", null, MenuItemConfig.Type.ACTION));
+        vcsLogTbCat.addEntry(new ActionCatalogEntry("vcs.log.goto.hash", "Go To Hash/Branch/Tag", "SEARCH", MenuItemConfig.Type.ACTION));
+        rootCategories.add(vcsLogTbCat);
+
+        // 28. VCS Operations Popup
+        ActionCatalogCategory vcsOpsCat = new ActionCatalogCategory("VCS Operations Popup");
+        vcsOpsCat.addEntry(new ActionCatalogEntry("vcs.operations.popup.vcsnameseparator", "Vcs.Operations.Popup.VcsNameSeparator", null, MenuItemConfig.Type.ACTION));
+        vcsOpsCat.addEntry(new ActionCatalogEntry("vcs.operations.popup.add", "Add to VCS", null, MenuItemConfig.Type.ACTION));
+        vcsOpsCat.addEntry(new ActionCatalogEntry("vcs.operations.popup.commit", "Commit\u2026", "CODE_BRANCH", MenuItemConfig.Type.ACTION));
+        vcsOpsCat.addEntry(new ActionCatalogEntry("vcs.operations.popup.toggle.commit.ui", "Toggle Commit UI\u2026", "CODE_BRANCH", MenuItemConfig.Type.ACTION));
+        vcsOpsCat.addEntry(new ActionCatalogEntry("vcs.operations.popup.commit.file", "Commit File", null, MenuItemConfig.Type.ACTION));
+        vcsOpsCat.addEntry(new ActionCatalogEntry("vcs.operations.popup.rollback", "Rollback\u2026", "UNDO", MenuItemConfig.Type.ACTION));
+        vcsOpsCat.addEntry(new ActionCatalogEntry("vcs.operations.popup.show.history", "Show History", "HISTORY", MenuItemConfig.Type.ACTION));
+        vcsOpsCat.addEntry(new ActionCatalogEntry("vcs.operations.popup.annotate", "Annotate", null, MenuItemConfig.Type.ACTION));
+        vcsOpsCat.addEntry(new ActionCatalogEntry("vcs.operations.popup.compare.same.repo", "Compare with Same Repository Version", "ARROW_RIGHT", MenuItemConfig.Type.ACTION));
+        vcsOpsCat.addEntry(new ActionCatalogEntry("vcs.operations.popup.vcs.providers", "Vcs.Operations.Popup.Vcs.Providers", null, MenuItemConfig.Type.ACTION));
+        vcsOpsCat.addEntry(new ActionCatalogEntry("vcs.operations.popup.create.git.repo", "Create Git Repository\u2026", null, MenuItemConfig.Type.ACTION));
+        vcsOpsCat.addEntry(new ActionCatalogEntry("vcs.operations.popup.enable.vcs.integration", "Enable Version Control Integration\u2026", null, MenuItemConfig.Type.ACTION));
+        vcsOpsCat.addEntry(new ActionCatalogEntry("vcs.operations.annotated.line", "Annotated Line", null, MenuItemConfig.Type.ACTION));
+        vcsOpsCat.addEntry(new ActionCatalogEntry("vcs.operations.show.history", "Show History\u2026", null, MenuItemConfig.Type.ACTION));
+        rootCategories.add(vcsOpsCat);
+
+        // 29. Other
         ActionCatalogCategory otherCat = new ActionCatalogCategory("Other");
         otherCat.addEntry(new ActionCatalogEntry("header.search", "Search Everywhere", "SEARCH", MenuItemConfig.Type.ACTION));
         otherCat.addEntry(new ActionCatalogEntry("file.settings", "Settings", "COG", MenuItemConfig.Type.ACTION));
