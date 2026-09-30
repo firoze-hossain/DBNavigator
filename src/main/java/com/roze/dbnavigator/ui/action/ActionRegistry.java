@@ -3741,6 +3741,7 @@ public final class ActionRegistry {
         registerEditorPopupMenuActions(manager);
         registerEditorGutterPopupMenuActions(manager);
         registerEditorTabPopupMenuActions(manager);
+        registerProjectViewPopupMenuActions(manager);
     }
 
     private static void registerMainToolbarActions(ActionManager manager) {
@@ -4699,6 +4700,362 @@ public final class ActionRegistry {
         manager.registerGroup(vcsLvcsGroup);
         manager.registerGroup(localHistoryGroup);
         manager.registerAction(AnAction.builder("tab.rename.file", "Rename File\u2026").onAction(ctx -> ctx.setStatus("Rename File\u2026")).build());
+    }
+
+    private static void registerProjectViewPopupMenuActions(ActionManager manager) {
+        AnAction attachDir = manager.getAction("file.attach.directory");
+        if (attachDir == null) {
+            attachDir = AnAction.builder("file.attach.directory", "Attach Directory to Project\u2026")
+                    .icon(FontAwesomeSolid.FOLDER_PLUS)
+                    .onAction(ctx -> ctx.setStatus("Attach Directory to Project\u2026"))
+                    .build();
+            manager.registerAction(attachDir);
+        }
+
+        AnAction assocFileType = AnAction.builder("project.associate.file.type", "Associate with File Type\u2026")
+                .onAction(ctx -> ctx.setStatus("Associate with File Type\u2026"))
+                .build();
+        AnAction restoreDefaultExts = AnAction.builder("project.restore.default.extensions", "Restore Default Extensions")
+                .onAction(ctx -> ctx.setStatus("Restore Default Extensions"))
+                .build();
+
+        AnAction cutAction = manager.getAction("edit.cut");
+        AnAction copyAction = manager.getAction("edit.copy");
+        AnAction copyPaths = AnAction.builder("project.copy.paths", "Copy Paths")
+                .onAction(ctx -> ctx.setStatus("Copy Paths"))
+                .build();
+        AnAction copyPlainText = manager.getAction("edit.copy.plain.text");
+        AnAction copyRichText = manager.getAction("edit.copy.rich.text");
+
+        AnAction copyPathAbsolute = AnAction.builder("project.copy.path.absolute", "Absolute Path")
+                .accelerator(new KeyCodeCombination(KeyCode.C, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Copy Absolute Path"))
+                .build();
+        AnAction copyPathFileName = AnAction.builder("project.copy.path.filename", "File Name")
+                .onAction(ctx -> ctx.setStatus("Copy File Name"))
+                .build();
+        AnAction copyPathLineNumber = AnAction.builder("project.copy.path.line.number", "Path with Line Number")
+                .onAction(ctx -> ctx.setStatus("Copy Path with Line Number"))
+                .build();
+        AnAction copyPathContentRoot = AnAction.builder("project.copy.path.content.root", "Path from Content Root")
+                .onAction(ctx -> ctx.setStatus("Copy Path from Content Root"))
+                .build();
+        AnAction copyPathSourceRoot = AnAction.builder("project.copy.path.source.root", "Path from Source Root")
+                .onAction(ctx -> ctx.setStatus("Copy Path from Source Root"))
+                .build();
+        AnAction copyPathRepoRoot = AnAction.builder("project.copy.path.repo.root", "Path From Repository Root")
+                .onAction(ctx -> ctx.setStatus("Copy Path from Repository Root"))
+                .build();
+        AnAction copyGitHostingLink = AnAction.builder("project.copy.git.hosting.link", "Git.Hosting.Copy.Link.Group")
+                .onAction(ctx -> ctx.setStatus("Git Hosting Copy Link"))
+                .build();
+        AnAction copyToolboxUrl = AnAction.builder("project.copy.toolbox.url", "Toolbox URL")
+                .icon(FontAwesomeSolid.TOOLBOX)
+                .onAction(ctx -> ctx.setStatus("Copy Toolbox URL"))
+                .build();
+        AnAction copyReference = AnAction.builder("project.copy.ref.action", "Copy Reference")
+                .accelerator(new KeyCodeCombination(KeyCode.C, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Copy Reference"))
+                .build();
+
+        AnAction pasteAction = manager.getAction("edit.paste");
+        AnAction pasteFromHistory = manager.getAction("edit.paste.from.history");
+        AnAction pastePlainText = manager.getAction("edit.paste.plain.text");
+        AnAction copyJsonPointer = AnAction.builder("project.copy.json.pointer", "Copy JSON Pointer")
+                .onAction(ctx -> ctx.setStatus("Copy JSON Pointer"))
+                .build();
+
+        AnAction importData = AnAction.builder("file.import.data", "Import to Database\u2026")
+                .icon(FontAwesomeSolid.UPLOAD)
+                .onAction(ctx -> ctx.setStatus("Import to Database\u2026"))
+                .build();
+        AnAction editSource = AnAction.builder("project.edit.source", "Edit Source")
+                .accelerator(new KeyCodeCombination(KeyCode.F4))
+                .onAction(ctx -> ctx.setStatus("Edit Source"))
+                .build();
+        AnAction applyPatch = AnAction.builder("project.apply.patch", "Apply Patch\u2026")
+                .onAction(ctx -> ctx.setStatus("Apply Patch\u2026"))
+                .build();
+
+        AnAction inspectCode = manager.getAction("code.inspect.code");
+        AnAction renameInner = AnAction.builder("refactor.rename.inner", "Rename\u2026")
+                .accelerator(new KeyCodeCombination(KeyCode.F6, KeyCombination.SHIFT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Rename"))
+                .build();
+
+        AnAction cacheRecovery = AnAction.builder("project.cache.recovery", "Cache Recovery")
+                .onAction(ctx -> ctx.setStatus("Cache Recovery"))
+                .build();
+        AnAction reloadFromDisk = AnAction.builder("file.reload.disk", "Reload from Disk")
+                .icon(FontAwesomeSolid.SYNC)
+                .accelerator(new KeyCodeCombination(KeyCode.Y, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN))
+                .onAction(ctx -> ctx.setStatus("Reload from Disk"))
+                .build();
+        AnAction gotoLinkTarget = AnAction.builder("project.goto.link.target", "Go to Link Target")
+                .onAction(ctx -> ctx.setStatus("Go to Link Target"))
+                .build();
+        AnAction compareFiles = AnAction.builder("project.compare.files", "Compare Files")
+                .icon(FontAwesomeSolid.ARROW_RIGHT)
+                .accelerator(new KeyCodeCombination(KeyCode.D, KeyCombination.CONTROL_DOWN))
+                .onAction(ctx -> ctx.setStatus("Compare Files"))
+                .build();
+        AnAction compareFileWithEditor = AnAction.builder("project.compare.file.editor", "Compare File with Editor")
+                .onAction(ctx -> ctx.setStatus("Compare File with Editor"))
+                .build();
+        AnAction externalTools = AnAction.builder("project.external.tools", "External Tools")
+                .onAction(ctx -> ctx.setStatus("External Tools"))
+                .build();
+        AnAction setBackgroundImage = AnAction.builder("project.set.background.image", "Set Background Image")
+                .onAction(ctx -> ctx.setStatus("Set Background Image"))
+                .build();
+
+        AnAction diagFileAssoc = AnAction.builder("project.diagrams.file.associations", "File Associations")
+                .onAction(ctx -> ctx.setStatus("File Associations"))
+                .build();
+        AnAction diagJumpExtEditor = AnAction.builder("project.diagrams.jump.external.editor", "Jump to External Editor")
+                .onAction(ctx -> ctx.setStatus("Jump to External Editor"))
+                .build();
+        AnAction diagConvertToPng = AnAction.builder("project.diagrams.convert.png", "Convert to PNG")
+                .onAction(ctx -> ctx.setStatus("Convert to PNG"))
+                .build();
+
+        // Groups
+        ActionGroup copyFileRef = new ActionGroup("project.copy.file.ref", "CopyFileReference", false);
+        copyFileRef.addAll(copyPathAbsolute, copyPathFileName)
+                .addSeparator()
+                .addAll(copyPathLineNumber, copyPathContentRoot, copyPathSourceRoot, copyPathRepoRoot, copyGitHostingLink);
+
+        ActionGroup copyExtRef = new ActionGroup("project.copy.ext.ref", "CopyExternalReferenceGroup", false);
+        copyExtRef.add(copyToolboxUrl);
+
+        ActionGroup copyPathRefGroup = new ActionGroup("project.copy.path.ref.group", "Copy Path/Reference\u2026", true);
+        copyPathRefGroup.add(copyFileRef)
+                .addSeparator()
+                .add(copyExtRef)
+                .add(copyReference);
+
+        ActionGroup pasteGroup = new ActionGroup("project.paste.group", "Paste", true);
+        if (pasteAction != null) pasteGroup.add(pasteAction);
+        if (pasteFromHistory != null) pasteGroup.add(pasteFromHistory);
+        if (pastePlainText != null) pasteGroup.add(pastePlainText);
+
+        ActionGroup cutCopyPaste = new ActionGroup("project.cut.copy.paste", "Cut/Copy/Paste Actions", false);
+        if (cutAction != null) cutCopyPaste.add(cutAction);
+        if (copyAction != null) cutCopyPaste.add(copyAction);
+        cutCopyPaste.add(copyPaths);
+        if (copyPlainText != null) cutCopyPaste.add(copyPlainText);
+        if (copyRichText != null) cutCopyPaste.add(copyRichText);
+        cutCopyPaste.add(copyPathRefGroup)
+                .add(pasteGroup)
+                .add(copyJsonPointer);
+
+        ActionGroup importGroup = new ActionGroup("fileeditor.import.to.database.group", "FileEditor.ImportToDatabase.Group", false);
+        importGroup.addSeparator().add(importData);
+
+        ActionGroup applyPatchGroup = new ActionGroup("changesview.applypatch.langgroup", "ChangesView.ApplyPatch.LangGroup", false);
+        applyPatchGroup.add(applyPatch);
+
+        ActionGroup inspectCodeGroup = new ActionGroup("project.inspect.code.action", "InspectCodeActionInPopupMenus", false);
+        if (inspectCode != null) inspectCodeGroup.add(inspectCode);
+
+        // Refactoring groups
+        ActionGroup refactorSubmenu = new ActionGroup("project.refactor.submenu", "Refactor", true);
+        AnAction refactorThis = manager.getAction("refactor.this");
+        AnAction refactorChangeSig = manager.getAction("refactor.change.signature");
+        AnAction refactorModifyObj = manager.getAction("refactor.modify.object");
+        ActionGroup extractIntroduce = manager.getGroup("refactor.extract.introduce.group");
+        AnAction refactorInline = manager.getAction("refactor.inline");
+        AnAction refactorMove = manager.getAction("refactor.move");
+        AnAction refactorCopy = manager.getAction("refactor.copy");
+        AnAction refactorSafeDel = manager.getAction("refactor.safe.delete");
+        AnAction refactorPullUp = manager.getAction("refactor.pull.members.up");
+        AnAction refactorPushDown = manager.getAction("refactor.push.members.down");
+        AnAction refactorInvertBool = manager.getAction("refactor.invert.boolean");
+
+        if (refactorThis != null) refactorSubmenu.add(refactorThis);
+        refactorSubmenu.add(renameInner);
+        if (refactorChangeSig != null) refactorSubmenu.add(refactorChangeSig);
+        if (refactorModifyObj != null) refactorSubmenu.add(refactorModifyObj);
+        refactorSubmenu.addSeparator();
+        if (extractIntroduce != null) refactorSubmenu.add(extractIntroduce);
+        if (refactorInline != null) refactorSubmenu.add(refactorInline);
+        refactorSubmenu.addSeparator();
+        if (refactorMove != null) refactorSubmenu.add(refactorMove);
+        if (refactorCopy != null) refactorSubmenu.add(refactorCopy);
+        if (refactorSafeDel != null) refactorSubmenu.add(refactorSafeDel);
+        refactorSubmenu.addSeparator();
+        if (refactorPullUp != null) refactorSubmenu.add(refactorPullUp);
+        if (refactorPushDown != null) refactorSubmenu.add(refactorPushDown);
+        if (refactorInvertBool != null) refactorSubmenu.add(refactorInvertBool);
+
+        ActionGroup projectRefactorGroup = new ActionGroup("project.refactoring.group", "Project View Popup Refactoring Group", false);
+        projectRefactorGroup.add(refactorSubmenu);
+
+        // Anonymous group 0 (Bookmarks)
+        ActionGroup projBookmarksGroup = new ActionGroup("project.bookmarks", "Bookmarks", true);
+        AnAction bmAddAnother = manager.getAction("tab.bookmark.add.another.list");
+        AnAction bmRename = manager.getAction("tab.bookmark.rename");
+        AnAction bmToggle = manager.getAction("tab.bookmark.toggle");
+        if (bmAddAnother != null) projBookmarksGroup.add(bmAddAnother);
+        if (bmRename != null) projBookmarksGroup.add(bmRename);
+        if (bmToggle != null) projBookmarksGroup.add(bmToggle);
+
+        ActionGroup anonGroup0 = new ActionGroup("project.anonymous.group.0", "<anonymous-group-0>", false);
+        anonGroup0.addSeparator().add(projBookmarksGroup).addSeparator();
+
+        // Modify Group
+        AnAction detachDir = AnAction.builder("project.mark.file.detach.directory", "Detach Directory from Project\u2026")
+                .onAction(ctx -> ctx.setStatus("Detach Directory from Project\u2026"))
+                .build();
+        AnAction excludeProj = AnAction.builder("project.mark.file.exclude", "Exclude from Project")
+                .onAction(ctx -> ctx.setStatus("Exclude from Project"))
+                .build();
+        AnAction includeProj = AnAction.builder("project.mark.file.include", "Include to Project")
+                .onAction(ctx -> ctx.setStatus("Include to Project"))
+                .build();
+
+        ActionGroup markFileAsGroup = new ActionGroup("project.mark.file.as", "Mark File As", true);
+        AnAction markOverride = manager.getAction("tab.mark.file.override.type");
+        AnAction markRevert = manager.getAction("tab.mark.file.revert.override");
+        if (markOverride != null) markFileAsGroup.add(markOverride);
+        if (markRevert != null) markFileAsGroup.add(markRevert);
+        markFileAsGroup.addAll(detachDir, excludeProj, includeProj);
+
+        ActionGroup modifyGroup = new ActionGroup("project.modify.group", "Project View Popup Menu Modify Group", false);
+        AnAction codeReformat = manager.getAction("code.reformat");
+        AnAction codeReformatJson = manager.getAction("code.reformat.json");
+        AnAction codeOptimize = manager.getAction("code.optimize.imports");
+        AnAction editDelete = manager.getAction("edit.delete");
+        AnAction changeFileLang = manager.getAction("editor.sql.change.file.language");
+        AnAction changeSqlDialect = manager.getAction("editor.sql.change.sql.dialect");
+        if (codeReformat != null) modifyGroup.add(codeReformat);
+        if (codeReformatJson != null) modifyGroup.add(codeReformatJson);
+        if (codeOptimize != null) modifyGroup.add(codeOptimize);
+        if (editDelete != null) modifyGroup.add(editDelete);
+        if (changeFileLang != null) modifyGroup.add(changeFileLang);
+        if (changeSqlDialect != null) modifyGroup.add(changeSqlDialect);
+        modifyGroup.add(markFileAsGroup);
+
+        // Run Group
+        ActionGroup projExecutorsGroup = new ActionGroup("project.run.context.executors", "RunContextExecutorsGroup", false);
+        AnAction runCtxConfig = manager.getAction("run.context.configuration");
+        AnAction debugCtxConfig = manager.getAction("debug.context.configuration");
+        if (runCtxConfig != null) projExecutorsGroup.add(runCtxConfig);
+        if (debugCtxConfig != null) projExecutorsGroup.add(debugCtxConfig);
+
+        ActionGroup projMoreRunDebugGroup = new ActionGroup("project.more.run.debug.group", "More Run/Debug", false);
+        AnAction runCoverage = manager.getAction("run.coverage.context.configuration");
+        AnAction runProfiler = manager.getAction("run.profiler.context.configuration");
+        AnAction createRunConfig = manager.getAction("run.create.configuration");
+        AnAction runCtxSec = manager.getAction("run.context.configuration.secondary");
+        AnAction debugCtxSec = manager.getAction("debug.context.configuration.secondary");
+        AnAction modifyRunConfig = manager.getAction("run.modify.configuration");
+        if (runCoverage != null) projMoreRunDebugGroup.add(runCoverage);
+        if (runProfiler != null) projMoreRunDebugGroup.add(runProfiler);
+        if (createRunConfig != null) projMoreRunDebugGroup.add(createRunConfig);
+        projMoreRunDebugGroup.addSeparator();
+        if (runCtxSec != null) projMoreRunDebugGroup.add(runCtxSec);
+        if (debugCtxSec != null) projMoreRunDebugGroup.add(debugCtxSec);
+        if (modifyRunConfig != null) projMoreRunDebugGroup.add(modifyRunConfig);
+
+        ActionGroup projRunCtxInner = new ActionGroup("project.run.context.group.inner", "RunContextGroupInner", false);
+        projRunCtxInner.addAll(projExecutorsGroup, projMoreRunDebugGroup);
+
+        ActionGroup projRunCtxGroup = new ActionGroup("project.run.context.group", "RunContextGroup", false);
+        projRunCtxGroup.add(projRunCtxInner).addSeparator();
+
+        ActionGroup projRunConfigsGroup = new ActionGroup("project.run.configurations.group", "Run Configurations", false);
+        projRunConfigsGroup.add(projRunCtxGroup);
+
+        ActionGroup projRunGroup = new ActionGroup("project.run.group", "Project View Popup Menu Run Group", false);
+        projRunGroup.add(projRunConfigsGroup);
+        ActionGroup consoleJdbcGroup = manager.getGroup("console.jdbc.run.context.group");
+        if (consoleJdbcGroup != null) projRunGroup.add(consoleJdbcGroup);
+
+        // SplitRevealGroup
+        ActionGroup projSplitRevealGroup = new ActionGroup("project.split.reveal.group", "SplitRevealGroup", false);
+        AnAction openSplitRight = manager.getAction("editor.open.in.right.split");
+        AnAction openSplitChooser = manager.getAction("editor.open.in.split.chooser");
+        ActionGroup openInGroup = manager.getGroup("editor.open.in.group");
+        if (openSplitRight != null) projSplitRevealGroup.add(openSplitRight);
+        if (openSplitChooser != null) projSplitRevealGroup.add(openSplitChooser);
+        if (openInGroup != null) projSplitRevealGroup.add(openInGroup);
+        projSplitRevealGroup.addSeparator();
+
+        // Settings Group
+        AnAction markDirAs = AnAction.builder("project.mark.directory.as", "Mark Directory As")
+                .onAction(ctx -> ctx.setStatus("Mark Directory As"))
+                .build();
+        ActionGroup projSettingsGroup = new ActionGroup("project.settings.group", "Project View Popup Menu Settings Group", false);
+        projSettingsGroup.add(markDirAs);
+
+        // Diagrams
+        ActionGroup diagramsGroup = new ActionGroup("project.diagrams", "Diagrams", true);
+        AnAction showUml = manager.getAction("diagrams.show.uml");
+        AnAction showUmlPopup = manager.getAction("diagrams.show.uml.popup");
+        AnAction showLocalChangesUml = manager.getAction("vcs.show.local.changes.uml");
+        if (showUml != null) diagramsGroup.add(showUml);
+        if (showUmlPopup != null) diagramsGroup.add(showUmlPopup);
+        if (showLocalChangesUml != null) diagramsGroup.add(showLocalChangesUml);
+        diagramsGroup.addAll(diagFileAssoc, diagJumpExtEditor, diagConvertToPng);
+
+        // Register actions
+        manager.registerAction(assocFileType);
+        manager.registerAction(restoreDefaultExts);
+        manager.registerAction(copyPaths);
+        manager.registerAction(copyPathAbsolute);
+        manager.registerAction(copyPathFileName);
+        manager.registerAction(copyPathLineNumber);
+        manager.registerAction(copyPathContentRoot);
+        manager.registerAction(copyPathSourceRoot);
+        manager.registerAction(copyPathRepoRoot);
+        manager.registerAction(copyGitHostingLink);
+        manager.registerAction(copyToolboxUrl);
+        manager.registerAction(copyReference);
+        manager.registerAction(copyJsonPointer);
+        manager.registerAction(importData);
+        manager.registerAction(editSource);
+        manager.registerAction(applyPatch);
+        manager.registerAction(renameInner);
+        manager.registerAction(detachDir);
+        manager.registerAction(excludeProj);
+        manager.registerAction(includeProj);
+        manager.registerAction(markDirAs);
+        manager.registerAction(cacheRecovery);
+        manager.registerAction(reloadFromDisk);
+        manager.registerAction(gotoLinkTarget);
+        manager.registerAction(compareFiles);
+        manager.registerAction(compareFileWithEditor);
+        manager.registerAction(externalTools);
+        manager.registerAction(setBackgroundImage);
+        manager.registerAction(diagFileAssoc);
+        manager.registerAction(diagJumpExtEditor);
+        manager.registerAction(diagConvertToPng);
+
+        // Register groups
+        manager.registerGroup(copyFileRef);
+        manager.registerGroup(copyExtRef);
+        manager.registerGroup(copyPathRefGroup);
+        manager.registerGroup(pasteGroup);
+        manager.registerGroup(cutCopyPaste);
+        manager.registerGroup(importGroup);
+        manager.registerGroup(applyPatchGroup);
+        manager.registerGroup(inspectCodeGroup);
+        manager.registerGroup(refactorSubmenu);
+        manager.registerGroup(projectRefactorGroup);
+        manager.registerGroup(projBookmarksGroup);
+        manager.registerGroup(anonGroup0);
+        manager.registerGroup(markFileAsGroup);
+        manager.registerGroup(modifyGroup);
+        manager.registerGroup(projExecutorsGroup);
+        manager.registerGroup(projMoreRunDebugGroup);
+        manager.registerGroup(projRunCtxInner);
+        manager.registerGroup(projRunCtxGroup);
+        manager.registerGroup(projRunConfigsGroup);
+        manager.registerGroup(projRunGroup);
+        manager.registerGroup(projSplitRevealGroup);
+        manager.registerGroup(projSettingsGroup);
+        manager.registerGroup(diagramsGroup);
     }
 
     public static List<ActionGroup> getMainMenuBarGroups(ActionManager manager) {
