@@ -3742,6 +3742,7 @@ public final class ActionRegistry {
         registerEditorGutterPopupMenuActions(manager);
         registerEditorTabPopupMenuActions(manager);
         registerProjectViewPopupMenuActions(manager);
+        registerNavBarAndDebugAndHistoryToolbarsActions(manager);
     }
 
     private static void registerMainToolbarActions(ActionManager manager) {
@@ -5032,6 +5033,28 @@ public final class ActionRegistry {
         manager.registerAction(diagJumpExtEditor);
         manager.registerAction(diagConvertToPng);
 
+        // Navigation Bar Popup specific actions
+        manager.registerAction(AnAction.builder("navbar.associate.file.type", "Associate with File Type\u2026")
+                .onAction(ctx -> ctx.setStatus("Associate with File Type"))
+                .build());
+        manager.registerAction(AnAction.builder("navbar.jump.source", "Jump to Source")
+                .icon(FontAwesomeSolid.EDIT)
+                .onAction(ctx -> ctx.setStatus("Jump to Source"))
+                .build());
+        manager.registerAction(AnAction.builder("navbar.navigation.bar", "Navigation Bar")
+                .onAction(ctx -> ctx.setStatus("Navigation Bar"))
+                .build());
+        manager.registerAction(AnAction.builder("navbar.members.navigation.bar", "Members in Navigation Bar")
+                .onAction(ctx -> ctx.setStatus("Members in Navigation Bar"))
+                .build());
+        manager.registerAction(AnAction.builder("navbar.reload.disk", "Reload from Disk")
+                .icon(FontAwesomeSolid.SYNC)
+                .onAction(ctx -> ctx.setStatus("Reload from Disk"))
+                .build());
+        manager.registerAction(AnAction.builder("navbar.external.tools", "External Tools")
+                .onAction(ctx -> ctx.setStatus("External Tools"))
+                .build());
+
         // Register groups
         manager.registerGroup(copyFileRef);
         manager.registerGroup(copyExtRef);
@@ -5056,6 +5079,339 @@ public final class ActionRegistry {
         manager.registerGroup(projSplitRevealGroup);
         manager.registerGroup(projSettingsGroup);
         manager.registerGroup(diagramsGroup);
+    }
+
+    private static void registerNavBarAndDebugAndHistoryToolbarsActions(ActionManager manager) {
+        // Navigation Bar Toolbar Actions
+        if (manager.getAction("middle.run") == null) {
+            manager.registerAction(AnAction.builder("middle.run", "Run")
+                    .icon(FontAwesomeSolid.PLAY, "#57965c", 11)
+                    .onAction(ctx -> ctx.setStatus("Run"))
+                    .build());
+        }
+        if (manager.getAction("debug.start") == null) {
+            manager.registerAction(AnAction.builder("debug.start", "Debug")
+                    .icon(FontAwesomeSolid.BUG, "#e05555", 11)
+                    .onAction(ctx -> ctx.setStatus("Debug"))
+                    .build());
+        }
+        if (manager.getAction("navbar.select.run.debug.config") == null) {
+            manager.registerAction(AnAction.builder("navbar.select.run.debug.config", "Select Run/Debug Configuration")
+                    .onAction(ctx -> ctx.setStatus("Select Run/Debug Configuration"))
+                    .build());
+        }
+        if (manager.getAction("debug.stop") == null) {
+            manager.registerAction(AnAction.builder("debug.stop", "Stop")
+                    .icon(FontAwesomeSolid.STOP, "#e05555", 11)
+                    .onAction(ctx -> ctx.setStatus("Stop"))
+                    .build());
+        }
+        if (manager.getAction("navbar.vcs.label") == null) {
+            manager.registerAction(AnAction.builder("navbar.vcs.label", "VCS Label")
+                    .onAction(ctx -> ctx.setStatus("VCS Label"))
+                    .build());
+        }
+        if (manager.getAction("vcs.commit.primary") == null) {
+            manager.registerAction(AnAction.builder("vcs.commit.primary", "Commit\u2026")
+                    .icon(FontAwesomeSolid.CHECK, "#57965c", 11)
+                    .onAction(ctx -> ctx.setStatus("Commit\u2026"))
+                    .build());
+        }
+        if (manager.getAction("vcs.commit.secondary") == null) {
+            manager.registerAction(AnAction.builder("vcs.commit.secondary", "Commit\u2026")
+                    .icon(FontAwesomeSolid.CHECK, "#57965c", 11)
+                    .onAction(ctx -> ctx.setStatus("Commit\u2026"))
+                    .build());
+        }
+        if (manager.getAction("vcs.toggle.commit.ui") == null) {
+            manager.registerAction(AnAction.builder("vcs.toggle.commit.ui", "Toggle Commit UI\u2026")
+                    .onAction(ctx -> ctx.setStatus("Toggle Commit UI\u2026"))
+                    .build());
+        }
+        if (manager.getAction("vcs.push") == null) {
+            manager.registerAction(AnAction.builder("vcs.push", "Push\u2026")
+                    .icon(FontAwesomeSolid.UPLOAD, "#4a88c7", 11)
+                    .onAction(ctx -> ctx.setStatus("Push\u2026"))
+                    .build());
+        }
+        if (manager.getAction("vcs.show.history") == null) {
+            manager.registerAction(AnAction.builder("vcs.show.history", "Show History")
+                    .icon(FontAwesomeSolid.HISTORY, "#a9b7c6", 11)
+                    .onAction(ctx -> ctx.setStatus("Show History"))
+                    .build());
+        }
+        if (manager.getAction("vcs.rollback") == null) {
+            manager.registerAction(AnAction.builder("vcs.rollback", "Rollback\u2026")
+                    .icon(FontAwesomeSolid.UNDO, "#a9b7c6", 11)
+                    .onAction(ctx -> ctx.setStatus("Rollback\u2026"))
+                    .build());
+        }
+        if (manager.getAction("navbar.toolbar.others") == null) {
+            manager.registerAction(AnAction.builder("navbar.toolbar.others", "NavBarToolBarOthers")
+                    .onAction(ctx -> ctx.setStatus("NavBarToolBarOthers"))
+                    .build());
+        }
+        if (manager.getAction("navbar.ai.assistant") == null) {
+            manager.registerAction(AnAction.builder("navbar.ai.assistant", "AIAssistantHubPopupAction")
+                    .icon(FontAwesomeSolid.ROBOT, "#9876aa", 11)
+                    .onAction(ctx -> ctx.setStatus("AIAssistantHubPopupAction"))
+                    .build());
+        }
+        if (manager.getAction("nav.search.everywhere") == null) {
+            manager.registerAction(AnAction.builder("nav.search.everywhere", "Search Everywhere")
+                    .icon(FontAwesomeSolid.SEARCH, "#a9b7c6", 11)
+                    .onAction(ctx -> ctx.setStatus("Search Everywhere"))
+                    .build());
+        }
+
+        // Navigation Bar Toolbar Groups
+        ActionGroup navRunDebugGroup = new ActionGroup("navbar.toolbar.run.debug.group", "Run/Debug", true);
+        if (manager.getAction("middle.run") != null) navRunDebugGroup.add(manager.getAction("middle.run"));
+        if (manager.getAction("debug.start") != null) navRunDebugGroup.add(manager.getAction("debug.start"));
+        if (manager.getAction("run.coverage.context.configuration") != null) navRunDebugGroup.add(manager.getAction("run.coverage.context.configuration"));
+        if (manager.getAction("run.profiler.context.configuration") != null) navRunDebugGroup.add(manager.getAction("run.profiler.context.configuration"));
+        manager.registerGroup(navRunDebugGroup);
+
+        ActionGroup navTbRunActions = new ActionGroup("navbar.toolbar.run.actions", "Toolbar Run Actions", false);
+        if (manager.getAction("navbar.select.run.debug.config") != null) navTbRunActions.add(manager.getAction("navbar.select.run.debug.config"));
+        navTbRunActions.add(navRunDebugGroup);
+        if (manager.getAction("debug.stop") != null) navTbRunActions.add(manager.getAction("debug.stop"));
+        navTbRunActions.add(ActionSeparator.getInstance());
+        manager.registerGroup(navTbRunActions);
+
+        ActionGroup navVcsTbActions = new ActionGroup("navbar.vcs.actions", "VcsNavBarToolbarActions", false);
+        if (manager.getAction("navbar.vcs.label") != null) navVcsTbActions.add(manager.getAction("navbar.vcs.label"));
+        if (manager.getAction("vcs.update.project") != null) navVcsTbActions.add(manager.getAction("vcs.update.project"));
+        if (manager.getAction("vcs.commit.primary") != null) navVcsTbActions.add(manager.getAction("vcs.commit.primary"));
+        if (manager.getAction("vcs.commit.secondary") != null) navVcsTbActions.add(manager.getAction("vcs.commit.secondary"));
+        if (manager.getAction("vcs.toggle.commit.ui") != null) navVcsTbActions.add(manager.getAction("vcs.toggle.commit.ui"));
+        if (manager.getAction("vcs.push") != null) navVcsTbActions.add(manager.getAction("vcs.push"));
+        if (manager.getAction("vcs.show.history") != null) navVcsTbActions.add(manager.getAction("vcs.show.history"));
+        if (manager.getAction("vcs.rollback") != null) navVcsTbActions.add(manager.getAction("vcs.rollback"));
+        navVcsTbActions.add(ActionSeparator.getInstance());
+        manager.registerGroup(navVcsTbActions);
+
+        ActionGroup navBarVcsGroup = new ActionGroup("navbar.vcs.group", "NavBarVcsGroup", false);
+        navBarVcsGroup.add(navVcsTbActions);
+        manager.registerGroup(navBarVcsGroup);
+
+        // Debug Header More Popup Actions
+        if (manager.getAction("debug.force.step.over") == null) {
+            manager.registerAction(AnAction.builder("debug.force.step.over", "Force Step Over")
+                    .icon(FontAwesomeSolid.STEP_FORWARD, "#a9b7c6", 11)
+                    .onAction(ctx -> ctx.setStatus("Force Step Over"))
+                    .build());
+        }
+        if (manager.getAction("debug.force.step.into") == null) {
+            manager.registerAction(AnAction.builder("debug.force.step.into", "Force Step Into")
+                    .icon(FontAwesomeSolid.ARROW_DOWN, "#a9b7c6", 11)
+                    .onAction(ctx -> ctx.setStatus("Force Step Into"))
+                    .build());
+        }
+        if (manager.getAction("debug.smart.step.into") == null) {
+            manager.registerAction(AnAction.builder("debug.smart.step.into", "Smart Step Into")
+                    .icon(FontAwesomeSolid.ARROW_RIGHT, "#a9b7c6", 11)
+                    .onAction(ctx -> ctx.setStatus("Smart Step Into"))
+                    .build());
+        }
+        if (manager.getAction("debug.show.point") == null) {
+            manager.registerAction(AnAction.builder("debug.show.point", "Show Execution Point")
+                    .icon(FontAwesomeSolid.BARS, "#a9b7c6", 11)
+                    .onAction(ctx -> ctx.setStatus("Show Execution Point"))
+                    .build());
+        }
+        if (manager.getAction("debug.reset.frame") == null) {
+            manager.registerAction(AnAction.builder("debug.reset.frame", "Reset Frame")
+                    .icon(FontAwesomeSolid.UNDO, "#a9b7c6", 11)
+                    .onAction(ctx -> ctx.setStatus("Reset Frame"))
+                    .build());
+        }
+
+        // Debug Header Toolbar Actions
+        if (manager.getAction("debug.rerun") == null) {
+            manager.registerAction(AnAction.builder("debug.rerun", "Rerun")
+                    .onAction(ctx -> ctx.setStatus("Rerun"))
+                    .build());
+        }
+        if (manager.getAction("debug.resume.program") == null) {
+            manager.registerAction(AnAction.builder("debug.resume.program", "Resume Program")
+                    .icon(FontAwesomeSolid.PLAY, "#57965c", 11)
+                    .onAction(ctx -> ctx.setStatus("Resume Program"))
+                    .build());
+        }
+        if (manager.getAction("debug.pause.program") == null) {
+            manager.registerAction(AnAction.builder("debug.pause.program", "Pause Program")
+                    .icon(FontAwesomeSolid.PAUSE, "#e0a44c", 11)
+                    .onAction(ctx -> ctx.setStatus("Pause Program"))
+                    .build());
+        }
+        if (manager.getAction("debug.step.over") == null) {
+            manager.registerAction(AnAction.builder("debug.step.over", "Step Over")
+                    .icon(FontAwesomeSolid.STEP_FORWARD, "#a9b7c6", 11)
+                    .onAction(ctx -> ctx.setStatus("Step Over"))
+                    .build());
+        }
+        if (manager.getAction("debug.step.into") == null) {
+            manager.registerAction(AnAction.builder("debug.step.into", "Step Into")
+                    .icon(FontAwesomeSolid.ARROW_DOWN, "#a9b7c6", 11)
+                    .onAction(ctx -> ctx.setStatus("Step Into"))
+                    .build());
+        }
+        if (manager.getAction("debug.step.out") == null) {
+            manager.registerAction(AnAction.builder("debug.step.out", "Step Out")
+                    .icon(FontAwesomeSolid.ARROW_UP, "#a9b7c6", 11)
+                    .onAction(ctx -> ctx.setStatus("Step Out"))
+                    .build());
+        }
+        if (manager.getAction("debug.view.breakpoints") == null) {
+            manager.registerAction(AnAction.builder("debug.view.breakpoints", "View Breakpoints\u2026")
+                    .icon(FontAwesomeSolid.CIRCLE, "#e05555", 11)
+                    .onAction(ctx -> ctx.setStatus("View Breakpoints\u2026"))
+                    .build());
+        }
+        if (manager.getAction("debug.mute.breakpoints") == null) {
+            manager.registerAction(AnAction.builder("debug.mute.breakpoints", "Mute Breakpoints")
+                    .icon(FontAwesomeSolid.BAN, "#e05555", 11)
+                    .onAction(ctx -> ctx.setStatus("Mute Breakpoints"))
+                    .build());
+        }
+
+        // Debug Header Toolbar Groups
+        ActionGroup resumeRef = new ActionGroup("debug.resume.ref", "Resume.Ref", false);
+        if (manager.getAction("debug.resume.program") != null) resumeRef.add(manager.getAction("debug.resume.program"));
+        manager.registerGroup(resumeRef);
+
+        ActionGroup pauseRef = new ActionGroup("debug.pause.ref", "Pause.Ref", false);
+        if (manager.getAction("debug.pause.program") != null) pauseRef.add(manager.getAction("debug.pause.program"));
+        manager.registerGroup(pauseRef);
+
+        ActionGroup stepOverRef = new ActionGroup("debug.stepover.ref", "StepOver.Ref", false);
+        if (manager.getAction("debug.step.over") != null) stepOverRef.add(manager.getAction("debug.step.over"));
+        if (manager.getAction("debug.step.into") != null) stepOverRef.add(manager.getAction("debug.step.into"));
+        if (manager.getAction("debug.step.out") != null) stepOverRef.add(manager.getAction("debug.step.out"));
+        stepOverRef.add(ActionSeparator.getInstance());
+        if (manager.getAction("debug.view.breakpoints") != null) stepOverRef.add(manager.getAction("debug.view.breakpoints"));
+        if (manager.getAction("debug.mute.breakpoints") != null) stepOverRef.add(manager.getAction("debug.mute.breakpoints"));
+        manager.registerGroup(stepOverRef);
+
+        // Debug Watches Toolbar Actions
+        if (manager.getAction("watches.new") == null) {
+            manager.registerAction(AnAction.builder("watches.new", "New Watch\u2026")
+                    .icon(FontAwesomeSolid.PLUS, "#57965c", 11)
+                    .onAction(ctx -> ctx.setStatus("New Watch\u2026"))
+                    .build());
+        }
+        if (manager.getAction("watches.remove") == null) {
+            manager.registerAction(AnAction.builder("watches.remove", "Remove Watch")
+                    .icon(FontAwesomeSolid.MINUS, "#e05555", 11)
+                    .onAction(ctx -> ctx.setStatus("Remove Watch"))
+                    .build());
+        }
+        if (manager.getAction("watches.move.up") == null) {
+            manager.registerAction(AnAction.builder("watches.move.up", "Move Watch Up")
+                    .icon(FontAwesomeSolid.ARROW_UP, "#a9b7c6", 11)
+                    .onAction(ctx -> ctx.setStatus("Move Watch Up"))
+                    .build());
+        }
+        if (manager.getAction("watches.move.down") == null) {
+            manager.registerAction(AnAction.builder("watches.move.down", "Move Watch Down")
+                    .icon(FontAwesomeSolid.ARROW_DOWN, "#a9b7c6", 11)
+                    .onAction(ctx -> ctx.setStatus("Move Watch Down"))
+                    .build());
+        }
+        if (manager.getAction("watches.duplicate") == null) {
+            manager.registerAction(AnAction.builder("watches.duplicate", "Duplicate Watch")
+                    .icon(FontAwesomeSolid.COPY, "#a9b7c6", 11)
+                    .onAction(ctx -> ctx.setStatus("Duplicate Watch"))
+                    .build());
+        }
+
+        // File History Toolbar Actions
+        if (manager.getAction("vcs.history.refresh") == null) {
+            manager.registerAction(AnAction.builder("vcs.history.refresh", "Refresh")
+                    .icon(FontAwesomeSolid.SYNC, "#57965c", 11)
+                    .onAction(ctx -> ctx.setStatus("Refresh"))
+                    .build());
+        }
+        if (manager.getAction("vcs.history.diff") == null) {
+            manager.registerAction(AnAction.builder("vcs.history.diff", "Show Diff")
+                    .icon(FontAwesomeSolid.EXCHANGE_ALT, "#4a88c7", 11)
+                    .onAction(ctx -> ctx.setStatus("Show Diff"))
+                    .build());
+        }
+        if (manager.getAction("vcs.history.show.affected.files") == null) {
+            manager.registerAction(AnAction.builder("vcs.history.show.affected.files", "Show All Affected Files")
+                    .icon(FontAwesomeSolid.LIST, "#a9b7c6", 11)
+                    .onAction(ctx -> ctx.setStatus("Show All Affected Files"))
+                    .build());
+        }
+        if (manager.getAction("vcs.history.commit.timestamp") == null) {
+            manager.registerAction(AnAction.builder("vcs.history.commit.timestamp", "Commit Timestamp")
+                    .onAction(ctx -> ctx.setStatus("Commit Timestamp"))
+                    .build());
+        }
+        if (manager.getAction("vcs.history.columns") == null) {
+            manager.registerAction(AnAction.builder("vcs.history.columns", "Columns")
+                    .onAction(ctx -> ctx.setStatus("Columns"))
+                    .build());
+        }
+        if (manager.getAction("vcs.history.show.details") == null) {
+            manager.registerAction(AnAction.builder("vcs.history.show.details", "Show Details")
+                    .onAction(ctx -> ctx.setStatus("Show Details"))
+                    .build());
+        }
+        if (manager.getAction("vcs.history.show.diff.preview") == null) {
+            manager.registerAction(AnAction.builder("vcs.history.show.diff.preview", "Show Diff Preview")
+                    .onAction(ctx -> ctx.setStatus("Show Diff Preview"))
+                    .build());
+        }
+        if (manager.getAction("vcs.history.diff.preview.bottom") == null) {
+            manager.registerAction(AnAction.builder("vcs.history.diff.preview.bottom", "Bottom")
+                    .onAction(ctx -> ctx.setStatus("Bottom"))
+                    .build());
+        }
+        if (manager.getAction("vcs.history.diff.preview.right") == null) {
+            manager.registerAction(AnAction.builder("vcs.history.diff.preview.right", "Right")
+                    .onAction(ctx -> ctx.setStatus("Right"))
+                    .build());
+        }
+        if (manager.getAction("git.hosting.open.in.browser.group") == null) {
+            manager.registerAction(AnAction.builder("git.hosting.open.in.browser.group", "Git.Hosting.Open.In.Browser.Group")
+                    .onAction(ctx -> ctx.setStatus("Git Hosting Open In Browser"))
+                    .build());
+        }
+        if (manager.getAction("vcs.history.resume.indexing") == null) {
+            manager.registerAction(AnAction.builder("vcs.history.resume.indexing", "Resume Indexing")
+                    .icon(FontAwesomeSolid.PLAY, "#57965c", 11)
+                    .onAction(ctx -> ctx.setStatus("Resume Indexing"))
+                    .build());
+        }
+
+        // File History Toolbar Groups
+        ActionGroup diffPreviewLoc = new ActionGroup("vcs.history.diff.preview.location", "Diff Preview Location", true);
+        diffPreviewLoc.add(manager.getAction("vcs.history.diff.preview.bottom"));
+        diffPreviewLoc.add(manager.getAction("vcs.history.diff.preview.right"));
+        manager.registerGroup(diffPreviewLoc);
+
+        ActionGroup configLayout = new ActionGroup("vcs.history.configure.layout", "Configure Layout", true);
+        configLayout.add(ActionSeparator.getInstance());
+        configLayout.add(manager.getAction("vcs.history.show.details"));
+        configLayout.add(manager.getAction("vcs.history.show.diff.preview"));
+        configLayout.add(diffPreviewLoc);
+        manager.registerGroup(configLayout);
+
+        ActionGroup viewOptions = new ActionGroup("vcs.history.view.options", "View Options", true);
+        viewOptions.add(ActionSeparator.getInstance());
+        viewOptions.add(manager.getAction("vcs.history.commit.timestamp"));
+        viewOptions.add(manager.getAction("vcs.history.columns"));
+        viewOptions.add(configLayout);
+        viewOptions.add(ActionSeparator.getInstance());
+        manager.registerGroup(viewOptions);
+
+        ActionGroup vcsHistoryActionsToolbar = new ActionGroup("vcs.history.actions.group.toolbar", "VcsHistoryActionsGroup.Toolbar", false);
+        vcsHistoryActionsToolbar.add(manager.getAction("git.hosting.open.in.browser.group"));
+        vcsHistoryActionsToolbar.add(manager.getAction("vcs.history.resume.indexing"));
+        manager.registerGroup(vcsHistoryActionsToolbar);
     }
 
     public static List<ActionGroup> getMainMenuBarGroups(ActionManager manager) {
