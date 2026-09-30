@@ -3743,6 +3743,7 @@ public final class ActionRegistry {
         registerEditorTabPopupMenuActions(manager);
         registerProjectViewPopupMenuActions(manager);
         registerNavBarAndDebugAndHistoryToolbarsActions(manager);
+        registerFloatingCodeAndQuickActionsAndSqlToolbarActions(manager);
     }
 
     private static void registerMainToolbarActions(ActionManager manager) {
@@ -5412,6 +5413,139 @@ public final class ActionRegistry {
         vcsHistoryActionsToolbar.add(manager.getAction("git.hosting.open.in.browser.group"));
         vcsHistoryActionsToolbar.add(manager.getAction("vcs.history.resume.indexing"));
         manager.registerGroup(vcsHistoryActionsToolbar);
+    }
+
+    private static void registerFloatingCodeAndQuickActionsAndSqlToolbarActions(ActionManager manager) {
+        // Floating Code Toolbar Actions
+        if (manager.getAction("code.surround.try.catch") == null) {
+            manager.registerAction(AnAction.builder("code.surround.try.catch", "try / catch")
+                    .onAction(ctx -> ctx.setStatus("try / catch"))
+                    .build());
+        }
+        if (manager.getAction("code.surround.try.catch.finally") == null) {
+            manager.registerAction(AnAction.builder("code.surround.try.catch.finally", "try / catch / finally")
+                    .onAction(ctx -> ctx.setStatus("try / catch / finally"))
+                    .build());
+        }
+        if (manager.getAction("code.surround.if") == null) {
+            manager.registerAction(AnAction.builder("code.surround.if", "if")
+                    .onAction(ctx -> ctx.setStatus("if"))
+                    .build());
+        }
+
+        // Floating Code Groups
+        ActionGroup extractGroup = new ActionGroup("code.extract.group", "Extract", false);
+        if (manager.getAction("refactor.extract.method") != null) extractGroup.add(manager.getAction("refactor.extract.method"));
+        if (manager.getAction("refactor.introduce.variable") != null) extractGroup.add(manager.getAction("refactor.introduce.variable"));
+        if (manager.getAction("refactor.introduce.constant") != null) extractGroup.add(manager.getAction("refactor.introduce.constant"));
+        if (manager.getAction("refactor.introduce.parameter") != null) extractGroup.add(manager.getAction("refactor.introduce.parameter"));
+        manager.registerGroup(extractGroup);
+
+        ActionGroup surroundGroup = new ActionGroup("code.surround.group", "Surround", false);
+        surroundGroup.add(manager.getAction("code.surround.try.catch"));
+        surroundGroup.add(manager.getAction("code.surround.try.catch.finally"));
+        surroundGroup.add(manager.getAction("code.surround.if"));
+        manager.registerGroup(surroundGroup);
+
+        ActionGroup xdbgCodeToolbar = new ActionGroup("xdebugger.code.toolbar", "XDebugger.Code.Toolbar", false);
+        xdbgCodeToolbar.add(ActionSeparator.getInstance());
+        if (manager.getAction("debug.evaluate.expression") != null) xdbgCodeToolbar.add(manager.getAction("debug.evaluate.expression"));
+        if (manager.getAction("debug.add.to.watches") != null) xdbgCodeToolbar.add(manager.getAction("debug.add.to.watches"));
+        manager.registerGroup(xdbgCodeToolbar);
+
+        // Markdown Editor Floating Toolbar Actions
+        if (manager.getAction("md.set.header.style") == null) {
+            manager.registerAction(AnAction.builder("md.set.header.style", "Set Header Style")
+                    .onAction(ctx -> ctx.setStatus("Set Header Style"))
+                    .build());
+        }
+        if (manager.getAction("md.bold") == null) {
+            manager.registerAction(AnAction.builder("md.bold", "Bold")
+                    .icon(FontAwesomeSolid.BOLD, "#a9b7c6", 11)
+                    .onAction(ctx -> ctx.setStatus("Bold"))
+                    .build());
+        }
+        if (manager.getAction("md.italic") == null) {
+            manager.registerAction(AnAction.builder("md.italic", "Italic")
+                    .icon(FontAwesomeSolid.ITALIC, "#a9b7c6", 11)
+                    .onAction(ctx -> ctx.setStatus("Italic"))
+                    .build());
+        }
+        if (manager.getAction("md.strikethrough") == null) {
+            manager.registerAction(AnAction.builder("md.strikethrough", "Strikethrough")
+                    .icon(FontAwesomeSolid.STRIKETHROUGH, "#a9b7c6", 11)
+                    .onAction(ctx -> ctx.setStatus("Strikethrough"))
+                    .build());
+        }
+        if (manager.getAction("md.code") == null) {
+            manager.registerAction(AnAction.builder("md.code", "<> Code")
+                    .icon(FontAwesomeSolid.CODE, "#a9b7c6", 11)
+                    .onAction(ctx -> ctx.setStatus("Code"))
+                    .build());
+        }
+        if (manager.getAction("md.create.link") == null) {
+            manager.registerAction(AnAction.builder("md.create.link", "Create Link")
+                    .icon(FontAwesomeSolid.LINK, "#3592c4", 11)
+                    .onAction(ctx -> ctx.setStatus("Create Link"))
+                    .build());
+        }
+        if (manager.getAction("md.create.or.change.list") == null) {
+            manager.registerAction(AnAction.builder("md.create.or.change.list", "Create Or Change List")
+                    .icon(FontAwesomeSolid.LIST, "#a9b7c6", 11)
+                    .onAction(ctx -> ctx.setStatus("Create Or Change List"))
+                    .build());
+        }
+
+        // Quick Actions Popup Toolbar Actions
+        if (manager.getAction("quick.actions.load.full.cell") == null) {
+            manager.registerAction(AnAction.builder("quick.actions.load.full.cell", "Load Full Cell")
+                    .icon(FontAwesomeSolid.ARROWS_ALT_V, "#3592c4", 11)
+                    .onAction(ctx -> ctx.setStatus("Load Full Cell"))
+                    .build());
+        }
+        if (manager.getAction("quick.actions.related.rows") == null) {
+            manager.registerAction(AnAction.builder("quick.actions.related.rows", "Related Rows")
+                    .icon(FontAwesomeSolid.TABLE, "#4a88c7", 11)
+                    .onAction(ctx -> ctx.setStatus("Related Rows"))
+                    .build());
+        }
+        if (manager.getAction("quick.actions.open.url") == null) {
+            manager.registerAction(AnAction.builder("quick.actions.open.url", "Open URL")
+                    .icon(FontAwesomeSolid.GLOBE, "#57965c", 11)
+                    .onAction(ctx -> ctx.setStatus("Open URL"))
+                    .build());
+        }
+        if (manager.getAction("quick.actions.open.file.uri") == null) {
+            manager.registerAction(AnAction.builder("quick.actions.open.file.uri", "Open File URI")
+                    .icon(FontAwesomeSolid.FOLDER, "#e0a44c", 11)
+                    .onAction(ctx -> ctx.setStatus("Open File URI"))
+                    .build());
+        }
+
+        // Run Tool Window Header Toolbar Actions
+        if (manager.getAction("run.header.rerun") == null) {
+            manager.registerAction(AnAction.builder("run.header.rerun", "Rerun")
+                    .onAction(ctx -> ctx.setStatus("Rerun"))
+                    .build());
+        }
+
+        // SQL Floating Toolbar Actions and Groups
+        if (manager.getAction("editor.explain.plan") == null) {
+            manager.registerAction(AnAction.builder("editor.explain.plan", "Explain Plan")
+                    .icon(FontAwesomeSolid.PROJECT_DIAGRAM, "#4a88c7", 11)
+                    .onAction(ctx -> ctx.setStatus("Explain Plan"))
+                    .build());
+        }
+
+        ActionGroup sqlFloatingCodeToolbar = new ActionGroup("sql.floating.code.toolbar", "Floating Code Toolbar", false);
+        sqlFloatingCodeToolbar.add(extractGroup);
+        sqlFloatingCodeToolbar.add(surroundGroup);
+        if (manager.getAction("code.comment.line") != null) sqlFloatingCodeToolbar.add(manager.getAction("code.comment.line"));
+        if (manager.getAction("code.reformat") != null) sqlFloatingCodeToolbar.add(manager.getAction("code.reformat"));
+        sqlFloatingCodeToolbar.add(xdbgCodeToolbar);
+        if (manager.getAction("middle.run") != null) sqlFloatingCodeToolbar.add(manager.getAction("middle.run"));
+        sqlFloatingCodeToolbar.add(manager.getAction("editor.explain.plan"));
+        manager.registerGroup(sqlFloatingCodeToolbar);
     }
 
     public static List<ActionGroup> getMainMenuBarGroups(ActionManager manager) {

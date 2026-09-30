@@ -3482,53 +3482,92 @@ public final class AppSettingsStore {
             historyToolbar.add(MenuItemConfig.group("vcs.history.actions.group.toolbar", "VcsHistoryActionsGroup.Toolbar", false, vcsHistoryActionsChildren));
             roots.add(MenuItemConfig.group("root.file.history.toolbar", "File History Toolbar", historyToolbar));
 
-            // 14. Floating Code Toolbar
+            // 14. Floating Code Toolbar (Image 1)
+            List<MenuItemConfig> extractChildren = new ArrayList<>();
+            extractChildren.add(MenuItemConfig.action("refactor.extract.method", "Extract Method\u2026"));
+            extractChildren.add(MenuItemConfig.action("refactor.introduce.variable", "Introduce Variable\u2026"));
+            extractChildren.add(MenuItemConfig.action("refactor.introduce.constant", "Introduce Constant\u2026"));
+            extractChildren.add(MenuItemConfig.action("refactor.introduce.parameter", "Introduce Parameter\u2026"));
+
+            List<MenuItemConfig> surroundChildren = new ArrayList<>();
+            surroundChildren.add(MenuItemConfig.action("code.surround.try.catch", "try / catch"));
+            surroundChildren.add(MenuItemConfig.action("code.surround.try.catch.finally", "try / catch / finally"));
+            surroundChildren.add(MenuItemConfig.action("code.surround.if", "if"));
+
+            List<MenuItemConfig> xdebuggerChildren = new ArrayList<>();
+            xdebuggerChildren.add(MenuItemConfig.separator());
+            xdebuggerChildren.add(MenuItemConfig.action("debug.evaluate.expression", "Evaluate Expression\u2026", "CALCULATOR"));
+            xdebuggerChildren.add(MenuItemConfig.action("debug.add.to.watches", "Add to Watches", "PLUS"));
+
             List<MenuItemConfig> floatingCode = new ArrayList<>();
-            floatingCode.add(MenuItemConfig.group("code.extract.group", "Extract", List.of()));
-            floatingCode.add(MenuItemConfig.group("code.surround.group", "Surround", List.of()));
-            floatingCode.add(MenuItemConfig.group("xdebugger.code.toolbar", "XDebugger.Code.Toolbar", List.of()));
+            floatingCode.add(MenuItemConfig.group("code.extract.group", "Extract", false, extractChildren));
+            floatingCode.add(MenuItemConfig.group("code.surround.group", "Surround", false, surroundChildren));
             floatingCode.add(MenuItemConfig.action("code.comment.line", "// Comment with Line Comment"));
-            floatingCode.add(MenuItemConfig.action("code.reformat", "Reformat Code"));
+            floatingCode.add(MenuItemConfig.action("code.reformat", "Reformat Code", "ALIGN_LEFT"));
+            floatingCode.add(MenuItemConfig.group("xdebugger.code.toolbar", "XDebugger.Code.Toolbar", false, xdebuggerChildren));
             roots.add(MenuItemConfig.group("root.floating.code.toolbar", "Floating Code Toolbar", floatingCode));
 
-            // 15. Markdown Editor Floating Toolbar
+            // 15. Markdown Editor Floating Toolbar (Image 2)
             List<MenuItemConfig> mdToolbar = new ArrayList<>();
             mdToolbar.add(MenuItemConfig.action("md.set.header.style", "Set Header Style"));
             mdToolbar.add(MenuItemConfig.separator());
-            mdToolbar.add(MenuItemConfig.action("md.bold", "Bold"));
-            mdToolbar.add(MenuItemConfig.action("md.italic", "Italic"));
-            mdToolbar.add(MenuItemConfig.action("md.strikethrough", "Strikethrough"));
-            mdToolbar.add(MenuItemConfig.action("md.code", "<> Code"));
-            mdToolbar.add(MenuItemConfig.action("md.create.link", "Create Link"));
+            mdToolbar.add(MenuItemConfig.action("md.bold", "Bold", "BOLD"));
+            mdToolbar.add(MenuItemConfig.action("md.italic", "Italic", "ITALIC"));
+            mdToolbar.add(MenuItemConfig.action("md.strikethrough", "Strikethrough", "STRIKETHROUGH"));
+            mdToolbar.add(MenuItemConfig.action("md.code", "<> Code", "CODE"));
+            mdToolbar.add(MenuItemConfig.action("md.create.link", "Create Link", "LINK"));
             mdToolbar.add(MenuItemConfig.separator());
-            mdToolbar.add(MenuItemConfig.action("md.create.or.change.list", "Create Or Change List"));
+            mdToolbar.add(MenuItemConfig.action("md.create.or.change.list", "Create Or Change List", "LIST"));
             roots.add(MenuItemConfig.group("root.markdown.editor.floating.toolbar", "Markdown Editor Floating Toolbar", mdToolbar));
 
-            // 16. Quick Actions Popup Toolbar
+            // 16. Quick Actions Popup Toolbar (Image 3)
             List<MenuItemConfig> quickActions = new ArrayList<>();
-            quickActions.add(MenuItemConfig.action("quick.actions.load.full.cell", "Load Full Cell"));
-            quickActions.add(MenuItemConfig.action("quick.actions.related.rows", "Related Rows"));
-            quickActions.add(MenuItemConfig.action("quick.actions.open.url", "Open URL"));
-            quickActions.add(MenuItemConfig.action("quick.actions.open.file.uri", "Open File URI"));
+            quickActions.add(MenuItemConfig.action("quick.actions.load.full.cell", "Load Full Cell", "ARROWS_ALT_V"));
+            quickActions.add(MenuItemConfig.action("quick.actions.related.rows", "Related Rows", "TABLE"));
+            quickActions.add(MenuItemConfig.action("quick.actions.open.url", "Open URL", "GLOBE"));
+            quickActions.add(MenuItemConfig.action("quick.actions.open.file.uri", "Open File URI", "FOLDER"));
             roots.add(MenuItemConfig.group("root.quick.actions.popup.toolbar", "Quick Actions Popup Toolbar", quickActions));
 
-            // 17. Run Tool Window Header More Popup
+            // 17. Run Tool Window Header More Popup (Images 3 & 4)
             List<MenuItemConfig> runMore = new ArrayList<>();
             roots.add(MenuItemConfig.group("root.run.toolwindow.header.more.popup", "Run Tool Window Header More Popup", runMore));
 
-            // 18. Run Tool Window Header Toolbar
+            // 18. Run Tool Window Header Toolbar (Image 4)
             List<MenuItemConfig> runHeaderToolbar = new ArrayList<>();
-            runHeaderToolbar.add(MenuItemConfig.action("middle.run", "Run"));
-            runHeaderToolbar.add(MenuItemConfig.action("debug.start", "Debug"));
+            runHeaderToolbar.add(MenuItemConfig.action("middle.run", "Run", "PLAY"));
+            runHeaderToolbar.add(MenuItemConfig.action("debug.start", "Debug", "BUG"));
             runHeaderToolbar.add(MenuItemConfig.action("run.header.rerun", "Rerun"));
-            runHeaderToolbar.add(MenuItemConfig.action("run.stop", "Stop"));
+            runHeaderToolbar.add(MenuItemConfig.action("debug.stop", "Stop", "STOP"));
             roots.add(MenuItemConfig.group("root.run.toolwindow.header.toolbar", "Run Tool Window Header Toolbar", runHeaderToolbar));
 
-            // 19. SQL Floating Toolbar
+            // 19. SQL Floating Toolbar (Image 5)
+            List<MenuItemConfig> sqlFloatingCodeChildren = new ArrayList<>();
+            List<MenuItemConfig> sqlExtractChildren = new ArrayList<>();
+            sqlExtractChildren.add(MenuItemConfig.action("refactor.extract.method", "Extract Method\u2026"));
+            sqlExtractChildren.add(MenuItemConfig.action("refactor.introduce.variable", "Introduce Variable\u2026"));
+            sqlExtractChildren.add(MenuItemConfig.action("refactor.introduce.constant", "Introduce Constant\u2026"));
+            sqlExtractChildren.add(MenuItemConfig.action("refactor.introduce.parameter", "Introduce Parameter\u2026"));
+
+            List<MenuItemConfig> sqlSurroundChildren = new ArrayList<>();
+            sqlSurroundChildren.add(MenuItemConfig.action("code.surround.try.catch", "try / catch"));
+            sqlSurroundChildren.add(MenuItemConfig.action("code.surround.try.catch.finally", "try / catch / finally"));
+            sqlSurroundChildren.add(MenuItemConfig.action("code.surround.if", "if"));
+
+            List<MenuItemConfig> sqlXdebuggerChildren = new ArrayList<>();
+            sqlXdebuggerChildren.add(MenuItemConfig.separator());
+            sqlXdebuggerChildren.add(MenuItemConfig.action("debug.evaluate.expression", "Evaluate Expression\u2026", "CALCULATOR"));
+            sqlXdebuggerChildren.add(MenuItemConfig.action("debug.add.to.watches", "Add to Watches", "PLUS"));
+
+            sqlFloatingCodeChildren.add(MenuItemConfig.group("code.extract.group", "Extract", false, sqlExtractChildren));
+            sqlFloatingCodeChildren.add(MenuItemConfig.group("code.surround.group", "Surround", false, sqlSurroundChildren));
+            sqlFloatingCodeChildren.add(MenuItemConfig.action("code.comment.line", "// Comment with Line Comment"));
+            sqlFloatingCodeChildren.add(MenuItemConfig.action("code.reformat", "Reformat Code", "ALIGN_LEFT"));
+            sqlFloatingCodeChildren.add(MenuItemConfig.group("xdebugger.code.toolbar", "XDebugger.Code.Toolbar", false, sqlXdebuggerChildren));
+            sqlFloatingCodeChildren.add(MenuItemConfig.action("middle.run", "Execute", "PLAY"));
+            sqlFloatingCodeChildren.add(MenuItemConfig.action("editor.explain.plan", "Explain Plan", "PROJECT_DIAGRAM"));
+
             List<MenuItemConfig> sqlFloating = new ArrayList<>();
-            sqlFloating.add(MenuItemConfig.group("sql.floating.code.toolbar", "Floating Code Toolbar", List.of()));
-            sqlFloating.add(MenuItemConfig.action("middle.run", "Execute"));
-            sqlFloating.add(MenuItemConfig.action("editor.explain.plan", "Explain Plan"));
+            sqlFloating.add(MenuItemConfig.group("sql.floating.code.toolbar", "Floating Code Toolbar", false, sqlFloatingCodeChildren));
             roots.add(MenuItemConfig.group("root.sql.floating.toolbar", "SQL Floating Toolbar", sqlFloating));
 
             // 20. VCS Local Changes Toolbar
@@ -4079,6 +4118,69 @@ public final class AppSettingsStore {
                         if (needsFileHistoryTbMigration) {
                             for (MenuItemConfig defRoot : defaultMenusAndToolbars()) {
                                 if ("root.file.history.toolbar".equalsIgnoreCase(defRoot.getId())) {
+                                    menusAndToolbars.set(i, defRoot.copy());
+                                    break;
+                                }
+                            }
+                        }
+                    } else if ("root.floating.code.toolbar".equalsIgnoreCase(root.getId())) {
+                        boolean needsFloatingCodeMigration = root.getChildren().stream()
+                                .noneMatch(c -> "code.extract.group".equalsIgnoreCase(c.getId()) && !c.getChildren().isEmpty())
+                                || root.getChildren().stream()
+                                .noneMatch(c -> "code.surround.group".equalsIgnoreCase(c.getId()) && !c.getChildren().isEmpty())
+                                || root.getChildren().stream()
+                                .noneMatch(c -> "xdebugger.code.toolbar".equalsIgnoreCase(c.getId()) && !c.getChildren().isEmpty());
+                        if (needsFloatingCodeMigration) {
+                            for (MenuItemConfig defRoot : defaultMenusAndToolbars()) {
+                                if ("root.floating.code.toolbar".equalsIgnoreCase(defRoot.getId())) {
+                                    menusAndToolbars.set(i, defRoot.copy());
+                                    break;
+                                }
+                            }
+                        }
+                    } else if ("root.markdown.editor.floating.toolbar".equalsIgnoreCase(root.getId())) {
+                        boolean needsMdMigration = root.getChildren().stream()
+                                .noneMatch(c -> "md.bold".equalsIgnoreCase(c.getId()) && "BOLD".equalsIgnoreCase(c.getIconName()))
+                                || root.getChildren().size() < 8;
+                        if (needsMdMigration) {
+                            for (MenuItemConfig defRoot : defaultMenusAndToolbars()) {
+                                if ("root.markdown.editor.floating.toolbar".equalsIgnoreCase(defRoot.getId())) {
+                                    menusAndToolbars.set(i, defRoot.copy());
+                                    break;
+                                }
+                            }
+                        }
+                    } else if ("root.quick.actions.popup.toolbar".equalsIgnoreCase(root.getId())) {
+                        boolean needsQuickActionsMigration = root.getChildren().stream()
+                                .noneMatch(c -> "quick.actions.open.url".equalsIgnoreCase(c.getId()) && "GLOBE".equalsIgnoreCase(c.getIconName()));
+                        if (needsQuickActionsMigration) {
+                            for (MenuItemConfig defRoot : defaultMenusAndToolbars()) {
+                                if ("root.quick.actions.popup.toolbar".equalsIgnoreCase(defRoot.getId())) {
+                                    menusAndToolbars.set(i, defRoot.copy());
+                                    break;
+                                }
+                            }
+                        }
+                    } else if ("root.run.toolwindow.header.toolbar".equalsIgnoreCase(root.getId())) {
+                        boolean needsRunHeaderMigration = root.getChildren().stream()
+                                .noneMatch(c -> "middle.run".equalsIgnoreCase(c.getId()) && "PLAY".equalsIgnoreCase(c.getIconName()))
+                                || root.getChildren().stream()
+                                .noneMatch(c -> "debug.stop".equalsIgnoreCase(c.getId()) && "STOP".equalsIgnoreCase(c.getIconName()));
+                        if (needsRunHeaderMigration) {
+                            for (MenuItemConfig defRoot : defaultMenusAndToolbars()) {
+                                if ("root.run.toolwindow.header.toolbar".equalsIgnoreCase(defRoot.getId())) {
+                                    menusAndToolbars.set(i, defRoot.copy());
+                                    break;
+                                }
+                            }
+                        }
+                    } else if ("root.sql.floating.toolbar".equalsIgnoreCase(root.getId())) {
+                        boolean needsSqlFloatingMigration = root.getChildren().stream()
+                                .noneMatch(c -> "sql.floating.code.toolbar".equalsIgnoreCase(c.getId())
+                                        && c.getChildren().stream().anyMatch(sub -> "middle.run".equalsIgnoreCase(sub.getId())));
+                        if (needsSqlFloatingMigration) {
+                            for (MenuItemConfig defRoot : defaultMenusAndToolbars()) {
+                                if ("root.sql.floating.toolbar".equalsIgnoreCase(defRoot.getId())) {
                                     menusAndToolbars.set(i, defRoot.copy());
                                     break;
                                 }
