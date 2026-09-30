@@ -1418,4 +1418,50 @@ public class ActionRegistryTest {
         assertEquals(KeyCombination.ModifierValue.DOWN, faAcc.getControl());
         assertEquals(KeyCombination.ModifierValue.DOWN, faAcc.getShift());
     }
+
+    @Test
+    public void testVcsToolbarsAndPopupActionsRegistration() {
+        // Local Changes Toolbar
+        assertNotNull(actionManager.getAction("vcs.local.refresh"));
+        assertNotNull(actionManager.getAction("vcs.local.commit"));
+        assertNotNull(actionManager.getAction("vcs.local.toggle.commit.ui"));
+        assertNotNull(actionManager.getAction("vcs.local.rollback"));
+        assertNotNull(actionManager.getAction("vcs.local.show.diff"));
+        assertNotNull(actionManager.getAction("vcs.local.shelve.silently"));
+        ActionGroup changelists = actionManager.getGroup("vcs.local.changelists");
+        assertNotNull(changelists);
+        assertEquals(5, changelists.getChildren().size());
+
+        // Log Changes Browser Toolbar
+        assertNotNull(actionManager.getAction("vcs.repository.changes.browser.revert"));
+        assertNotNull(actionManager.getAction("vcs.repository.changes.browser.history.up.to.here"));
+        assertNotNull(actionManager.getAction("vcs.log.show.affected.changes"));
+        ActionGroup repoChanges = actionManager.getGroup("vcs.repository.changes.browser.toolbar");
+        assertNotNull(repoChanges);
+        assertEquals(2, repoChanges.getChildren().size());
+        ActionGroup logChangesViewOpts = actionManager.getGroup("vcs.log.changes.view.options");
+        assertNotNull(logChangesViewOpts);
+        assertEquals(3, logChangesViewOpts.getChildren().size());
+
+        // Log Toolbar
+        assertNotNull(actionManager.getAction("vcs.log.resume.indexing"));
+        assertNotNull(actionManager.getAction("vcs.log.refresh"));
+        assertNotNull(actionManager.getAction("vcs.log.goto.hash"));
+        ActionGroup logToolbarGroup = actionManager.getGroup("vcs.log.toolbar.group");
+        assertNotNull(logToolbarGroup);
+        ActionGroup logViewOpts = actionManager.getGroup("vcs.log.view.options");
+        assertNotNull(logViewOpts);
+        assertEquals(11, logViewOpts.getChildren().size());
+
+        // Operations Popup
+        ActionGroup vcsAware = actionManager.getGroup("vcs.operations.popup.vcsaware");
+        assertNotNull(vcsAware);
+        assertEquals(10, vcsAware.getChildren().size());
+        ActionGroup nonVcsAware = actionManager.getGroup("vcs.operations.popup.nonvcsaware");
+        assertNotNull(nonVcsAware);
+        assertEquals(2, nonVcsAware.getChildren().size());
+        assertNotNull(actionManager.getAction("vcs.operations.popup.vcs.providers"));
+        assertNotNull(actionManager.getAction("vcs.operations.annotated.line"));
+        assertNotNull(actionManager.getAction("vcs.operations.show.history"));
+    }
 }

@@ -4017,6 +4017,348 @@ public class MenusAndToolbarsTest {
         MenuItemConfig migFct = migrated.getChildren().get(0);
         assertEquals(7, migFct.getChildren().size(), "Stale SQL floating toolbar must be migrated with full children");
     }
+
+    @Test
+    @DisplayName("Verify VCS Local Changes Toolbar detailed hierarchy, icons, catalog, and auto-migration")
+    public void testVcsLocalChangesToolbarHierarchyAndIcons() {
+        MenuItemConfig localRoot = settings.getMenuConfig("root.vcs.local.changes.toolbar");
+        assertNotNull(localRoot);
+        assertEquals("VCS Local Changes Toolbar", localRoot.getText());
+        assertEquals(7, localRoot.getChildren().size());
+
+        assertEquals("vcs.local.refresh", localRoot.getChildren().get(0).getId());
+        assertEquals("Refresh", localRoot.getChildren().get(0).getText());
+        assertEquals("SYNC", localRoot.getChildren().get(0).getIconName());
+
+        assertEquals("vcs.local.commit", localRoot.getChildren().get(1).getId());
+        assertEquals("Commit\u2026", localRoot.getChildren().get(1).getText());
+        assertEquals("CODE_BRANCH", localRoot.getChildren().get(1).getIconName());
+
+        assertEquals("vcs.local.toggle.commit.ui", localRoot.getChildren().get(2).getId());
+        assertEquals("Toggle Commit UI\u2026", localRoot.getChildren().get(2).getText());
+        assertEquals("CODE_BRANCH", localRoot.getChildren().get(2).getIconName());
+
+        assertEquals("vcs.local.rollback", localRoot.getChildren().get(3).getId());
+        assertEquals("Rollback\u2026", localRoot.getChildren().get(3).getText());
+        assertEquals("UNDO", localRoot.getChildren().get(3).getIconName());
+
+        assertEquals("vcs.local.show.diff", localRoot.getChildren().get(4).getId());
+        assertEquals("Show Diff", localRoot.getChildren().get(4).getText());
+        assertEquals("ARROW_RIGHT", localRoot.getChildren().get(4).getIconName());
+
+        MenuItemConfig changelists = localRoot.getChildren().get(5);
+        assertEquals("vcs.local.changelists", changelists.getId());
+        assertEquals("Changelists", changelists.getText());
+        assertEquals(MenuItemConfig.Type.GROUP, changelists.getType());
+        assertEquals(5, changelists.getChildren().size());
+
+        assertEquals("vcs.local.changelists.new", changelists.getChildren().get(0).getId());
+        assertEquals("New Changelist\u2026", changelists.getChildren().get(0).getText());
+        assertEquals("PLUS", changelists.getChildren().get(0).getIconName());
+
+        assertEquals("vcs.local.changelists.edit", changelists.getChildren().get(1).getId());
+        assertEquals("Edit Changelist\u2026", changelists.getChildren().get(1).getText());
+        assertEquals("EDIT", changelists.getChildren().get(1).getIconName());
+
+        assertEquals("vcs.local.changelists.delete", changelists.getChildren().get(2).getId());
+        assertEquals("Delete Changelist", changelists.getChildren().get(2).getText());
+        assertEquals("MINUS", changelists.getChildren().get(2).getIconName());
+
+        assertEquals("vcs.local.changelists.set.active", changelists.getChildren().get(3).getId());
+        assertEquals("Set Active Changelist", changelists.getChildren().get(3).getText());
+        assertEquals("CHECK_SQUARE", changelists.getChildren().get(3).getIconName());
+
+        assertEquals("vcs.local.changelists.move", changelists.getChildren().get(4).getId());
+        assertEquals("Move to Another Changelist\u2026", changelists.getChildren().get(4).getText());
+        assertNull(changelists.getChildren().get(4).getIconName());
+
+        assertEquals("vcs.local.shelve.silently", localRoot.getChildren().get(6).getId());
+        assertEquals("Shelve Silently", localRoot.getChildren().get(6).getText());
+        assertEquals("DOWNLOAD", localRoot.getChildren().get(6).getIconName());
+
+        // Action catalog check
+        ActionManager actionManager = ActionManager.getInstance();
+        var cat = actionManager.getActionCatalog().stream()
+                .filter(c -> "VCS Local Changes Toolbar".equals(c.getName()))
+                .findFirst().orElseThrow();
+        assertEquals(11, cat.getEntries().size());
+
+        // Auto-migration test
+        MenuItemConfig staleLocal = MenuItemConfig.group("root.vcs.local.changes.toolbar", "VCS Local Changes Toolbar", List.of(
+                MenuItemConfig.action("vcs.local.refresh", "Refresh")
+        ));
+        List<MenuItemConfig> testList = new ArrayList<>(settings.getMenusAndToolbars());
+        for (int i = 0; i < testList.size(); i++) {
+            if ("root.vcs.local.changes.toolbar".equalsIgnoreCase(testList.get(i).getId())) {
+                testList.set(i, staleLocal);
+                break;
+            }
+        }
+        settings.setMenusAndToolbars(testList);
+        MenuItemConfig migrated = settings.getMenusAndToolbars().stream()
+                .filter(r -> "root.vcs.local.changes.toolbar".equalsIgnoreCase(r.getId()))
+                .findFirst().orElseThrow();
+        assertEquals(7, migrated.getChildren().size(), "Stale VCS local changes toolbar must be migrated with full children");
+    }
+
+    @Test
+    @DisplayName("Verify VCS Log Changes Browser Toolbar detailed hierarchy, icons, catalog, and auto-migration")
+    public void testVcsLogChangesBrowserToolbarHierarchyAndIcons() {
+        MenuItemConfig logChangesRoot = settings.getMenuConfig("root.vcs.log.changes.browser.toolbar");
+        assertNotNull(logChangesRoot);
+        assertEquals("VCS Log Changes Browser Toolbar", logChangesRoot.getText());
+        assertEquals(3, logChangesRoot.getChildren().size());
+
+        MenuItemConfig repoChanges = logChangesRoot.getChildren().get(0);
+        assertEquals("vcs.repository.changes.browser.toolbar", repoChanges.getId());
+        assertEquals("Vcs.RepositoryChangesBrowserToolbar", repoChanges.getText());
+        assertEquals(2, repoChanges.getChildren().size());
+        assertEquals("vcs.repository.changes.browser.revert", repoChanges.getChildren().get(0).getId());
+        assertEquals("Revert Selected Changes", repoChanges.getChildren().get(0).getText());
+        assertEquals("UNDO", repoChanges.getChildren().get(0).getIconName());
+        assertEquals("vcs.repository.changes.browser.history.up.to.here", repoChanges.getChildren().get(1).getId());
+        assertEquals("History Up to Here", repoChanges.getChildren().get(1).getText());
+        assertEquals("HISTORY", repoChanges.getChildren().get(1).getIconName());
+
+        assertEquals("vcs.log.show.affected.changes", logChangesRoot.getChildren().get(1).getId());
+        assertEquals("Show Only Affected Changes", logChangesRoot.getChildren().get(1).getText());
+        assertEquals("FOLDER", logChangesRoot.getChildren().get(1).getIconName());
+
+        MenuItemConfig viewOptions = logChangesRoot.getChildren().get(2);
+        assertEquals("vcs.log.changes.view.options", viewOptions.getId());
+        assertEquals("View Options", viewOptions.getText());
+        assertEquals(3, viewOptions.getChildren().size());
+
+        MenuItemConfig groupBy = viewOptions.getChildren().get(0);
+        assertEquals("vcs.log.changes.group.by", groupBy.getId());
+        assertEquals("Group By", groupBy.getText());
+        assertEquals(3, groupBy.getChildren().size());
+        assertEquals(MenuItemConfig.Type.SEPARATOR, groupBy.getChildren().get(0).getType());
+        assertEquals("vcs.log.changes.group.by.directory", groupBy.getChildren().get(1).getId());
+        assertEquals("Directory", groupBy.getChildren().get(1).getText());
+        assertEquals("vcs.log.changes.group.by.repository", groupBy.getChildren().get(2).getId());
+        assertEquals("Repository", groupBy.getChildren().get(2).getText());
+
+        MenuItemConfig filterBy = viewOptions.getChildren().get(1);
+        assertEquals("vcs.log.changes.filter.by", filterBy.getId());
+        assertEquals("Filter By", filterBy.getText());
+        assertEquals("FILTER", filterBy.getIconName());
+
+        MenuItemConfig configLayout = viewOptions.getChildren().get(2);
+        assertEquals("vcs.log.changes.configure.layout", configLayout.getId());
+        assertEquals("Configure Layout", configLayout.getText());
+        assertEquals(4, configLayout.getChildren().size());
+        assertEquals(MenuItemConfig.Type.SEPARATOR, configLayout.getChildren().get(0).getType());
+        assertEquals("vcs.log.changes.show.details", configLayout.getChildren().get(1).getId());
+        assertEquals("Show Details", configLayout.getChildren().get(1).getText());
+        assertEquals("vcs.log.changes.show.diff.preview", configLayout.getChildren().get(2).getId());
+        assertEquals("Show Diff Preview", configLayout.getChildren().get(2).getText());
+
+        MenuItemConfig diffPreviewLoc = configLayout.getChildren().get(3);
+        assertEquals("vcs.log.changes.diff.preview.location", diffPreviewLoc.getId());
+        assertEquals("Diff Preview Location", diffPreviewLoc.getText());
+        assertEquals(2, diffPreviewLoc.getChildren().size());
+        assertEquals("vcs.log.changes.diff.preview.bottom", diffPreviewLoc.getChildren().get(0).getId());
+        assertEquals("Bottom", diffPreviewLoc.getChildren().get(0).getText());
+        assertEquals("vcs.log.changes.diff.preview.right", diffPreviewLoc.getChildren().get(1).getId());
+        assertEquals("Right", diffPreviewLoc.getChildren().get(1).getText());
+
+        // Action catalog check
+        ActionManager actionManager = ActionManager.getInstance();
+        var cat = actionManager.getActionCatalog().stream()
+                .filter(c -> "VCS Log Changes Browser Toolbar".equals(c.getName()))
+                .findFirst().orElseThrow();
+        assertEquals(10, cat.getEntries().size());
+
+        // Auto-migration test
+        MenuItemConfig staleBrowser = MenuItemConfig.group("root.vcs.log.changes.browser.toolbar", "VCS Log Changes Browser Toolbar", List.of(
+                MenuItemConfig.group("vcs.repository.changes.browser.toolbar", "Vcs.RepositoryChangesBrowserToolbar", List.of())
+        ));
+        List<MenuItemConfig> testList = new ArrayList<>(settings.getMenusAndToolbars());
+        for (int i = 0; i < testList.size(); i++) {
+            if ("root.vcs.log.changes.browser.toolbar".equalsIgnoreCase(testList.get(i).getId())) {
+                testList.set(i, staleBrowser);
+                break;
+            }
+        }
+        settings.setMenusAndToolbars(testList);
+        MenuItemConfig migrated = settings.getMenusAndToolbars().stream()
+                .filter(r -> "root.vcs.log.changes.browser.toolbar".equalsIgnoreCase(r.getId()))
+                .findFirst().orElseThrow();
+        assertEquals(3, migrated.getChildren().size(), "Stale VCS log changes browser toolbar must be migrated with full children");
+    }
+
+    @Test
+    @DisplayName("Verify VCS Log Toolbar detailed hierarchy, icons, catalog, and auto-migration")
+    public void testVcsLogToolbarHierarchyAndIcons() {
+        MenuItemConfig logTbRoot = settings.getMenuConfig("root.vcs.log.toolbar");
+        assertNotNull(logTbRoot);
+        assertEquals("VCS Log Toolbar", logTbRoot.getText());
+        assertEquals(5, logTbRoot.getChildren().size());
+
+        assertEquals("vcs.log.resume.indexing", logTbRoot.getChildren().get(0).getId());
+        assertEquals("Resume Indexing", logTbRoot.getChildren().get(0).getText());
+        assertEquals("PLAY", logTbRoot.getChildren().get(0).getIconName());
+
+        assertEquals("vcs.log.refresh", logTbRoot.getChildren().get(1).getId());
+        assertEquals("Refresh", logTbRoot.getChildren().get(1).getText());
+        assertEquals("SYNC", logTbRoot.getChildren().get(1).getIconName());
+
+        MenuItemConfig vcsLogTbGroup = logTbRoot.getChildren().get(2);
+        assertEquals("vcs.log.toolbar.group", vcsLogTbGroup.getId());
+        assertEquals("Vcs.Log.Toolbar", vcsLogTbGroup.getText());
+        assertEquals(1, vcsLogTbGroup.getChildren().size());
+
+        MenuItemConfig dvcsTb = vcsLogTbGroup.getChildren().get(0);
+        assertEquals("vcs.log.dvcs.toolbar", dvcsTb.getId());
+        assertEquals("Dvcs.Log.Toolbar", dvcsTb.getText());
+        assertEquals(1, dvcsTb.getChildren().size());
+        assertEquals("vcs.log.cherry.pick", dvcsTb.getChildren().get(0).getId());
+        assertEquals("Cherry-Pick", dvcsTb.getChildren().get(0).getText());
+        assertEquals("CODE_BRANCH", dvcsTb.getChildren().get(0).getIconName());
+
+        MenuItemConfig viewOptions = logTbRoot.getChildren().get(3);
+        assertEquals("vcs.log.view.options", viewOptions.getId());
+        assertEquals("View Options", viewOptions.getText());
+        assertEquals(11, viewOptions.getChildren().size());
+        assertEquals(MenuItemConfig.Type.SEPARATOR, viewOptions.getChildren().get(0).getType());
+        assertEquals("vcs.log.view.options.root.names", viewOptions.getChildren().get(1).getId());
+        assertEquals("Root Names", viewOptions.getChildren().get(1).getText());
+        assertEquals("vcs.log.view.options.compact.references", viewOptions.getChildren().get(2).getId());
+        assertEquals("Compact References View", viewOptions.getChildren().get(2).getText());
+        assertEquals("vcs.log.view.options.tag.names", viewOptions.getChildren().get(3).getId());
+        assertEquals("Tag Names", viewOptions.getChildren().get(3).getText());
+        assertEquals("vcs.log.view.options.long.edges", viewOptions.getChildren().get(4).getId());
+        assertEquals("Long Edges", viewOptions.getChildren().get(4).getText());
+        assertEquals("vcs.log.view.options.commit.timestamp", viewOptions.getChildren().get(5).getId());
+        assertEquals("Commit Timestamp", viewOptions.getChildren().get(5).getText());
+        assertEquals("vcs.log.view.options.references.on.left", viewOptions.getChildren().get(6).getId());
+        assertEquals("References on the Left", viewOptions.getChildren().get(6).getText());
+        assertEquals("vcs.log.view.options.columns", viewOptions.getChildren().get(7).getId());
+        assertEquals("Columns", viewOptions.getChildren().get(7).getText());
+        assertEquals(MenuItemConfig.Type.SEPARATOR, viewOptions.getChildren().get(8).getType());
+        assertEquals("vcs.log.highlighters.action.group", viewOptions.getChildren().get(9).getId());
+        assertEquals("Vcs.Log.HighlightersActionGroup", viewOptions.getChildren().get(9).getText());
+
+        MenuItemConfig gitLogTb = viewOptions.getChildren().get(10);
+        assertEquals("vcs.log.git.log.toolbar", gitLogTb.getId());
+        assertEquals("Git.Log.Toolbar", gitLogTb.getText());
+        assertEquals(1, gitLogTb.getChildren().size());
+        assertEquals("vcs.log.git.not.cherry.picked.commits", gitLogTb.getChildren().get(0).getId());
+        assertEquals("Not Cherry-Picked Commits", gitLogTb.getChildren().get(0).getText());
+
+        assertEquals("vcs.log.goto.hash", logTbRoot.getChildren().get(4).getId());
+        assertEquals("Go To Hash/Branch/Tag", logTbRoot.getChildren().get(4).getText());
+        assertEquals("SEARCH", logTbRoot.getChildren().get(4).getIconName());
+
+        // Action catalog check
+        ActionManager actionManager = ActionManager.getInstance();
+        var cat = actionManager.getActionCatalog().stream()
+                .filter(c -> "VCS Log Toolbar".equals(c.getName()))
+                .findFirst().orElseThrow();
+        assertEquals(13, cat.getEntries().size());
+
+        // Auto-migration test
+        MenuItemConfig staleLogTb = MenuItemConfig.group("root.vcs.log.toolbar", "VCS Log Toolbar", List.of(
+                MenuItemConfig.action("vcs.log.refresh", "Refresh")
+        ));
+        List<MenuItemConfig> testList = new ArrayList<>(settings.getMenusAndToolbars());
+        for (int i = 0; i < testList.size(); i++) {
+            if ("root.vcs.log.toolbar".equalsIgnoreCase(testList.get(i).getId())) {
+                testList.set(i, staleLogTb);
+                break;
+            }
+        }
+        settings.setMenusAndToolbars(testList);
+        MenuItemConfig migrated = settings.getMenusAndToolbars().stream()
+                .filter(r -> "root.vcs.log.toolbar".equalsIgnoreCase(r.getId()))
+                .findFirst().orElseThrow();
+        assertEquals(5, migrated.getChildren().size(), "Stale VCS log toolbar must be migrated with full children");
+    }
+
+    @Test
+    @DisplayName("Verify VCS Operations Popup detailed hierarchy, icons, catalog, and auto-migration")
+    public void testVcsOperationsPopupHierarchyAndIcons() {
+        MenuItemConfig opsRoot = settings.getMenuConfig("root.vcs.operations.popup");
+        assertNotNull(opsRoot);
+        assertEquals("VCS Operations Popup", opsRoot.getText());
+        assertEquals(7, opsRoot.getChildren().size());
+
+        MenuItemConfig vcsAware = opsRoot.getChildren().get(0);
+        assertEquals("vcs.operations.popup.vcsaware", vcsAware.getId());
+        assertEquals("Vcs.Operations.Popup.VcsAware", vcsAware.getText());
+        assertEquals(10, vcsAware.getChildren().size());
+        assertEquals("vcs.operations.popup.vcsnameseparator", vcsAware.getChildren().get(0).getId());
+        assertEquals("Vcs.Operations.Popup.VcsNameSeparator", vcsAware.getChildren().get(0).getText());
+        assertEquals("vcs.operations.popup.add", vcsAware.getChildren().get(1).getId());
+        assertEquals("Add to VCS", vcsAware.getChildren().get(1).getText());
+        assertEquals("vcs.operations.popup.commit", vcsAware.getChildren().get(2).getId());
+        assertEquals("Commit\u2026", vcsAware.getChildren().get(2).getText());
+        assertEquals("CODE_BRANCH", vcsAware.getChildren().get(2).getIconName());
+        assertEquals("vcs.operations.popup.toggle.commit.ui", vcsAware.getChildren().get(3).getId());
+        assertEquals("Toggle Commit UI\u2026", vcsAware.getChildren().get(3).getText());
+        assertEquals("CODE_BRANCH", vcsAware.getChildren().get(3).getIconName());
+        assertEquals("vcs.operations.popup.commit.file", vcsAware.getChildren().get(4).getId());
+        assertEquals("Commit File", vcsAware.getChildren().get(4).getText());
+        assertEquals("vcs.operations.popup.rollback", vcsAware.getChildren().get(5).getId());
+        assertEquals("Rollback\u2026", vcsAware.getChildren().get(5).getText());
+        assertEquals("UNDO", vcsAware.getChildren().get(5).getIconName());
+        assertEquals(MenuItemConfig.Type.SEPARATOR, vcsAware.getChildren().get(6).getType());
+        assertEquals("vcs.operations.popup.show.history", vcsAware.getChildren().get(7).getId());
+        assertEquals("Show History", vcsAware.getChildren().get(7).getText());
+        assertEquals("HISTORY", vcsAware.getChildren().get(7).getIconName());
+        assertEquals("vcs.operations.popup.annotate", vcsAware.getChildren().get(8).getId());
+        assertEquals("Annotate", vcsAware.getChildren().get(8).getText());
+        assertEquals("vcs.operations.popup.compare.same.repo", vcsAware.getChildren().get(9).getId());
+        assertEquals("Compare with Same Repository Version", vcsAware.getChildren().get(9).getText());
+        assertEquals("ARROW_RIGHT", vcsAware.getChildren().get(9).getIconName());
+
+        assertEquals(MenuItemConfig.Type.SEPARATOR, opsRoot.getChildren().get(1).getType());
+
+        assertEquals("vcs.operations.popup.vcs.providers", opsRoot.getChildren().get(2).getId());
+        assertEquals("Vcs.Operations.Popup.Vcs.Providers", opsRoot.getChildren().get(2).getText());
+
+        MenuItemConfig nonVcsAware = opsRoot.getChildren().get(3);
+        assertEquals("vcs.operations.popup.nonvcsaware", nonVcsAware.getId());
+        assertEquals("Vcs.Operations.Popup.NonVcsAware", nonVcsAware.getText());
+        assertEquals(2, nonVcsAware.getChildren().size());
+        assertEquals("vcs.operations.popup.create.git.repo", nonVcsAware.getChildren().get(0).getId());
+        assertEquals("Create Git Repository\u2026", nonVcsAware.getChildren().get(0).getText());
+        assertEquals("vcs.operations.popup.enable.vcs.integration", nonVcsAware.getChildren().get(1).getId());
+        assertEquals("Enable Version Control Integration\u2026", nonVcsAware.getChildren().get(1).getText());
+
+        assertEquals(MenuItemConfig.Type.SEPARATOR, opsRoot.getChildren().get(4).getType());
+
+        assertEquals("vcs.operations.annotated.line", opsRoot.getChildren().get(5).getId());
+        assertEquals("Annotated Line", opsRoot.getChildren().get(5).getText());
+
+        assertEquals("vcs.operations.show.history", opsRoot.getChildren().get(6).getId());
+        assertEquals("Show History\u2026", opsRoot.getChildren().get(6).getText());
+
+        // Action catalog check
+        ActionManager actionManager = ActionManager.getInstance();
+        var cat = actionManager.getActionCatalog().stream()
+                .filter(c -> "VCS Operations Popup".equals(c.getName()))
+                .findFirst().orElseThrow();
+        assertEquals(14, cat.getEntries().size());
+
+        // Auto-migration test
+        MenuItemConfig staleOps = MenuItemConfig.group("root.vcs.operations.popup", "VCS Operations Popup", List.of(
+                MenuItemConfig.action("vcs.operations.show.history", "Show History\u2026")
+        ));
+        List<MenuItemConfig> testList = new ArrayList<>(settings.getMenusAndToolbars());
+        for (int i = 0; i < testList.size(); i++) {
+            if ("root.vcs.operations.popup".equalsIgnoreCase(testList.get(i).getId())) {
+                testList.set(i, staleOps);
+                break;
+            }
+        }
+        settings.setMenusAndToolbars(testList);
+        MenuItemConfig migrated = settings.getMenusAndToolbars().stream()
+                .filter(r -> "root.vcs.operations.popup".equalsIgnoreCase(r.getId()))
+                .findFirst().orElseThrow();
+        assertEquals(7, migrated.getChildren().size(), "Stale VCS operations popup must be migrated with full children");
+    }
 }
 
 

@@ -3744,6 +3744,7 @@ public final class ActionRegistry {
         registerProjectViewPopupMenuActions(manager);
         registerNavBarAndDebugAndHistoryToolbarsActions(manager);
         registerFloatingCodeAndQuickActionsAndSqlToolbarActions(manager);
+        registerVcsToolbarsAndOperationsPopupActions(manager);
     }
 
     private static void registerMainToolbarActions(ActionManager manager) {
@@ -5546,6 +5547,360 @@ public final class ActionRegistry {
         if (manager.getAction("middle.run") != null) sqlFloatingCodeToolbar.add(manager.getAction("middle.run"));
         sqlFloatingCodeToolbar.add(manager.getAction("editor.explain.plan"));
         manager.registerGroup(sqlFloatingCodeToolbar);
+    }
+
+    private static void registerVcsToolbarsAndOperationsPopupActions(ActionManager manager) {
+        // 1. VCS Local Changes Toolbar Actions
+        if (manager.getAction("vcs.local.refresh") == null) {
+            manager.registerAction(AnAction.builder("vcs.local.refresh", "Refresh")
+                    .icon(FontAwesomeSolid.SYNC, "#a9b7c6", 11)
+                    .onAction(ctx -> ctx.setStatus("Refresh Local Changes"))
+                    .build());
+        }
+        if (manager.getAction("vcs.local.commit") == null) {
+            manager.registerAction(AnAction.builder("vcs.local.commit", "Commit\u2026")
+                    .icon(FontAwesomeSolid.CODE_BRANCH, "#4a88c7", 11)
+                    .onAction(ctx -> ctx.setStatus("Commit Changes"))
+                    .build());
+        }
+        if (manager.getAction("vcs.local.toggle.commit.ui") == null) {
+            manager.registerAction(AnAction.builder("vcs.local.toggle.commit.ui", "Toggle Commit UI\u2026")
+                    .icon(FontAwesomeSolid.CODE_BRANCH, "#a9b7c6", 11)
+                    .onAction(ctx -> ctx.setStatus("Toggle Commit UI"))
+                    .build());
+        }
+        if (manager.getAction("vcs.local.rollback") == null) {
+            manager.registerAction(AnAction.builder("vcs.local.rollback", "Rollback\u2026")
+                    .icon(FontAwesomeSolid.UNDO, "#a9b7c6", 11)
+                    .onAction(ctx -> ctx.setStatus("Rollback"))
+                    .build());
+        }
+        if (manager.getAction("vcs.local.show.diff") == null) {
+            manager.registerAction(AnAction.builder("vcs.local.show.diff", "Show Diff")
+                    .icon(FontAwesomeSolid.ARROW_RIGHT, "#4a88c7", 11)
+                    .onAction(ctx -> ctx.setStatus("Show Diff"))
+                    .build());
+        }
+        if (manager.getAction("vcs.local.changelists.new") == null) {
+            manager.registerAction(AnAction.builder("vcs.local.changelists.new", "New Changelist\u2026")
+                    .icon(FontAwesomeSolid.PLUS, "#57965c", 11)
+                    .onAction(ctx -> ctx.setStatus("New Changelist"))
+                    .build());
+        }
+        if (manager.getAction("vcs.local.changelists.edit") == null) {
+            manager.registerAction(AnAction.builder("vcs.local.changelists.edit", "Edit Changelist\u2026")
+                    .icon(FontAwesomeSolid.EDIT, "#a9b7c6", 11)
+                    .onAction(ctx -> ctx.setStatus("Edit Changelist"))
+                    .build());
+        }
+        if (manager.getAction("vcs.local.changelists.delete") == null) {
+            manager.registerAction(AnAction.builder("vcs.local.changelists.delete", "Delete Changelist")
+                    .icon(FontAwesomeSolid.MINUS, "#cc6666", 11)
+                    .onAction(ctx -> ctx.setStatus("Delete Changelist"))
+                    .build());
+        }
+        if (manager.getAction("vcs.local.changelists.set.active") == null) {
+            manager.registerAction(AnAction.builder("vcs.local.changelists.set.active", "Set Active Changelist")
+                    .icon(FontAwesomeSolid.CHECK_SQUARE, "#57965c", 11)
+                    .onAction(ctx -> ctx.setStatus("Set Active Changelist"))
+                    .build());
+        }
+        if (manager.getAction("vcs.local.changelists.move") == null) {
+            manager.registerAction(AnAction.builder("vcs.local.changelists.move", "Move to Another Changelist\u2026")
+                    .onAction(ctx -> ctx.setStatus("Move to Another Changelist"))
+                    .build());
+        }
+        if (manager.getAction("vcs.local.shelve.silently") == null) {
+            manager.registerAction(AnAction.builder("vcs.local.shelve.silently", "Shelve Silently")
+                    .icon(FontAwesomeSolid.DOWNLOAD, "#4a88c7", 11)
+                    .onAction(ctx -> ctx.setStatus("Shelve Silently"))
+                    .build());
+        }
+
+        ActionGroup changelistsGroup = new ActionGroup("vcs.local.changelists", "Changelists", false);
+        changelistsGroup.add(manager.getAction("vcs.local.changelists.new"));
+        changelistsGroup.add(manager.getAction("vcs.local.changelists.edit"));
+        changelistsGroup.add(manager.getAction("vcs.local.changelists.delete"));
+        changelistsGroup.add(manager.getAction("vcs.local.changelists.set.active"));
+        changelistsGroup.add(manager.getAction("vcs.local.changelists.move"));
+        manager.registerGroup(changelistsGroup);
+
+        // 2. VCS Log Changes Browser Toolbar Actions
+        if (manager.getAction("vcs.repository.changes.browser.revert") == null) {
+            manager.registerAction(AnAction.builder("vcs.repository.changes.browser.revert", "Revert Selected Changes")
+                    .icon(FontAwesomeSolid.UNDO, "#a9b7c6", 11)
+                    .onAction(ctx -> ctx.setStatus("Revert Selected Changes"))
+                    .build());
+        }
+        if (manager.getAction("vcs.repository.changes.browser.history.up.to.here") == null) {
+            manager.registerAction(AnAction.builder("vcs.repository.changes.browser.history.up.to.here", "History Up to Here")
+                    .icon(FontAwesomeSolid.HISTORY, "#4a88c7", 11)
+                    .onAction(ctx -> ctx.setStatus("History Up to Here"))
+                    .build());
+        }
+        if (manager.getAction("vcs.log.show.affected.changes") == null) {
+            manager.registerAction(AnAction.builder("vcs.log.show.affected.changes", "Show Only Affected Changes")
+                    .icon(FontAwesomeSolid.FOLDER, "#e0a44c", 11)
+                    .onAction(ctx -> ctx.setStatus("Show Only Affected Changes"))
+                    .build());
+        }
+        if (manager.getAction("vcs.log.changes.group.by.directory") == null) {
+            manager.registerAction(AnAction.builder("vcs.log.changes.group.by.directory", "Directory")
+                    .onAction(ctx -> ctx.setStatus("Group By Directory"))
+                    .build());
+        }
+        if (manager.getAction("vcs.log.changes.group.by.repository") == null) {
+            manager.registerAction(AnAction.builder("vcs.log.changes.group.by.repository", "Repository")
+                    .onAction(ctx -> ctx.setStatus("Group By Repository"))
+                    .build());
+        }
+        if (manager.getAction("vcs.log.changes.filter.by") == null) {
+            manager.registerAction(AnAction.builder("vcs.log.changes.filter.by", "Filter By")
+                    .icon(FontAwesomeSolid.FILTER, "#a9b7c6", 11)
+                    .onAction(ctx -> ctx.setStatus("Filter By"))
+                    .build());
+        }
+        if (manager.getAction("vcs.log.changes.show.details") == null) {
+            manager.registerAction(AnAction.builder("vcs.log.changes.show.details", "Show Details")
+                    .onAction(ctx -> ctx.setStatus("Show Details"))
+                    .build());
+        }
+        if (manager.getAction("vcs.log.changes.show.diff.preview") == null) {
+            manager.registerAction(AnAction.builder("vcs.log.changes.show.diff.preview", "Show Diff Preview")
+                    .onAction(ctx -> ctx.setStatus("Show Diff Preview"))
+                    .build());
+        }
+        if (manager.getAction("vcs.log.changes.diff.preview.bottom") == null) {
+            manager.registerAction(AnAction.builder("vcs.log.changes.diff.preview.bottom", "Bottom")
+                    .onAction(ctx -> ctx.setStatus("Diff Preview: Bottom"))
+                    .build());
+        }
+        if (manager.getAction("vcs.log.changes.diff.preview.right") == null) {
+            manager.registerAction(AnAction.builder("vcs.log.changes.diff.preview.right", "Right")
+                    .onAction(ctx -> ctx.setStatus("Diff Preview: Right"))
+                    .build());
+        }
+
+        ActionGroup repoChangesBrowserGroup = new ActionGroup("vcs.repository.changes.browser.toolbar", "Vcs.RepositoryChangesBrowserToolbar", false);
+        repoChangesBrowserGroup.add(manager.getAction("vcs.repository.changes.browser.revert"));
+        repoChangesBrowserGroup.add(manager.getAction("vcs.repository.changes.browser.history.up.to.here"));
+        manager.registerGroup(repoChangesBrowserGroup);
+
+        ActionGroup logGroupByGroup = new ActionGroup("vcs.log.changes.group.by", "Group By", true);
+        logGroupByGroup.add(ActionSeparator.getInstance());
+        logGroupByGroup.add(manager.getAction("vcs.log.changes.group.by.directory"));
+        logGroupByGroup.add(manager.getAction("vcs.log.changes.group.by.repository"));
+        manager.registerGroup(logGroupByGroup);
+
+        ActionGroup logDiffLocGroup = new ActionGroup("vcs.log.changes.diff.preview.location", "Diff Preview Location", true);
+        logDiffLocGroup.add(manager.getAction("vcs.log.changes.diff.preview.bottom"));
+        logDiffLocGroup.add(manager.getAction("vcs.log.changes.diff.preview.right"));
+        manager.registerGroup(logDiffLocGroup);
+
+        ActionGroup logConfigLayoutGroup = new ActionGroup("vcs.log.changes.configure.layout", "Configure Layout", true);
+        logConfigLayoutGroup.add(ActionSeparator.getInstance());
+        logConfigLayoutGroup.add(manager.getAction("vcs.log.changes.show.details"));
+        logConfigLayoutGroup.add(manager.getAction("vcs.log.changes.show.diff.preview"));
+        logConfigLayoutGroup.add(logDiffLocGroup);
+        manager.registerGroup(logConfigLayoutGroup);
+
+        ActionGroup logChangesViewOptionsGroup = new ActionGroup("vcs.log.changes.view.options", "View Options", true);
+        logChangesViewOptionsGroup.add(logGroupByGroup);
+        logChangesViewOptionsGroup.add(manager.getAction("vcs.log.changes.filter.by"));
+        logChangesViewOptionsGroup.add(logConfigLayoutGroup);
+        manager.registerGroup(logChangesViewOptionsGroup);
+
+        // 3. VCS Log Toolbar Actions
+        if (manager.getAction("vcs.log.resume.indexing") == null) {
+            manager.registerAction(AnAction.builder("vcs.log.resume.indexing", "Resume Indexing")
+                    .icon(FontAwesomeSolid.PLAY, "#57965c", 11)
+                    .onAction(ctx -> ctx.setStatus("Resume Indexing"))
+                    .build());
+        }
+        if (manager.getAction("vcs.log.refresh") == null) {
+            manager.registerAction(AnAction.builder("vcs.log.refresh", "Refresh")
+                    .icon(FontAwesomeSolid.SYNC, "#a9b7c6", 11)
+                    .onAction(ctx -> ctx.setStatus("Refresh VCS Log"))
+                    .build());
+        }
+        if (manager.getAction("vcs.log.cherry.pick") == null) {
+            manager.registerAction(AnAction.builder("vcs.log.cherry.pick", "Cherry-Pick")
+                    .icon(FontAwesomeSolid.CODE_BRANCH, "#4a88c7", 11)
+                    .onAction(ctx -> ctx.setStatus("Cherry-Pick"))
+                    .build());
+        }
+        if (manager.getAction("vcs.log.view.options.root.names") == null) {
+            manager.registerAction(AnAction.builder("vcs.log.view.options.root.names", "Root Names")
+                    .onAction(ctx -> ctx.setStatus("Root Names"))
+                    .build());
+        }
+        if (manager.getAction("vcs.log.view.options.compact.references") == null) {
+            manager.registerAction(AnAction.builder("vcs.log.view.options.compact.references", "Compact References View")
+                    .onAction(ctx -> ctx.setStatus("Compact References View"))
+                    .build());
+        }
+        if (manager.getAction("vcs.log.view.options.tag.names") == null) {
+            manager.registerAction(AnAction.builder("vcs.log.view.options.tag.names", "Tag Names")
+                    .onAction(ctx -> ctx.setStatus("Tag Names"))
+                    .build());
+        }
+        if (manager.getAction("vcs.log.view.options.long.edges") == null) {
+            manager.registerAction(AnAction.builder("vcs.log.view.options.long.edges", "Long Edges")
+                    .onAction(ctx -> ctx.setStatus("Long Edges"))
+                    .build());
+        }
+        if (manager.getAction("vcs.log.view.options.commit.timestamp") == null) {
+            manager.registerAction(AnAction.builder("vcs.log.view.options.commit.timestamp", "Commit Timestamp")
+                    .onAction(ctx -> ctx.setStatus("Commit Timestamp"))
+                    .build());
+        }
+        if (manager.getAction("vcs.log.view.options.references.on.left") == null) {
+            manager.registerAction(AnAction.builder("vcs.log.view.options.references.on.left", "References on the Left")
+                    .onAction(ctx -> ctx.setStatus("References on the Left"))
+                    .build());
+        }
+        if (manager.getAction("vcs.log.view.options.columns") == null) {
+            manager.registerAction(AnAction.builder("vcs.log.view.options.columns", "Columns")
+                    .onAction(ctx -> ctx.setStatus("Columns"))
+                    .build());
+        }
+        if (manager.getAction("vcs.log.highlighters.action.group") == null) {
+            manager.registerAction(AnAction.builder("vcs.log.highlighters.action.group", "Vcs.Log.HighlightersActionGroup")
+                    .onAction(ctx -> ctx.setStatus("Highlighters Action Group"))
+                    .build());
+        }
+        if (manager.getAction("vcs.log.git.not.cherry.picked.commits") == null) {
+            manager.registerAction(AnAction.builder("vcs.log.git.not.cherry.picked.commits", "Not Cherry-Picked Commits")
+                    .onAction(ctx -> ctx.setStatus("Not Cherry-Picked Commits"))
+                    .build());
+        }
+        if (manager.getAction("vcs.log.goto.hash") == null) {
+            manager.registerAction(AnAction.builder("vcs.log.goto.hash", "Go To Hash/Branch/Tag")
+                    .icon(FontAwesomeSolid.SEARCH, "#a9b7c6", 11)
+                    .onAction(ctx -> ctx.setStatus("Go To Hash/Branch/Tag"))
+                    .build());
+        }
+
+        ActionGroup dvcsToolbarGroup = new ActionGroup("vcs.log.dvcs.toolbar", "Dvcs.Log.Toolbar", false);
+        dvcsToolbarGroup.add(manager.getAction("vcs.log.cherry.pick"));
+        manager.registerGroup(dvcsToolbarGroup);
+
+        ActionGroup vcsLogToolbarInnerGroup = new ActionGroup("vcs.log.toolbar.group", "Vcs.Log.Toolbar", false);
+        vcsLogToolbarInnerGroup.add(dvcsToolbarGroup);
+        manager.registerGroup(vcsLogToolbarInnerGroup);
+
+        ActionGroup gitLogToolbarGroup = new ActionGroup("vcs.log.git.log.toolbar", "Git.Log.Toolbar", false);
+        gitLogToolbarGroup.add(manager.getAction("vcs.log.git.not.cherry.picked.commits"));
+        manager.registerGroup(gitLogToolbarGroup);
+
+        ActionGroup vcsLogViewOptionsGroup = new ActionGroup("vcs.log.view.options", "View Options", true);
+        vcsLogViewOptionsGroup.add(ActionSeparator.getInstance());
+        vcsLogViewOptionsGroup.add(manager.getAction("vcs.log.view.options.root.names"));
+        vcsLogViewOptionsGroup.add(manager.getAction("vcs.log.view.options.compact.references"));
+        vcsLogViewOptionsGroup.add(manager.getAction("vcs.log.view.options.tag.names"));
+        vcsLogViewOptionsGroup.add(manager.getAction("vcs.log.view.options.long.edges"));
+        vcsLogViewOptionsGroup.add(manager.getAction("vcs.log.view.options.commit.timestamp"));
+        vcsLogViewOptionsGroup.add(manager.getAction("vcs.log.view.options.references.on.left"));
+        vcsLogViewOptionsGroup.add(manager.getAction("vcs.log.view.options.columns"));
+        vcsLogViewOptionsGroup.add(ActionSeparator.getInstance());
+        vcsLogViewOptionsGroup.add(manager.getAction("vcs.log.highlighters.action.group"));
+        vcsLogViewOptionsGroup.add(gitLogToolbarGroup);
+        manager.registerGroup(vcsLogViewOptionsGroup);
+
+        // 4. VCS Operations Popup Actions
+        if (manager.getAction("vcs.operations.popup.vcsnameseparator") == null) {
+            manager.registerAction(AnAction.builder("vcs.operations.popup.vcsnameseparator", "Vcs.Operations.Popup.VcsNameSeparator")
+                    .onAction(ctx -> ctx.setStatus("Vcs Name Separator"))
+                    .build());
+        }
+        if (manager.getAction("vcs.operations.popup.add") == null) {
+            manager.registerAction(AnAction.builder("vcs.operations.popup.add", "Add to VCS")
+                    .onAction(ctx -> ctx.setStatus("Add to VCS"))
+                    .build());
+        }
+        if (manager.getAction("vcs.operations.popup.commit") == null) {
+            manager.registerAction(AnAction.builder("vcs.operations.popup.commit", "Commit\u2026")
+                    .icon(FontAwesomeSolid.CODE_BRANCH, "#4a88c7", 11)
+                    .onAction(ctx -> ctx.setStatus("Commit\u2026"))
+                    .build());
+        }
+        if (manager.getAction("vcs.operations.popup.toggle.commit.ui") == null) {
+            manager.registerAction(AnAction.builder("vcs.operations.popup.toggle.commit.ui", "Toggle Commit UI\u2026")
+                    .icon(FontAwesomeSolid.CODE_BRANCH, "#a9b7c6", 11)
+                    .onAction(ctx -> ctx.setStatus("Toggle Commit UI\u2026"))
+                    .build());
+        }
+        if (manager.getAction("vcs.operations.popup.commit.file") == null) {
+            manager.registerAction(AnAction.builder("vcs.operations.popup.commit.file", "Commit File")
+                    .onAction(ctx -> ctx.setStatus("Commit File"))
+                    .build());
+        }
+        if (manager.getAction("vcs.operations.popup.rollback") == null) {
+            manager.registerAction(AnAction.builder("vcs.operations.popup.rollback", "Rollback\u2026")
+                    .icon(FontAwesomeSolid.UNDO, "#a9b7c6", 11)
+                    .onAction(ctx -> ctx.setStatus("Rollback\u2026"))
+                    .build());
+        }
+        if (manager.getAction("vcs.operations.popup.show.history") == null) {
+            manager.registerAction(AnAction.builder("vcs.operations.popup.show.history", "Show History")
+                    .icon(FontAwesomeSolid.HISTORY, "#4a88c7", 11)
+                    .onAction(ctx -> ctx.setStatus("Show History"))
+                    .build());
+        }
+        if (manager.getAction("vcs.operations.popup.annotate") == null) {
+            manager.registerAction(AnAction.builder("vcs.operations.popup.annotate", "Annotate")
+                    .onAction(ctx -> ctx.setStatus("Annotate"))
+                    .build());
+        }
+        if (manager.getAction("vcs.operations.popup.compare.same.repo") == null) {
+            manager.registerAction(AnAction.builder("vcs.operations.popup.compare.same.repo", "Compare with Same Repository Version")
+                    .icon(FontAwesomeSolid.ARROW_RIGHT, "#4a88c7", 11)
+                    .onAction(ctx -> ctx.setStatus("Compare with Same Repository Version"))
+                    .build());
+        }
+        if (manager.getAction("vcs.operations.popup.vcs.providers") == null) {
+            manager.registerAction(AnAction.builder("vcs.operations.popup.vcs.providers", "Vcs.Operations.Popup.Vcs.Providers")
+                    .onAction(ctx -> ctx.setStatus("Vcs Providers"))
+                    .build());
+        }
+        if (manager.getAction("vcs.operations.popup.create.git.repo") == null) {
+            manager.registerAction(AnAction.builder("vcs.operations.popup.create.git.repo", "Create Git Repository\u2026")
+                    .onAction(ctx -> ctx.setStatus("Create Git Repository"))
+                    .build());
+        }
+        if (manager.getAction("vcs.operations.popup.enable.vcs.integration") == null) {
+            manager.registerAction(AnAction.builder("vcs.operations.popup.enable.vcs.integration", "Enable Version Control Integration\u2026")
+                    .onAction(ctx -> ctx.setStatus("Enable Version Control Integration"))
+                    .build());
+        }
+        if (manager.getAction("vcs.operations.annotated.line") == null) {
+            manager.registerAction(AnAction.builder("vcs.operations.annotated.line", "Annotated Line")
+                    .onAction(ctx -> ctx.setStatus("Annotated Line"))
+                    .build());
+        }
+        if (manager.getAction("vcs.operations.show.history") == null) {
+            manager.registerAction(AnAction.builder("vcs.operations.show.history", "Show History\u2026")
+                    .onAction(ctx -> ctx.setStatus("Show History"))
+                    .build());
+        }
+
+        ActionGroup vcsAwareGroup = new ActionGroup("vcs.operations.popup.vcsaware", "Vcs.Operations.Popup.VcsAware", false);
+        vcsAwareGroup.add(manager.getAction("vcs.operations.popup.vcsnameseparator"));
+        vcsAwareGroup.add(manager.getAction("vcs.operations.popup.add"));
+        vcsAwareGroup.add(manager.getAction("vcs.operations.popup.commit"));
+        vcsAwareGroup.add(manager.getAction("vcs.operations.popup.toggle.commit.ui"));
+        vcsAwareGroup.add(manager.getAction("vcs.operations.popup.commit.file"));
+        vcsAwareGroup.add(manager.getAction("vcs.operations.popup.rollback"));
+        vcsAwareGroup.add(ActionSeparator.getInstance());
+        vcsAwareGroup.add(manager.getAction("vcs.operations.popup.show.history"));
+        vcsAwareGroup.add(manager.getAction("vcs.operations.popup.annotate"));
+        vcsAwareGroup.add(manager.getAction("vcs.operations.popup.compare.same.repo"));
+        manager.registerGroup(vcsAwareGroup);
+
+        ActionGroup nonVcsAwareGroup = new ActionGroup("vcs.operations.popup.nonvcsaware", "Vcs.Operations.Popup.NonVcsAware", false);
+        nonVcsAwareGroup.add(manager.getAction("vcs.operations.popup.create.git.repo"));
+        nonVcsAwareGroup.add(manager.getAction("vcs.operations.popup.enable.vcs.integration"));
+        manager.registerGroup(nonVcsAwareGroup);
     }
 
     public static List<ActionGroup> getMainMenuBarGroups(ActionManager manager) {

@@ -3571,39 +3571,107 @@ public final class AppSettingsStore {
             roots.add(MenuItemConfig.group("root.sql.floating.toolbar", "SQL Floating Toolbar", sqlFloating));
 
             // 20. VCS Local Changes Toolbar
+            List<MenuItemConfig> changelistsChildren = new ArrayList<>();
+            changelistsChildren.add(MenuItemConfig.action("vcs.local.changelists.new", "New Changelist\u2026", "PLUS"));
+            changelistsChildren.add(MenuItemConfig.action("vcs.local.changelists.edit", "Edit Changelist\u2026", "EDIT"));
+            changelistsChildren.add(MenuItemConfig.action("vcs.local.changelists.delete", "Delete Changelist", "MINUS"));
+            changelistsChildren.add(MenuItemConfig.action("vcs.local.changelists.set.active", "Set Active Changelist", "CHECK_SQUARE"));
+            changelistsChildren.add(MenuItemConfig.action("vcs.local.changelists.move", "Move to Another Changelist\u2026"));
+
             List<MenuItemConfig> vcsLocal = new ArrayList<>();
-            vcsLocal.add(MenuItemConfig.action("vcs.local.refresh", "Refresh"));
-            vcsLocal.add(MenuItemConfig.action("vcs.local.commit", "Commit\u2026"));
-            vcsLocal.add(MenuItemConfig.action("vcs.local.toggle.commit.ui", "Toggle Commit UI\u2026"));
-            vcsLocal.add(MenuItemConfig.action("vcs.local.rollback", "Rollback\u2026"));
-            vcsLocal.add(MenuItemConfig.action("vcs.local.show.diff", "Show Diff"));
-            vcsLocal.add(MenuItemConfig.group("vcs.local.changelists", "Changelists", List.of()));
-            vcsLocal.add(MenuItemConfig.action("vcs.local.shelve.silently", "Shelve Silently"));
+            vcsLocal.add(MenuItemConfig.action("vcs.local.refresh", "Refresh", "SYNC"));
+            vcsLocal.add(MenuItemConfig.action("vcs.local.commit", "Commit\u2026", "CODE_BRANCH"));
+            vcsLocal.add(MenuItemConfig.action("vcs.local.toggle.commit.ui", "Toggle Commit UI\u2026", "CODE_BRANCH"));
+            vcsLocal.add(MenuItemConfig.action("vcs.local.rollback", "Rollback\u2026", "UNDO"));
+            vcsLocal.add(MenuItemConfig.action("vcs.local.show.diff", "Show Diff", "ARROW_RIGHT"));
+            vcsLocal.add(MenuItemConfig.group("vcs.local.changelists", "Changelists", false, changelistsChildren));
+            vcsLocal.add(MenuItemConfig.action("vcs.local.shelve.silently", "Shelve Silently", "DOWNLOAD"));
             roots.add(MenuItemConfig.group("root.vcs.local.changes.toolbar", "VCS Local Changes Toolbar", vcsLocal));
 
             // 21. VCS Log Changes Browser Toolbar
+            List<MenuItemConfig> vcsRepoBrowserChildren = new ArrayList<>();
+            vcsRepoBrowserChildren.add(MenuItemConfig.action("vcs.repository.changes.browser.revert", "Revert Selected Changes", "UNDO"));
+            vcsRepoBrowserChildren.add(MenuItemConfig.action("vcs.repository.changes.browser.history.up.to.here", "History Up to Here", "HISTORY"));
+
+            List<MenuItemConfig> groupByChildren = new ArrayList<>();
+            groupByChildren.add(MenuItemConfig.separator());
+            groupByChildren.add(MenuItemConfig.action("vcs.log.changes.group.by.directory", "Directory"));
+            groupByChildren.add(MenuItemConfig.action("vcs.log.changes.group.by.repository", "Repository"));
+
+            List<MenuItemConfig> diffLocChildren = new ArrayList<>();
+            diffLocChildren.add(MenuItemConfig.action("vcs.log.changes.diff.preview.bottom", "Bottom"));
+            diffLocChildren.add(MenuItemConfig.action("vcs.log.changes.diff.preview.right", "Right"));
+
+            List<MenuItemConfig> vcsLogChangesConfigLayoutChildren = new ArrayList<>();
+            vcsLogChangesConfigLayoutChildren.add(MenuItemConfig.separator());
+            vcsLogChangesConfigLayoutChildren.add(MenuItemConfig.action("vcs.log.changes.show.details", "Show Details"));
+            vcsLogChangesConfigLayoutChildren.add(MenuItemConfig.action("vcs.log.changes.show.diff.preview", "Show Diff Preview"));
+            vcsLogChangesConfigLayoutChildren.add(MenuItemConfig.group("vcs.log.changes.diff.preview.location", "Diff Preview Location", true, diffLocChildren));
+
+            List<MenuItemConfig> vcsLogChangesViewOptionsChildren = new ArrayList<>();
+            vcsLogChangesViewOptionsChildren.add(MenuItemConfig.group("vcs.log.changes.group.by", "Group By", true, groupByChildren));
+            vcsLogChangesViewOptionsChildren.add(MenuItemConfig.action("vcs.log.changes.filter.by", "Filter By", "FILTER"));
+            vcsLogChangesViewOptionsChildren.add(MenuItemConfig.group("vcs.log.changes.configure.layout", "Configure Layout", true, vcsLogChangesConfigLayoutChildren));
+
             List<MenuItemConfig> vcsLogChanges = new ArrayList<>();
-            vcsLogChanges.add(MenuItemConfig.group("vcs.repository.changes.browser.toolbar", "Vcs.RepositoryChangesBrowserToolbar", List.of()));
-            vcsLogChanges.add(MenuItemConfig.action("vcs.log.show.affected.changes", "Show Only Affected Changes"));
-            vcsLogChanges.add(MenuItemConfig.separator());
-            vcsLogChanges.add(MenuItemConfig.group("vcs.log.changes.view.options", "View Options", List.of()));
+            vcsLogChanges.add(MenuItemConfig.group("vcs.repository.changes.browser.toolbar", "Vcs.RepositoryChangesBrowserToolbar", false, vcsRepoBrowserChildren));
+            vcsLogChanges.add(MenuItemConfig.action("vcs.log.show.affected.changes", "Show Only Affected Changes", "FOLDER"));
+            vcsLogChanges.add(MenuItemConfig.group("vcs.log.changes.view.options", "View Options", true, vcsLogChangesViewOptionsChildren));
             roots.add(MenuItemConfig.group("root.vcs.log.changes.browser.toolbar", "VCS Log Changes Browser Toolbar", vcsLogChanges));
 
             // 22. VCS Log Toolbar
+            List<MenuItemConfig> dvcsLogToolbarChildren = new ArrayList<>();
+            dvcsLogToolbarChildren.add(MenuItemConfig.action("vcs.log.cherry.pick", "Cherry-Pick", "CODE_BRANCH"));
+
+            List<MenuItemConfig> vcsLogToolbarChildren = new ArrayList<>();
+            vcsLogToolbarChildren.add(MenuItemConfig.group("vcs.log.dvcs.toolbar", "Dvcs.Log.Toolbar", false, dvcsLogToolbarChildren));
+
+            List<MenuItemConfig> gitLogToolbarChildren = new ArrayList<>();
+            gitLogToolbarChildren.add(MenuItemConfig.action("vcs.log.git.not.cherry.picked.commits", "Not Cherry-Picked Commits"));
+
+            List<MenuItemConfig> vcsLogViewOptionsChildren = new ArrayList<>();
+            vcsLogViewOptionsChildren.add(MenuItemConfig.separator());
+            vcsLogViewOptionsChildren.add(MenuItemConfig.action("vcs.log.view.options.root.names", "Root Names"));
+            vcsLogViewOptionsChildren.add(MenuItemConfig.action("vcs.log.view.options.compact.references", "Compact References View"));
+            vcsLogViewOptionsChildren.add(MenuItemConfig.action("vcs.log.view.options.tag.names", "Tag Names"));
+            vcsLogViewOptionsChildren.add(MenuItemConfig.action("vcs.log.view.options.long.edges", "Long Edges"));
+            vcsLogViewOptionsChildren.add(MenuItemConfig.action("vcs.log.view.options.commit.timestamp", "Commit Timestamp"));
+            vcsLogViewOptionsChildren.add(MenuItemConfig.action("vcs.log.view.options.references.on.left", "References on the Left"));
+            vcsLogViewOptionsChildren.add(MenuItemConfig.action("vcs.log.view.options.columns", "Columns"));
+            vcsLogViewOptionsChildren.add(MenuItemConfig.separator());
+            vcsLogViewOptionsChildren.add(MenuItemConfig.action("vcs.log.highlighters.action.group", "Vcs.Log.HighlightersActionGroup"));
+            vcsLogViewOptionsChildren.add(MenuItemConfig.group("vcs.log.git.log.toolbar", "Git.Log.Toolbar", false, gitLogToolbarChildren));
+
             List<MenuItemConfig> vcsLogToolbar = new ArrayList<>();
-            vcsLogToolbar.add(MenuItemConfig.action("vcs.log.resume.indexing", "Resume Indexing"));
-            vcsLogToolbar.add(MenuItemConfig.action("vcs.log.refresh", "Refresh"));
-            vcsLogToolbar.add(MenuItemConfig.group("vcs.log.toolbar.group", "Vcs.Log.Toolbar", List.of()));
-            vcsLogToolbar.add(MenuItemConfig.group("vcs.log.view.options", "View Options", List.of()));
-            vcsLogToolbar.add(MenuItemConfig.action("vcs.log.goto.hash", "Go To Hash/Branch/Tag"));
+            vcsLogToolbar.add(MenuItemConfig.action("vcs.log.resume.indexing", "Resume Indexing", "PLAY"));
+            vcsLogToolbar.add(MenuItemConfig.action("vcs.log.refresh", "Refresh", "SYNC"));
+            vcsLogToolbar.add(MenuItemConfig.group("vcs.log.toolbar.group", "Vcs.Log.Toolbar", false, vcsLogToolbarChildren));
+            vcsLogToolbar.add(MenuItemConfig.group("vcs.log.view.options", "View Options", true, vcsLogViewOptionsChildren));
+            vcsLogToolbar.add(MenuItemConfig.action("vcs.log.goto.hash", "Go To Hash/Branch/Tag", "SEARCH"));
             roots.add(MenuItemConfig.group("root.vcs.log.toolbar", "VCS Log Toolbar", vcsLogToolbar));
 
             // 23. VCS Operations Popup
+            List<MenuItemConfig> vcsAwareChildren = new ArrayList<>();
+            vcsAwareChildren.add(MenuItemConfig.action("vcs.operations.popup.vcsnameseparator", "Vcs.Operations.Popup.VcsNameSeparator"));
+            vcsAwareChildren.add(MenuItemConfig.action("vcs.operations.popup.add", "Add to VCS"));
+            vcsAwareChildren.add(MenuItemConfig.action("vcs.operations.popup.commit", "Commit\u2026", "CODE_BRANCH"));
+            vcsAwareChildren.add(MenuItemConfig.action("vcs.operations.popup.toggle.commit.ui", "Toggle Commit UI\u2026", "CODE_BRANCH"));
+            vcsAwareChildren.add(MenuItemConfig.action("vcs.operations.popup.commit.file", "Commit File"));
+            vcsAwareChildren.add(MenuItemConfig.action("vcs.operations.popup.rollback", "Rollback\u2026", "UNDO"));
+            vcsAwareChildren.add(MenuItemConfig.separator());
+            vcsAwareChildren.add(MenuItemConfig.action("vcs.operations.popup.show.history", "Show History", "HISTORY"));
+            vcsAwareChildren.add(MenuItemConfig.action("vcs.operations.popup.annotate", "Annotate"));
+            vcsAwareChildren.add(MenuItemConfig.action("vcs.operations.popup.compare.same.repo", "Compare with Same Repository Version", "ARROW_RIGHT"));
+
+            List<MenuItemConfig> nonVcsAwareChildren = new ArrayList<>();
+            nonVcsAwareChildren.add(MenuItemConfig.action("vcs.operations.popup.create.git.repo", "Create Git Repository\u2026"));
+            nonVcsAwareChildren.add(MenuItemConfig.action("vcs.operations.popup.enable.vcs.integration", "Enable Version Control Integration\u2026"));
+
             List<MenuItemConfig> vcsOps = new ArrayList<>();
-            vcsOps.add(MenuItemConfig.group("vcs.operations.popup.vcsaware", "Vcs.Operations.Popup.VcsAware", List.of()));
+            vcsOps.add(MenuItemConfig.group("vcs.operations.popup.vcsaware", "Vcs.Operations.Popup.VcsAware", false, vcsAwareChildren));
             vcsOps.add(MenuItemConfig.separator());
             vcsOps.add(MenuItemConfig.action("vcs.operations.popup.vcs.providers", "Vcs.Operations.Popup.Vcs.Providers"));
-            vcsOps.add(MenuItemConfig.group("vcs.operations.popup.nonvcsaware", "Vcs.Operations.Popup.NonVcsAware", List.of()));
+            vcsOps.add(MenuItemConfig.group("vcs.operations.popup.nonvcsaware", "Vcs.Operations.Popup.NonVcsAware", false, nonVcsAwareChildren));
             vcsOps.add(MenuItemConfig.separator());
             vcsOps.add(MenuItemConfig.action("vcs.operations.annotated.line", "Annotated Line"));
             vcsOps.add(MenuItemConfig.action("vcs.operations.show.history", "Show History\u2026"));
@@ -4181,6 +4249,60 @@ public final class AppSettingsStore {
                         if (needsSqlFloatingMigration) {
                             for (MenuItemConfig defRoot : defaultMenusAndToolbars()) {
                                 if ("root.sql.floating.toolbar".equalsIgnoreCase(defRoot.getId())) {
+                                    menusAndToolbars.set(i, defRoot.copy());
+                                    break;
+                                }
+                            }
+                        }
+                    } else if ("root.vcs.local.changes.toolbar".equalsIgnoreCase(root.getId())) {
+                        boolean needsVcsLocalMigration = root.getChildren().stream()
+                                .noneMatch(c -> "vcs.local.changelists".equalsIgnoreCase(c.getId()) && !c.getChildren().isEmpty())
+                                || root.getChildren().stream()
+                                .noneMatch(c -> "vcs.local.commit".equalsIgnoreCase(c.getId()) && "CODE_BRANCH".equalsIgnoreCase(c.getIconName()));
+                        if (needsVcsLocalMigration) {
+                            for (MenuItemConfig defRoot : defaultMenusAndToolbars()) {
+                                if ("root.vcs.local.changes.toolbar".equalsIgnoreCase(defRoot.getId())) {
+                                    menusAndToolbars.set(i, defRoot.copy());
+                                    break;
+                                }
+                            }
+                        }
+                    } else if ("root.vcs.log.changes.browser.toolbar".equalsIgnoreCase(root.getId())) {
+                        boolean needsVcsLogChangesMigration = root.getChildren().stream()
+                                .noneMatch(c -> "vcs.repository.changes.browser.toolbar".equalsIgnoreCase(c.getId()) && !c.getChildren().isEmpty())
+                                || root.getChildren().stream()
+                                .noneMatch(c -> "vcs.log.changes.view.options".equalsIgnoreCase(c.getId()) && !c.getChildren().isEmpty());
+                        if (needsVcsLogChangesMigration) {
+                            for (MenuItemConfig defRoot : defaultMenusAndToolbars()) {
+                                if ("root.vcs.log.changes.browser.toolbar".equalsIgnoreCase(defRoot.getId())) {
+                                    menusAndToolbars.set(i, defRoot.copy());
+                                    break;
+                                }
+                            }
+                        }
+                    } else if ("root.vcs.log.toolbar".equalsIgnoreCase(root.getId())) {
+                        boolean needsVcsLogToolbarMigration = root.getChildren().stream()
+                                .noneMatch(c -> "vcs.log.toolbar.group".equalsIgnoreCase(c.getId()) && !c.getChildren().isEmpty())
+                                || root.getChildren().stream()
+                                .noneMatch(c -> "vcs.log.view.options".equalsIgnoreCase(c.getId()) && !c.getChildren().isEmpty())
+                                || root.getChildren().stream()
+                                .noneMatch(c -> "vcs.log.resume.indexing".equalsIgnoreCase(c.getId()) && "PLAY".equalsIgnoreCase(c.getIconName()));
+                        if (needsVcsLogToolbarMigration) {
+                            for (MenuItemConfig defRoot : defaultMenusAndToolbars()) {
+                                if ("root.vcs.log.toolbar".equalsIgnoreCase(defRoot.getId())) {
+                                    menusAndToolbars.set(i, defRoot.copy());
+                                    break;
+                                }
+                            }
+                        }
+                    } else if ("root.vcs.operations.popup".equalsIgnoreCase(root.getId())) {
+                        boolean needsVcsOpsMigration = root.getChildren().stream()
+                                .noneMatch(c -> "vcs.operations.popup.vcsaware".equalsIgnoreCase(c.getId()) && !c.getChildren().isEmpty())
+                                || root.getChildren().stream()
+                                .noneMatch(c -> "vcs.operations.popup.nonvcsaware".equalsIgnoreCase(c.getId()) && !c.getChildren().isEmpty());
+                        if (needsVcsOpsMigration) {
+                            for (MenuItemConfig defRoot : defaultMenusAndToolbars()) {
+                                if ("root.vcs.operations.popup".equalsIgnoreCase(defRoot.getId())) {
                                     menusAndToolbars.set(i, defRoot.copy());
                                     break;
                                 }
