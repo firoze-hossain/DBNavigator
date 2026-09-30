@@ -1468,7 +1468,66 @@ public class ActionManager {
         fileHistoryTbCat.addEntry(new ActionCatalogEntry("vcs.history.resume.indexing", "Resume Indexing", "PLAY", MenuItemConfig.Type.ACTION));
         rootCategories.add(fileHistoryTbCat);
 
-        // 20. Other
+        // 20. Floating Code Toolbar
+        ActionCatalogCategory floatingCodeCat = new ActionCatalogCategory("Floating Code Toolbar");
+        floatingCodeCat.addEntry(new ActionCatalogEntry("refactor.extract.method", "Extract Method\u2026", null, MenuItemConfig.Type.ACTION));
+        floatingCodeCat.addEntry(new ActionCatalogEntry("refactor.introduce.variable", "Introduce Variable\u2026", null, MenuItemConfig.Type.ACTION));
+        floatingCodeCat.addEntry(new ActionCatalogEntry("refactor.introduce.constant", "Introduce Constant\u2026", null, MenuItemConfig.Type.ACTION));
+        floatingCodeCat.addEntry(new ActionCatalogEntry("refactor.introduce.parameter", "Introduce Parameter\u2026", null, MenuItemConfig.Type.ACTION));
+        floatingCodeCat.addEntry(new ActionCatalogEntry("code.surround.try.catch", "try / catch", null, MenuItemConfig.Type.ACTION));
+        floatingCodeCat.addEntry(new ActionCatalogEntry("code.surround.try.catch.finally", "try / catch / finally", null, MenuItemConfig.Type.ACTION));
+        floatingCodeCat.addEntry(new ActionCatalogEntry("code.surround.if", "if", null, MenuItemConfig.Type.ACTION));
+        floatingCodeCat.addEntry(new ActionCatalogEntry("code.comment.line", "// Comment with Line Comment", null, MenuItemConfig.Type.ACTION));
+        floatingCodeCat.addEntry(new ActionCatalogEntry("code.reformat", "Reformat Code", "ALIGN_LEFT", MenuItemConfig.Type.ACTION));
+        floatingCodeCat.addEntry(new ActionCatalogEntry("debug.evaluate.expression", "Evaluate Expression\u2026", "CALCULATOR", MenuItemConfig.Type.ACTION));
+        floatingCodeCat.addEntry(new ActionCatalogEntry("debug.add.to.watches", "Add to Watches", "PLUS", MenuItemConfig.Type.ACTION));
+        rootCategories.add(floatingCodeCat);
+
+        // 21. Markdown Editor Floating Toolbar
+        ActionCatalogCategory mdCat = new ActionCatalogCategory("Markdown Editor Floating Toolbar");
+        mdCat.addEntry(new ActionCatalogEntry("md.set.header.style", "Set Header Style", null, MenuItemConfig.Type.ACTION));
+        mdCat.addEntry(new ActionCatalogEntry("md.bold", "Bold", "BOLD", MenuItemConfig.Type.ACTION));
+        mdCat.addEntry(new ActionCatalogEntry("md.italic", "Italic", "ITALIC", MenuItemConfig.Type.ACTION));
+        mdCat.addEntry(new ActionCatalogEntry("md.strikethrough", "Strikethrough", "STRIKETHROUGH", MenuItemConfig.Type.ACTION));
+        mdCat.addEntry(new ActionCatalogEntry("md.code", "<> Code", "CODE", MenuItemConfig.Type.ACTION));
+        mdCat.addEntry(new ActionCatalogEntry("md.create.link", "Create Link", "LINK", MenuItemConfig.Type.ACTION));
+        mdCat.addEntry(new ActionCatalogEntry("md.create.or.change.list", "Create Or Change List", "LIST", MenuItemConfig.Type.ACTION));
+        rootCategories.add(mdCat);
+
+        // 22. Quick Actions Popup Toolbar
+        ActionCatalogCategory quickActionsCat = new ActionCatalogCategory("Quick Actions Popup Toolbar");
+        quickActionsCat.addEntry(new ActionCatalogEntry("quick.actions.load.full.cell", "Load Full Cell", "ARROWS_ALT_V", MenuItemConfig.Type.ACTION));
+        quickActionsCat.addEntry(new ActionCatalogEntry("quick.actions.related.rows", "Related Rows", "TABLE", MenuItemConfig.Type.ACTION));
+        quickActionsCat.addEntry(new ActionCatalogEntry("quick.actions.open.url", "Open URL", "GLOBE", MenuItemConfig.Type.ACTION));
+        quickActionsCat.addEntry(new ActionCatalogEntry("quick.actions.open.file.uri", "Open File URI", "FOLDER", MenuItemConfig.Type.ACTION));
+        rootCategories.add(quickActionsCat);
+
+        // 23. Run Tool Window Header Toolbar
+        ActionCatalogCategory runHeaderCat = new ActionCatalogCategory("Run Tool Window Header Toolbar");
+        runHeaderCat.addEntry(new ActionCatalogEntry("middle.run", "Run", "PLAY", MenuItemConfig.Type.ACTION));
+        runHeaderCat.addEntry(new ActionCatalogEntry("debug.start", "Debug", "BUG", MenuItemConfig.Type.ACTION));
+        runHeaderCat.addEntry(new ActionCatalogEntry("run.header.rerun", "Rerun", null, MenuItemConfig.Type.ACTION));
+        runHeaderCat.addEntry(new ActionCatalogEntry("debug.stop", "Stop", "STOP", MenuItemConfig.Type.ACTION));
+        rootCategories.add(runHeaderCat);
+
+        // 24. SQL Floating Toolbar
+        ActionCatalogCategory sqlFloatingCat = new ActionCatalogCategory("SQL Floating Toolbar");
+        sqlFloatingCat.addEntry(new ActionCatalogEntry("refactor.extract.method", "Extract Method\u2026", null, MenuItemConfig.Type.ACTION));
+        sqlFloatingCat.addEntry(new ActionCatalogEntry("refactor.introduce.variable", "Introduce Variable\u2026", null, MenuItemConfig.Type.ACTION));
+        sqlFloatingCat.addEntry(new ActionCatalogEntry("refactor.introduce.constant", "Introduce Constant\u2026", null, MenuItemConfig.Type.ACTION));
+        sqlFloatingCat.addEntry(new ActionCatalogEntry("refactor.introduce.parameter", "Introduce Parameter\u2026", null, MenuItemConfig.Type.ACTION));
+        sqlFloatingCat.addEntry(new ActionCatalogEntry("code.surround.try.catch", "try / catch", null, MenuItemConfig.Type.ACTION));
+        sqlFloatingCat.addEntry(new ActionCatalogEntry("code.surround.try.catch.finally", "try / catch / finally", null, MenuItemConfig.Type.ACTION));
+        sqlFloatingCat.addEntry(new ActionCatalogEntry("code.surround.if", "if", null, MenuItemConfig.Type.ACTION));
+        sqlFloatingCat.addEntry(new ActionCatalogEntry("code.comment.line", "// Comment with Line Comment", null, MenuItemConfig.Type.ACTION));
+        sqlFloatingCat.addEntry(new ActionCatalogEntry("code.reformat", "Reformat Code", "ALIGN_LEFT", MenuItemConfig.Type.ACTION));
+        sqlFloatingCat.addEntry(new ActionCatalogEntry("debug.evaluate.expression", "Evaluate Expression\u2026", "CALCULATOR", MenuItemConfig.Type.ACTION));
+        sqlFloatingCat.addEntry(new ActionCatalogEntry("debug.add.to.watches", "Add to Watches", "PLUS", MenuItemConfig.Type.ACTION));
+        sqlFloatingCat.addEntry(new ActionCatalogEntry("middle.run", "Execute", "PLAY", MenuItemConfig.Type.ACTION));
+        sqlFloatingCat.addEntry(new ActionCatalogEntry("editor.explain.plan", "Explain Plan", "PROJECT_DIAGRAM", MenuItemConfig.Type.ACTION));
+        rootCategories.add(sqlFloatingCat);
+
+        // 25. Other
         ActionCatalogCategory otherCat = new ActionCatalogCategory("Other");
         otherCat.addEntry(new ActionCatalogEntry("header.search", "Search Everywhere", "SEARCH", MenuItemConfig.Type.ACTION));
         otherCat.addEntry(new ActionCatalogEntry("file.settings", "Settings", "COG", MenuItemConfig.Type.ACTION));

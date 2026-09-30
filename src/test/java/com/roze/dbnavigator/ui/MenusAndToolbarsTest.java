@@ -1209,8 +1209,12 @@ public class MenusAndToolbarsTest {
         assertNotNull(sqlFloating);
         List<String> sqlItems = sqlFloating.getChildren().stream().map(MenuItemConfig::getText).toList();
         assertTrue(sqlItems.contains("Floating Code Toolbar"));
-        assertTrue(sqlItems.contains("Execute"));
-        assertTrue(sqlItems.contains("Explain Plan"));
+        MenuItemConfig fct = sqlFloating.getChildren().stream()
+                .filter(c -> "sql.floating.code.toolbar".equals(c.getId()) || "Floating Code Toolbar".equals(c.getText()))
+                .findFirst().orElse(null);
+        List<String> fctItems = fct != null ? fct.getChildren().stream().map(MenuItemConfig::getText).toList() : List.of();
+        assertTrue(sqlItems.contains("Execute") || fctItems.contains("Execute"));
+        assertTrue(sqlItems.contains("Explain Plan") || fctItems.contains("Explain Plan"));
     }
 
     @Test
@@ -3675,6 +3679,343 @@ public class MenusAndToolbarsTest {
                 .filter(c -> "vcs.history.view.options".equalsIgnoreCase(c.getId()))
                 .findFirst().orElseThrow();
         assertFalse(migVo.getChildren().isEmpty(), "Stale file history toolbar must be migrated with full children");
+    }
+
+    @Test
+    @DisplayName("Verify Floating Code Toolbar hierarchy, Extract/Surround groups, icons, catalog, and auto-migration matching DataGrip Image 1")
+    public void testFloatingCodeToolbarStructureAndOrderMatchingDataGrip() {
+        MenuItemConfig fct = settings.getMenuConfig("root.floating.code.toolbar");
+        assertNotNull(fct);
+        assertEquals("Floating Code Toolbar", fct.getText());
+
+        List<MenuItemConfig> items = fct.getChildren();
+        assertEquals(5, items.size());
+
+        // 1. Extract group
+        MenuItemConfig extract = items.get(0);
+        assertEquals("code.extract.group", extract.getId());
+        assertEquals("Extract", extract.getText());
+        assertFalse(extract.isPopup());
+        List<MenuItemConfig> extChildren = extract.getChildren();
+        assertEquals(4, extChildren.size());
+        assertEquals("refactor.extract.method", extChildren.get(0).getId());
+        assertEquals("refactor.introduce.variable", extChildren.get(1).getId());
+        assertEquals("refactor.introduce.constant", extChildren.get(2).getId());
+        assertEquals("refactor.introduce.parameter", extChildren.get(3).getId());
+
+        // 2. Surround group
+        MenuItemConfig surround = items.get(1);
+        assertEquals("code.surround.group", surround.getId());
+        assertEquals("Surround", surround.getText());
+        assertFalse(surround.isPopup());
+        List<MenuItemConfig> surChildren = surround.getChildren();
+        assertEquals(3, surChildren.size());
+        assertEquals("code.surround.try.catch", surChildren.get(0).getId());
+        assertEquals("try / catch", surChildren.get(0).getText());
+        assertEquals("code.surround.try.catch.finally", surChildren.get(1).getId());
+        assertEquals("try / catch / finally", surChildren.get(1).getText());
+        assertEquals("code.surround.if", surChildren.get(2).getId());
+        assertEquals("if", surChildren.get(2).getText());
+
+        // 3. Comment with Line Comment
+        assertEquals("code.comment.line", items.get(2).getId());
+        assertEquals("// Comment with Line Comment", items.get(2).getText());
+
+        // 4. Reformat Code
+        assertEquals("code.reformat", items.get(3).getId());
+        assertEquals("Reformat Code", items.get(3).getText());
+        assertEquals("ALIGN_LEFT", items.get(3).getIconName());
+
+        // 5. XDebugger.Code.Toolbar
+        MenuItemConfig xdbg = items.get(4);
+        assertEquals("xdebugger.code.toolbar", xdbg.getId());
+        assertEquals("XDebugger.Code.Toolbar", xdbg.getText());
+        assertFalse(xdbg.isPopup());
+        List<MenuItemConfig> xdbgChildren = xdbg.getChildren();
+        assertEquals(3, xdbgChildren.size());
+        assertEquals(MenuItemConfig.Type.SEPARATOR, xdbgChildren.get(0).getType());
+        assertEquals("debug.evaluate.expression", xdbgChildren.get(1).getId());
+        assertEquals("CALCULATOR", xdbgChildren.get(1).getIconName());
+        assertEquals("debug.add.to.watches", xdbgChildren.get(2).getId());
+        assertEquals("Add to Watches", xdbgChildren.get(2).getText());
+        assertEquals("PLUS", xdbgChildren.get(2).getIconName());
+
+        // Action catalog check
+        ActionManager actionManager = ActionManager.getInstance();
+        var cat = actionManager.getActionCatalog().stream()
+                .filter(c -> "Floating Code Toolbar".equals(c.getName()))
+                .findFirst().orElseThrow();
+        assertEquals(11, cat.getEntries().size());
+
+        // Auto-migration test
+        MenuItemConfig staleFct = MenuItemConfig.group("root.floating.code.toolbar", "Floating Code Toolbar", List.of(
+                MenuItemConfig.group("code.extract.group", "Extract", List.of())
+        ));
+        List<MenuItemConfig> testList = new ArrayList<>(settings.getMenusAndToolbars());
+        for (int i = 0; i < testList.size(); i++) {
+            if ("root.floating.code.toolbar".equalsIgnoreCase(testList.get(i).getId())) {
+                testList.set(i, staleFct);
+                break;
+            }
+        }
+        settings.setMenusAndToolbars(testList);
+        MenuItemConfig migrated = settings.getMenusAndToolbars().stream()
+                .filter(r -> "root.floating.code.toolbar".equalsIgnoreCase(r.getId()))
+                .findFirst().orElseThrow();
+        MenuItemConfig migExt = migrated.getChildren().stream()
+                .filter(c -> "code.extract.group".equalsIgnoreCase(c.getId()))
+                .findFirst().orElseThrow();
+        assertEquals(4, migExt.getChildren().size(), "Stale floating code toolbar must be migrated with extract group");
+    }
+
+    @Test
+    @DisplayName("Verify Markdown Editor Floating Toolbar hierarchy, formatting icons, catalog, and auto-migration matching DataGrip Image 2")
+    public void testMarkdownEditorFloatingToolbarStructureAndOrderMatchingDataGrip() {
+        MenuItemConfig md = settings.getMenuConfig("root.markdown.editor.floating.toolbar");
+        assertNotNull(md);
+        assertEquals("Markdown Editor Floating Toolbar", md.getText());
+
+        List<MenuItemConfig> items = md.getChildren();
+        assertEquals(9, items.size());
+
+        assertEquals("md.set.header.style", items.get(0).getId());
+        assertEquals("Set Header Style", items.get(0).getText());
+
+        assertEquals(MenuItemConfig.Type.SEPARATOR, items.get(1).getType());
+
+        assertEquals("md.bold", items.get(2).getId());
+        assertEquals("Bold", items.get(2).getText());
+        assertEquals("BOLD", items.get(2).getIconName());
+
+        assertEquals("md.italic", items.get(3).getId());
+        assertEquals("Italic", items.get(3).getText());
+        assertEquals("ITALIC", items.get(3).getIconName());
+
+        assertEquals("md.strikethrough", items.get(4).getId());
+        assertEquals("Strikethrough", items.get(4).getText());
+        assertEquals("STRIKETHROUGH", items.get(4).getIconName());
+
+        assertEquals("md.code", items.get(5).getId());
+        assertEquals("CODE", items.get(5).getIconName());
+
+        assertEquals("md.create.link", items.get(6).getId());
+        assertEquals("Create Link", items.get(6).getText());
+        assertEquals("LINK", items.get(6).getIconName());
+
+        assertEquals(MenuItemConfig.Type.SEPARATOR, items.get(7).getType());
+
+        assertEquals("md.create.or.change.list", items.get(8).getId());
+        assertEquals("Create Or Change List", items.get(8).getText());
+        assertEquals("LIST", items.get(8).getIconName());
+
+        // Action catalog check
+        ActionManager actionManager = ActionManager.getInstance();
+        var cat = actionManager.getActionCatalog().stream()
+                .filter(c -> "Markdown Editor Floating Toolbar".equals(c.getName()))
+                .findFirst().orElseThrow();
+        assertEquals(7, cat.getEntries().size());
+
+        // Auto-migration test
+        MenuItemConfig staleMd = MenuItemConfig.group("root.markdown.editor.floating.toolbar", "Markdown Editor Floating Toolbar", List.of(
+                MenuItemConfig.action("md.bold", "Bold")
+        ));
+        List<MenuItemConfig> testList = new ArrayList<>(settings.getMenusAndToolbars());
+        for (int i = 0; i < testList.size(); i++) {
+            if ("root.markdown.editor.floating.toolbar".equalsIgnoreCase(testList.get(i).getId())) {
+                testList.set(i, staleMd);
+                break;
+            }
+        }
+        settings.setMenusAndToolbars(testList);
+        MenuItemConfig migrated = settings.getMenusAndToolbars().stream()
+                .filter(r -> "root.markdown.editor.floating.toolbar".equalsIgnoreCase(r.getId()))
+                .findFirst().orElseThrow();
+        assertEquals(9, migrated.getChildren().size(), "Stale markdown toolbar must be migrated");
+    }
+
+    @Test
+    @DisplayName("Verify Quick Actions Popup Toolbar hierarchy, icons, catalog, and auto-migration matching DataGrip Image 3")
+    public void testQuickActionsPopupToolbarStructureAndOrderMatchingDataGrip() {
+        MenuItemConfig qa = settings.getMenuConfig("root.quick.actions.popup.toolbar");
+        assertNotNull(qa);
+        assertEquals("Quick Actions Popup Toolbar", qa.getText());
+
+        List<MenuItemConfig> items = qa.getChildren();
+        assertEquals(4, items.size());
+
+        assertEquals("quick.actions.load.full.cell", items.get(0).getId());
+        assertEquals("Load Full Cell", items.get(0).getText());
+        assertEquals("ARROWS_ALT_V", items.get(0).getIconName());
+
+        assertEquals("quick.actions.related.rows", items.get(1).getId());
+        assertEquals("Related Rows", items.get(1).getText());
+        assertEquals("TABLE", items.get(1).getIconName());
+
+        assertEquals("quick.actions.open.url", items.get(2).getId());
+        assertEquals("Open URL", items.get(2).getText());
+        assertEquals("GLOBE", items.get(2).getIconName());
+
+        assertEquals("quick.actions.open.file.uri", items.get(3).getId());
+        assertEquals("Open File URI", items.get(3).getText());
+        assertEquals("FOLDER", items.get(3).getIconName());
+
+        // Action catalog check
+        ActionManager actionManager = ActionManager.getInstance();
+        var cat = actionManager.getActionCatalog().stream()
+                .filter(c -> "Quick Actions Popup Toolbar".equals(c.getName()))
+                .findFirst().orElseThrow();
+        assertEquals(4, cat.getEntries().size());
+
+        // Auto-migration test
+        MenuItemConfig staleQa = MenuItemConfig.group("root.quick.actions.popup.toolbar", "Quick Actions Popup Toolbar", List.of(
+                MenuItemConfig.action("quick.actions.open.url", "Open URL")
+        ));
+        List<MenuItemConfig> testList = new ArrayList<>(settings.getMenusAndToolbars());
+        for (int i = 0; i < testList.size(); i++) {
+            if ("root.quick.actions.popup.toolbar".equalsIgnoreCase(testList.get(i).getId())) {
+                testList.set(i, staleQa);
+                break;
+            }
+        }
+        settings.setMenusAndToolbars(testList);
+        MenuItemConfig migrated = settings.getMenusAndToolbars().stream()
+                .filter(r -> "root.quick.actions.popup.toolbar".equalsIgnoreCase(r.getId()))
+                .findFirst().orElseThrow();
+        MenuItemConfig migUrl = migrated.getChildren().stream()
+                .filter(c -> "quick.actions.open.url".equalsIgnoreCase(c.getId()))
+                .findFirst().orElseThrow();
+        assertEquals("GLOBE", migUrl.getIconName(), "Stale quick actions toolbar must be migrated with icons");
+    }
+
+    @Test
+    @DisplayName("Verify Run Tool Window Header Toolbar and More Popup hierarchy, icons, catalog, and auto-migration matching DataGrip Image 4")
+    public void testRunToolWindowHeaderToolbarStructureAndOrderMatchingDataGrip() {
+        MenuItemConfig runMore = settings.getMenuConfig("root.run.toolwindow.header.more.popup");
+        assertNotNull(runMore);
+        assertEquals("Run Tool Window Header More Popup", runMore.getText());
+        assertTrue(runMore.getChildren().isEmpty(), "Run Tool Window Header More Popup should be empty in DataGrip");
+
+        MenuItemConfig runTb = settings.getMenuConfig("root.run.toolwindow.header.toolbar");
+        assertNotNull(runTb);
+        assertEquals("Run Tool Window Header Toolbar", runTb.getText());
+
+        List<MenuItemConfig> items = runTb.getChildren();
+        assertEquals(4, items.size());
+
+        assertEquals("middle.run", items.get(0).getId());
+        assertEquals("Run", items.get(0).getText());
+        assertEquals("PLAY", items.get(0).getIconName());
+
+        assertEquals("debug.start", items.get(1).getId());
+        assertEquals("Debug", items.get(1).getText());
+        assertEquals("BUG", items.get(1).getIconName());
+
+        assertEquals("run.header.rerun", items.get(2).getId());
+        assertEquals("Rerun", items.get(2).getText());
+
+        assertEquals("debug.stop", items.get(3).getId());
+        assertEquals("Stop", items.get(3).getText());
+        assertEquals("STOP", items.get(3).getIconName());
+
+        // Action catalog check
+        ActionManager actionManager = ActionManager.getInstance();
+        var cat = actionManager.getActionCatalog().stream()
+                .filter(c -> "Run Tool Window Header Toolbar".equals(c.getName()))
+                .findFirst().orElseThrow();
+        assertEquals(4, cat.getEntries().size());
+
+        // Auto-migration test
+        MenuItemConfig staleRunTb = MenuItemConfig.group("root.run.toolwindow.header.toolbar", "Run Tool Window Header Toolbar", List.of(
+                MenuItemConfig.action("middle.run", "Run")
+        ));
+        List<MenuItemConfig> testList = new ArrayList<>(settings.getMenusAndToolbars());
+        for (int i = 0; i < testList.size(); i++) {
+            if ("root.run.toolwindow.header.toolbar".equalsIgnoreCase(testList.get(i).getId())) {
+                testList.set(i, staleRunTb);
+                break;
+            }
+        }
+        settings.setMenusAndToolbars(testList);
+        MenuItemConfig migrated = settings.getMenusAndToolbars().stream()
+                .filter(r -> "root.run.toolwindow.header.toolbar".equalsIgnoreCase(r.getId()))
+                .findFirst().orElseThrow();
+        MenuItemConfig migStop = migrated.getChildren().stream()
+                .filter(c -> "debug.stop".equalsIgnoreCase(c.getId()))
+                .findFirst().orElseThrow();
+        assertEquals("STOP", migStop.getIconName(), "Stale run toolbar must be migrated with icons");
+    }
+
+    @Test
+    @DisplayName("Verify SQL Floating Toolbar hierarchy, nested Floating Code Toolbar, Execute & Explain Plan, catalog, and auto-migration matching DataGrip Image 5")
+    public void testSqlFloatingToolbarStructureAndOrderMatchingDataGrip() {
+        MenuItemConfig sqlTb = settings.getMenuConfig("root.sql.floating.toolbar");
+        assertNotNull(sqlTb);
+        assertEquals("SQL Floating Toolbar", sqlTb.getText());
+
+        assertEquals(1, sqlTb.getChildren().size());
+        MenuItemConfig fctGroup = sqlTb.getChildren().get(0);
+        assertEquals("sql.floating.code.toolbar", fctGroup.getId());
+        assertEquals("Floating Code Toolbar", fctGroup.getText());
+        assertFalse(fctGroup.isPopup());
+
+        List<MenuItemConfig> fctChildren = fctGroup.getChildren();
+        assertEquals(7, fctChildren.size());
+
+        // 1. Extract group
+        assertEquals("code.extract.group", fctChildren.get(0).getId());
+        assertEquals("Extract", fctChildren.get(0).getText());
+        assertEquals(4, fctChildren.get(0).getChildren().size());
+
+        // 2. Surround group
+        assertEquals("code.surround.group", fctChildren.get(1).getId());
+        assertEquals("Surround", fctChildren.get(1).getText());
+        assertEquals(3, fctChildren.get(1).getChildren().size());
+
+        // 3. Comment with Line Comment
+        assertEquals("code.comment.line", fctChildren.get(2).getId());
+
+        // 4. Reformat Code
+        assertEquals("code.reformat", fctChildren.get(3).getId());
+        assertEquals("ALIGN_LEFT", fctChildren.get(3).getIconName());
+
+        // 5. XDebugger.Code.Toolbar
+        assertEquals("xdebugger.code.toolbar", fctChildren.get(4).getId());
+        assertEquals(3, fctChildren.get(4).getChildren().size());
+
+        // 6. Execute
+        assertEquals("middle.run", fctChildren.get(5).getId());
+        assertEquals("Execute", fctChildren.get(5).getText());
+        assertEquals("PLAY", fctChildren.get(5).getIconName());
+
+        // 7. Explain Plan
+        assertEquals("editor.explain.plan", fctChildren.get(6).getId());
+        assertEquals("Explain Plan", fctChildren.get(6).getText());
+        assertEquals("PROJECT_DIAGRAM", fctChildren.get(6).getIconName());
+
+        // Action catalog check
+        ActionManager actionManager = ActionManager.getInstance();
+        var cat = actionManager.getActionCatalog().stream()
+                .filter(c -> "SQL Floating Toolbar".equals(c.getName()))
+                .findFirst().orElseThrow();
+        assertEquals(13, cat.getEntries().size());
+
+        // Auto-migration test
+        MenuItemConfig staleSqlTb = MenuItemConfig.group("root.sql.floating.toolbar", "SQL Floating Toolbar", List.of(
+                MenuItemConfig.group("sql.floating.code.toolbar", "Floating Code Toolbar", List.of())
+        ));
+        List<MenuItemConfig> testList = new ArrayList<>(settings.getMenusAndToolbars());
+        for (int i = 0; i < testList.size(); i++) {
+            if ("root.sql.floating.toolbar".equalsIgnoreCase(testList.get(i).getId())) {
+                testList.set(i, staleSqlTb);
+                break;
+            }
+        }
+        settings.setMenusAndToolbars(testList);
+        MenuItemConfig migrated = settings.getMenusAndToolbars().stream()
+                .filter(r -> "root.sql.floating.toolbar".equalsIgnoreCase(r.getId()))
+                .findFirst().orElseThrow();
+        MenuItemConfig migFct = migrated.getChildren().get(0);
+        assertEquals(7, migFct.getChildren().size(), "Stale SQL floating toolbar must be migrated with full children");
     }
 }
 
