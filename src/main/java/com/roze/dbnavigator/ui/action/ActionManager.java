@@ -1234,7 +1234,54 @@ public class ActionManager {
         tabPopupCat.addEntry(new ActionCatalogEntry("tab.rename.file", "Rename File\u2026", null, MenuItemConfig.Type.ACTION));
         rootCategories.add(tabPopupCat);
 
-        // 12. Other
+        // 12. Project View Popup Menu
+        ActionCatalogCategory projectPopupCat = new ActionCatalogCategory("Project View Popup Menu");
+        projectPopupCat.addEntry(new ActionCatalogEntry("file.attach.directory", "Attach Directory to Project\u2026", "FOLDER_PLUS", MenuItemConfig.Type.ACTION));
+        projectPopupCat.addEntry(new ActionCatalogEntry("project.associate.file.type", "Associate with File Type\u2026", null, MenuItemConfig.Type.ACTION));
+        projectPopupCat.addEntry(new ActionCatalogEntry("project.restore.default.extensions", "Restore Default Extensions", null, MenuItemConfig.Type.ACTION));
+        projectPopupCat.addEntry(new ActionCatalogEntry("project.copy.paths", "Copy Paths", null, MenuItemConfig.Type.ACTION));
+        projectPopupCat.addEntry(new ActionCatalogEntry("project.copy.path.absolute", "Absolute Path", null, MenuItemConfig.Type.ACTION));
+        projectPopupCat.addEntry(new ActionCatalogEntry("project.copy.path.filename", "File Name", null, MenuItemConfig.Type.ACTION));
+        projectPopupCat.addEntry(new ActionCatalogEntry("project.copy.path.line.number", "Path with Line Number", null, MenuItemConfig.Type.ACTION));
+        projectPopupCat.addEntry(new ActionCatalogEntry("project.copy.path.content.root", "Path from Content Root", null, MenuItemConfig.Type.ACTION));
+        projectPopupCat.addEntry(new ActionCatalogEntry("project.copy.path.source.root", "Path from Source Root", null, MenuItemConfig.Type.ACTION));
+        projectPopupCat.addEntry(new ActionCatalogEntry("project.copy.path.repo.root", "Path From Repository Root", null, MenuItemConfig.Type.ACTION));
+        projectPopupCat.addEntry(new ActionCatalogEntry("project.copy.git.hosting.link", "Git.Hosting.Copy.Link.Group", null, MenuItemConfig.Type.ACTION));
+        projectPopupCat.addEntry(new ActionCatalogEntry("project.copy.toolbox.url", "Toolbox URL", "TOOLBOX", MenuItemConfig.Type.ACTION));
+        projectPopupCat.addEntry(new ActionCatalogEntry("project.copy.ref.action", "Copy Reference", null, MenuItemConfig.Type.ACTION));
+        projectPopupCat.addEntry(new ActionCatalogEntry("project.copy.json.pointer", "Copy JSON Pointer", null, MenuItemConfig.Type.ACTION));
+        projectPopupCat.addEntry(new ActionCatalogEntry("file.import.data", "Import to Database\u2026", "UPLOAD", MenuItemConfig.Type.ACTION));
+        projectPopupCat.addEntry(new ActionCatalogEntry("project.edit.source", "Edit Source", null, MenuItemConfig.Type.ACTION));
+        projectPopupCat.addEntry(new ActionCatalogEntry("project.apply.patch", "Apply Patch\u2026", null, MenuItemConfig.Type.ACTION));
+        projectPopupCat.addEntry(new ActionCatalogEntry("refactor.rename.inner", "Rename\u2026", null, MenuItemConfig.Type.ACTION));
+        projectPopupCat.addEntry(new ActionCatalogEntry("code.reformat", "Reformat Code", "ALIGN_LEFT", MenuItemConfig.Type.ACTION));
+        projectPopupCat.addEntry(new ActionCatalogEntry("code.reformat.json", "Reformat JSON", null, MenuItemConfig.Type.ACTION));
+        projectPopupCat.addEntry(new ActionCatalogEntry("code.optimize.imports", "Optimize Imports", null, MenuItemConfig.Type.ACTION));
+        projectPopupCat.addEntry(new ActionCatalogEntry("edit.delete", "Delete", null, MenuItemConfig.Type.ACTION));
+        projectPopupCat.addEntry(new ActionCatalogEntry("editor.sql.change.file.language", "Change File Language", null, MenuItemConfig.Type.ACTION));
+        projectPopupCat.addEntry(new ActionCatalogEntry("editor.sql.change.sql.dialect", "Change SQL Dialect", null, MenuItemConfig.Type.ACTION));
+        projectPopupCat.addEntry(new ActionCatalogEntry("tab.mark.file.override.type", "Override File Type", null, MenuItemConfig.Type.ACTION));
+        projectPopupCat.addEntry(new ActionCatalogEntry("tab.mark.file.revert.override", "Revert File Type Override", null, MenuItemConfig.Type.ACTION));
+        projectPopupCat.addEntry(new ActionCatalogEntry("project.mark.file.detach.directory", "Detach Directory from Project\u2026", null, MenuItemConfig.Type.ACTION));
+        projectPopupCat.addEntry(new ActionCatalogEntry("project.mark.file.exclude", "Exclude from Project", null, MenuItemConfig.Type.ACTION));
+        projectPopupCat.addEntry(new ActionCatalogEntry("project.mark.file.include", "Include to Project", null, MenuItemConfig.Type.ACTION));
+        projectPopupCat.addEntry(new ActionCatalogEntry("project.cache.recovery", "Cache Recovery", null, MenuItemConfig.Type.ACTION));
+        projectPopupCat.addEntry(new ActionCatalogEntry("file.reload.disk", "Reload from Disk", "SYNC", MenuItemConfig.Type.ACTION));
+        projectPopupCat.addEntry(new ActionCatalogEntry("project.goto.link.target", "Go to Link Target", null, MenuItemConfig.Type.ACTION));
+        projectPopupCat.addEntry(new ActionCatalogEntry("project.compare.files", "Compare Files", "ARROW_RIGHT", MenuItemConfig.Type.ACTION));
+        projectPopupCat.addEntry(new ActionCatalogEntry("project.compare.file.editor", "Compare File with Editor", null, MenuItemConfig.Type.ACTION));
+        projectPopupCat.addEntry(new ActionCatalogEntry("project.external.tools", "External Tools", null, MenuItemConfig.Type.ACTION));
+        projectPopupCat.addEntry(new ActionCatalogEntry("project.mark.directory.as", "Mark Directory As", null, MenuItemConfig.Type.ACTION));
+        projectPopupCat.addEntry(new ActionCatalogEntry("project.set.background.image", "Set Background Image", null, MenuItemConfig.Type.ACTION));
+        projectPopupCat.addEntry(new ActionCatalogEntry("diagrams.show.uml", "ShowUmlDiagram", "PROJECT_DIAGRAM", MenuItemConfig.Type.ACTION));
+        projectPopupCat.addEntry(new ActionCatalogEntry("diagrams.show.uml.popup", "ShowUmlDiagramPopup", "PROJECT_DIAGRAM", MenuItemConfig.Type.ACTION));
+        projectPopupCat.addEntry(new ActionCatalogEntry("vcs.show.local.changes.uml", "Show Local Changes as UML", "PROJECT_DIAGRAM", MenuItemConfig.Type.ACTION));
+        projectPopupCat.addEntry(new ActionCatalogEntry("project.diagrams.file.associations", "File Associations", null, MenuItemConfig.Type.ACTION));
+        projectPopupCat.addEntry(new ActionCatalogEntry("project.diagrams.jump.external.editor", "Jump to External Editor", null, MenuItemConfig.Type.ACTION));
+        projectPopupCat.addEntry(new ActionCatalogEntry("project.diagrams.convert.png", "Convert to PNG", null, MenuItemConfig.Type.ACTION));
+        rootCategories.add(projectPopupCat);
+
+        // 13. Other
         ActionCatalogCategory otherCat = new ActionCatalogCategory("Other");
         otherCat.addEntry(new ActionCatalogEntry("header.search", "Search Everywhere", "SEARCH", MenuItemConfig.Type.ACTION));
         otherCat.addEntry(new ActionCatalogEntry("file.settings", "Settings", "COG", MenuItemConfig.Type.ACTION));

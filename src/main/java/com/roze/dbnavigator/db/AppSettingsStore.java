@@ -2483,63 +2483,313 @@ public final class AppSettingsStore {
             tabPopup.add(MenuItemConfig.group("tab.editor.tab.popup.actions.1", "Editor Tab Popup Menu Actions (1)", false, tabActions1Children));
             roots.add(MenuItemConfig.group("root.editor.tab.popup", "Editor Tab Popup Menu", tabPopup));
 
-            // 6. Project View Popup Menu
+            // 6. Project View Popup Menu (DataGrip Alignment - Images 1-5)
             List<MenuItemConfig> projectPopup = new ArrayList<>();
-            projectPopup.add(MenuItemConfig.action("project.attach.directory", "Attach Directory to Project\u2026"));
-            projectPopup.add(MenuItemConfig.group("project.new", "New", List.of(
-                    MenuItemConfig.action("file.new.project", "Project\u2026"),
-                    MenuItemConfig.action("file.new.sqlfile", "SQL File"),
-                    MenuItemConfig.action("file.new.scratch", "Scratch File"),
-                    MenuItemConfig.action("file.new.console", "Query Console")
-            )));
+            projectPopup.add(MenuItemConfig.action("file.attach.directory", "Attach Directory to Project\u2026", "FOLDER_PLUS"));
+
+            // New Submenu (Image 3)
+            List<MenuItemConfig> projXmlChildren = new ArrayList<>();
+            projXmlChildren.add(MenuItemConfig.action("file.new.html", "HTML File", "FILE_CODE"));
+
+            List<MenuItemConfig> projWebDevChildren = new ArrayList<>();
+            projWebDevChildren.add(MenuItemConfig.group("file.web.dev.xml", "XML", true, projXmlChildren));
+            projWebDevChildren.add(MenuItemConfig.action("file.microservices.templates", "Microservices Templates"));
+            projWebDevChildren.add(MenuItemConfig.action("file.from.template", "From Template"));
+            projWebDevChildren.add(MenuItemConfig.action("file.xml.config.file", "XML Configuration File", "CODE"));
+
+            List<MenuItemConfig> projNewFileChildren = new ArrayList<>();
+            projNewFileChildren.add(MenuItemConfig.action("file.new.sqlfile", "SQL File", "FILE_CODE"));
+            projNewFileChildren.add(MenuItemConfig.separator());
+            projNewFileChildren.add(MenuItemConfig.action("file.new.generic.file", "File", "FILE"));
+            projNewFileChildren.add(MenuItemConfig.action("file.new.scratch", "Scratch File", "FILE_ALT"));
+            projNewFileChildren.add(MenuItemConfig.action("file.new.directory.package", "Directory/Package", "FOLDER"));
+            projNewFileChildren.add(MenuItemConfig.action("file.template.separator.group", "FileTemplateSeparatorGroup"));
+            projNewFileChildren.add(MenuItemConfig.group("file.web.dev.templates", "Web Development Templates", true, projWebDevChildren));
+
+            List<MenuItemConfig> projCreateDsChildren = new ArrayList<>();
+            projCreateDsChildren.add(MenuItemConfig.action("file.new.datasource.cloud", "Data Source from Cloud Provider", "CLOUD"));
+            projCreateDsChildren.add(MenuItemConfig.action("file.new.datasource.templates", "Data Source Templates", "LAYER_GROUP"));
+            projCreateDsChildren.add(MenuItemConfig.action("file.new.datasource.file", "Data Source from File/Folder", "FOLDER_OPEN"));
+            projCreateDsChildren.add(MenuItemConfig.action("file.new.datasource.url", "Data Source from URL", "LINK"));
+            projCreateDsChildren.add(MenuItemConfig.action("file.new.datasource.selection", "Add Data Source from Selection\u2026"));
+            projCreateDsChildren.add(MenuItemConfig.action("file.new.datasource.path", "Data Source in Path"));
+            projCreateDsChildren.add(MenuItemConfig.action("file.new.datasource.clipboard", "Import from Clipboard"));
+            projCreateDsChildren.add(MenuItemConfig.separator());
+            projCreateDsChildren.add(MenuItemConfig.action("file.new.folder", "Create a New Folder", "FOLDER"));
+            projCreateDsChildren.add(MenuItemConfig.action("file.new.driver", "Driver", "PLUG"));
+
+            List<MenuItemConfig> projAddChildren = new ArrayList<>();
+            projAddChildren.add(MenuItemConfig.action("file.new.queryfile.active", "Query File", "TERMINAL"));
+            projAddChildren.add(MenuItemConfig.action("file.new.queryfile", "Query File\u2026", "FILE_CODE"));
+            projAddChildren.add(MenuItemConfig.action("file.new.scratch.queryfile", "Scratch Query File", "TERMINAL"));
+            projAddChildren.add(MenuItemConfig.separator());
+            projAddChildren.add(MenuItemConfig.action("file.new.add.ddl.object", "Add Ddl Object", "DATABASE"));
+            projAddChildren.add(MenuItemConfig.separator());
+            projAddChildren.add(MenuItemConfig.group("file.new.create.datasource", "Create Data Source", true, projCreateDsChildren));
+
+            List<MenuItemConfig> projNewDbChildren = new ArrayList<>();
+            projNewDbChildren.add(MenuItemConfig.group("file.new.add.group", "Add", false, projAddChildren));
+
+            List<MenuItemConfig> projNewGroupChildren = new ArrayList<>();
+            projNewGroupChildren.add(MenuItemConfig.group("file.new.file.group", "New File", true, projNewFileChildren));
+            projNewGroupChildren.add(MenuItemConfig.group("file.new.db.group", "New", false, projNewDbChildren));
+
+            projectPopup.add(MenuItemConfig.group("project.new", "New", true, projNewGroupChildren));
             projectPopup.add(MenuItemConfig.action("project.associate.file.type", "Associate with File Type\u2026"));
             projectPopup.add(MenuItemConfig.action("project.restore.default.extensions", "Restore Default Extensions"));
             projectPopup.add(MenuItemConfig.separator());
-            projectPopup.add(MenuItemConfig.group("project.cut.copy.paste", "Cut/Copy/Paste Actions", List.of(
-                    MenuItemConfig.action("edit.cut", "Cut"),
-                    MenuItemConfig.action("edit.copy", "Copy"),
-                    MenuItemConfig.action("edit.paste", "Paste")
-            )));
-            projectPopup.add(MenuItemConfig.group("fileeditor.import.to.database.group", "FileEditor.ImportToDatabase.Group", List.of(
-                    MenuItemConfig.action("file.import.data", "Import to Database\u2026")
-            )));
+
+            // Cut/Copy/Paste Actions (Image 4)
+            List<MenuItemConfig> projCopyFileRefChildren = new ArrayList<>();
+            projCopyFileRefChildren.add(MenuItemConfig.action("project.copy.path.absolute", "Absolute Path"));
+            projCopyFileRefChildren.add(MenuItemConfig.action("project.copy.path.filename", "File Name"));
+            projCopyFileRefChildren.add(MenuItemConfig.separator());
+            projCopyFileRefChildren.add(MenuItemConfig.action("project.copy.path.line.number", "Path with Line Number"));
+            projCopyFileRefChildren.add(MenuItemConfig.action("project.copy.path.content.root", "Path from Content Root"));
+            projCopyFileRefChildren.add(MenuItemConfig.action("project.copy.path.source.root", "Path from Source Root"));
+            projCopyFileRefChildren.add(MenuItemConfig.action("project.copy.path.repo.root", "Path From Repository Root"));
+            projCopyFileRefChildren.add(MenuItemConfig.action("project.copy.git.hosting.link", "Git.Hosting.Copy.Link.Group"));
+
+            List<MenuItemConfig> projCopyExtRefChildren = new ArrayList<>();
+            projCopyExtRefChildren.add(MenuItemConfig.action("project.copy.toolbox.url", "Toolbox URL", "TOOLBOX"));
+
+            List<MenuItemConfig> projCopyPathRefChildren = new ArrayList<>();
+            projCopyPathRefChildren.add(MenuItemConfig.group("project.copy.file.ref", "CopyFileReference", false, projCopyFileRefChildren));
+            projCopyPathRefChildren.add(MenuItemConfig.separator());
+            projCopyPathRefChildren.add(MenuItemConfig.group("project.copy.ext.ref", "CopyExternalReferenceGroup", false, projCopyExtRefChildren));
+            projCopyPathRefChildren.add(MenuItemConfig.action("project.copy.ref.action", "Copy Reference"));
+
+            List<MenuItemConfig> projPasteChildren = new ArrayList<>();
+            projPasteChildren.add(MenuItemConfig.action("edit.paste", "Paste", "PASTE"));
+            projPasteChildren.add(MenuItemConfig.action("edit.paste.from.history", "Paste from History\u2026"));
+            projPasteChildren.add(MenuItemConfig.action("edit.paste.plain.text", "Paste as Plain Text"));
+
+            List<MenuItemConfig> projCutCopyPasteChildren = new ArrayList<>();
+            projCutCopyPasteChildren.add(MenuItemConfig.action("edit.cut", "Cut", "CUT"));
+            projCutCopyPasteChildren.add(MenuItemConfig.action("edit.copy", "Copy", "COPY"));
+            projCutCopyPasteChildren.add(MenuItemConfig.action("project.copy.paths", "Copy Paths"));
+            projCutCopyPasteChildren.add(MenuItemConfig.action("edit.copy.plain.text", "Copy as Plain Text"));
+            projCutCopyPasteChildren.add(MenuItemConfig.action("edit.copy.rich.text", "Copy as Rich Text"));
+            projCutCopyPasteChildren.add(MenuItemConfig.group("project.copy.path.ref.group", "Copy Path/Reference\u2026", true, projCopyPathRefChildren));
+            projCutCopyPasteChildren.add(MenuItemConfig.group("project.paste.group", "Paste", true, projPasteChildren));
+            projCutCopyPasteChildren.add(MenuItemConfig.action("project.copy.json.pointer", "Copy JSON Pointer"));
+
+            projectPopup.add(MenuItemConfig.group("project.cut.copy.paste", "Cut/Copy/Paste Actions", false, projCutCopyPasteChildren));
+
+            // FileEditor.ImportToDatabase.Group (Image 4)
+            List<MenuItemConfig> projImportChildren = new ArrayList<>();
+            projImportChildren.add(MenuItemConfig.separator());
+            projImportChildren.add(MenuItemConfig.action("file.import.data", "Import to Database\u2026", "UPLOAD"));
+            projectPopup.add(MenuItemConfig.group("fileeditor.import.to.database.group", "FileEditor.ImportToDatabase.Group", false, projImportChildren));
+
             projectPopup.add(MenuItemConfig.action("project.edit.source", "Edit Source"));
-            projectPopup.add(MenuItemConfig.group("changesview.applypatch.langgroup", "ChangesView.ApplyPatch.LangGroup", List.of()));
+
+            // ChangesView.ApplyPatch.LangGroup (Image 4)
+            List<MenuItemConfig> projApplyPatchChildren = new ArrayList<>();
+            projApplyPatchChildren.add(MenuItemConfig.action("project.apply.patch", "Apply Patch\u2026"));
+            projectPopup.add(MenuItemConfig.group("changesview.applypatch.langgroup", "ChangesView.ApplyPatch.LangGroup", false, projApplyPatchChildren));
+
             projectPopup.add(MenuItemConfig.separator());
             projectPopup.add(MenuItemConfig.action("edit.find.usages", "Find Usages"));
             projectPopup.add(MenuItemConfig.action("edit.find.files", "Find in Files\u2026"));
             projectPopup.add(MenuItemConfig.action("edit.replace.files", "Replace in Files\u2026"));
-            projectPopup.add(MenuItemConfig.group("project.inspect.code.action", "InspectCodeActionInPopupMenus", List.of()));
+
+            // InspectCodeActionInPopupMenus (Image 5)
+            List<MenuItemConfig> projInspectCodeChildren = new ArrayList<>();
+            projInspectCodeChildren.add(MenuItemConfig.action("code.inspect.code", "Inspect Code\u2026"));
+            projectPopup.add(MenuItemConfig.group("project.inspect.code.action", "InspectCodeActionInPopupMenus", false, projInspectCodeChildren));
+
             projectPopup.add(MenuItemConfig.separator());
-            projectPopup.add(MenuItemConfig.action("project.rename", "Rename\u2026"));
-            projectPopup.add(MenuItemConfig.group("project.refactoring.group", "Project View Popup Refactoring Group", List.of()));
-            projectPopup.add(MenuItemConfig.group("project.anonymous.group.0", "<anonymous-group-0>", List.of()));
+            projectPopup.add(MenuItemConfig.action("refactor.rename", "Rename\u2026"));
+
+            // Project View Popup Refactoring Group (Image 5)
+            List<MenuItemConfig> projExtractIntroChildren = new ArrayList<>();
+            projExtractIntroChildren.add(MenuItemConfig.action("refactor.introduce.variable", "Introduce Variable\u2026"));
+            projExtractIntroChildren.add(MenuItemConfig.action("refactor.extract.routine", "Extract Routine\u2026"));
+            projExtractIntroChildren.add(MenuItemConfig.action("refactor.table.alias", "Table alias\u2026"));
+            projExtractIntroChildren.add(MenuItemConfig.action("refactor.introduce.constant", "Introduce Constant\u2026"));
+            projExtractIntroChildren.add(MenuItemConfig.action("refactor.introduce.field", "Introduce Field\u2026"));
+            projExtractIntroChildren.add(MenuItemConfig.action("refactor.introduce.parameter", "Introduce Parameter\u2026"));
+            projExtractIntroChildren.add(MenuItemConfig.separator());
+            projExtractIntroChildren.add(MenuItemConfig.action("refactor.introduce.parameter.object", "Introduce Parameter Object\u2026"));
+            projExtractIntroChildren.add(MenuItemConfig.separator());
+            projExtractIntroChildren.add(MenuItemConfig.action("refactor.extract.method", "Extract Method\u2026"));
+            projExtractIntroChildren.add(MenuItemConfig.separator());
+            projExtractIntroChildren.add(MenuItemConfig.action("refactor.extract.delegate", "Extract Delegate\u2026"));
+            projExtractIntroChildren.add(MenuItemConfig.action("refactor.include.file", "Include File\u2026"));
+            projExtractIntroChildren.add(MenuItemConfig.action("refactor.extract.interface", "Extract Interface\u2026"));
+            projExtractIntroChildren.add(MenuItemConfig.action("refactor.extract.superclass", "Extract Superclass\u2026"));
+            projExtractIntroChildren.add(MenuItemConfig.action("refactor.extract.module", "Extract Module\u2026"));
+            projExtractIntroChildren.add(MenuItemConfig.action("refactor.subquery.cte", "Subquery as CTE"));
+
+            List<MenuItemConfig> projRefactorSubmenuChildren = new ArrayList<>();
+            projRefactorSubmenuChildren.add(MenuItemConfig.action("refactor.this", "Refactor This\u2026"));
+            projRefactorSubmenuChildren.add(MenuItemConfig.action("refactor.rename.inner", "Rename\u2026"));
+            projRefactorSubmenuChildren.add(MenuItemConfig.action("refactor.change.signature", "Change Signature\u2026"));
+            projRefactorSubmenuChildren.add(MenuItemConfig.action("refactor.modify.object", "Modify Object\u2026"));
+            projRefactorSubmenuChildren.add(MenuItemConfig.separator());
+            projRefactorSubmenuChildren.add(MenuItemConfig.group("project.refactor.extract.introduce", "Extract/Introduce", true, projExtractIntroChildren));
+            projRefactorSubmenuChildren.add(MenuItemConfig.action("refactor.inline", "Inline\u2026"));
+            projRefactorSubmenuChildren.add(MenuItemConfig.separator());
+            projRefactorSubmenuChildren.add(MenuItemConfig.action("refactor.move", "Move\u2026"));
+            projRefactorSubmenuChildren.add(MenuItemConfig.action("refactor.copy", "Copy\u2026"));
+            projRefactorSubmenuChildren.add(MenuItemConfig.action("refactor.safe.delete", "Safe Delete\u2026"));
+            projRefactorSubmenuChildren.add(MenuItemConfig.separator());
+            projRefactorSubmenuChildren.add(MenuItemConfig.action("refactor.pull.members.up", "Pull Members Up\u2026"));
+            projRefactorSubmenuChildren.add(MenuItemConfig.action("refactor.push.members.down", "Push Members Down\u2026"));
+            projRefactorSubmenuChildren.add(MenuItemConfig.action("refactor.invert.boolean", "Invert Boolean\u2026"));
+
+            List<MenuItemConfig> projRefactorGroupChildren = new ArrayList<>();
+            projRefactorGroupChildren.add(MenuItemConfig.group("project.refactor.submenu", "Refactor", true, projRefactorSubmenuChildren));
+            projectPopup.add(MenuItemConfig.group("project.refactoring.group", "Project View Popup Refactoring Group", false, projRefactorGroupChildren));
+
+            // <anonymous-group-0> (Image 1)
+            List<MenuItemConfig> projBookmarkChildren = new ArrayList<>();
+            projBookmarkChildren.add(MenuItemConfig.action("tab.bookmark.add.another.list", "Add Bookmark to Another List"));
+            projBookmarkChildren.add(MenuItemConfig.action("tab.bookmark.rename", "Rename Bookmark\u2026", "EDIT"));
+            projBookmarkChildren.add(MenuItemConfig.action("tab.bookmark.toggle", "Toggle Bookmark"));
+
+            List<MenuItemConfig> projAnon0Children = new ArrayList<>();
+            projAnon0Children.add(MenuItemConfig.separator());
+            projAnon0Children.add(MenuItemConfig.group("project.bookmarks", "Bookmarks", true, projBookmarkChildren));
+            projAnon0Children.add(MenuItemConfig.separator());
+
+            projectPopup.add(MenuItemConfig.group("project.anonymous.group.0", "<anonymous-group-0>", false, projAnon0Children));
             projectPopup.add(MenuItemConfig.separator());
-            projectPopup.add(MenuItemConfig.group("project.modify.group", "Project View Popup Menu Modify Group", List.of()));
+
+            // Project View Popup Menu Modify Group (Image 1)
+            List<MenuItemConfig> projMarkFileAsChildren = new ArrayList<>();
+            projMarkFileAsChildren.add(MenuItemConfig.action("tab.mark.file.override.type", "Override File Type"));
+            projMarkFileAsChildren.add(MenuItemConfig.action("tab.mark.file.revert.override", "Revert File Type Override"));
+            projMarkFileAsChildren.add(MenuItemConfig.action("project.mark.file.detach.directory", "Detach Directory from Project\u2026"));
+            projMarkFileAsChildren.add(MenuItemConfig.action("project.mark.file.exclude", "Exclude from Project"));
+            projMarkFileAsChildren.add(MenuItemConfig.action("project.mark.file.include", "Include to Project"));
+
+            List<MenuItemConfig> projModifyChildren = new ArrayList<>();
+            projModifyChildren.add(MenuItemConfig.action("code.reformat", "Reformat Code", "ALIGN_LEFT"));
+            projModifyChildren.add(MenuItemConfig.action("code.reformat.json", "Reformat JSON"));
+            projModifyChildren.add(MenuItemConfig.action("code.optimize.imports", "Optimize Imports"));
+            projModifyChildren.add(MenuItemConfig.action("edit.delete", "Delete"));
+            projModifyChildren.add(MenuItemConfig.action("editor.sql.change.file.language", "Change File Language"));
+            projModifyChildren.add(MenuItemConfig.action("editor.sql.change.sql.dialect", "Change SQL Dialect"));
+            projModifyChildren.add(MenuItemConfig.group("project.mark.file.as", "Mark File As", true, projMarkFileAsChildren));
+
+            projectPopup.add(MenuItemConfig.group("project.modify.group", "Project View Popup Menu Modify Group", false, projModifyChildren));
             projectPopup.add(MenuItemConfig.separator());
-            projectPopup.add(MenuItemConfig.group("project.run.group", "Project View Popup Menu Run Group", List.of()));
-            projectPopup.add(MenuItemConfig.group("project.split.reveal.group", "SplitRevealGroup", List.of()));
-            projectPopup.add(MenuItemConfig.separator());
-            projectPopup.add(MenuItemConfig.group("project.vcs.lvcs.actions", "VCS/LVCS Actions", List.of(
-                    MenuItemConfig.action("vcs.commit", "Commit Directory\u2026"),
-                    MenuItemConfig.action("vcs.diff", "Show Diff")
-            )));
+
+            // Project View Popup Menu Run Group (Images 1 & 2)
+            List<MenuItemConfig> projExecutorsChildren = new ArrayList<>();
+            projExecutorsChildren.add(MenuItemConfig.action("run.context.configuration", "Run context configuration", "PLAY"));
+            projExecutorsChildren.add(MenuItemConfig.action("debug.context.configuration", "Debug context configuration", "BUG"));
+
+            List<MenuItemConfig> projMoreRunDebugChildren = new ArrayList<>();
+            projMoreRunDebugChildren.add(MenuItemConfig.action("run.coverage.context.configuration", "Run with Coverage context configuration", "SHIELD_ALT"));
+            projMoreRunDebugChildren.add(MenuItemConfig.action("run.profiler.context.configuration", "Run with Profiler"));
+            projMoreRunDebugChildren.add(MenuItemConfig.action("run.create.configuration", "Create Run Configuration"));
+            projMoreRunDebugChildren.add(MenuItemConfig.separator());
+            projMoreRunDebugChildren.add(MenuItemConfig.action("run.context.configuration.secondary", "Run context configuration", "PLAY"));
+            projMoreRunDebugChildren.add(MenuItemConfig.action("debug.context.configuration.secondary", "Debug context configuration", "BUG"));
+            projMoreRunDebugChildren.add(MenuItemConfig.action("run.modify.configuration", "Modify Run Configuration\u2026"));
+
+            List<MenuItemConfig> projRunContextInnerChildren = new ArrayList<>();
+            projRunContextInnerChildren.add(MenuItemConfig.group("project.run.context.executors", "RunContextExecutorsGroup", false, projExecutorsChildren));
+            projRunContextInnerChildren.add(MenuItemConfig.group("project.more.run.debug.group", "More Run/Debug", false, projMoreRunDebugChildren));
+
+            List<MenuItemConfig> projRunContextChildren = new ArrayList<>();
+            projRunContextChildren.add(MenuItemConfig.group("project.run.context.group.inner", "RunContextGroupInner", false, projRunContextInnerChildren));
+            projRunContextChildren.add(MenuItemConfig.separator());
+
+            List<MenuItemConfig> projRunConfigsChildren = new ArrayList<>();
+            projRunConfigsChildren.add(MenuItemConfig.group("project.run.context.group", "RunContextGroup", false, projRunContextChildren));
+
+            // Console.Jdbc.RunContextGroup (Image 2)
+            List<MenuItemConfig> projExplainPlanChildren = new ArrayList<>();
+            projExplainPlanChildren.add(MenuItemConfig.action("console.explain.plan", "Explain Plan", "PROJECT_DIAGRAM"));
+            projExplainPlanChildren.add(MenuItemConfig.action("console.explain.plan.raw", "Explain Plan (Raw)", "PROJECT_DIAGRAM"));
+            projExplainPlanChildren.add(MenuItemConfig.action("console.explain.analyse", "Explain Analyse", "PROJECT_DIAGRAM"));
+            projExplainPlanChildren.add(MenuItemConfig.action("console.explain.analyse.raw", "Explain Analyse (Raw)", "PROJECT_DIAGRAM"));
+
+            List<MenuItemConfig> projConsoleJdbcRunChildren = new ArrayList<>();
+            projConsoleJdbcRunChildren.add(MenuItemConfig.action("console.attach.data.source", "Attach Data Source"));
+            projConsoleJdbcRunChildren.add(MenuItemConfig.separator());
+            projConsoleJdbcRunChildren.add(MenuItemConfig.action("console.recompile", "Recompile\u2026", "HAMMER"));
+            projConsoleJdbcRunChildren.add(MenuItemConfig.group("console.explain.plan.group", "Explain Plan", true, projExplainPlanChildren));
+            projConsoleJdbcRunChildren.add(MenuItemConfig.action("middle.run", "Execute", "PLAY"));
+            projConsoleJdbcRunChildren.add(MenuItemConfig.action("editor.execute.selection.single", "Execute Selection as Single Statement", "PLAY"));
+            projConsoleJdbcRunChildren.add(MenuItemConfig.action("editor.export.data", "Export Data\u2026", "DOWNLOAD"));
+            projConsoleJdbcRunChildren.add(MenuItemConfig.action("editor.debug", "Debug", "BUG"));
+            projConsoleJdbcRunChildren.add(MenuItemConfig.action("editor.debug.routine", "Debug Routine\u2026", "BUG"));
+            projConsoleJdbcRunChildren.add(MenuItemConfig.separator());
+            projConsoleJdbcRunChildren.add(MenuItemConfig.action("editor.migrate.consoles.to.queryfiles", "Migrate Query Consoles to Query Files\u2026", "ARROW_RIGHT"));
+            projConsoleJdbcRunChildren.add(MenuItemConfig.separator());
+
+            List<MenuItemConfig> projRunGroupChildren = new ArrayList<>();
+            projRunGroupChildren.add(MenuItemConfig.group("project.run.configurations.group", "Run Configurations", false, projRunConfigsChildren));
+            projRunGroupChildren.add(MenuItemConfig.group("console.jdbc.run.context.group", "Console.Jdbc.RunContextGroup", false, projConsoleJdbcRunChildren));
+
+            projectPopup.add(MenuItemConfig.group("project.run.group", "Project View Popup Menu Run Group", false, projRunGroupChildren));
+
+            // SplitRevealGroup (Images 2 & 3)
+            List<MenuItemConfig> projOpenInChildren = new ArrayList<>();
+            projOpenInChildren.add(MenuItemConfig.action("editor.open.in.file.manager", "Show in File Manager"));
+            projOpenInChildren.add(MenuItemConfig.action("editor.open.in.associated.app", "Open in Associated Application"));
+            projOpenInChildren.add(MenuItemConfig.action("editor.open.in.browser", "Open in Browser", "GLOBE"));
+            projOpenInChildren.add(MenuItemConfig.action("editor.open.in.file.path", "File Path"));
+            projOpenInChildren.add(MenuItemConfig.action("editor.open.in.terminal", "Open in Terminal", "TERMINAL"));
+            projOpenInChildren.add(MenuItemConfig.action("editor.open.in.terminal.second", "Open in Terminal", "TERMINAL"));
+            projOpenInChildren.add(MenuItemConfig.action("git.hosting.open.in.browser.group", "Git.Hosting.Open.In.Browser.Group"));
+
+            List<MenuItemConfig> projSplitRevealChildren = new ArrayList<>();
+            projSplitRevealChildren.add(MenuItemConfig.action("editor.open.in.right.split", "Open in Right Split", "COLUMNS"));
+            projSplitRevealChildren.add(MenuItemConfig.action("editor.open.in.split.chooser", "Open in Split with Chooser\u2026"));
+            projSplitRevealChildren.add(MenuItemConfig.group("editor.open.in.group", "Open In", true, projOpenInChildren));
+            projSplitRevealChildren.add(MenuItemConfig.separator());
+
+            projectPopup.add(MenuItemConfig.group("project.split.reveal.group", "SplitRevealGroup", false, projSplitRevealChildren));
+
+            // VCS/LVCS Actions (Image 3)
+            List<MenuItemConfig> projLocalHistoryChildren = new ArrayList<>();
+            projLocalHistoryChildren.add(MenuItemConfig.action("editor.local.history.show", "Show History\u2026"));
+            projLocalHistoryChildren.add(MenuItemConfig.action("editor.local.history.show.selection", "Show History for Selection\u2026"));
+            projLocalHistoryChildren.add(MenuItemConfig.separator());
+            projLocalHistoryChildren.add(MenuItemConfig.action("editor.local.history.show.project", "Show Project History\u2026"));
+            projLocalHistoryChildren.add(MenuItemConfig.action("editor.local.history.recent.changes", "Recent Changes"));
+            projLocalHistoryChildren.add(MenuItemConfig.action("editor.local.history.put.label", "Put Label\u2026"));
+            projLocalHistoryChildren.add(MenuItemConfig.action("editor.local.history.vcs.group", "Version Control Group"));
+
+            List<MenuItemConfig> projVcsLvcsChildren = new ArrayList<>();
+            projVcsLvcsChildren.add(MenuItemConfig.group("editor.local.history.group", "Local History", true, projLocalHistoryChildren));
+
+            projectPopup.add(MenuItemConfig.group("project.vcs.lvcs.actions", "VCS/LVCS Actions", false, projVcsLvcsChildren));
+
             projectPopup.add(MenuItemConfig.action("project.cache.recovery", "Cache Recovery"));
-            projectPopup.add(MenuItemConfig.action("file.reload.disk", "Reload from Disk"));
+            projectPopup.add(MenuItemConfig.action("file.reload.disk", "Reload from Disk", "SYNC"));
             projectPopup.add(MenuItemConfig.separator());
             projectPopup.add(MenuItemConfig.action("project.goto.link.target", "Go to Link Target"));
             projectPopup.add(MenuItemConfig.separator());
-            projectPopup.add(MenuItemConfig.action("project.compare.files", "Compare Files"));
+            projectPopup.add(MenuItemConfig.action("project.compare.files", "Compare Files", "ARROW_RIGHT"));
             projectPopup.add(MenuItemConfig.action("project.compare.file.editor", "Compare File with Editor"));
             projectPopup.add(MenuItemConfig.separator());
-            projectPopup.add(MenuItemConfig.group("project.external.tools", "External Tools", List.of()));
+            projectPopup.add(MenuItemConfig.action("project.external.tools", "External Tools"));
             projectPopup.add(MenuItemConfig.separator());
-            projectPopup.add(MenuItemConfig.group("project.settings.group", "Project View Popup Menu Settings Group", List.of()));
+
+            // Project View Popup Menu Settings Group (Image 3)
+            List<MenuItemConfig> projSettingsChildren = new ArrayList<>();
+            projSettingsChildren.add(MenuItemConfig.action("project.mark.directory.as", "Mark Directory As"));
+            projectPopup.add(MenuItemConfig.group("project.settings.group", "Project View Popup Menu Settings Group", false, projSettingsChildren));
+
             projectPopup.add(MenuItemConfig.action("project.set.background.image", "Set Background Image"));
-            projectPopup.add(MenuItemConfig.group("project.diagrams", "Diagrams", List.of()));
-            projectPopup.add(MenuItemConfig.action("project.file.associations", "File Associations"));
-            projectPopup.add(MenuItemConfig.action("project.jump.external.editor", "Jump to External Editor"));
-            projectPopup.add(MenuItemConfig.action("project.convert.to.png", "Convert to PNG"));
+
+            // Diagrams (Image 3)
+            List<MenuItemConfig> projDiagramsChildren = new ArrayList<>();
+            projDiagramsChildren.add(MenuItemConfig.action("diagrams.show.uml", "ShowUmlDiagram", "PROJECT_DIAGRAM"));
+            projDiagramsChildren.add(MenuItemConfig.action("diagrams.show.uml.popup", "ShowUmlDiagramPopup", "PROJECT_DIAGRAM"));
+            projDiagramsChildren.add(MenuItemConfig.action("vcs.show.local.changes.uml", "Show Local Changes as UML", "PROJECT_DIAGRAM"));
+            projDiagramsChildren.add(MenuItemConfig.action("project.diagrams.file.associations", "File Associations"));
+            projDiagramsChildren.add(MenuItemConfig.action("project.diagrams.jump.external.editor", "Jump to External Editor"));
+            projDiagramsChildren.add(MenuItemConfig.action("project.diagrams.convert.png", "Convert to PNG"));
+            projectPopup.add(MenuItemConfig.group("project.diagrams", "Diagrams", true, projDiagramsChildren));
+
             roots.add(MenuItemConfig.group("root.project.view.popup", "Project View Popup Menu", projectPopup));
 
             // 7. Scope View Popup Menu
@@ -3139,6 +3389,21 @@ public final class AppSettingsStore {
                         if (needsTabMigration) {
                             for (MenuItemConfig defRoot : defaultMenusAndToolbars()) {
                                 if ("root.editor.tab.popup".equalsIgnoreCase(defRoot.getId())) {
+                                    menusAndToolbars.set(i, defRoot.copy());
+                                    break;
+                                }
+                            }
+                        }
+                    } else if ("root.project.view.popup".equalsIgnoreCase(root.getId())) {
+                        boolean needsProjectPopupMigration = root.getChildren().stream()
+                                .noneMatch(c -> "project.modify.group".equalsIgnoreCase(c.getId()) && !c.getChildren().isEmpty())
+                                || root.getChildren().stream()
+                                .noneMatch(c -> "project.run.group".equalsIgnoreCase(c.getId()) && !c.getChildren().isEmpty())
+                                || root.getChildren().stream()
+                                .noneMatch(c -> "project.diagrams".equalsIgnoreCase(c.getId()) && c.getChildren().size() >= 6);
+                        if (needsProjectPopupMigration) {
+                            for (MenuItemConfig defRoot : defaultMenusAndToolbars()) {
+                                if ("root.project.view.popup".equalsIgnoreCase(defRoot.getId())) {
                                     menusAndToolbars.set(i, defRoot.copy());
                                     break;
                                 }
