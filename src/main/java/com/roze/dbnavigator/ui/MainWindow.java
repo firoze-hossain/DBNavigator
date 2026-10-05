@@ -66,6 +66,10 @@ public class MainWindow {
     private final SplitPane centerSplit;
     private boolean runPanelVisible = false;
     private double lastRunPanelDivider = 0.72;
+    private double lastNormalWidth = -1;
+    private double lastNormalHeight = -1;
+    private double lastNormalX = -1;
+    private double lastNormalY = -1;
 
     private final Label statusLabel = new Label("Ready");
     private final HBox taskIndicator = new HBox();
@@ -154,8 +158,18 @@ public class MainWindow {
         });
         showWelcomeTab();
 
+        schemaPane.setMinWidth(180);
+        tabPane.setMinWidth(250);
+
         centerSplit = new SplitPane(schemaPane, tabPane);
-        centerSplit.setDividerPositions(0.22);
+        AppSettingsStore.Settings startupSettings = AppSettingsStore.load();
+        double savedDivider = startupSettings.getSchemaPaneDivider();
+        if (savedDivider > 0.05 && savedDivider < 0.80) {
+            centerSplit.setDividerPositions(savedDivider);
+            lastSchemaPaneDivider = savedDivider;
+        } else {
+            centerSplit.setDividerPositions(0.22);
+        }
         SplitPane.setResizableWithParent(schemaPane, false);
 
         // Vertical split: main content on top, Run panel docked at the bottom.
@@ -172,7 +186,22 @@ public class MainWindow {
         // own children, which don't exist until the two lines above run.
         restoreSession();
         schemaPane.restoreTreeState();
+
+        stage.widthProperty().addListener((obs, oldV, newV) -> {
+            if (!stage.isMaximized() && newV.doubleValue() > 300) lastNormalWidth = newV.doubleValue();
+        });
+        stage.heightProperty().addListener((obs, oldV, newV) -> {
+            if (!stage.isMaximized() && newV.doubleValue() > 200) lastNormalHeight = newV.doubleValue();
+        });
+        stage.xProperty().addListener((obs, oldV, newV) -> {
+            if (!stage.isMaximized()) lastNormalX = newV.doubleValue();
+        });
+        stage.yProperty().addListener((obs, oldV, newV) -> {
+            if (!stage.isMaximized()) lastNormalY = newV.doubleValue();
+        });
+
         stage.setOnCloseRequest(e -> {
+            saveWindowState();
             saveSession();
             schemaPane.saveTreeState();
         });
@@ -346,6 +375,13 @@ public class MainWindow {
         BorderPane.setAlignment(leftBox, Pos.CENTER_LEFT);
         BorderPane.setAlignment(middleBox, Pos.CENTER);
         BorderPane.setAlignment(rightBox, Pos.CENTER_RIGHT);
+
+        headerBar.setMinHeight(Region.USE_PREF_SIZE);
+        leftBox.setMinWidth(Region.USE_PREF_SIZE);
+        rightBox.setMinWidth(Region.USE_PREF_SIZE);
+        if (middleBox != null) {
+            middleBox.setMinWidth(0);
+        }
 
         return headerBar;
     }
@@ -922,7 +958,40 @@ public class MainWindow {
         return settingsMenu;
     }
 
+    public void saveWindowState() {
+        AppSettingsStore.Settings s = AppSettingsStore.load();
+        boolean isMax = stage.isMaximized();
+        s.setWindowMaximized(isMax);
+        if (lastNormalWidth > 300) {
+            s.setWindowWidth(lastNormalWidth);
+        } else if (!isMax && stage.getWidth() > 300) {
+            s.setWindowWidth(stage.getWidth());
+        }
+        if (lastNormalHeight > 200) {
+            s.setWindowHeight(lastNormalHeight);
+        } else if (!isMax && stage.getHeight() > 200) {
+            s.setWindowHeight(stage.getHeight());
+        }
+        if (lastNormalX > -2000) {
+            s.setWindowX(lastNormalX);
+        } else if (!isMax) {
+            s.setWindowX(stage.getX());
+        }
+        if (lastNormalY > -2000) {
+            s.setWindowY(lastNormalY);
+        } else if (!isMax) {
+            s.setWindowY(stage.getY());
+        }
+        if (centerSplit != null && centerSplit.getDividerPositions().length > 0) {
+            s.setSchemaPaneDivider(centerSplit.getDividerPositions()[0]);
+        }
+        AppSettingsStore.save(s);
+    }
+
     public void closeWindow() {
+        saveWindowState();
+        saveSession();
+        schemaPane.saveTreeState();
         stage.close();
     }
 
@@ -1474,9 +1543,13 @@ public class MainWindow {
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
+        statusLabel.setMinWidth(0);
+        statusLabel.setTextOverrun(OverrunStyle.ELLIPSIS);
+
         HBox bar = new HBox(statusLabel, spacer, taskIndicator);
         bar.setPadding(new Insets(5, 12, 5, 12));
         bar.getStyleClass().add("app-status-bar");
+        bar.setMinHeight(Region.USE_PREF_SIZE);
         this.statusBarNode = bar;
         return bar;
     }

@@ -45,6 +45,9 @@ public class ProjectWidget extends Button {
         badgePane.getChildren().addAll(badgeBg, badgeLetter);
 
         nameLabel.setStyle("-fx-text-fill: -text; -fx-font-size: 12px; -fx-font-weight: bold;");
+        nameLabel.setMinWidth(0);
+        nameLabel.setMaxWidth(110);
+        nameLabel.setTextOverrun(OverrunStyle.ELLIPSIS);
 
         Label chevron = new Label();
         chevron.setGraphic(Icons.of(FontAwesomeSolid.CHEVRON_DOWN, "#868a91", 9));

@@ -50,7 +50,7 @@ public class ProjectStoreTest {
 
     @Test
     public void testCreateOrOpenProject() {
-        String testPath = System.getProperty("user.home") + "/Documents/test_analytics";
+        String testPath = java.nio.file.Path.of(System.getProperty("user.home"), "Documents", "test_analytics").toString();
         Project created = ProjectStore.createOrOpenProject(testPath);
 
         assertNotNull(created);
