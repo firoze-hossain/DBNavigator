@@ -14,6 +14,7 @@ import javafx.geometry.Insets;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import org.kordamp.ikonli.fontawesome5.FontAwesomeSolid;
 
@@ -49,6 +50,8 @@ public class SchemaTreePane extends VBox {
 
         Label header = new Label("Database Explorer");
         header.getStyleClass().add("panel-header");
+        header.setMinWidth(0);
+        header.setTextOverrun(OverrunStyle.ELLIPSIS);
 
         this.projectWidget = new ProjectWidget(mainWindow);
 
@@ -68,6 +71,7 @@ public class SchemaTreePane extends VBox {
         headerBox.setAlignment(Pos.CENTER_LEFT);
         headerBox.setPadding(new Insets(8, 8, 8, 10));
         headerBox.getStyleClass().add("panel-header-box");
+        headerBox.setMinHeight(Region.USE_PREF_SIZE);
 
         tree.setRoot(root);
         tree.setShowRoot(false);
@@ -165,6 +169,7 @@ public class SchemaTreePane extends VBox {
 
         ScrollPane scroll = new ScrollPane(tilesBox);
         scroll.setFitToWidth(true);
+        scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         scroll.setStyle("-fx-background-color: transparent; -fx-background: transparent;");
         VBox.setVgrow(scroll, Priority.ALWAYS);
 
@@ -177,6 +182,8 @@ public class SchemaTreePane extends VBox {
         Button btn = new Button(text);
         btn.setGraphic(Icons.of(icon, iconColor, 12));
         btn.setMaxWidth(Double.MAX_VALUE);
+        btn.setMinWidth(0);
+        btn.setTextOverrun(OverrunStyle.ELLIPSIS);
         btn.setAlignment(Pos.CENTER_LEFT);
         btn.setStyle("-fx-background-color: #2b2d30; -fx-background-radius: 6; -fx-text-fill: -text; -fx-font-size: 12px; -fx-padding: 8 12; -fx-cursor: hand;");
         btn.setOnMouseEntered(e -> btn.setStyle("-fx-background-color: #35373c; -fx-background-radius: 6; -fx-text-fill: -text; -fx-font-size: 12px; -fx-padding: 8 12; -fx-cursor: hand;"));

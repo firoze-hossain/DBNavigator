@@ -132,6 +132,14 @@ public final class AppSettingsStore {
         public boolean reviewParametersBeforeExecution = true;
         public boolean warnUnsafeQueries = true;
 
+        // Window geometry and placement
+        public double windowWidth = -1;
+        public double windowHeight = -1;
+        public double windowX = -1;
+        public double windowY = -1;
+        public boolean windowMaximized = false;
+        public double schemaPaneDivider = 0.22;
+
         // Output and Results (Images 1 & 2)
         public boolean showTimestampForQueryOutput = false;
         public boolean enableDbmsOutput = false;
@@ -3721,6 +3729,19 @@ public final class AppSettingsStore {
                     "Snowflake"
             );
         }
+
+        public double getWindowWidth() { return windowWidth; }
+        public void setWindowWidth(double windowWidth) { this.windowWidth = windowWidth; }
+        public double getWindowHeight() { return windowHeight; }
+        public void setWindowHeight(double windowHeight) { this.windowHeight = windowHeight; }
+        public double getWindowX() { return windowX; }
+        public void setWindowX(double windowX) { this.windowX = windowX; }
+        public double getWindowY() { return windowY; }
+        public void setWindowY(double windowY) { this.windowY = windowY; }
+        public boolean isWindowMaximized() { return windowMaximized; }
+        public void setWindowMaximized(boolean windowMaximized) { this.windowMaximized = windowMaximized; }
+        public double getSchemaPaneDivider() { return schemaPaneDivider; }
+        public void setSchemaPaneDivider(double schemaPaneDivider) { this.schemaPaneDivider = schemaPaneDivider; }
 
         public Theme getTheme() { return theme; }
         public void setTheme(Theme theme) { this.theme = theme; }
