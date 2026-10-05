@@ -59,12 +59,23 @@ public final class AppUpdateService {
     }
 
     public static CompletableFuture<AppUpdate> checkForUpdate(String endpoint, String channel) {
-        String base = endpoint == null || endpoint.isBlank() ? DEFAULT_ENDPOINT : endpoint.trim();
+        String base;
+        if (endpoint == null || endpoint.isBlank()) {
+            base = DEFAULT_ENDPOINT;
+        } else {
+            String trimmed = endpoint.trim().replaceAll("/+$", "");
+            if (!trimmed.contains("/api/v1/updates")) {
+                base = trimmed + "/api/v1/updates/dbnavigator";
+            } else {
+                base = trimmed;
+            }
+        }
         String separator = base.contains("?") ? "&" : "?";
         String uri = base + separator
                 + "version=" + encode(currentVersion())
                 + "&platform=" + encode(platform())
                 + "&architecture=" + encode(architecture())
+                + "&arch=" + encode(architecture())
                 + "&channel=" + encode(channel == null || channel.isBlank() ? "Stable" : channel);
 
         HttpRequest request = HttpRequest.newBuilder(URI.create(uri))
