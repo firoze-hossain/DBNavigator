@@ -978,7 +978,7 @@ public final class SettingsDialog {
         } else if ("Keymap".equals(fullPath)) {
             return buildKeymapPanel(settings, inputs, navigateTo);
         } else if ("Plugins".equals(fullPath)) {
-            return buildPluginsPanel();
+            return new com.roze.dbnavigator.ui.plugin.PluginsPanel();
         } else if ("Version Control / Git".equals(fullPath) || "Git".equals(fullPath)) {
             return buildVersionControlPanel(cat, navigateTo);
         } else if ("Version Control / Commit".equals(fullPath) || "Commit".equals(fullPath)) {
@@ -1734,7 +1734,7 @@ public final class SettingsDialog {
         hint.setWrapText(true);
         hint.setMaxWidth(500);
 
-        Button check = new Button("Check for Updates…");
+        Button check = new Button("Check for Updates...");
         check.setOnAction(e -> {
             Window owner = check.getScene() == null ? null : check.getScene().getWindow();
             AppUpdateDialog.check(owner, false);

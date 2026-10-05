@@ -48,6 +48,7 @@ module com.roze.dbnavigator {
     // Jackson also (de)serializes AppSettingsStore.Settings and the query/local
     // history entry records, which live in this package
     opens com.roze.dbnavigator.db to com.fasterxml.jackson.databind;
+    opens com.roze.dbnavigator.plugin to com.fasterxml.jackson.databind;
 
     exports com.roze.dbnavigator;
     exports com.roze.dbnavigator.model;
@@ -55,4 +56,6 @@ module com.roze.dbnavigator {
     exports com.roze.dbnavigator.ui.action;
     exports com.roze.dbnavigator.db;
     exports com.roze.dbnavigator.util;
+    exports com.roze.dbnavigator.plugin;
+    exports com.roze.dbnavigator.ui.plugin;
 }

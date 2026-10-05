@@ -1,6 +1,9 @@
 package com.roze.dbnavigator.db;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.SerializationFeature;
 
 import java.io.IOException;
@@ -102,6 +105,7 @@ public final class AppSettingsStore {
     }
 
     /** Plain data holder — Jackson needs a no-arg constructor and public fields/getters+setters. */
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class Settings {
         public Theme theme = Theme.DARK;
         public String editorFontFamily = "JetBrains Mono";
@@ -3771,6 +3775,14 @@ public final class AppSettingsStore {
         public void setUpdateChannel(String value) { this.updateChannel = value; }
         public String getUpdateEndpoint() { return updateEndpoint; }
         public void setUpdateEndpoint(String value) { this.updateEndpoint = value; }
+
+        @JsonIgnore
+        public String getEffectiveRozeHubEndpoint() {
+            if (updateEndpoint != null && !updateEndpoint.isBlank()) {
+                return updateEndpoint.trim().replaceAll("/+$", "");
+            }
+            return "http://127.0.0.1:8000";
+        }
         public int getQueryTimeoutSeconds() { return queryTimeoutSeconds; }
         public void setQueryTimeoutSeconds(int queryTimeoutSeconds) { this.queryTimeoutSeconds = queryTimeoutSeconds; }
         public int getMaxResultRows() { return maxResultRows; }
@@ -5852,7 +5864,7 @@ public final class AppSettingsStore {
     private static final Path FILE =
             Path.of(System.getProperty("user.home"), ".dbnavigator", "settings.json");
     private static final ObjectMapper MAPPER =
-            new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
+            new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT).configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     private static Settings cached;
 
