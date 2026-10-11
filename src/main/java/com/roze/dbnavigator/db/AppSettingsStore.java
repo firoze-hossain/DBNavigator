@@ -5364,6 +5364,81 @@ public final class AppSettingsStore {
         public void setCodeEditingNextErrorAction(String val) { this.codeEditingNextErrorAction = val != null ? val : "The problems with the highest priority"; }
         public int getCodeEditingTooltipDelayMs() { return codeEditingTooltipDelayMs; }
         public void setCodeEditingTooltipDelayMs(int val) { this.codeEditingTooltipDelayMs = Math.max(0, val); }
+
+        // Version Control settings
+        private VcsChangelistsConfig vcsChangelists = new VcsChangelistsConfig();
+        private VcsCommitConfig vcsCommit = new VcsCommitConfig();
+        private VcsConfirmationConfig vcsConfirmation = new VcsConfirmationConfig();
+        private VcsDirectoryMappingConfig vcsDirectoryMappings = new VcsDirectoryMappingConfig();
+        private VcsFileStatusColorsConfig vcsFileStatusColors = new VcsFileStatusColorsConfig();
+
+        public VcsChangelistsConfig getVcsChangelists() {
+            if (vcsChangelists == null) vcsChangelists = new VcsChangelistsConfig();
+            return vcsChangelists;
+        }
+        public void setVcsChangelists(VcsChangelistsConfig vcsChangelists) {
+            this.vcsChangelists = vcsChangelists != null ? vcsChangelists : new VcsChangelistsConfig();
+        }
+
+        public VcsCommitConfig getVcsCommit() {
+            if (vcsCommit == null) vcsCommit = new VcsCommitConfig();
+            return vcsCommit;
+        }
+        public void setVcsCommit(VcsCommitConfig vcsCommit) {
+            this.vcsCommit = vcsCommit != null ? vcsCommit : new VcsCommitConfig();
+        }
+
+        public VcsConfirmationConfig getVcsConfirmation() {
+            if (vcsConfirmation == null) vcsConfirmation = new VcsConfirmationConfig();
+            return vcsConfirmation;
+        }
+        public void setVcsConfirmation(VcsConfirmationConfig vcsConfirmation) {
+            this.vcsConfirmation = vcsConfirmation != null ? vcsConfirmation : new VcsConfirmationConfig();
+        }
+
+        public VcsDirectoryMappingConfig getVcsDirectoryMappings() {
+            if (vcsDirectoryMappings == null) vcsDirectoryMappings = new VcsDirectoryMappingConfig();
+            return vcsDirectoryMappings;
+        }
+        public void setVcsDirectoryMappings(VcsDirectoryMappingConfig vcsDirectoryMappings) {
+            this.vcsDirectoryMappings = vcsDirectoryMappings != null ? vcsDirectoryMappings : new VcsDirectoryMappingConfig();
+        }
+
+        public VcsFileStatusColorsConfig getVcsFileStatusColors() {
+            if (vcsFileStatusColors == null) vcsFileStatusColors = new VcsFileStatusColorsConfig();
+            return vcsFileStatusColors;
+        }
+        public void setVcsFileStatusColors(VcsFileStatusColorsConfig vcsFileStatusColors) {
+            this.vcsFileStatusColors = vcsFileStatusColors != null ? vcsFileStatusColors : new VcsFileStatusColorsConfig();
+        }
+
+        private VcsIssueNavigationConfig vcsIssueNavigation = new VcsIssueNavigationConfig();
+        private VcsShelfConfig vcsShelf = new VcsShelfConfig();
+        private VcsGitConfig vcsGit = new VcsGitConfig();
+
+        public VcsIssueNavigationConfig getVcsIssueNavigation() {
+            if (vcsIssueNavigation == null) vcsIssueNavigation = new VcsIssueNavigationConfig();
+            return vcsIssueNavigation;
+        }
+        public void setVcsIssueNavigation(VcsIssueNavigationConfig vcsIssueNavigation) {
+            this.vcsIssueNavigation = vcsIssueNavigation != null ? vcsIssueNavigation : new VcsIssueNavigationConfig();
+        }
+
+        public VcsShelfConfig getVcsShelf() {
+            if (vcsShelf == null) vcsShelf = new VcsShelfConfig();
+            return vcsShelf;
+        }
+        public void setVcsShelf(VcsShelfConfig vcsShelf) {
+            this.vcsShelf = vcsShelf != null ? vcsShelf : new VcsShelfConfig();
+        }
+
+        public VcsGitConfig getVcsGit() {
+            if (vcsGit == null) vcsGit = new VcsGitConfig();
+            return vcsGit;
+        }
+        public void setVcsGit(VcsGitConfig vcsGit) {
+            this.vcsGit = vcsGit != null ? vcsGit : new VcsGitConfig();
+        }
     }
 
     public static class UserParameterPattern {
@@ -5859,6 +5934,657 @@ public final class AppSettingsStore {
         public String toString() {
             return text != null && !text.isEmpty() ? text : (id != null ? id : "");
         }
+    }
+
+    public static class VcsChangelistsConfig {
+        private boolean createChangelistsAutomatically = false;
+        private boolean allowPuttingChangesInDifferentChangelists = true;
+        private boolean highlightFilesFromInactiveChangelists = false;
+        private boolean showDialogOnEditFromInactiveChangelist = false;
+        private String whenEmptyChangelistBecomesInactive = "Show options";
+        private boolean highlightFilesWithChangelistConflicts = true;
+        private List<String> ignoredConflictFiles = new ArrayList<>();
+
+        public VcsChangelistsConfig() {}
+
+        public VcsChangelistsConfig copy() {
+            VcsChangelistsConfig c = new VcsChangelistsConfig();
+            c.createChangelistsAutomatically = this.createChangelistsAutomatically;
+            c.allowPuttingChangesInDifferentChangelists = this.allowPuttingChangesInDifferentChangelists;
+            c.highlightFilesFromInactiveChangelists = this.highlightFilesFromInactiveChangelists;
+            c.showDialogOnEditFromInactiveChangelist = this.showDialogOnEditFromInactiveChangelist;
+            c.whenEmptyChangelistBecomesInactive = this.whenEmptyChangelistBecomesInactive;
+            c.highlightFilesWithChangelistConflicts = this.highlightFilesWithChangelistConflicts;
+            c.ignoredConflictFiles = new ArrayList<>(this.ignoredConflictFiles != null ? this.ignoredConflictFiles : List.of());
+            return c;
+        }
+
+        public boolean isCreateChangelistsAutomatically() { return createChangelistsAutomatically; }
+        public void setCreateChangelistsAutomatically(boolean createChangelistsAutomatically) { this.createChangelistsAutomatically = createChangelistsAutomatically; }
+
+        public boolean isAllowPuttingChangesInDifferentChangelists() { return allowPuttingChangesInDifferentChangelists; }
+        public void setAllowPuttingChangesInDifferentChangelists(boolean allowPuttingChangesInDifferentChangelists) { this.allowPuttingChangesInDifferentChangelists = allowPuttingChangesInDifferentChangelists; }
+
+        public boolean isHighlightFilesFromInactiveChangelists() { return highlightFilesFromInactiveChangelists; }
+        public void setHighlightFilesFromInactiveChangelists(boolean highlightFilesFromInactiveChangelists) { this.highlightFilesFromInactiveChangelists = highlightFilesFromInactiveChangelists; }
+
+        public boolean isShowDialogOnEditFromInactiveChangelist() { return showDialogOnEditFromInactiveChangelist; }
+        public void setShowDialogOnEditFromInactiveChangelist(boolean showDialogOnEditFromInactiveChangelist) { this.showDialogOnEditFromInactiveChangelist = showDialogOnEditFromInactiveChangelist; }
+
+        public String getWhenEmptyChangelistBecomesInactive() { return whenEmptyChangelistBecomesInactive != null ? whenEmptyChangelistBecomesInactive : "Show options"; }
+        public void setWhenEmptyChangelistBecomesInactive(String whenEmptyChangelistBecomesInactive) { this.whenEmptyChangelistBecomesInactive = whenEmptyChangelistBecomesInactive != null ? whenEmptyChangelistBecomesInactive : "Show options"; }
+
+        public boolean isHighlightFilesWithChangelistConflicts() { return highlightFilesWithChangelistConflicts; }
+        public void setHighlightFilesWithChangelistConflicts(boolean highlightFilesWithChangelistConflicts) { this.highlightFilesWithChangelistConflicts = highlightFilesWithChangelistConflicts; }
+
+        public List<String> getIgnoredConflictFiles() {
+            if (ignoredConflictFiles == null) ignoredConflictFiles = new ArrayList<>();
+            return ignoredConflictFiles;
+        }
+        public void setIgnoredConflictFiles(List<String> ignoredConflictFiles) {
+            this.ignoredConflictFiles = ignoredConflictFiles != null ? new ArrayList<>(ignoredConflictFiles) : new ArrayList<>();
+        }
+    }
+
+    public static class CommitInspectionConfig {
+        private String name = "";
+        private boolean enabled = true;
+        private String severity = "Warning";
+
+        public CommitInspectionConfig() {}
+
+        public CommitInspectionConfig(String name, boolean enabled, String severity) {
+            this.name = name != null ? name : "";
+            this.enabled = enabled;
+            this.severity = severity != null ? severity : "Warning";
+        }
+
+        public CommitInspectionConfig copy() {
+            return new CommitInspectionConfig(this.name, this.enabled, this.severity);
+        }
+
+        public String getName() { return name != null ? name : ""; }
+        public void setName(String name) { this.name = name != null ? name : ""; }
+
+        public boolean isEnabled() { return enabled; }
+        public void setEnabled(boolean enabled) { this.enabled = enabled; }
+
+        public String getSeverity() { return severity != null ? severity : "Warning"; }
+        public void setSeverity(String severity) { this.severity = severity != null ? severity : "Warning"; }
+    }
+
+    public static class VcsCommitConfig {
+        private boolean clearInitialCommitMessage = false;
+        private List<CommitInspectionConfig> inspections = defaultInspections();
+        private boolean reformatCode = false;
+        private boolean cleanup = false;
+        private String cleanupProfile = "Project Default";
+        private boolean analyzeCode = true;
+        private String analyzeCodeProfile = "Project Default";
+        private boolean checkTodo = true;
+        private String checkTodoFilter = "All TODOs";
+        private boolean runConfiguration = false;
+        private String runConfigurationName = "None";
+        private boolean runAdvancedChecksAfterCommit = true;
+
+        public static List<CommitInspectionConfig> defaultInspections() {
+            List<CommitInspectionConfig> list = new ArrayList<>();
+            list.add(new CommitInspectionConfig("Blank line between subject and body", true, "Warning"));
+            list.add(new CommitInspectionConfig("Limit body line", true, "Warning"));
+            list.add(new CommitInspectionConfig("Limit subject line", true, "Warning"));
+            return list;
+        }
+
+        public VcsCommitConfig() {}
+
+        public VcsCommitConfig copy() {
+            VcsCommitConfig c = new VcsCommitConfig();
+            c.clearInitialCommitMessage = this.clearInitialCommitMessage;
+            c.inspections = new ArrayList<>();
+            if (this.inspections != null) {
+                for (CommitInspectionConfig i : this.inspections) {
+                    c.inspections.add(i.copy());
+                }
+            }
+            c.reformatCode = this.reformatCode;
+            c.cleanup = this.cleanup;
+            c.cleanupProfile = this.cleanupProfile;
+            c.analyzeCode = this.analyzeCode;
+            c.analyzeCodeProfile = this.analyzeCodeProfile;
+            c.checkTodo = this.checkTodo;
+            c.checkTodoFilter = this.checkTodoFilter;
+            c.runConfiguration = this.runConfiguration;
+            c.runConfigurationName = this.runConfigurationName;
+            c.runAdvancedChecksAfterCommit = this.runAdvancedChecksAfterCommit;
+            return c;
+        }
+
+        public boolean isClearInitialCommitMessage() { return clearInitialCommitMessage; }
+        public void setClearInitialCommitMessage(boolean clearInitialCommitMessage) { this.clearInitialCommitMessage = clearInitialCommitMessage; }
+
+        public List<CommitInspectionConfig> getInspections() {
+            if (inspections == null) inspections = defaultInspections();
+            return inspections;
+        }
+        public void setInspections(List<CommitInspectionConfig> inspections) {
+            this.inspections = inspections != null ? new ArrayList<>(inspections) : defaultInspections();
+        }
+
+        public boolean isReformatCode() { return reformatCode; }
+        public void setReformatCode(boolean reformatCode) { this.reformatCode = reformatCode; }
+
+        public boolean isCleanup() { return cleanup; }
+        public void setCleanup(boolean cleanup) { this.cleanup = cleanup; }
+
+        public String getCleanupProfile() { return cleanupProfile != null ? cleanupProfile : "Project Default"; }
+        public void setCleanupProfile(String cleanupProfile) { this.cleanupProfile = cleanupProfile != null ? cleanupProfile : "Project Default"; }
+
+        public boolean isAnalyzeCode() { return analyzeCode; }
+        public void setAnalyzeCode(boolean analyzeCode) { this.analyzeCode = analyzeCode; }
+
+        public String getAnalyzeCodeProfile() { return analyzeCodeProfile != null ? analyzeCodeProfile : "Project Default"; }
+        public void setAnalyzeCodeProfile(String analyzeCodeProfile) { this.analyzeCodeProfile = analyzeCodeProfile != null ? analyzeCodeProfile : "Project Default"; }
+
+        public boolean isCheckTodo() { return checkTodo; }
+        public void setCheckTodo(boolean checkTodo) { this.checkTodo = checkTodo; }
+
+        public String getCheckTodoFilter() { return checkTodoFilter != null ? checkTodoFilter : "All TODOs"; }
+        public void setCheckTodoFilter(String checkTodoFilter) { this.checkTodoFilter = checkTodoFilter != null ? checkTodoFilter : "All TODOs"; }
+
+        public boolean isRunConfiguration() { return runConfiguration; }
+        public void setRunConfiguration(boolean runConfiguration) { this.runConfiguration = runConfiguration; }
+
+        public String getRunConfigurationName() { return runConfigurationName != null ? runConfigurationName : "None"; }
+        public void setRunConfigurationName(String runConfigurationName) { this.runConfigurationName = runConfigurationName != null ? runConfigurationName : "None"; }
+
+        public boolean isRunAdvancedChecksAfterCommit() { return runAdvancedChecksAfterCommit; }
+        public void setRunAdvancedChecksAfterCommit(boolean runAdvancedChecksAfterCommit) { this.runAdvancedChecksAfterCommit = runAdvancedChecksAfterCommit; }
+    }
+
+    public static class VcsConfirmationConfig {
+        private String whenFilesCreated = "Ask";
+        private boolean applyToFilesCreatedOutside = false;
+        private String whenFilesDeleted = "Ask";
+        private boolean showOptionsBeforeUpdate = true;
+        private boolean askConfirmationToDropCommits = true;
+        private boolean checkConflictsWithServer = false;
+        private int checkConflictsMinutes = 60;
+        private boolean highlightFilesChangedInLastDays = false;
+        private int highlightFilesDays = 31;
+        private boolean highlightDirectoriesWithModifiedFiles = false;
+        private String whenPatchCreated = "Ask";
+        private boolean restoreWorkspaceWhenSwitchingBranches = true;
+        private boolean limitHistoryRows = true;
+        private int maxHistoryRows = 1000;
+        private boolean highlightModifiedLinesInGutter = true;
+        private boolean highlightModifiedLinesInErrorStripe = true;
+        private boolean highlightWhitespaceOnlyModifications = true;
+
+        public VcsConfirmationConfig() {}
+
+        public VcsConfirmationConfig copy() {
+            VcsConfirmationConfig c = new VcsConfirmationConfig();
+            c.whenFilesCreated = this.whenFilesCreated;
+            c.applyToFilesCreatedOutside = this.applyToFilesCreatedOutside;
+            c.whenFilesDeleted = this.whenFilesDeleted;
+            c.showOptionsBeforeUpdate = this.showOptionsBeforeUpdate;
+            c.askConfirmationToDropCommits = this.askConfirmationToDropCommits;
+            c.checkConflictsWithServer = this.checkConflictsWithServer;
+            c.checkConflictsMinutes = this.checkConflictsMinutes;
+            c.highlightFilesChangedInLastDays = this.highlightFilesChangedInLastDays;
+            c.highlightFilesDays = this.highlightFilesDays;
+            c.highlightDirectoriesWithModifiedFiles = this.highlightDirectoriesWithModifiedFiles;
+            c.whenPatchCreated = this.whenPatchCreated;
+            c.restoreWorkspaceWhenSwitchingBranches = this.restoreWorkspaceWhenSwitchingBranches;
+            c.limitHistoryRows = this.limitHistoryRows;
+            c.maxHistoryRows = this.maxHistoryRows;
+            c.highlightModifiedLinesInGutter = this.highlightModifiedLinesInGutter;
+            c.highlightModifiedLinesInErrorStripe = this.highlightModifiedLinesInErrorStripe;
+            c.highlightWhitespaceOnlyModifications = this.highlightWhitespaceOnlyModifications;
+            return c;
+        }
+
+        public String getWhenFilesCreated() { return whenFilesCreated != null ? whenFilesCreated : "Ask"; }
+        public void setWhenFilesCreated(String whenFilesCreated) { this.whenFilesCreated = whenFilesCreated != null ? whenFilesCreated : "Ask"; }
+
+        public boolean isApplyToFilesCreatedOutside() { return applyToFilesCreatedOutside; }
+        public void setApplyToFilesCreatedOutside(boolean applyToFilesCreatedOutside) { this.applyToFilesCreatedOutside = applyToFilesCreatedOutside; }
+
+        public String getWhenFilesDeleted() { return whenFilesDeleted != null ? whenFilesDeleted : "Ask"; }
+        public void setWhenFilesDeleted(String whenFilesDeleted) { this.whenFilesDeleted = whenFilesDeleted != null ? whenFilesDeleted : "Ask"; }
+
+        public boolean isShowOptionsBeforeUpdate() { return showOptionsBeforeUpdate; }
+        public void setShowOptionsBeforeUpdate(boolean showOptionsBeforeUpdate) { this.showOptionsBeforeUpdate = showOptionsBeforeUpdate; }
+
+        public boolean isAskConfirmationToDropCommits() { return askConfirmationToDropCommits; }
+        public void setAskConfirmationToDropCommits(boolean askConfirmationToDropCommits) { this.askConfirmationToDropCommits = askConfirmationToDropCommits; }
+
+        public boolean isCheckConflictsWithServer() { return checkConflictsWithServer; }
+        public void setCheckConflictsWithServer(boolean checkConflictsWithServer) { this.checkConflictsWithServer = checkConflictsWithServer; }
+
+        public int getCheckConflictsMinutes() { return checkConflictsMinutes > 0 ? checkConflictsMinutes : 60; }
+        public void setCheckConflictsMinutes(int checkConflictsMinutes) { this.checkConflictsMinutes = Math.max(1, checkConflictsMinutes); }
+
+        public boolean isHighlightFilesChangedInLastDays() { return highlightFilesChangedInLastDays; }
+        public void setHighlightFilesChangedInLastDays(boolean highlightFilesChangedInLastDays) { this.highlightFilesChangedInLastDays = highlightFilesChangedInLastDays; }
+
+        public int getHighlightFilesDays() { return highlightFilesDays > 0 ? highlightFilesDays : 31; }
+        public void setHighlightFilesDays(int highlightFilesDays) { this.highlightFilesDays = Math.max(1, highlightFilesDays); }
+
+        public boolean isHighlightDirectoriesWithModifiedFiles() { return highlightDirectoriesWithModifiedFiles; }
+        public void setHighlightDirectoriesWithModifiedFiles(boolean highlightDirectoriesWithModifiedFiles) { this.highlightDirectoriesWithModifiedFiles = highlightDirectoriesWithModifiedFiles; }
+
+        public String getWhenPatchCreated() { return whenPatchCreated != null ? whenPatchCreated : "Ask"; }
+        public void setWhenPatchCreated(String whenPatchCreated) { this.whenPatchCreated = whenPatchCreated != null ? whenPatchCreated : "Ask"; }
+
+        public boolean isRestoreWorkspaceWhenSwitchingBranches() { return restoreWorkspaceWhenSwitchingBranches; }
+        public void setRestoreWorkspaceWhenSwitchingBranches(boolean restoreWorkspaceWhenSwitchingBranches) { this.restoreWorkspaceWhenSwitchingBranches = restoreWorkspaceWhenSwitchingBranches; }
+
+        public boolean isLimitHistoryRows() { return limitHistoryRows; }
+        public void setLimitHistoryRows(boolean limitHistoryRows) { this.limitHistoryRows = limitHistoryRows; }
+
+        public int getMaxHistoryRows() { return maxHistoryRows > 0 ? maxHistoryRows : 1000; }
+        public void setMaxHistoryRows(int maxHistoryRows) { this.maxHistoryRows = Math.max(1, maxHistoryRows); }
+
+        public boolean isHighlightModifiedLinesInGutter() { return highlightModifiedLinesInGutter; }
+        public void setHighlightModifiedLinesInGutter(boolean highlightModifiedLinesInGutter) { this.highlightModifiedLinesInGutter = highlightModifiedLinesInGutter; }
+
+        public boolean isHighlightModifiedLinesInErrorStripe() { return highlightModifiedLinesInErrorStripe; }
+        public void setHighlightModifiedLinesInErrorStripe(boolean highlightModifiedLinesInErrorStripe) { this.highlightModifiedLinesInErrorStripe = highlightModifiedLinesInErrorStripe; }
+
+        public boolean isHighlightWhitespaceOnlyModifications() { return highlightWhitespaceOnlyModifications; }
+        public void setHighlightWhitespaceOnlyModifications(boolean highlightWhitespaceOnlyModifications) { this.highlightWhitespaceOnlyModifications = highlightWhitespaceOnlyModifications; }
+    }
+
+    public static class VcsDirectoryMappingEntry {
+        private String directory = "<Project>";
+        private String vcs = "Git";
+
+        public VcsDirectoryMappingEntry() {}
+
+        public VcsDirectoryMappingEntry(String directory, String vcs) {
+            this.directory = directory != null ? directory : "<Project>";
+            this.vcs = vcs != null ? vcs : "Git";
+        }
+
+        public VcsDirectoryMappingEntry copy() {
+            return new VcsDirectoryMappingEntry(this.directory, this.vcs);
+        }
+
+        public String getDirectory() { return directory != null ? directory : "<Project>"; }
+        public void setDirectory(String directory) { this.directory = directory != null ? directory : "<Project>"; }
+
+        public String getVcs() { return vcs != null ? vcs : "Git"; }
+        public void setVcs(String vcs) { this.vcs = vcs != null ? vcs : "Git"; }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            VcsDirectoryMappingEntry that = (VcsDirectoryMappingEntry) o;
+            return Objects.equals(directory, that.directory) && Objects.equals(vcs, that.vcs);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(directory, vcs);
+        }
+
+        @Override
+        public String toString() {
+            return directory + " [" + vcs + "]";
+        }
+    }
+
+    public static class VcsDirectoryMappingConfig {
+        private List<VcsDirectoryMappingEntry> mappings = defaultMappings();
+        private boolean enableAutomaticMappingDetection = true;
+
+        public static List<VcsDirectoryMappingEntry> defaultMappings() {
+            List<VcsDirectoryMappingEntry> list = new ArrayList<>();
+            list.add(new VcsDirectoryMappingEntry("<Project>", "Git"));
+            return list;
+        }
+
+        public VcsDirectoryMappingConfig() {}
+
+        public VcsDirectoryMappingConfig copy() {
+            VcsDirectoryMappingConfig c = new VcsDirectoryMappingConfig();
+            c.mappings = new ArrayList<>();
+            if (this.mappings != null) {
+                for (VcsDirectoryMappingEntry m : this.mappings) {
+                    c.mappings.add(m.copy());
+                }
+            }
+            c.enableAutomaticMappingDetection = this.enableAutomaticMappingDetection;
+            return c;
+        }
+
+        public List<VcsDirectoryMappingEntry> getMappings() {
+            if (mappings == null) mappings = defaultMappings();
+            return mappings;
+        }
+        public void setMappings(List<VcsDirectoryMappingEntry> mappings) {
+            this.mappings = mappings != null ? new ArrayList<>(mappings) : defaultMappings();
+        }
+
+        public boolean isEnableAutomaticMappingDetection() { return enableAutomaticMappingDetection; }
+        public void setEnableAutomaticMappingDetection(boolean enableAutomaticMappingDetection) { this.enableAutomaticMappingDetection = enableAutomaticMappingDetection; }
+    }
+
+    public static class VcsFileStatusColorEntry {
+        private String statusName = "";
+        private String colorHex = "A9B7C6";
+        private boolean customized = false;
+        private String defaultColorHex = "A9B7C6";
+
+        public VcsFileStatusColorEntry() {}
+
+        public VcsFileStatusColorEntry(String statusName, String colorHex, boolean customized, String defaultColorHex) {
+            this.statusName = statusName != null ? statusName : "";
+            this.colorHex = colorHex != null ? colorHex.replace("#", "").toUpperCase() : "A9B7C6";
+            this.customized = customized;
+            this.defaultColorHex = defaultColorHex != null ? defaultColorHex.replace("#", "").toUpperCase() : this.colorHex;
+        }
+
+        public VcsFileStatusColorEntry copy() {
+            return new VcsFileStatusColorEntry(this.statusName, this.colorHex, this.customized, this.defaultColorHex);
+        }
+
+        public String getStatusName() { return statusName != null ? statusName : ""; }
+        public void setStatusName(String statusName) { this.statusName = statusName != null ? statusName : ""; }
+
+        public String getColorHex() { return colorHex != null ? colorHex : "A9B7C6"; }
+        public void setColorHex(String colorHex) { this.colorHex = colorHex != null ? colorHex.replace("#", "").toUpperCase() : "A9B7C6"; }
+
+        public boolean isCustomized() { return customized; }
+        public void setCustomized(boolean customized) { this.customized = customized; }
+
+        public String getDefaultColorHex() { return defaultColorHex != null ? defaultColorHex : "A9B7C6"; }
+        public void setDefaultColorHex(String defaultColorHex) { this.defaultColorHex = defaultColorHex != null ? defaultColorHex.replace("#", "").toUpperCase() : "A9B7C6"; }
+
+        @Override
+        public String toString() {
+            return (customized ? "* " : "") + statusName + " (#" + colorHex + ")";
+        }
+    }
+
+    public static class VcsFileStatusColorsConfig {
+        private List<VcsFileStatusColorEntry> statusColors = defaultStatusColors();
+
+        public static List<VcsFileStatusColorEntry> defaultStatusColors() {
+            List<VcsFileStatusColorEntry> list = new ArrayList<>();
+            list.add(new VcsFileStatusColorEntry("Added", "629755", true, "629755"));
+            list.add(new VcsFileStatusColorEntry("Added in not active changelist", "629755", true, "629755"));
+            list.add(new VcsFileStatusColorEntry("Changelist conflict", "DE6A66", true, "DE6A66"));
+            list.add(new VcsFileStatusColorEntry("Deleted", "6E6E6E", true, "6E6E6E"));
+            list.add(new VcsFileStatusColorEntry("Deleted from file system", "777777", true, "777777"));
+            list.add(new VcsFileStatusColorEntry("Have changed descendants", "0E82C7", true, "0E82C7"));
+            list.add(new VcsFileStatusColorEntry("Have immediate changed children", "32B8CD", true, "32B8CD"));
+            list.add(new VcsFileStatusColorEntry("Hijacked", "BC3F3C", false, "BC3F3C"));
+            list.add(new VcsFileStatusColorEntry("Ignored", "848504", true, "848504"));
+            list.add(new VcsFileStatusColorEntry("Merged", "9876AA", true, "9876AA"));
+            list.add(new VcsFileStatusColorEntry("Merged with conflicts", "FF6B68", true, "FF6B68"));
+            list.add(new VcsFileStatusColorEntry("Merged with property conflicts", "E26E60", false, "E26E60"));
+            list.add(new VcsFileStatusColorEntry("Merged with text and property conflicts", "DE6A66", false, "DE6A66"));
+            list.add(new VcsFileStatusColorEntry("Modified", "6897BB", true, "6897BB"));
+            list.add(new VcsFileStatusColorEntry("Modified in not active changelist", "507874", false, "507874"));
+            list.add(new VcsFileStatusColorEntry("Obsolete", "6E6E6E", false, "6E6E6E"));
+            list.add(new VcsFileStatusColorEntry("Suppressed", "6E6E6E", false, "6E6E6E"));
+            list.add(new VcsFileStatusColorEntry("Switched", "8F9D6A", false, "8F9D6A"));
+            list.add(new VcsFileStatusColorEntry("Unknown", "D1675A", true, "D1675A"));
+            list.add(new VcsFileStatusColorEntry("Up to date", "A9B7C6", false, "A9B7C6"));
+            return list;
+        }
+
+        public VcsFileStatusColorsConfig() {}
+
+        public VcsFileStatusColorsConfig copy() {
+            VcsFileStatusColorsConfig c = new VcsFileStatusColorsConfig();
+            c.statusColors = new ArrayList<>();
+            if (this.statusColors != null) {
+                for (VcsFileStatusColorEntry e : this.statusColors) {
+                    c.statusColors.add(e.copy());
+                }
+            }
+            return c;
+        }
+
+        public List<VcsFileStatusColorEntry> getStatusColors() {
+            if (statusColors == null) statusColors = defaultStatusColors();
+            return statusColors;
+        }
+        public void setStatusColors(List<VcsFileStatusColorEntry> statusColors) {
+            this.statusColors = statusColors != null ? new ArrayList<>(statusColors) : defaultStatusColors();
+        }
+    }
+
+    public static class IssueNavigationPattern {
+        private String issue = "";
+        private String link = "";
+        private String trackerType = "Custom";
+
+        public IssueNavigationPattern() {}
+
+        public IssueNavigationPattern(String issue, String link, String trackerType) {
+            this.issue = issue != null ? issue : "";
+            this.link = link != null ? link : "";
+            this.trackerType = trackerType != null ? trackerType : "Custom";
+        }
+
+        public IssueNavigationPattern copy() {
+            return new IssueNavigationPattern(this.issue, this.link, this.trackerType);
+        }
+
+        public String getIssue() { return issue != null ? issue : ""; }
+        public void setIssue(String issue) { this.issue = issue != null ? issue : ""; }
+
+        public String getLink() { return link != null ? link : ""; }
+        public void setLink(String link) { this.link = link != null ? link : ""; }
+
+        public String getTrackerType() { return trackerType != null ? trackerType : "Custom"; }
+        public void setTrackerType(String trackerType) { this.trackerType = trackerType != null ? trackerType : "Custom"; }
+
+        @Override
+        public String toString() {
+            return issue + " -> " + link;
+        }
+    }
+
+    public static class VcsIssueNavigationConfig {
+        private List<IssueNavigationPattern> patterns = new ArrayList<>();
+
+        public VcsIssueNavigationConfig() {}
+
+        public VcsIssueNavigationConfig copy() {
+            VcsIssueNavigationConfig c = new VcsIssueNavigationConfig();
+            c.patterns = new ArrayList<>();
+            if (this.patterns != null) {
+                for (IssueNavigationPattern p : this.patterns) {
+                    c.patterns.add(p.copy());
+                }
+            }
+            return c;
+        }
+
+        public List<IssueNavigationPattern> getPatterns() {
+            if (patterns == null) patterns = new ArrayList<>();
+            return patterns;
+        }
+
+        public void setPatterns(List<IssueNavigationPattern> patterns) {
+            this.patterns = patterns != null ? new ArrayList<>(patterns) : new ArrayList<>();
+        }
+    }
+
+    public static class VcsShelfConfig {
+        private boolean removeAppliedFiles = false;
+        private boolean shelveBaseRevisions = true;
+        private String customShelvesLocation = "";
+
+        public VcsShelfConfig() {}
+
+        public VcsShelfConfig copy() {
+            VcsShelfConfig c = new VcsShelfConfig();
+            c.removeAppliedFiles = this.removeAppliedFiles;
+            c.shelveBaseRevisions = this.shelveBaseRevisions;
+            c.customShelvesLocation = this.customShelvesLocation;
+            return c;
+        }
+
+        public boolean isRemoveAppliedFiles() { return removeAppliedFiles; }
+        public void setRemoveAppliedFiles(boolean removeAppliedFiles) { this.removeAppliedFiles = removeAppliedFiles; }
+
+        public boolean isShelveBaseRevisions() { return shelveBaseRevisions; }
+        public void setShelveBaseRevisions(boolean shelveBaseRevisions) { this.shelveBaseRevisions = shelveBaseRevisions; }
+
+        public String getCustomShelvesLocation() { return customShelvesLocation != null ? customShelvesLocation : ""; }
+        public void setCustomShelvesLocation(String customShelvesLocation) { this.customShelvesLocation = customShelvesLocation != null ? customShelvesLocation : ""; }
+    }
+
+    public static class VcsGitConfig {
+        private String gitPath = "git";
+        private boolean setPathOnlyForCurrentProject = false;
+        private boolean automaticallyExcludeIgnoredDirectories = false;
+
+        // Commit section
+        private boolean enableStagingArea = false;
+        private boolean warnCrlfLineSeparators = true;
+        private boolean warnCommittingInDetachedHead = true;
+        private boolean warnCommitFilesLargerThan = true;
+        private int warnCommitFilesLargerThanMb = 50;
+        private boolean warnCommitNamesIssueOnOtherSystems = true;
+        private boolean addCherryPickedSuffix = true;
+        private String gpgKey = "";
+
+        // Push section
+        private boolean autoUpdateIfPushRejected = false;
+        private boolean showPushDialogForCommitAndPush = true;
+        private boolean showPushDialogOnlyForProtectedBranches = false;
+        private String protectedBranches = "master;main";
+        private boolean loadBranchProtectionFromGitHub = true;
+
+        // Update section
+        private String updateMethod = "Merge";
+        private String cleanWorkingTreeUsing = "Shelve";
+        private String filterUpdateProjectInfoByPaths = "All";
+        private boolean fetchRemoteChangesAutomatically = false;
+        private boolean checkRemoteForIncomingChanges = true;
+
+        // Other Git options
+        private String fetchTags = "Auto";
+        private boolean useCredentialHelper = false;
+
+        // Stash section
+        private boolean combineStashesAndShelvesInOneTab = false;
+        private String compareStashedChangesWith = "local";
+
+        public VcsGitConfig() {}
+
+        public VcsGitConfig copy() {
+            VcsGitConfig c = new VcsGitConfig();
+            c.gitPath = this.gitPath;
+            c.setPathOnlyForCurrentProject = this.setPathOnlyForCurrentProject;
+            c.automaticallyExcludeIgnoredDirectories = this.automaticallyExcludeIgnoredDirectories;
+            c.enableStagingArea = this.enableStagingArea;
+            c.warnCrlfLineSeparators = this.warnCrlfLineSeparators;
+            c.warnCommittingInDetachedHead = this.warnCommittingInDetachedHead;
+            c.warnCommitFilesLargerThan = this.warnCommitFilesLargerThan;
+            c.warnCommitFilesLargerThanMb = this.warnCommitFilesLargerThanMb;
+            c.warnCommitNamesIssueOnOtherSystems = this.warnCommitNamesIssueOnOtherSystems;
+            c.addCherryPickedSuffix = this.addCherryPickedSuffix;
+            c.gpgKey = this.gpgKey;
+            c.autoUpdateIfPushRejected = this.autoUpdateIfPushRejected;
+            c.showPushDialogForCommitAndPush = this.showPushDialogForCommitAndPush;
+            c.showPushDialogOnlyForProtectedBranches = this.showPushDialogOnlyForProtectedBranches;
+            c.protectedBranches = this.protectedBranches;
+            c.loadBranchProtectionFromGitHub = this.loadBranchProtectionFromGitHub;
+            c.updateMethod = this.updateMethod;
+            c.cleanWorkingTreeUsing = this.cleanWorkingTreeUsing;
+            c.filterUpdateProjectInfoByPaths = this.filterUpdateProjectInfoByPaths;
+            c.fetchRemoteChangesAutomatically = this.fetchRemoteChangesAutomatically;
+            c.checkRemoteForIncomingChanges = this.checkRemoteForIncomingChanges;
+            c.fetchTags = this.fetchTags;
+            c.useCredentialHelper = this.useCredentialHelper;
+            c.combineStashesAndShelvesInOneTab = this.combineStashesAndShelvesInOneTab;
+            c.compareStashedChangesWith = this.compareStashedChangesWith;
+            return c;
+        }
+
+        public String getGitPath() { return gitPath != null ? gitPath : "git"; }
+        public void setGitPath(String gitPath) { this.gitPath = gitPath != null ? gitPath : "git"; }
+
+        public boolean isSetPathOnlyForCurrentProject() { return setPathOnlyForCurrentProject; }
+        public void setSetPathOnlyForCurrentProject(boolean setPathOnlyForCurrentProject) { this.setPathOnlyForCurrentProject = setPathOnlyForCurrentProject; }
+
+        public boolean isAutomaticallyExcludeIgnoredDirectories() { return automaticallyExcludeIgnoredDirectories; }
+        public void setAutomaticallyExcludeIgnoredDirectories(boolean automaticallyExcludeIgnoredDirectories) { this.automaticallyExcludeIgnoredDirectories = automaticallyExcludeIgnoredDirectories; }
+
+        public boolean isEnableStagingArea() { return enableStagingArea; }
+        public void setEnableStagingArea(boolean enableStagingArea) { this.enableStagingArea = enableStagingArea; }
+
+        public boolean isWarnCrlfLineSeparators() { return warnCrlfLineSeparators; }
+        public void setWarnCrlfLineSeparators(boolean warnCrlfLineSeparators) { this.warnCrlfLineSeparators = warnCrlfLineSeparators; }
+
+        public boolean isWarnCommittingInDetachedHead() { return warnCommittingInDetachedHead; }
+        public void setWarnCommittingInDetachedHead(boolean warnCommittingInDetachedHead) { this.warnCommittingInDetachedHead = warnCommittingInDetachedHead; }
+
+        public boolean isWarnCommitFilesLargerThan() { return warnCommitFilesLargerThan; }
+        public void setWarnCommitFilesLargerThan(boolean warnCommitFilesLargerThan) { this.warnCommitFilesLargerThan = warnCommitFilesLargerThan; }
+
+        public int getWarnCommitFilesLargerThanMb() { return warnCommitFilesLargerThanMb > 0 ? warnCommitFilesLargerThanMb : 50; }
+        public void setWarnCommitFilesLargerThanMb(int warnCommitFilesLargerThanMb) { this.warnCommitFilesLargerThanMb = Math.max(1, warnCommitFilesLargerThanMb); }
+
+        public boolean isWarnCommitNamesIssueOnOtherSystems() { return warnCommitNamesIssueOnOtherSystems; }
+        public void setWarnCommitNamesIssueOnOtherSystems(boolean warnCommitNamesIssueOnOtherSystems) { this.warnCommitNamesIssueOnOtherSystems = warnCommitNamesIssueOnOtherSystems; }
+
+        public boolean isAddCherryPickedSuffix() { return addCherryPickedSuffix; }
+        public void setAddCherryPickedSuffix(boolean addCherryPickedSuffix) { this.addCherryPickedSuffix = addCherryPickedSuffix; }
+
+        public String getGpgKey() { return gpgKey != null ? gpgKey : ""; }
+        public void setGpgKey(String gpgKey) { this.gpgKey = gpgKey != null ? gpgKey : ""; }
+
+        public boolean isAutoUpdateIfPushRejected() { return autoUpdateIfPushRejected; }
+        public void setAutoUpdateIfPushRejected(boolean autoUpdateIfPushRejected) { this.autoUpdateIfPushRejected = autoUpdateIfPushRejected; }
+
+        public boolean isShowPushDialogForCommitAndPush() { return showPushDialogForCommitAndPush; }
+        public void setShowPushDialogForCommitAndPush(boolean showPushDialogForCommitAndPush) { this.showPushDialogForCommitAndPush = showPushDialogForCommitAndPush; }
+
+        public boolean isShowPushDialogOnlyForProtectedBranches() { return showPushDialogOnlyForProtectedBranches; }
+        public void setShowPushDialogOnlyForProtectedBranches(boolean showPushDialogOnlyForProtectedBranches) { this.showPushDialogOnlyForProtectedBranches = showPushDialogOnlyForProtectedBranches; }
+
+        public String getProtectedBranches() { return protectedBranches != null ? protectedBranches : "master;main"; }
+        public void setProtectedBranches(String protectedBranches) { this.protectedBranches = protectedBranches != null ? protectedBranches : "master;main"; }
+
+        public boolean isLoadBranchProtectionFromGitHub() { return loadBranchProtectionFromGitHub; }
+        public void setLoadBranchProtectionFromGitHub(boolean loadBranchProtectionFromGitHub) { this.loadBranchProtectionFromGitHub = loadBranchProtectionFromGitHub; }
+
+        public String getUpdateMethod() { return updateMethod != null ? updateMethod : "Merge"; }
+        public void setUpdateMethod(String updateMethod) { this.updateMethod = updateMethod != null ? updateMethod : "Merge"; }
+
+        public String getCleanWorkingTreeUsing() { return cleanWorkingTreeUsing != null ? cleanWorkingTreeUsing : "Shelve"; }
+        public void setCleanWorkingTreeUsing(String cleanWorkingTreeUsing) { this.cleanWorkingTreeUsing = cleanWorkingTreeUsing != null ? cleanWorkingTreeUsing : "Shelve"; }
+
+        public String getFilterUpdateProjectInfoByPaths() { return filterUpdateProjectInfoByPaths != null ? filterUpdateProjectInfoByPaths : "All"; }
+        public void setFilterUpdateProjectInfoByPaths(String filterUpdateProjectInfoByPaths) { this.filterUpdateProjectInfoByPaths = filterUpdateProjectInfoByPaths != null ? filterUpdateProjectInfoByPaths : "All"; }
+
+        public boolean isFetchRemoteChangesAutomatically() { return fetchRemoteChangesAutomatically; }
+        public void setFetchRemoteChangesAutomatically(boolean fetchRemoteChangesAutomatically) { this.fetchRemoteChangesAutomatically = fetchRemoteChangesAutomatically; }
+
+        public boolean isCheckRemoteForIncomingChanges() { return checkRemoteForIncomingChanges; }
+        public void setCheckRemoteForIncomingChanges(boolean checkRemoteForIncomingChanges) { this.checkRemoteForIncomingChanges = checkRemoteForIncomingChanges; }
+
+        public String getFetchTags() { return fetchTags != null ? fetchTags : "Auto"; }
+        public void setFetchTags(String fetchTags) { this.fetchTags = fetchTags != null ? fetchTags : "Auto"; }
+
+        public boolean isUseCredentialHelper() { return useCredentialHelper; }
+        public void setUseCredentialHelper(boolean useCredentialHelper) { this.useCredentialHelper = useCredentialHelper; }
+
+        public boolean isCombineStashesAndShelvesInOneTab() { return combineStashesAndShelvesInOneTab; }
+        public void setCombineStashesAndShelvesInOneTab(boolean combineStashesAndShelvesInOneTab) { this.combineStashesAndShelvesInOneTab = combineStashesAndShelvesInOneTab; }
+
+        public String getCompareStashedChangesWith() { return compareStashedChangesWith != null ? compareStashedChangesWith : "local"; }
+        public void setCompareStashedChangesWith(String compareStashedChangesWith) { this.compareStashedChangesWith = compareStashedChangesWith != null ? compareStashedChangesWith : "local"; }
     }
 
     private static final Path FILE =
