@@ -10,10 +10,13 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
 
 /**
  * App-wide preferences (theme, editor font, etc.), persisted to
@@ -5439,6 +5442,238 @@ public final class AppSettingsStore {
         public void setVcsGit(VcsGitConfig vcsGit) {
             this.vcsGit = vcsGit != null ? vcsGit : new VcsGitConfig();
         }
+
+        private MarkdownSettingsConfig markdown = new MarkdownSettingsConfig();
+        private SchemasDtdsConfig schemasDtds = new SchemasDtdsConfig();
+        private DefaultXmlSchemasConfig defaultXmlSchemas = new DefaultXmlSchemasConfig();
+
+        public MarkdownSettingsConfig getMarkdown() {
+            if (markdown == null) markdown = new MarkdownSettingsConfig();
+            return markdown;
+        }
+        public void setMarkdown(MarkdownSettingsConfig markdown) {
+            this.markdown = markdown != null ? markdown : new MarkdownSettingsConfig();
+        }
+
+        public SchemasDtdsConfig getSchemasDtds() {
+            if (schemasDtds == null) schemasDtds = new SchemasDtdsConfig();
+            return schemasDtds;
+        }
+        public void setSchemasDtds(SchemasDtdsConfig schemasDtds) {
+            this.schemasDtds = schemasDtds != null ? schemasDtds : new SchemasDtdsConfig();
+        }
+
+        public DefaultXmlSchemasConfig getDefaultXmlSchemas() {
+            if (defaultXmlSchemas == null) defaultXmlSchemas = new DefaultXmlSchemasConfig();
+            return defaultXmlSchemas;
+        }
+        public void setDefaultXmlSchemas(DefaultXmlSchemasConfig defaultXmlSchemas) {
+            this.defaultXmlSchemas = defaultXmlSchemas != null ? defaultXmlSchemas : new DefaultXmlSchemasConfig();
+        }
+
+        private JsonSchemaMappingsConfig jsonSchemaMappings = new JsonSchemaMappingsConfig();
+        private RemoteJsonSchemasConfig remoteJsonSchemas = new RemoteJsonSchemasConfig();
+        private XmlCatalogConfig xmlCatalog = new XmlCatalogConfig();
+        private XsltConfig xslt = new XsltConfig();
+
+        public JsonSchemaMappingsConfig getJsonSchemaMappings() {
+            if (jsonSchemaMappings == null) jsonSchemaMappings = new JsonSchemaMappingsConfig();
+            return jsonSchemaMappings;
+        }
+        public void setJsonSchemaMappings(JsonSchemaMappingsConfig jsonSchemaMappings) {
+            this.jsonSchemaMappings = jsonSchemaMappings != null ? jsonSchemaMappings : new JsonSchemaMappingsConfig();
+        }
+
+        public RemoteJsonSchemasConfig getRemoteJsonSchemas() {
+            if (remoteJsonSchemas == null) remoteJsonSchemas = new RemoteJsonSchemasConfig();
+            return remoteJsonSchemas;
+        }
+        public void setRemoteJsonSchemas(RemoteJsonSchemasConfig remoteJsonSchemas) {
+            this.remoteJsonSchemas = remoteJsonSchemas != null ? remoteJsonSchemas : new RemoteJsonSchemasConfig();
+        }
+
+        public XmlCatalogConfig getXmlCatalog() {
+            if (xmlCatalog == null) xmlCatalog = new XmlCatalogConfig();
+            return xmlCatalog;
+        }
+        public void setXmlCatalog(XmlCatalogConfig xmlCatalog) {
+            this.xmlCatalog = xmlCatalog != null ? xmlCatalog : new XmlCatalogConfig();
+        }
+
+        public XsltConfig getXslt() {
+            if (xslt == null) xslt = new XsltConfig();
+            return xslt;
+        }
+        public void setXslt(XsltConfig xslt) {
+            this.xslt = xslt != null ? xslt : new XsltConfig();
+        }
+
+        private XsltFileAssociationsConfig xsltFileAssociations = new XsltFileAssociationsConfig();
+        private BuildToolsConfig buildTools = new BuildToolsConfig();
+        private ActionsOnSaveConfig actionsOnSave = new ActionsOnSaveConfig();
+        private CoverageConfig coverage = new CoverageConfig();
+
+        public XsltFileAssociationsConfig getXsltFileAssociations() {
+            if (xsltFileAssociations == null) xsltFileAssociations = new XsltFileAssociationsConfig();
+            return xsltFileAssociations;
+        }
+        public void setXsltFileAssociations(XsltFileAssociationsConfig xsltFileAssociations) {
+            this.xsltFileAssociations = xsltFileAssociations != null ? xsltFileAssociations : new XsltFileAssociationsConfig();
+        }
+
+        public BuildToolsConfig getBuildTools() {
+            if (buildTools == null) buildTools = new BuildToolsConfig();
+            return buildTools;
+        }
+        public void setBuildTools(BuildToolsConfig buildTools) {
+            this.buildTools = buildTools != null ? buildTools : new BuildToolsConfig();
+        }
+
+        public ActionsOnSaveConfig getActionsOnSave() {
+            if (actionsOnSave == null) actionsOnSave = new ActionsOnSaveConfig();
+            return actionsOnSave;
+        }
+        public void setActionsOnSave(ActionsOnSaveConfig actionsOnSave) {
+            this.actionsOnSave = actionsOnSave != null ? actionsOnSave : new ActionsOnSaveConfig();
+        }
+
+        public CoverageConfig getCoverage() {
+            if (coverage == null) coverage = new CoverageConfig();
+            return coverage;
+        }
+        public void setCoverage(CoverageConfig coverage) {
+            this.coverage = coverage != null ? coverage : new CoverageConfig();
+        }
+
+        private DebuggerConfig debugger = new DebuggerConfig();
+        private DebuggerDataViewsConfig debuggerDataViews = new DebuggerDataViewsConfig();
+        private DebuggerSteppingConfig debuggerStepping = new DebuggerSteppingConfig();
+        private DiagramsConfig diagrams = new DiagramsConfig();
+        private DiffMergeConfig diffMerge = new DiffMergeConfig();
+
+        public DebuggerConfig getDebugger() {
+            if (debugger == null) debugger = new DebuggerConfig();
+            return debugger;
+        }
+        public void setDebugger(DebuggerConfig debugger) {
+            this.debugger = debugger != null ? debugger : new DebuggerConfig();
+        }
+
+        public DebuggerDataViewsConfig getDebuggerDataViews() {
+            if (debuggerDataViews == null) debuggerDataViews = new DebuggerDataViewsConfig();
+            return debuggerDataViews;
+        }
+        public void setDebuggerDataViews(DebuggerDataViewsConfig debuggerDataViews) {
+            this.debuggerDataViews = debuggerDataViews != null ? debuggerDataViews : new DebuggerDataViewsConfig();
+        }
+
+        public DebuggerSteppingConfig getDebuggerStepping() {
+            if (debuggerStepping == null) debuggerStepping = new DebuggerSteppingConfig();
+            return debuggerStepping;
+        }
+        public void setDebuggerStepping(DebuggerSteppingConfig debuggerStepping) {
+            this.debuggerStepping = debuggerStepping != null ? debuggerStepping : new DebuggerSteppingConfig();
+        }
+
+        public DiagramsConfig getDiagrams() {
+            if (diagrams == null) diagrams = new DiagramsConfig();
+            return diagrams;
+        }
+        public void setDiagrams(DiagramsConfig diagrams) {
+            this.diagrams = diagrams != null ? diagrams : new DiagramsConfig();
+        }
+
+        public DiffMergeConfig getDiffMerge() {
+            if (diffMerge == null) diffMerge = new DiffMergeConfig();
+            return diffMerge;
+        }
+        public void setDiffMerge(DiffMergeConfig diffMerge) {
+            this.diffMerge = diffMerge != null ? diffMerge : new DiffMergeConfig();
+        }
+
+        private ExternalDiffToolsConfig externalDiffTools = new ExternalDiffToolsConfig();
+        private ExternalToolsConfig externalTools = new ExternalToolsConfig();
+        private McpServerConfig mcpServer = new McpServerConfig();
+
+        public ExternalDiffToolsConfig getExternalDiffTools() {
+            if (externalDiffTools == null) externalDiffTools = new ExternalDiffToolsConfig();
+            return externalDiffTools;
+        }
+        public void setExternalDiffTools(ExternalDiffToolsConfig externalDiffTools) {
+            this.externalDiffTools = externalDiffTools != null ? externalDiffTools : new ExternalDiffToolsConfig();
+        }
+
+        public ExternalToolsConfig getExternalTools() {
+            if (externalTools == null) externalTools = new ExternalToolsConfig();
+            return externalTools;
+        }
+        public void setExternalTools(ExternalToolsConfig externalTools) {
+            this.externalTools = externalTools != null ? externalTools : new ExternalToolsConfig();
+        }
+
+        public McpServerConfig getMcpServer() {
+            if (mcpServer == null) mcpServer = new McpServerConfig();
+            return mcpServer;
+        }
+        public void setMcpServer(McpServerConfig mcpServer) {
+            this.mcpServer = mcpServer != null ? mcpServer : new McpServerConfig();
+        }
+
+        private RsyncConfig rsync = new RsyncConfig();
+        private SshConfigurationsConfig sshConfigurations = new SshConfigurationsConfig();
+        private TerminalConfig terminal = new TerminalConfig();
+
+        public RsyncConfig getRsync() {
+            if (rsync == null) rsync = new RsyncConfig();
+            return rsync;
+        }
+        public void setRsync(RsyncConfig rsync) {
+            this.rsync = rsync != null ? rsync : new RsyncConfig();
+        }
+
+        public SshConfigurationsConfig getSshConfigurations() {
+            if (sshConfigurations == null) sshConfigurations = new SshConfigurationsConfig();
+            return sshConfigurations;
+        }
+        public void setSshConfigurations(SshConfigurationsConfig sshConfigurations) {
+            this.sshConfigurations = sshConfigurations != null ? sshConfigurations : new SshConfigurationsConfig();
+        }
+
+        public TerminalConfig getTerminal() {
+            if (terminal == null) terminal = new TerminalConfig();
+            return terminal;
+        }
+        public void setTerminal(TerminalConfig terminal) {
+            this.terminal = terminal != null ? terminal : new TerminalConfig();
+        }
+
+        private WebBrowsersConfig webBrowsers = new WebBrowsersConfig();
+        private XPathViewerConfig xpathViewer = new XPathViewerConfig();
+        private BackupSyncConfig backupSync = new BackupSyncConfig();
+
+        public WebBrowsersConfig getWebBrowsers() {
+            if (webBrowsers == null) webBrowsers = new WebBrowsersConfig();
+            return webBrowsers;
+        }
+        public void setWebBrowsers(WebBrowsersConfig webBrowsers) {
+            this.webBrowsers = webBrowsers != null ? webBrowsers : new WebBrowsersConfig();
+        }
+
+        public XPathViewerConfig getXpathViewer() {
+            if (xpathViewer == null) xpathViewer = new XPathViewerConfig();
+            return xpathViewer;
+        }
+        public void setXpathViewer(XPathViewerConfig xpathViewer) {
+            this.xpathViewer = xpathViewer != null ? xpathViewer : new XPathViewerConfig();
+        }
+
+        public BackupSyncConfig getBackupSync() {
+            if (backupSync == null) backupSync = new BackupSyncConfig();
+            return backupSync;
+        }
+        public void setBackupSync(BackupSyncConfig backupSync) {
+            this.backupSync = backupSync != null ? backupSync : new BackupSyncConfig();
+        }
     }
 
     public static class UserParameterPattern {
@@ -6585,6 +6820,1688 @@ public final class AppSettingsStore {
 
         public String getCompareStashedChangesWith() { return compareStashedChangesWith != null ? compareStashedChangesWith : "local"; }
         public void setCompareStashedChangesWith(String compareStashedChangesWith) { this.compareStashedChangesWith = compareStashedChangesWith != null ? compareStashedChangesWith : "local"; }
+    }
+
+    // =========================================================================
+    // Languages > Markdown Configuration (DataGrip Alignment)
+    // =========================================================================
+    public static class MarkdownSettingsConfig {
+        private String previewRenderingEngine = "Chromium browser";
+        private String defaultLayout = "Editor and Preview";
+        private String previewLayout = "Split vertically";
+        private int previewFontSize = 13;
+        private boolean syncScroll = true;
+        private boolean injectLanguagesInCodeFences = true;
+        private boolean showProblemsInCodeFences = true;
+        private boolean groupDocumentsWithSameName = false;
+        private boolean detectCommandsCanRun = true;
+
+        // Markdown Extensions
+        private boolean plantUmlEnabled = false;
+
+        // Custom CSS
+        private boolean customCssLoadFromEnabled = false;
+        private String customCssPath = "";
+        private boolean customCssRulesEnabled = false;
+        private String customCssRules = "";
+
+        // Pandoc Settings
+        private String pandocExecutablePath = "";
+        private String pandocWordImagesDir = "";
+
+        public MarkdownSettingsConfig() {}
+
+        public MarkdownSettingsConfig copy() {
+            MarkdownSettingsConfig c = new MarkdownSettingsConfig();
+            c.previewRenderingEngine = this.previewRenderingEngine;
+            c.defaultLayout = this.defaultLayout;
+            c.previewLayout = this.previewLayout;
+            c.previewFontSize = this.previewFontSize;
+            c.syncScroll = this.syncScroll;
+            c.injectLanguagesInCodeFences = this.injectLanguagesInCodeFences;
+            c.showProblemsInCodeFences = this.showProblemsInCodeFences;
+            c.groupDocumentsWithSameName = this.groupDocumentsWithSameName;
+            c.detectCommandsCanRun = this.detectCommandsCanRun;
+            c.plantUmlEnabled = this.plantUmlEnabled;
+            c.customCssLoadFromEnabled = this.customCssLoadFromEnabled;
+            c.customCssPath = this.customCssPath;
+            c.customCssRulesEnabled = this.customCssRulesEnabled;
+            c.customCssRules = this.customCssRules;
+            c.pandocExecutablePath = this.pandocExecutablePath;
+            c.pandocWordImagesDir = this.pandocWordImagesDir;
+            return c;
+        }
+
+        public String getPreviewRenderingEngine() { return previewRenderingEngine != null ? previewRenderingEngine : "Chromium browser"; }
+        public void setPreviewRenderingEngine(String val) { this.previewRenderingEngine = val != null ? val : "Chromium browser"; }
+
+        public String getDefaultLayout() { return defaultLayout != null ? defaultLayout : "Editor and Preview"; }
+        public void setDefaultLayout(String val) { this.defaultLayout = val != null ? val : "Editor and Preview"; }
+
+        public String getPreviewLayout() { return previewLayout != null ? previewLayout : "Split vertically"; }
+        public void setPreviewLayout(String val) { this.previewLayout = val != null ? val : "Split vertically"; }
+
+        public int getPreviewFontSize() { return previewFontSize; }
+        public void setPreviewFontSize(int val) { this.previewFontSize = val; }
+
+        public boolean isSyncScroll() { return syncScroll; }
+        public void setSyncScroll(boolean val) { this.syncScroll = val; }
+
+        public boolean isInjectLanguagesInCodeFences() { return injectLanguagesInCodeFences; }
+        public void setInjectLanguagesInCodeFences(boolean val) { this.injectLanguagesInCodeFences = val; }
+
+        public boolean isShowProblemsInCodeFences() { return showProblemsInCodeFences; }
+        public void setShowProblemsInCodeFences(boolean val) { this.showProblemsInCodeFences = val; }
+
+        public boolean isGroupDocumentsWithSameName() { return groupDocumentsWithSameName; }
+        public void setGroupDocumentsWithSameName(boolean val) { this.groupDocumentsWithSameName = val; }
+
+        public boolean isDetectCommandsCanRun() { return detectCommandsCanRun; }
+        public void setDetectCommandsCanRun(boolean val) { this.detectCommandsCanRun = val; }
+
+        public boolean isPlantUmlEnabled() { return plantUmlEnabled; }
+        public void setPlantUmlEnabled(boolean val) { this.plantUmlEnabled = val; }
+
+        public boolean isCustomCssLoadFromEnabled() { return customCssLoadFromEnabled; }
+        public void setCustomCssLoadFromEnabled(boolean val) { this.customCssLoadFromEnabled = val; }
+
+        public String getCustomCssPath() { return customCssPath != null ? customCssPath : ""; }
+        public void setCustomCssPath(String val) { this.customCssPath = val != null ? val : ""; }
+
+        public boolean isCustomCssRulesEnabled() { return customCssRulesEnabled; }
+        public void setCustomCssRulesEnabled(boolean val) { this.customCssRulesEnabled = val; }
+
+        public String getCustomCssRules() { return customCssRules != null ? customCssRules : ""; }
+        public void setCustomCssRules(String val) { this.customCssRules = val != null ? val : ""; }
+
+        public String getPandocExecutablePath() { return pandocExecutablePath != null ? pandocExecutablePath : ""; }
+        public void setPandocExecutablePath(String val) { this.pandocExecutablePath = val != null ? val : ""; }
+
+        public String getPandocWordImagesDir() { return pandocWordImagesDir != null ? pandocWordImagesDir : ""; }
+        public void setPandocWordImagesDir(String val) { this.pandocWordImagesDir = val != null ? val : ""; }
+    }
+
+    // =========================================================================
+    // Languages > Schemas and DTDs Configuration (DataGrip Alignment)
+    // =========================================================================
+    public static class ExternalResourceMapping {
+        private String uri = "";
+        private String location = "";
+
+        public ExternalResourceMapping() {}
+
+        public ExternalResourceMapping(String uri, String location) {
+            this.uri = uri;
+            this.location = location;
+        }
+
+        public ExternalResourceMapping copy() {
+            return new ExternalResourceMapping(this.uri, this.location);
+        }
+
+        public String getUri() { return uri != null ? uri : ""; }
+        public void setUri(String uri) { this.uri = uri != null ? uri : ""; }
+
+        public String getLocation() { return location != null ? location : ""; }
+        public void setLocation(String location) { this.location = location != null ? location : ""; }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof ExternalResourceMapping that)) return false;
+            return Objects.equals(uri, that.uri) && Objects.equals(location, that.location);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(uri, location);
+        }
+    }
+
+    public static class SchemasDtdsConfig {
+        private List<ExternalResourceMapping> externalResources = new ArrayList<>();
+        private List<String> ignoredResources = new ArrayList<>(defaultIgnoredSchemas());
+
+        public static List<String> defaultIgnoredSchemas() {
+            return List.of(
+                    "http://exslt.org/common",
+                    "http://exslt.org/dates-and-times",
+                    "http://exslt.org/dynamic",
+                    "http://exslt.org/math",
+                    "http://exslt.org/sets",
+                    "http://exslt.org/strings",
+                    "http://relaxng.org/ns/compatibility/annotations/1.0",
+                    "urn:idea:xslt-plugin#extensions"
+            );
+        }
+
+        public SchemasDtdsConfig() {}
+
+        public SchemasDtdsConfig copy() {
+            SchemasDtdsConfig c = new SchemasDtdsConfig();
+            if (this.externalResources != null) {
+                c.externalResources = new ArrayList<>();
+                for (ExternalResourceMapping m : this.externalResources) {
+                    c.externalResources.add(m != null ? m.copy() : null);
+                }
+            }
+            if (this.ignoredResources != null) {
+                c.ignoredResources = new ArrayList<>(this.ignoredResources);
+            }
+            return c;
+        }
+
+        public List<ExternalResourceMapping> getExternalResources() {
+            if (externalResources == null) externalResources = new ArrayList<>();
+            return externalResources;
+        }
+        public void setExternalResources(List<ExternalResourceMapping> externalResources) {
+            this.externalResources = externalResources != null ? new ArrayList<>(externalResources) : new ArrayList<>();
+        }
+
+        public List<String> getIgnoredResources() {
+            if (ignoredResources == null) ignoredResources = new ArrayList<>();
+            return ignoredResources;
+        }
+        public void setIgnoredResources(List<String> ignoredResources) {
+            this.ignoredResources = ignoredResources != null ? new ArrayList<>(ignoredResources) : new ArrayList<>();
+        }
+    }
+
+    // =========================================================================
+    // Languages > Schemas and DTDs > Default XML Schemas Configuration
+    // =========================================================================
+    public static class DefaultXmlSchemasConfig {
+        private String htmlLanguageLevel = "HTML 5"; // "HTML 4", "HTML 5", "Other doctype:"
+        private String htmlOtherDoctype = "";
+        private String xmlSchemaVersion = "1.0"; // "1.0", "1.1"
+
+        public DefaultXmlSchemasConfig() {}
+
+        public DefaultXmlSchemasConfig copy() {
+            DefaultXmlSchemasConfig c = new DefaultXmlSchemasConfig();
+            c.htmlLanguageLevel = this.htmlLanguageLevel;
+            c.htmlOtherDoctype = this.htmlOtherDoctype;
+            c.xmlSchemaVersion = this.xmlSchemaVersion;
+            return c;
+        }
+
+        public String getHtmlLanguageLevel() { return htmlLanguageLevel != null ? htmlLanguageLevel : "HTML 5"; }
+        public void setHtmlLanguageLevel(String htmlLanguageLevel) { this.htmlLanguageLevel = htmlLanguageLevel != null ? htmlLanguageLevel : "HTML 5"; }
+
+        public String getHtmlOtherDoctype() { return htmlOtherDoctype != null ? htmlOtherDoctype : ""; }
+        public void setHtmlOtherDoctype(String htmlOtherDoctype) { this.htmlOtherDoctype = htmlOtherDoctype != null ? htmlOtherDoctype : ""; }
+
+        public String getXmlSchemaVersion() { return xmlSchemaVersion != null ? xmlSchemaVersion : "1.0"; }
+        public void setXmlSchemaVersion(String xmlSchemaVersion) { this.xmlSchemaVersion = xmlSchemaVersion != null ? xmlSchemaVersion : "1.0"; }
+    }
+
+    // =========================================================================
+    // Languages > Schemas and DTDs > JSON Schema Mappings Configuration
+    // =========================================================================
+    public static class JsonSchemaPatternMapping {
+        public enum PatternKind {
+            FILE, FILE_PATH_PATTERN, DIRECTORY
+        }
+
+        private PatternKind kind = PatternKind.FILE_PATH_PATTERN;
+        private String pathOrPattern = "";
+
+        public JsonSchemaPatternMapping() {}
+
+        public JsonSchemaPatternMapping(PatternKind kind, String pathOrPattern) {
+            this.kind = kind;
+            this.pathOrPattern = pathOrPattern;
+        }
+
+        public JsonSchemaPatternMapping copy() {
+            return new JsonSchemaPatternMapping(this.kind, this.pathOrPattern);
+        }
+
+        public PatternKind getKind() { return kind != null ? kind : PatternKind.FILE_PATH_PATTERN; }
+        public void setKind(PatternKind kind) { this.kind = kind != null ? kind : PatternKind.FILE_PATH_PATTERN; }
+
+        public String getPathOrPattern() { return pathOrPattern != null ? pathOrPattern : ""; }
+        public void setPathOrPattern(String pathOrPattern) { this.pathOrPattern = pathOrPattern != null ? pathOrPattern : ""; }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof JsonSchemaPatternMapping that)) return false;
+            return kind == that.kind && Objects.equals(pathOrPattern, that.pathOrPattern);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(kind, pathOrPattern);
+        }
+    }
+
+    public static class JsonSchemaMappingItem {
+        private String id = java.util.UUID.randomUUID().toString();
+        private String name = "New Schema";
+        private String schemaFileOrUrl = "";
+        private String schemaVersion = "JSON Schema v4";
+        private List<JsonSchemaPatternMapping> patterns = new ArrayList<>();
+
+        public JsonSchemaMappingItem() {}
+
+        public JsonSchemaMappingItem(String name, String schemaFileOrUrl, String schemaVersion) {
+            this.id = java.util.UUID.randomUUID().toString();
+            this.name = name;
+            this.schemaFileOrUrl = schemaFileOrUrl;
+            this.schemaVersion = schemaVersion;
+        }
+
+        public JsonSchemaMappingItem copy() {
+            JsonSchemaMappingItem c = new JsonSchemaMappingItem();
+            c.id = this.id;
+            c.name = this.name;
+            c.schemaFileOrUrl = this.schemaFileOrUrl;
+            c.schemaVersion = this.schemaVersion;
+            if (this.patterns != null) {
+                c.patterns = new ArrayList<>();
+                for (JsonSchemaPatternMapping p : this.patterns) {
+                    c.patterns.add(p != null ? p.copy() : null);
+                }
+            }
+            return c;
+        }
+
+        public String getId() { return id != null ? id : (id = java.util.UUID.randomUUID().toString()); }
+        public void setId(String id) { this.id = id; }
+
+        public String getName() { return name != null ? name : "New Schema"; }
+        public void setName(String name) { this.name = name != null ? name : "New Schema"; }
+
+        public String getSchemaFileOrUrl() { return schemaFileOrUrl != null ? schemaFileOrUrl : ""; }
+        public void setSchemaFileOrUrl(String schemaFileOrUrl) { this.schemaFileOrUrl = schemaFileOrUrl != null ? schemaFileOrUrl : ""; }
+
+        public String getSchemaVersion() { return schemaVersion != null ? schemaVersion : "JSON Schema v4"; }
+        public void setSchemaVersion(String schemaVersion) { this.schemaVersion = schemaVersion != null ? schemaVersion : "JSON Schema v4"; }
+
+        public List<JsonSchemaPatternMapping> getPatterns() {
+            if (patterns == null) patterns = new ArrayList<>();
+            return patterns;
+        }
+        public void setPatterns(List<JsonSchemaPatternMapping> patterns) {
+            this.patterns = patterns != null ? new ArrayList<>(patterns) : new ArrayList<>();
+        }
+
+        @Override
+        public String toString() {
+            return getName();
+        }
+    }
+
+    public static class JsonSchemaMappingsConfig {
+        private List<JsonSchemaMappingItem> mappings = new ArrayList<>();
+
+        public JsonSchemaMappingsConfig() {}
+
+        public JsonSchemaMappingsConfig copy() {
+            JsonSchemaMappingsConfig c = new JsonSchemaMappingsConfig();
+            if (this.mappings != null) {
+                c.mappings = new ArrayList<>();
+                for (JsonSchemaMappingItem m : this.mappings) {
+                    c.mappings.add(m != null ? m.copy() : null);
+                }
+            }
+            return c;
+        }
+
+        public List<JsonSchemaMappingItem> getMappings() {
+            if (mappings == null) mappings = new ArrayList<>();
+            return mappings;
+        }
+        public void setMappings(List<JsonSchemaMappingItem> mappings) {
+            this.mappings = mappings != null ? new ArrayList<>(mappings) : new ArrayList<>();
+        }
+    }
+
+    // =========================================================================
+    // Languages > Schemas and DTDs > Remote JSON Schemas Configuration
+    // =========================================================================
+    public static class RemoteJsonSchemasConfig {
+        private boolean allowDownloadRemoteSchemas = true;
+        private boolean useSchemaStoreCatalog = true;
+        private boolean alwaysDownloadMostRecent = false;
+
+        public RemoteJsonSchemasConfig() {}
+
+        public RemoteJsonSchemasConfig copy() {
+            RemoteJsonSchemasConfig c = new RemoteJsonSchemasConfig();
+            c.allowDownloadRemoteSchemas = this.allowDownloadRemoteSchemas;
+            c.useSchemaStoreCatalog = this.useSchemaStoreCatalog;
+            c.alwaysDownloadMostRecent = this.alwaysDownloadMostRecent;
+            return c;
+        }
+
+        public boolean isAllowDownloadRemoteSchemas() { return allowDownloadRemoteSchemas; }
+        public void setAllowDownloadRemoteSchemas(boolean val) { this.allowDownloadRemoteSchemas = val; }
+
+        public boolean isUseSchemaStoreCatalog() { return useSchemaStoreCatalog; }
+        public void setUseSchemaStoreCatalog(boolean val) { this.useSchemaStoreCatalog = val; }
+
+        public boolean isAlwaysDownloadMostRecent() { return alwaysDownloadMostRecent; }
+        public void setAlwaysDownloadMostRecent(boolean val) { this.alwaysDownloadMostRecent = val; }
+    }
+
+    // =========================================================================
+    // Languages > Schemas and DTDs > XML Catalog Configuration
+    // =========================================================================
+    public static class XmlCatalogConfig {
+        private String catalogPropertyFile = "";
+
+        public XmlCatalogConfig() {}
+
+        public XmlCatalogConfig copy() {
+            XmlCatalogConfig c = new XmlCatalogConfig();
+            c.catalogPropertyFile = this.catalogPropertyFile;
+            return c;
+        }
+
+        public String getCatalogPropertyFile() { return catalogPropertyFile != null ? catalogPropertyFile : ""; }
+        public void setCatalogPropertyFile(String catalogPropertyFile) { this.catalogPropertyFile = catalogPropertyFile != null ? catalogPropertyFile : ""; }
+    }
+
+    // =========================================================================
+    // Languages > XSLT Configuration
+    // =========================================================================
+    public static class XsltConfig {
+        private boolean showAssociatedFilesInProjectView = true;
+
+        public XsltConfig() {}
+
+        public XsltConfig copy() {
+            XsltConfig c = new XsltConfig();
+            c.showAssociatedFilesInProjectView = this.showAssociatedFilesInProjectView;
+            return c;
+        }
+
+        public boolean isShowAssociatedFilesInProjectView() { return showAssociatedFilesInProjectView; }
+        public void setShowAssociatedFilesInProjectView(boolean val) { this.showAssociatedFilesInProjectView = val; }
+    }
+
+    // =========================================================================
+    // Languages > XSLT File Associations Configuration
+    // =========================================================================
+    public static class XsltAssociationEntry {
+        private String xsltFileOrDir = "Db  ~/DataGripProjects/Db";
+        private List<String> associatedFiles = new ArrayList<>();
+
+        public XsltAssociationEntry() {}
+
+        public XsltAssociationEntry(String xsltFileOrDir, List<String> associatedFiles) {
+            this.xsltFileOrDir = xsltFileOrDir;
+            this.associatedFiles = associatedFiles != null ? new ArrayList<>(associatedFiles) : new ArrayList<>();
+        }
+
+        public XsltAssociationEntry copy() {
+            return new XsltAssociationEntry(this.xsltFileOrDir, this.associatedFiles);
+        }
+
+        public String getXsltFileOrDir() { return xsltFileOrDir != null ? xsltFileOrDir : ""; }
+        public void setXsltFileOrDir(String xsltFileOrDir) { this.xsltFileOrDir = xsltFileOrDir != null ? xsltFileOrDir : ""; }
+
+        public List<String> getAssociatedFiles() {
+            if (associatedFiles == null) associatedFiles = new ArrayList<>();
+            return associatedFiles;
+        }
+        public void setAssociatedFiles(List<String> associatedFiles) {
+            this.associatedFiles = associatedFiles != null ? new ArrayList<>(associatedFiles) : new ArrayList<>();
+        }
+
+        @Override
+        public String toString() {
+            return getXsltFileOrDir();
+        }
+    }
+
+    public static class XsltFileAssociationsConfig {
+        private List<XsltAssociationEntry> entries = new ArrayList<>(List.of(
+                new XsltAssociationEntry("Db  ~/DataGripProjects/Db", new ArrayList<>())
+        ));
+
+        public XsltFileAssociationsConfig() {}
+
+        public XsltFileAssociationsConfig copy() {
+            XsltFileAssociationsConfig c = new XsltFileAssociationsConfig();
+            if (this.entries != null) {
+                c.entries = new ArrayList<>();
+                for (XsltAssociationEntry e : this.entries) {
+                    c.entries.add(e != null ? e.copy() : null);
+                }
+            }
+            return c;
+        }
+
+        public List<XsltAssociationEntry> getEntries() {
+            if (entries == null) entries = new ArrayList<>();
+            return entries;
+        }
+        public void setEntries(List<XsltAssociationEntry> entries) {
+            this.entries = entries != null ? new ArrayList<>(entries) : new ArrayList<>();
+        }
+    }
+
+    // =========================================================================
+    // Tools > Build Tools Configuration
+    // =========================================================================
+    public static class BuildToolsConfig {
+        private boolean syncProjectAfterChanges = true;
+        private String syncTrigger = "External changes"; // "Any changes" or "External changes"
+
+        public BuildToolsConfig() {}
+
+        public BuildToolsConfig copy() {
+            BuildToolsConfig c = new BuildToolsConfig();
+            c.syncProjectAfterChanges = this.syncProjectAfterChanges;
+            c.syncTrigger = this.syncTrigger;
+            return c;
+        }
+
+        public boolean isSyncProjectAfterChanges() { return syncProjectAfterChanges; }
+        public void setSyncProjectAfterChanges(boolean syncProjectAfterChanges) { this.syncProjectAfterChanges = syncProjectAfterChanges; }
+
+        public String getSyncTrigger() { return syncTrigger != null ? syncTrigger : "External changes"; }
+        public void setSyncTrigger(String syncTrigger) { this.syncTrigger = syncTrigger != null ? syncTrigger : "External changes"; }
+    }
+
+    // =========================================================================
+    // Tools > Actions on Save Configuration
+    // =========================================================================
+    public static class ActionsOnSaveConfig {
+        private boolean reformatCode = false;
+        private boolean allFileTypes = true;
+        private List<String> selectedFileTypes = new ArrayList<>(defaultFileTypes());
+        private String activatedOn = "Any save"; // "Any save" or "Explicit save only"
+
+        public static List<String> defaultFileTypes() {
+            return List.of(
+                    "CassandraQL", "HiveQL", "HTML", "JSON", "JSON lines", "JSON5",
+                    "Markdown", "Redis", "RELAX NG compact syntax", "Scalable Vector Graphics",
+                    "SQL", "XHTML", "XML", "XML Document Type Definition"
+            );
+        }
+
+        public ActionsOnSaveConfig() {}
+
+        public ActionsOnSaveConfig copy() {
+            ActionsOnSaveConfig c = new ActionsOnSaveConfig();
+            c.reformatCode = this.reformatCode;
+            c.allFileTypes = this.allFileTypes;
+            if (this.selectedFileTypes != null) {
+                c.selectedFileTypes = new ArrayList<>(this.selectedFileTypes);
+            }
+            c.activatedOn = this.activatedOn;
+            return c;
+        }
+
+        public boolean isReformatCode() { return reformatCode; }
+        public void setReformatCode(boolean reformatCode) { this.reformatCode = reformatCode; }
+
+        public boolean isAllFileTypes() { return allFileTypes; }
+        public void setAllFileTypes(boolean allFileTypes) { this.allFileTypes = allFileTypes; }
+
+        public List<String> getSelectedFileTypes() {
+            if (selectedFileTypes == null) selectedFileTypes = new ArrayList<>(defaultFileTypes());
+            return selectedFileTypes;
+        }
+        public void setSelectedFileTypes(List<String> selectedFileTypes) {
+            this.selectedFileTypes = selectedFileTypes != null ? new ArrayList<>(selectedFileTypes) : new ArrayList<>();
+        }
+
+        public String getActivatedOn() { return activatedOn != null ? activatedOn : "Any save"; }
+        public void setActivatedOn(String activatedOn) { this.activatedOn = activatedOn != null ? activatedOn : "Any save"; }
+    }
+
+    // =========================================================================
+    // Tools > Coverage Configuration
+    // =========================================================================
+    public static class CoverageConfig {
+        private String whenNewCoverageGathered = "Show options before applying coverage to the editor";
+        private boolean activateCoverageView = true;
+        private boolean showCoverageInProjectView = true;
+
+        public CoverageConfig() {}
+
+        public CoverageConfig copy() {
+            CoverageConfig c = new CoverageConfig();
+            c.whenNewCoverageGathered = this.whenNewCoverageGathered;
+            c.activateCoverageView = this.activateCoverageView;
+            c.showCoverageInProjectView = this.showCoverageInProjectView;
+            return c;
+        }
+
+        public String getWhenNewCoverageGathered() {
+            return whenNewCoverageGathered != null ? whenNewCoverageGathered : "Show options before applying coverage to the editor";
+        }
+        public void setWhenNewCoverageGathered(String val) {
+            this.whenNewCoverageGathered = val != null ? val : "Show options before applying coverage to the editor";
+        }
+
+        public boolean isActivateCoverageView() { return activateCoverageView; }
+        public void setActivateCoverageView(boolean activateCoverageView) { this.activateCoverageView = activateCoverageView; }
+
+        public boolean isShowCoverageInProjectView() { return showCoverageInProjectView; }
+        public void setShowCoverageInProjectView(boolean showCoverageInProjectView) { this.showCoverageInProjectView = showCoverageInProjectView; }
+    }
+
+    // =========================================================================
+    // Tools > Debugger Configuration
+    // =========================================================================
+    public static class DebuggerConfig {
+        private boolean showDebugWindowOnBreakpoint = true;
+        private boolean focusApplicationOnBreakpoint = true;
+        private boolean hideDebugWindowOnProcessTermination = false;
+        private boolean scrollExecutionPointToCenter = false;
+        private boolean clickLineNumberToRunToCursor = true;
+        private String removeBreakpointMode = "Click with left mouse button"; // or "Drag to the editor or click with middle mouse button"
+        private boolean confirmRemovalOfConditionalOrLoggingBreakpoints = false;
+
+        public DebuggerConfig() {}
+
+        public DebuggerConfig copy() {
+            DebuggerConfig c = new DebuggerConfig();
+            c.showDebugWindowOnBreakpoint = this.showDebugWindowOnBreakpoint;
+            c.focusApplicationOnBreakpoint = this.focusApplicationOnBreakpoint;
+            c.hideDebugWindowOnProcessTermination = this.hideDebugWindowOnProcessTermination;
+            c.scrollExecutionPointToCenter = this.scrollExecutionPointToCenter;
+            c.clickLineNumberToRunToCursor = this.clickLineNumberToRunToCursor;
+            c.removeBreakpointMode = this.removeBreakpointMode;
+            c.confirmRemovalOfConditionalOrLoggingBreakpoints = this.confirmRemovalOfConditionalOrLoggingBreakpoints;
+            return c;
+        }
+
+        public boolean isShowDebugWindowOnBreakpoint() { return showDebugWindowOnBreakpoint; }
+        public void setShowDebugWindowOnBreakpoint(boolean showDebugWindowOnBreakpoint) { this.showDebugWindowOnBreakpoint = showDebugWindowOnBreakpoint; }
+
+        public boolean isFocusApplicationOnBreakpoint() { return focusApplicationOnBreakpoint; }
+        public void setFocusApplicationOnBreakpoint(boolean focusApplicationOnBreakpoint) { this.focusApplicationOnBreakpoint = focusApplicationOnBreakpoint; }
+
+        public boolean isHideDebugWindowOnProcessTermination() { return hideDebugWindowOnProcessTermination; }
+        public void setHideDebugWindowOnProcessTermination(boolean hideDebugWindowOnProcessTermination) { this.hideDebugWindowOnProcessTermination = hideDebugWindowOnProcessTermination; }
+
+        public boolean isScrollExecutionPointToCenter() { return scrollExecutionPointToCenter; }
+        public void setScrollExecutionPointToCenter(boolean scrollExecutionPointToCenter) { this.scrollExecutionPointToCenter = scrollExecutionPointToCenter; }
+
+        public boolean isClickLineNumberToRunToCursor() { return clickLineNumberToRunToCursor; }
+        public void setClickLineNumberToRunToCursor(boolean clickLineNumberToRunToCursor) { this.clickLineNumberToRunToCursor = clickLineNumberToRunToCursor; }
+
+        public String getRemoveBreakpointMode() {
+            return removeBreakpointMode != null ? removeBreakpointMode : "Click with left mouse button";
+        }
+        public void setRemoveBreakpointMode(String removeBreakpointMode) {
+            this.removeBreakpointMode = removeBreakpointMode != null ? removeBreakpointMode : "Click with left mouse button";
+        }
+
+        public boolean isConfirmRemovalOfConditionalOrLoggingBreakpoints() { return confirmRemovalOfConditionalOrLoggingBreakpoints; }
+        public void setConfirmRemovalOfConditionalOrLoggingBreakpoints(boolean val) { this.confirmRemovalOfConditionalOrLoggingBreakpoints = val; }
+    }
+
+    // =========================================================================
+    // Tools > Debugger > Data Views Configuration
+    // =========================================================================
+    public static class DebuggerDataViewsConfig {
+        private boolean sortValuesAlphabetically = false;
+        private boolean enableAutoExpressions = true;
+        private boolean showValuesInline = true;
+        private boolean showValueTooltip = true;
+        private int valueTooltipDelayMs = 700;
+        private boolean showValueTooltipOnCodeSelection = false;
+
+        public DebuggerDataViewsConfig() {}
+
+        public DebuggerDataViewsConfig copy() {
+            DebuggerDataViewsConfig c = new DebuggerDataViewsConfig();
+            c.sortValuesAlphabetically = this.sortValuesAlphabetically;
+            c.enableAutoExpressions = this.enableAutoExpressions;
+            c.showValuesInline = this.showValuesInline;
+            c.showValueTooltip = this.showValueTooltip;
+            c.valueTooltipDelayMs = this.valueTooltipDelayMs;
+            c.showValueTooltipOnCodeSelection = this.showValueTooltipOnCodeSelection;
+            return c;
+        }
+
+        public boolean isSortValuesAlphabetically() { return sortValuesAlphabetically; }
+        public void setSortValuesAlphabetically(boolean sortValuesAlphabetically) { this.sortValuesAlphabetically = sortValuesAlphabetically; }
+
+        public boolean isEnableAutoExpressions() { return enableAutoExpressions; }
+        public void setEnableAutoExpressions(boolean enableAutoExpressions) { this.enableAutoExpressions = enableAutoExpressions; }
+
+        public boolean isShowValuesInline() { return showValuesInline; }
+        public void setShowValuesInline(boolean showValuesInline) { this.showValuesInline = showValuesInline; }
+
+        public boolean isShowValueTooltip() { return showValueTooltip; }
+        public void setShowValueTooltip(boolean showValueTooltip) { this.showValueTooltip = showValueTooltip; }
+
+        public int getValueTooltipDelayMs() { return valueTooltipDelayMs; }
+        public void setValueTooltipDelayMs(int valueTooltipDelayMs) { this.valueTooltipDelayMs = valueTooltipDelayMs; }
+
+        public boolean isShowValueTooltipOnCodeSelection() { return showValueTooltipOnCodeSelection; }
+        public void setShowValueTooltipOnCodeSelection(boolean showValueTooltipOnCodeSelection) { this.showValueTooltipOnCodeSelection = showValueTooltipOnCodeSelection; }
+    }
+
+    // =========================================================================
+    // Tools > Debugger > Stepping Configuration
+    // =========================================================================
+    public static class DebuggerSteppingConfig {
+        private String steppingMode = "Graceful"; // "Graceful", "Force step", "Step into"
+        private boolean pauseAtBegin = false;
+
+        public DebuggerSteppingConfig() {}
+
+        public DebuggerSteppingConfig copy() {
+            DebuggerSteppingConfig c = new DebuggerSteppingConfig();
+            c.steppingMode = this.steppingMode;
+            c.pauseAtBegin = this.pauseAtBegin;
+            return c;
+        }
+
+        public String getSteppingMode() {
+            return steppingMode != null ? steppingMode : "Graceful";
+        }
+        public void setSteppingMode(String steppingMode) {
+            this.steppingMode = steppingMode != null ? steppingMode : "Graceful";
+        }
+
+        public boolean isPauseAtBegin() { return pauseAtBegin; }
+        public void setPauseAtBegin(boolean pauseAtBegin) { this.pauseAtBegin = pauseAtBegin; }
+    }
+
+    // =========================================================================
+    // Tools > Diagrams Configuration
+    // =========================================================================
+    public static class DiagramsConfig {
+        private Set<String> enabledCategories = new HashSet<>(defaultCategories());
+        private String defaultScope = "All"; // "All", "Project", "Current Schema"
+        private String nodeItemStyle = "With types aligned"; // "With types aligned", "Compact", "UML"
+        private int shortenNodeItemsLength = 60;
+        private boolean showGridByDefault = true;
+        private boolean enableAnimations = true;
+        private boolean enableNodeItemsSyntaxHighlighting = true;
+        private String defaultLayout = "Hierarchic Compact"; // "Hierarchic Compact", "Hierarchical", "Organic", "Orthogonal", "Circular"
+        private String layoutOnCategorySwitch = "With light layouter"; // "With light layouter", "Keep positions", "Relayout all"
+        private int layoutAnimationDuration = 1500;
+        private boolean fitContentAfterLayout = true;
+        private boolean relayoutWhenNewElementsAdded = true;
+
+        public static Set<String> defaultCategories() {
+            return new HashSet<>(List.of(
+                    "Show Difference", "Details",
+                    "Database Schema Diagram", "Key columns", "Columns", "Virtual foreign keys", "Comments",
+                    "Graphical Explain Plan", "Attributes"
+            ));
+        }
+
+        public DiagramsConfig() {}
+
+        public DiagramsConfig copy() {
+            DiagramsConfig c = new DiagramsConfig();
+            if (this.enabledCategories != null) {
+                c.enabledCategories = new HashSet<>(this.enabledCategories);
+            }
+            c.defaultScope = this.defaultScope;
+            c.nodeItemStyle = this.nodeItemStyle;
+            c.shortenNodeItemsLength = this.shortenNodeItemsLength;
+            c.showGridByDefault = this.showGridByDefault;
+            c.enableAnimations = this.enableAnimations;
+            c.enableNodeItemsSyntaxHighlighting = this.enableNodeItemsSyntaxHighlighting;
+            c.defaultLayout = this.defaultLayout;
+            c.layoutOnCategorySwitch = this.layoutOnCategorySwitch;
+            c.layoutAnimationDuration = this.layoutAnimationDuration;
+            c.fitContentAfterLayout = this.fitContentAfterLayout;
+            c.relayoutWhenNewElementsAdded = this.relayoutWhenNewElementsAdded;
+            return c;
+        }
+
+        public Set<String> getEnabledCategories() {
+            if (enabledCategories == null) enabledCategories = new HashSet<>(defaultCategories());
+            return enabledCategories;
+        }
+        public void setEnabledCategories(Set<String> enabledCategories) {
+            this.enabledCategories = enabledCategories != null ? new HashSet<>(enabledCategories) : new HashSet<>(defaultCategories());
+        }
+
+        public String getDefaultScope() { return defaultScope != null ? defaultScope : "All"; }
+        public void setDefaultScope(String defaultScope) { this.defaultScope = defaultScope != null ? defaultScope : "All"; }
+
+        public String getNodeItemStyle() { return nodeItemStyle != null ? nodeItemStyle : "With types aligned"; }
+        public void setNodeItemStyle(String nodeItemStyle) { this.nodeItemStyle = nodeItemStyle != null ? nodeItemStyle : "With types aligned"; }
+
+        public int getShortenNodeItemsLength() { return shortenNodeItemsLength; }
+        public void setShortenNodeItemsLength(int shortenNodeItemsLength) { this.shortenNodeItemsLength = shortenNodeItemsLength; }
+
+        public boolean isShowGridByDefault() { return showGridByDefault; }
+        public void setShowGridByDefault(boolean showGridByDefault) { this.showGridByDefault = showGridByDefault; }
+
+        public boolean isEnableAnimations() { return enableAnimations; }
+        public void setEnableAnimations(boolean enableAnimations) { this.enableAnimations = enableAnimations; }
+
+        public boolean isEnableNodeItemsSyntaxHighlighting() { return enableNodeItemsSyntaxHighlighting; }
+        public void setEnableNodeItemsSyntaxHighlighting(boolean enableNodeItemsSyntaxHighlighting) { this.enableNodeItemsSyntaxHighlighting = enableNodeItemsSyntaxHighlighting; }
+
+        public String getDefaultLayout() { return defaultLayout != null ? defaultLayout : "Hierarchic Compact"; }
+        public void setDefaultLayout(String defaultLayout) { this.defaultLayout = defaultLayout != null ? defaultLayout : "Hierarchic Compact"; }
+
+        public String getLayoutOnCategorySwitch() { return layoutOnCategorySwitch != null ? layoutOnCategorySwitch : "With light layouter"; }
+        public void setLayoutOnCategorySwitch(String layoutOnCategorySwitch) { this.layoutOnCategorySwitch = layoutOnCategorySwitch != null ? layoutOnCategorySwitch : "With light layouter"; }
+
+        public int getLayoutAnimationDuration() { return layoutAnimationDuration; }
+        public void setLayoutAnimationDuration(int layoutAnimationDuration) { this.layoutAnimationDuration = layoutAnimationDuration; }
+
+        public boolean isFitContentAfterLayout() { return fitContentAfterLayout; }
+        public void setFitContentAfterLayout(boolean fitContentAfterLayout) { this.fitContentAfterLayout = fitContentAfterLayout; }
+
+        public boolean isRelayoutWhenNewElementsAdded() { return relayoutWhenNewElementsAdded; }
+        public void setRelayoutWhenNewElementsAdded(boolean relayoutWhenNewElementsAdded) { this.relayoutWhenNewElementsAdded = relayoutWhenNewElementsAdded; }
+    }
+
+    // =========================================================================
+    // Tools > Diff & Merge Configuration
+    // =========================================================================
+    public static class DiffMergeConfig {
+        private String contextLines = "4"; // "1", "2", "4", "8", "Disable"
+        private boolean goToNextFileAfterLastChange = true;
+        private String includeDiffsInNavigationHistory = "Until the diff is closed"; // "Until the diff is closed", "Always", "Never"
+        private boolean autoApplyNonConflictingChanges = false;
+        private boolean autoResolveConflictsInImports = false;
+        private boolean highlightModifiedLinesInGutter = true;
+
+        public DiffMergeConfig() {}
+
+        public DiffMergeConfig copy() {
+            DiffMergeConfig c = new DiffMergeConfig();
+            c.contextLines = this.contextLines;
+            c.goToNextFileAfterLastChange = this.goToNextFileAfterLastChange;
+            c.includeDiffsInNavigationHistory = this.includeDiffsInNavigationHistory;
+            c.autoApplyNonConflictingChanges = this.autoApplyNonConflictingChanges;
+            c.autoResolveConflictsInImports = this.autoResolveConflictsInImports;
+            c.highlightModifiedLinesInGutter = this.highlightModifiedLinesInGutter;
+            return c;
+        }
+
+        public String getContextLines() { return contextLines != null ? contextLines : "4"; }
+        public void setContextLines(String contextLines) { this.contextLines = contextLines != null ? contextLines : "4"; }
+
+        public boolean isGoToNextFileAfterLastChange() { return goToNextFileAfterLastChange; }
+        public void setGoToNextFileAfterLastChange(boolean goToNextFileAfterLastChange) { this.goToNextFileAfterLastChange = goToNextFileAfterLastChange; }
+
+        public String getIncludeDiffsInNavigationHistory() {
+            return includeDiffsInNavigationHistory != null ? includeDiffsInNavigationHistory : "Until the diff is closed";
+        }
+        public void setIncludeDiffsInNavigationHistory(String includeDiffsInNavigationHistory) {
+            this.includeDiffsInNavigationHistory = includeDiffsInNavigationHistory != null ? includeDiffsInNavigationHistory : "Until the diff is closed";
+        }
+
+        public boolean isAutoApplyNonConflictingChanges() { return autoApplyNonConflictingChanges; }
+        public void setAutoApplyNonConflictingChanges(boolean autoApplyNonConflictingChanges) { this.autoApplyNonConflictingChanges = autoApplyNonConflictingChanges; }
+
+        public boolean isAutoResolveConflictsInImports() { return autoResolveConflictsInImports; }
+        public void setAutoResolveConflictsInImports(boolean autoResolveConflictsInImports) { this.autoResolveConflictsInImports = autoResolveConflictsInImports; }
+
+        public boolean isHighlightModifiedLinesInGutter() { return highlightModifiedLinesInGutter; }
+        public void setHighlightModifiedLinesInGutter(boolean highlightModifiedLinesInGutter) { this.highlightModifiedLinesInGutter = highlightModifiedLinesInGutter; }
+    }
+
+    // =========================================================================
+    // Tools > Diff & Merge > External Diff Tools Configuration
+    // =========================================================================
+    public static class ExternalDiffToolsConfig {
+        private boolean enableExternalTools = false;
+        private List<ExternalToolDefinition> customTools = new ArrayList<>();
+        private List<FileTypeToolAssociation> associations = new ArrayList<>(defaultAssociations());
+
+        public static List<FileTypeToolAssociation> defaultAssociations() {
+            return List.of(new FileTypeToolAssociation("Default", "Built-in", "Built-in"));
+        }
+
+        public ExternalDiffToolsConfig() {}
+
+        public ExternalDiffToolsConfig copy() {
+            ExternalDiffToolsConfig c = new ExternalDiffToolsConfig();
+            c.enableExternalTools = this.enableExternalTools;
+            if (this.customTools != null) {
+                c.customTools = new ArrayList<>();
+                for (ExternalToolDefinition def : this.customTools) {
+                    if (def != null) c.customTools.add(def.copy());
+                }
+            }
+            if (this.associations != null) {
+                c.associations = new ArrayList<>();
+                for (FileTypeToolAssociation assoc : this.associations) {
+                    if (assoc != null) c.associations.add(assoc.copy());
+                }
+            }
+            return c;
+        }
+
+        public boolean isEnableExternalTools() { return enableExternalTools; }
+        public void setEnableExternalTools(boolean enableExternalTools) { this.enableExternalTools = enableExternalTools; }
+
+        public List<ExternalToolDefinition> getCustomTools() {
+            if (customTools == null) customTools = new ArrayList<>();
+            return customTools;
+        }
+        public void setCustomTools(List<ExternalToolDefinition> customTools) {
+            this.customTools = customTools != null ? new ArrayList<>(customTools) : new ArrayList<>();
+        }
+
+        public List<FileTypeToolAssociation> getAssociations() {
+            if (associations == null || associations.isEmpty()) associations = new ArrayList<>(defaultAssociations());
+            return associations;
+        }
+        public void setAssociations(List<FileTypeToolAssociation> associations) {
+            this.associations = associations != null ? new ArrayList<>(associations) : new ArrayList<>(defaultAssociations());
+        }
+    }
+
+    public static class ExternalToolDefinition {
+        private String name = "";
+        private String programPath = "";
+        private String diffParameters = "%1 %2";
+        private String mergeParameters = "%1 %2 %3 %4";
+
+        public ExternalToolDefinition() {}
+
+        public ExternalToolDefinition(String name, String programPath, String diffParameters, String mergeParameters) {
+            this.name = name;
+            this.programPath = programPath;
+            this.diffParameters = diffParameters;
+            this.mergeParameters = mergeParameters;
+        }
+
+        public ExternalToolDefinition copy() {
+            return new ExternalToolDefinition(name, programPath, diffParameters, mergeParameters);
+        }
+
+        public String getName() { return name != null ? name : ""; }
+        public void setName(String name) { this.name = name != null ? name : ""; }
+
+        public String getProgramPath() { return programPath != null ? programPath : ""; }
+        public void setProgramPath(String programPath) { this.programPath = programPath != null ? programPath : ""; }
+
+        public String getDiffParameters() { return diffParameters != null ? diffParameters : "%1 %2"; }
+        public void setDiffParameters(String diffParameters) { this.diffParameters = diffParameters != null ? diffParameters : "%1 %2"; }
+
+        public String getMergeParameters() { return mergeParameters != null ? mergeParameters : "%1 %2 %3 %4"; }
+        public void setMergeParameters(String mergeParameters) { this.mergeParameters = mergeParameters != null ? mergeParameters : "%1 %2 %3 %4"; }
+    }
+
+    public static class FileTypeToolAssociation {
+        private String fileType = "Default";
+        private String diffTool = "Built-in";
+        private String mergeTool = "Built-in";
+
+        public FileTypeToolAssociation() {}
+
+        public FileTypeToolAssociation(String fileType, String diffTool, String mergeTool) {
+            this.fileType = fileType;
+            this.diffTool = diffTool;
+            this.mergeTool = mergeTool;
+        }
+
+        public FileTypeToolAssociation copy() {
+            return new FileTypeToolAssociation(fileType, diffTool, mergeTool);
+        }
+
+        public String getFileType() { return fileType != null ? fileType : "Default"; }
+        public void setFileType(String fileType) { this.fileType = fileType != null ? fileType : "Default"; }
+
+        public String getDiffTool() { return diffTool != null ? diffTool : "Built-in"; }
+        public void setDiffTool(String diffTool) { this.diffTool = diffTool != null ? diffTool : "Built-in"; }
+
+        public String getMergeTool() { return mergeTool != null ? mergeTool : "Built-in"; }
+        public void setMergeTool(String mergeTool) { this.mergeTool = mergeTool != null ? mergeTool : "Built-in"; }
+    }
+
+    // =========================================================================
+    // Tools > External Tools Configuration
+    // =========================================================================
+    public static class ExternalToolsConfig {
+        private List<ExternalToolItem> tools = new ArrayList<>();
+
+        public ExternalToolsConfig() {}
+
+        public ExternalToolsConfig copy() {
+            ExternalToolsConfig c = new ExternalToolsConfig();
+            if (this.tools != null) {
+                c.tools = new ArrayList<>();
+                for (ExternalToolItem item : this.tools) {
+                    if (item != null) c.tools.add(item.copy());
+                }
+            }
+            return c;
+        }
+
+        public List<ExternalToolItem> getTools() {
+            if (tools == null) tools = new ArrayList<>();
+            return tools;
+        }
+        public void setTools(List<ExternalToolItem> tools) {
+            this.tools = tools != null ? new ArrayList<>(tools) : new ArrayList<>();
+        }
+    }
+
+    public static class ExternalToolItem {
+        private String name = "";
+        private String group = "External Tools";
+        private String description = "";
+        private String program = "";
+        private String arguments = "";
+        private String workingDirectory = "";
+        private boolean synchronizeFiles = true;
+        private boolean openConsole = true;
+        private boolean consoleActiveOnStdout = false;
+        private boolean consoleActiveOnStderr = false;
+        private String outputFilters = "";
+
+        public ExternalToolItem() {}
+
+        public ExternalToolItem(String name, String group, String description, String program, String arguments, String workingDirectory) {
+            this.name = name;
+            this.group = group;
+            this.description = description;
+            this.program = program;
+            this.arguments = arguments;
+            this.workingDirectory = workingDirectory;
+        }
+
+        public ExternalToolItem copy() {
+            ExternalToolItem c = new ExternalToolItem();
+            c.name = this.name;
+            c.group = this.group;
+            c.description = this.description;
+            c.program = this.program;
+            c.arguments = this.arguments;
+            c.workingDirectory = this.workingDirectory;
+            c.synchronizeFiles = this.synchronizeFiles;
+            c.openConsole = this.openConsole;
+            c.consoleActiveOnStdout = this.consoleActiveOnStdout;
+            c.consoleActiveOnStderr = this.consoleActiveOnStderr;
+            c.outputFilters = this.outputFilters;
+            return c;
+        }
+
+        public String getName() { return name != null ? name : ""; }
+        public void setName(String name) { this.name = name != null ? name : ""; }
+
+        public String getGroup() { return group != null ? group : "External Tools"; }
+        public void setGroup(String group) { this.group = group != null ? group : "External Tools"; }
+
+        public String getDescription() { return description != null ? description : ""; }
+        public void setDescription(String description) { this.description = description != null ? description : ""; }
+
+        public String getProgram() { return program != null ? program : ""; }
+        public void setProgram(String program) { this.program = program != null ? program : ""; }
+
+        public String getArguments() { return arguments != null ? arguments : ""; }
+        public void setArguments(String arguments) { this.arguments = arguments != null ? arguments : ""; }
+
+        public String getWorkingDirectory() { return workingDirectory != null ? workingDirectory : ""; }
+        public void setWorkingDirectory(String workingDirectory) { this.workingDirectory = workingDirectory != null ? workingDirectory : ""; }
+
+        public boolean isSynchronizeFiles() { return synchronizeFiles; }
+        public void setSynchronizeFiles(boolean synchronizeFiles) { this.synchronizeFiles = synchronizeFiles; }
+
+        public boolean isOpenConsole() { return openConsole; }
+        public void setOpenConsole(boolean openConsole) { this.openConsole = openConsole; }
+
+        public boolean isConsoleActiveOnStdout() { return consoleActiveOnStdout; }
+        public void setConsoleActiveOnStdout(boolean consoleActiveOnStdout) { this.consoleActiveOnStdout = consoleActiveOnStdout; }
+
+        public boolean isConsoleActiveOnStderr() { return consoleActiveOnStderr; }
+        public void setConsoleActiveOnStderr(boolean consoleActiveOnStderr) { this.consoleActiveOnStderr = consoleActiveOnStderr; }
+
+        public String getOutputFilters() { return outputFilters != null ? outputFilters : ""; }
+        public void setOutputFilters(String outputFilters) { this.outputFilters = outputFilters != null ? outputFilters : ""; }
+    }
+
+    // =========================================================================
+    // Tools > MCP Server Configuration
+    // =========================================================================
+    public static class McpServerConfig {
+        private boolean enableMcpServer = false;
+        private Set<String> enabledExposedTools = new HashSet<>(defaultExposedTools());
+
+        public static Set<String> defaultExposedTools() {
+            return new HashSet<>(List.of(
+                    "AnalysisToolset.build_project",
+                    "AnalysisToolset.get_file_problems",
+                    "AnalysisToolset.get_project_dependancies",
+                    "AnalysisToolset.get_project_modules",
+                    "CodeInsightToolset.get_symbol_info",
+                    "ExecutionToolset.execute_run_configuration",
+                    "ExecutionToolset.get_run_configurations",
+                    "FileToolset.create_new_file",
+                    "FileToolset.find_files_by_glob",
+                    "FileToolset.find_files_by_name_keyword",
+                    "FileToolset.get_all_open_file_paths",
+                    "FileToolset.list_directory_tree",
+                    "FileToolset.open_file_in_editor",
+                    "FormattingToolset.reformat_file",
+                    "ReadToolset.read_file",
+                    "RefactoringToolset.rename_refactoring",
+                    "SearchToolset.search_file",
+                    "SearchToolset.search_regex",
+                    "SearchToolset.search_symbol",
+                    "SearchToolset.search_text",
+                    "TerminalToolset.execute_terminal_command",
+                    "TextToolset.get_file_text_by_path",
+                    "TextToolset.replace_text_in_file",
+                    "TextToolset.search_in_files_by_regex",
+                    "TextToolset.search_in_files_by_text",
+                    "VcsToolset.get_repositories"
+            ));
+        }
+
+        public McpServerConfig() {}
+
+        public McpServerConfig copy() {
+            McpServerConfig c = new McpServerConfig();
+            c.enableMcpServer = this.enableMcpServer;
+            if (this.enabledExposedTools != null) {
+                c.enabledExposedTools = new HashSet<>(this.enabledExposedTools);
+            }
+            return c;
+        }
+
+        public boolean isEnableMcpServer() { return enableMcpServer; }
+        public void setEnableMcpServer(boolean enableMcpServer) { this.enableMcpServer = enableMcpServer; }
+
+        public Set<String> getEnabledExposedTools() {
+            if (enabledExposedTools == null) enabledExposedTools = new HashSet<>(defaultExposedTools());
+            return enabledExposedTools;
+        }
+        public void setEnabledExposedTools(Set<String> enabledExposedTools) {
+            this.enabledExposedTools = enabledExposedTools != null ? new HashSet<>(enabledExposedTools) : new HashSet<>(defaultExposedTools());
+        }
+    }
+
+    // =========================================================================
+    // Tools > Rsync Configuration
+    // =========================================================================
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class RsyncConfig {
+        private String rsyncExecutablePath = "rsync";
+        private String rsyncOptions = "-zar";
+        private String shellExecutablePath = "ssh";
+
+        public RsyncConfig() {}
+
+        public RsyncConfig copy() {
+            RsyncConfig c = new RsyncConfig();
+            c.rsyncExecutablePath = this.rsyncExecutablePath;
+            c.rsyncOptions = this.rsyncOptions;
+            c.shellExecutablePath = this.shellExecutablePath;
+            return c;
+        }
+
+        public String getRsyncExecutablePath() { return rsyncExecutablePath; }
+        public void setRsyncExecutablePath(String rsyncExecutablePath) {
+            this.rsyncExecutablePath = rsyncExecutablePath != null ? rsyncExecutablePath : "rsync";
+        }
+
+        public String getRsyncOptions() { return rsyncOptions; }
+        public void setRsyncOptions(String rsyncOptions) {
+            this.rsyncOptions = rsyncOptions != null ? rsyncOptions : "-zar";
+        }
+
+        public String getShellExecutablePath() { return shellExecutablePath; }
+        public void setShellExecutablePath(String shellExecutablePath) {
+            this.shellExecutablePath = shellExecutablePath != null ? shellExecutablePath : "ssh";
+        }
+    }
+
+    // =========================================================================
+    // Tools > SSH Configurations
+    // =========================================================================
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class SshConfigurationEntry {
+        private String id = UUID.randomUUID().toString();
+        private String name = "localhost";
+        private boolean visibleOnlyForThisProject = false;
+        private String host = "localhost";
+        private int port = 22;
+        private String username = System.getProperty("user.name", "root");
+        private String authType = "Password";
+        private String password = "";
+        private boolean savePassword = true;
+        private String privateKeyPath = "";
+        private String passphrase = "";
+        private boolean parseConfigFile = true;
+
+        private boolean sendKeepAlive = true;
+        private int keepAliveIntervalSec = 300;
+        private boolean strictHostKeyChecking = true;
+        private String strictHostKeyMode = "Ask";
+        private boolean hashHostsInKnownHosts = false;
+
+        private boolean useGlobalProxy = false;
+        private String proxyType = "No proxy";
+        private String proxyHost = "";
+        private int proxyPort = 1080;
+        private String proxyAuthType = "No authentication";
+        private String proxyUser = "";
+        private String proxyPassword = "";
+
+        public SshConfigurationEntry() {}
+
+        public SshConfigurationEntry(String name, String host, int port, String username, String authType) {
+            this.id = UUID.randomUUID().toString();
+            this.name = name;
+            this.host = host;
+            this.port = port;
+            this.username = username;
+            this.authType = authType;
+        }
+
+        public SshConfigurationEntry copy() {
+            SshConfigurationEntry c = new SshConfigurationEntry();
+            c.id = this.id;
+            c.name = this.name;
+            c.visibleOnlyForThisProject = this.visibleOnlyForThisProject;
+            c.host = this.host;
+            c.port = this.port;
+            c.username = this.username;
+            c.authType = this.authType;
+            c.password = this.password;
+            c.savePassword = this.savePassword;
+            c.privateKeyPath = this.privateKeyPath;
+            c.passphrase = this.passphrase;
+            c.parseConfigFile = this.parseConfigFile;
+            c.sendKeepAlive = this.sendKeepAlive;
+            c.keepAliveIntervalSec = this.keepAliveIntervalSec;
+            c.strictHostKeyChecking = this.strictHostKeyChecking;
+            c.strictHostKeyMode = this.strictHostKeyMode;
+            c.hashHostsInKnownHosts = this.hashHostsInKnownHosts;
+            c.useGlobalProxy = this.useGlobalProxy;
+            c.proxyType = this.proxyType;
+            c.proxyHost = this.proxyHost;
+            c.proxyPort = this.proxyPort;
+            c.proxyAuthType = this.proxyAuthType;
+            c.proxyUser = this.proxyUser;
+            c.proxyPassword = this.proxyPassword;
+            return c;
+        }
+
+        @JsonIgnore
+        public String getDisplayName() {
+            String u = (username != null && !username.isBlank()) ? username : "user";
+            String h = (host != null && !host.isBlank()) ? host : "localhost";
+            String a = (authType != null ? authType.toLowerCase() : "password");
+            return u + "@" + h + ":" + port + " " + a;
+        }
+
+        public String getId() { return id; }
+        public void setId(String id) { this.id = id; }
+
+        public String getName() { return name; }
+        public void setName(String name) { this.name = name; }
+
+        public boolean isVisibleOnlyForThisProject() { return visibleOnlyForThisProject; }
+        public void setVisibleOnlyForThisProject(boolean visibleOnlyForThisProject) { this.visibleOnlyForThisProject = visibleOnlyForThisProject; }
+
+        public String getHost() { return host; }
+        public void setHost(String host) { this.host = host; }
+
+        public int getPort() { return port; }
+        public void setPort(int port) { this.port = port; }
+
+        public String getUsername() { return username; }
+        public void setUsername(String username) { this.username = username; }
+
+        public String getAuthType() { return authType; }
+        public void setAuthType(String authType) { this.authType = authType; }
+
+        public String getPassword() { return password; }
+        public void setPassword(String password) { this.password = password; }
+
+        public boolean isSavePassword() { return savePassword; }
+        public void setSavePassword(boolean savePassword) { this.savePassword = savePassword; }
+
+        public String getPrivateKeyPath() { return privateKeyPath; }
+        public void setPrivateKeyPath(String privateKeyPath) { this.privateKeyPath = privateKeyPath; }
+
+        public String getPassphrase() { return passphrase; }
+        public void setPassphrase(String passphrase) { this.passphrase = passphrase; }
+
+        public boolean isParseConfigFile() { return parseConfigFile; }
+        public void setParseConfigFile(boolean parseConfigFile) { this.parseConfigFile = parseConfigFile; }
+
+        public boolean isSendKeepAlive() { return sendKeepAlive; }
+        public void setSendKeepAlive(boolean sendKeepAlive) { this.sendKeepAlive = sendKeepAlive; }
+
+        public int getKeepAliveIntervalSec() { return keepAliveIntervalSec; }
+        public void setKeepAliveIntervalSec(int keepAliveIntervalSec) { this.keepAliveIntervalSec = keepAliveIntervalSec; }
+
+        public boolean isStrictHostKeyChecking() { return strictHostKeyChecking; }
+        public void setStrictHostKeyChecking(boolean strictHostKeyChecking) { this.strictHostKeyChecking = strictHostKeyChecking; }
+
+        public String getStrictHostKeyMode() { return strictHostKeyMode; }
+        public void setStrictHostKeyMode(String strictHostKeyMode) { this.strictHostKeyMode = strictHostKeyMode; }
+
+        public boolean isHashHostsInKnownHosts() { return hashHostsInKnownHosts; }
+        public void setHashHostsInKnownHosts(boolean hashHostsInKnownHosts) { this.hashHostsInKnownHosts = hashHostsInKnownHosts; }
+
+        public boolean isUseGlobalProxy() { return useGlobalProxy; }
+        public void setUseGlobalProxy(boolean useGlobalProxy) { this.useGlobalProxy = useGlobalProxy; }
+
+        public String getProxyType() { return proxyType; }
+        public void setProxyType(String proxyType) { this.proxyType = proxyType; }
+
+        public String getProxyHost() { return proxyHost; }
+        public void setProxyHost(String proxyHost) { this.proxyHost = proxyHost; }
+
+        public int getProxyPort() { return proxyPort; }
+        public void setProxyPort(int proxyPort) { this.proxyPort = proxyPort; }
+
+        public String getProxyAuthType() { return proxyAuthType; }
+        public void setProxyAuthType(String proxyAuthType) { this.proxyAuthType = proxyAuthType; }
+
+        public String getProxyUser() { return proxyUser; }
+        public void setProxyUser(String proxyUser) { this.proxyUser = proxyUser; }
+
+        public String getProxyPassword() { return proxyPassword; }
+        public void setProxyPassword(String proxyPassword) { this.proxyPassword = proxyPassword; }
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class SshConfigurationsConfig {
+        private List<SshConfigurationEntry> configurations = new ArrayList<>();
+
+        public SshConfigurationsConfig() {}
+
+        public SshConfigurationsConfig copy() {
+            SshConfigurationsConfig c = new SshConfigurationsConfig();
+            if (this.configurations != null) {
+                for (SshConfigurationEntry entry : this.configurations) {
+                    c.configurations.add(entry.copy());
+                }
+            }
+            return c;
+        }
+
+        public List<SshConfigurationEntry> getConfigurations() {
+            if (configurations == null) configurations = new ArrayList<>();
+            return configurations;
+        }
+        public void setConfigurations(List<SshConfigurationEntry> configurations) {
+            this.configurations = configurations != null ? new ArrayList<>(configurations) : new ArrayList<>();
+        }
+    }
+
+    // =========================================================================
+    // Tools > Terminal Configuration
+    // =========================================================================
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class TerminalConfig {
+        private String terminalEngine = "Reworked 2025";
+        private boolean showCompletionPopup = true;
+        private String completionTrigger = "Only for parameters";
+        private boolean showCompletionShortcutEnabled = true;
+        private String completionShortcut = "Ctrl+Space";
+        private String insertSuggestionWith = "Enter";
+
+        private String startDirectory = "";
+        private String environmentVariables = "";
+
+        private String font = "JetBrains Mono";
+        private String fallbackFont = "JetBrains Mono";
+        private double fontSize = 13.0;
+        private double lineHeight = 1.0;
+        private double columnWidth = 1.0;
+
+        private String shellPath = System.getProperty("os.name", "").toLowerCase().contains("win") ? "powershell.exe" : "/bin/bash";
+        private String defaultTabName = "Local";
+        private boolean useApplicationTitleAsTabName = true;
+        private String applicationTitleMode = "When command is running";
+        private boolean enforceMinimumContrastRatio = true;
+        private double minimumContrastRatio = 4.5;
+        private boolean showSeparatorsBetweenExecutedCommands = true;
+        private boolean audibleBell = true;
+        private boolean closeSessionWhenItEnds = true;
+        private boolean mouseReporting = true;
+        private boolean moveFocusToEditor = false;
+        private String moveFocusKey = "Escape";
+        private boolean pasteOnMiddleMouseButtonClick = true;
+        private boolean overrideIdeShortcuts = true;
+        private boolean shellIntegration = true;
+        private boolean highlightHyperlinks = true;
+        private String cursorShape = "Block";
+
+        public TerminalConfig() {}
+
+        public TerminalConfig copy() {
+            TerminalConfig c = new TerminalConfig();
+            c.terminalEngine = this.terminalEngine;
+            c.showCompletionPopup = this.showCompletionPopup;
+            c.completionTrigger = this.completionTrigger;
+            c.showCompletionShortcutEnabled = this.showCompletionShortcutEnabled;
+            c.completionShortcut = this.completionShortcut;
+            c.insertSuggestionWith = this.insertSuggestionWith;
+            c.startDirectory = this.startDirectory;
+            c.environmentVariables = this.environmentVariables;
+            c.font = this.font;
+            c.fallbackFont = this.fallbackFont;
+            c.fontSize = this.fontSize;
+            c.lineHeight = this.lineHeight;
+            c.columnWidth = this.columnWidth;
+            c.shellPath = this.shellPath;
+            c.defaultTabName = this.defaultTabName;
+            c.useApplicationTitleAsTabName = this.useApplicationTitleAsTabName;
+            c.applicationTitleMode = this.applicationTitleMode;
+            c.enforceMinimumContrastRatio = this.enforceMinimumContrastRatio;
+            c.minimumContrastRatio = this.minimumContrastRatio;
+            c.showSeparatorsBetweenExecutedCommands = this.showSeparatorsBetweenExecutedCommands;
+            c.audibleBell = this.audibleBell;
+            c.closeSessionWhenItEnds = this.closeSessionWhenItEnds;
+            c.mouseReporting = this.mouseReporting;
+            c.moveFocusToEditor = this.moveFocusToEditor;
+            c.moveFocusKey = this.moveFocusKey;
+            c.pasteOnMiddleMouseButtonClick = this.pasteOnMiddleMouseButtonClick;
+            c.overrideIdeShortcuts = this.overrideIdeShortcuts;
+            c.shellIntegration = this.shellIntegration;
+            c.highlightHyperlinks = this.highlightHyperlinks;
+            c.cursorShape = this.cursorShape;
+            return c;
+        }
+
+        public String getTerminalEngine() { return terminalEngine; }
+        public void setTerminalEngine(String terminalEngine) { this.terminalEngine = terminalEngine; }
+
+        public boolean isShowCompletionPopup() { return showCompletionPopup; }
+        public void setShowCompletionPopup(boolean showCompletionPopup) { this.showCompletionPopup = showCompletionPopup; }
+
+        public String getCompletionTrigger() { return completionTrigger; }
+        public void setCompletionTrigger(String completionTrigger) { this.completionTrigger = completionTrigger; }
+
+        public boolean isShowCompletionShortcutEnabled() { return showCompletionShortcutEnabled; }
+        public void setShowCompletionShortcutEnabled(boolean showCompletionShortcutEnabled) { this.showCompletionShortcutEnabled = showCompletionShortcutEnabled; }
+
+        public String getCompletionShortcut() { return completionShortcut; }
+        public void setCompletionShortcut(String completionShortcut) { this.completionShortcut = completionShortcut; }
+
+        public String getInsertSuggestionWith() { return insertSuggestionWith; }
+        public void setInsertSuggestionWith(String insertSuggestionWith) { this.insertSuggestionWith = insertSuggestionWith; }
+
+        public String getStartDirectory() { return startDirectory; }
+        public void setStartDirectory(String startDirectory) { this.startDirectory = startDirectory; }
+
+        public String getEnvironmentVariables() { return environmentVariables; }
+        public void setEnvironmentVariables(String environmentVariables) { this.environmentVariables = environmentVariables; }
+
+        public String getFont() { return font; }
+        public void setFont(String font) { this.font = font; }
+
+        public String getFallbackFont() { return fallbackFont; }
+        public void setFallbackFont(String fallbackFont) { this.fallbackFont = fallbackFont; }
+
+        public double getFontSize() { return fontSize; }
+        public void setFontSize(double fontSize) { this.fontSize = fontSize; }
+
+        public double getLineHeight() { return lineHeight; }
+        public void setLineHeight(double lineHeight) { this.lineHeight = lineHeight; }
+
+        public double getColumnWidth() { return columnWidth; }
+        public void setColumnWidth(double columnWidth) { this.columnWidth = columnWidth; }
+
+        public String getShellPath() { return shellPath; }
+        public void setShellPath(String shellPath) { this.shellPath = shellPath; }
+
+        public String getDefaultTabName() { return defaultTabName; }
+        public void setDefaultTabName(String defaultTabName) { this.defaultTabName = defaultTabName; }
+
+        public boolean isUseApplicationTitleAsTabName() { return useApplicationTitleAsTabName; }
+        public void setUseApplicationTitleAsTabName(boolean useApplicationTitleAsTabName) { this.useApplicationTitleAsTabName = useApplicationTitleAsTabName; }
+
+        public String getApplicationTitleMode() { return applicationTitleMode; }
+        public void setApplicationTitleMode(String applicationTitleMode) { this.applicationTitleMode = applicationTitleMode; }
+
+        public boolean isEnforceMinimumContrastRatio() { return enforceMinimumContrastRatio; }
+        public void setEnforceMinimumContrastRatio(boolean enforceMinimumContrastRatio) { this.enforceMinimumContrastRatio = enforceMinimumContrastRatio; }
+
+        public double getMinimumContrastRatio() { return minimumContrastRatio; }
+        public void setMinimumContrastRatio(double minimumContrastRatio) { this.minimumContrastRatio = minimumContrastRatio; }
+
+        public boolean isShowSeparatorsBetweenExecutedCommands() { return showSeparatorsBetweenExecutedCommands; }
+        public void setShowSeparatorsBetweenExecutedCommands(boolean showSeparatorsBetweenExecutedCommands) { this.showSeparatorsBetweenExecutedCommands = showSeparatorsBetweenExecutedCommands; }
+
+        public boolean isAudibleBell() { return audibleBell; }
+        public void setAudibleBell(boolean audibleBell) { this.audibleBell = audibleBell; }
+
+        public boolean isCloseSessionWhenItEnds() { return closeSessionWhenItEnds; }
+        public void setCloseSessionWhenItEnds(boolean closeSessionWhenItEnds) { this.closeSessionWhenItEnds = closeSessionWhenItEnds; }
+
+        public boolean isMouseReporting() { return mouseReporting; }
+        public void setMouseReporting(boolean mouseReporting) { this.mouseReporting = mouseReporting; }
+
+        public boolean isMoveFocusToEditor() { return moveFocusToEditor; }
+        public void setMoveFocusToEditor(boolean moveFocusToEditor) { this.moveFocusToEditor = moveFocusToEditor; }
+
+        public String getMoveFocusKey() { return moveFocusKey; }
+        public void setMoveFocusKey(String moveFocusKey) { this.moveFocusKey = moveFocusKey; }
+
+        public boolean isPasteOnMiddleMouseButtonClick() { return pasteOnMiddleMouseButtonClick; }
+        public void setPasteOnMiddleMouseButtonClick(boolean pasteOnMiddleMouseButtonClick) { this.pasteOnMiddleMouseButtonClick = pasteOnMiddleMouseButtonClick; }
+
+        public boolean isOverrideIdeShortcuts() { return overrideIdeShortcuts; }
+        public void setOverrideIdeShortcuts(boolean overrideIdeShortcuts) { this.overrideIdeShortcuts = overrideIdeShortcuts; }
+
+        public boolean isShellIntegration() { return shellIntegration; }
+        public void setShellIntegration(boolean shellIntegration) { this.shellIntegration = shellIntegration; }
+
+        public boolean isHighlightHyperlinks() { return highlightHyperlinks; }
+        public void setHighlightHyperlinks(boolean highlightHyperlinks) { this.highlightHyperlinks = highlightHyperlinks; }
+
+        public String getCursorShape() { return cursorShape; }
+        public void setCursorShape(String cursorShape) { this.cursorShape = cursorShape; }
+    }
+
+    // =========================================================================
+    // Tools > Web Browsers and Preview Configuration
+    // =========================================================================
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class WebBrowserItem {
+        private String id = UUID.randomUUID().toString();
+        private boolean active = true;
+        private String name = "Chrome";
+        private String family = "Chrome";
+        private String path = "google-chrome";
+
+        public WebBrowserItem() {}
+
+        public WebBrowserItem(boolean active, String name, String family, String path) {
+            this.id = UUID.randomUUID().toString();
+            this.active = active;
+            this.name = name;
+            this.family = family;
+            this.path = path;
+        }
+
+        public WebBrowserItem copy() {
+            WebBrowserItem c = new WebBrowserItem();
+            c.id = this.id;
+            c.active = this.active;
+            c.name = this.name;
+            c.family = this.family;
+            c.path = this.path;
+            return c;
+        }
+
+        public String getId() { return id; }
+        public void setId(String id) { this.id = id; }
+
+        public boolean isActive() { return active; }
+        public void setActive(boolean active) { this.active = active; }
+
+        public String getName() { return name; }
+        public void setName(String name) { this.name = name; }
+
+        public String getFamily() { return family; }
+        public void setFamily(String family) { this.family = family; }
+
+        public String getPath() { return path; }
+        public void setPath(String path) { this.path = path; }
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class WebBrowsersConfig {
+        private List<WebBrowserItem> browsers = new ArrayList<>(defaultBrowsers());
+        private String defaultBrowser = "System default";
+        private String customBrowserPath = "";
+        private boolean showPopupForHtml = true;
+        private boolean showPopupForXml = false;
+        private String reloadPageInBrowser = "On Save";
+        private String reloadPageInBuiltInPreview = "On Save";
+        private int builtInServerPort = 63342;
+        private boolean acceptExternalConnections = false;
+        private boolean allowUnsignedRequests = false;
+
+        public static List<WebBrowserItem> defaultBrowsers() {
+            List<WebBrowserItem> list = new ArrayList<>();
+            list.add(new WebBrowserItem(true, "Chrome", "Chrome", "google-chrome"));
+            list.add(new WebBrowserItem(true, "Firefox", "Firefox", "firefox"));
+            list.add(new WebBrowserItem(false, "Safari", "Safari", ""));
+            list.add(new WebBrowserItem(false, "Opera", "Chrome", "opera"));
+            list.add(new WebBrowserItem(false, "Internet Explorer", "Internet Explorer", ""));
+            list.add(new WebBrowserItem(false, "Edge", "Chrome", "microsoft-edge"));
+            return list;
+        }
+
+        public WebBrowsersConfig() {}
+
+        public WebBrowsersConfig copy() {
+            WebBrowsersConfig c = new WebBrowsersConfig();
+            c.browsers = new ArrayList<>();
+            if (this.browsers != null) {
+                for (WebBrowserItem b : this.browsers) c.browsers.add(b.copy());
+            }
+            c.defaultBrowser = this.defaultBrowser;
+            c.customBrowserPath = this.customBrowserPath;
+            c.showPopupForHtml = this.showPopupForHtml;
+            c.showPopupForXml = this.showPopupForXml;
+            c.reloadPageInBrowser = this.reloadPageInBrowser;
+            c.reloadPageInBuiltInPreview = this.reloadPageInBuiltInPreview;
+            c.builtInServerPort = this.builtInServerPort;
+            c.acceptExternalConnections = this.acceptExternalConnections;
+            c.allowUnsignedRequests = this.allowUnsignedRequests;
+            return c;
+        }
+
+        public List<WebBrowserItem> getBrowsers() {
+            if (browsers == null) browsers = new ArrayList<>(defaultBrowsers());
+            return browsers;
+        }
+        public void setBrowsers(List<WebBrowserItem> browsers) {
+            this.browsers = browsers != null ? new ArrayList<>(browsers) : new ArrayList<>(defaultBrowsers());
+        }
+
+        public String getDefaultBrowser() { return defaultBrowser != null ? defaultBrowser : "System default"; }
+        public void setDefaultBrowser(String defaultBrowser) { this.defaultBrowser = defaultBrowser; }
+
+        public String getCustomBrowserPath() { return customBrowserPath != null ? customBrowserPath : ""; }
+        public void setCustomBrowserPath(String customBrowserPath) { this.customBrowserPath = customBrowserPath; }
+
+        public boolean isShowPopupForHtml() { return showPopupForHtml; }
+        public void setShowPopupForHtml(boolean showPopupForHtml) { this.showPopupForHtml = showPopupForHtml; }
+
+        public boolean isShowPopupForXml() { return showPopupForXml; }
+        public void setShowPopupForXml(boolean showPopupForXml) { this.showPopupForXml = showPopupForXml; }
+
+        public String getReloadPageInBrowser() { return reloadPageInBrowser != null ? reloadPageInBrowser : "On Save"; }
+        public void setReloadPageInBrowser(String reloadPageInBrowser) { this.reloadPageInBrowser = reloadPageInBrowser; }
+
+        public String getReloadPageInBuiltInPreview() { return reloadPageInBuiltInPreview != null ? reloadPageInBuiltInPreview : "On Save"; }
+        public void setReloadPageInBuiltInPreview(String reloadPageInBuiltInPreview) { this.reloadPageInBuiltInPreview = reloadPageInBuiltInPreview; }
+
+        public int getBuiltInServerPort() { return builtInServerPort; }
+        public void setBuiltInServerPort(int builtInServerPort) { this.builtInServerPort = builtInServerPort; }
+
+        public boolean isAcceptExternalConnections() { return acceptExternalConnections; }
+        public void setAcceptExternalConnections(boolean acceptExternalConnections) { this.acceptExternalConnections = acceptExternalConnections; }
+
+        public boolean isAllowUnsignedRequests() { return allowUnsignedRequests; }
+        public void setAllowUnsignedRequests(boolean allowUnsignedRequests) { this.allowUnsignedRequests = allowUnsignedRequests; }
+    }
+
+    // =========================================================================
+    // Tools > XPath Viewer Configuration
+    // =========================================================================
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class XPathViewerConfig {
+        private boolean scrollFirstHitIntoVisibleArea = true;
+        private boolean useNodeAtCursorAsContextNode = true;
+        private boolean highlightOnlyStartTag = true;
+        private boolean addErrorStripeMarkers = true;
+        private String highlightColor = "#FFD578";
+        private String contextNodeColor = "#C2FFD4";
+
+        public XPathViewerConfig() {}
+
+        public XPathViewerConfig copy() {
+            XPathViewerConfig c = new XPathViewerConfig();
+            c.scrollFirstHitIntoVisibleArea = this.scrollFirstHitIntoVisibleArea;
+            c.useNodeAtCursorAsContextNode = this.useNodeAtCursorAsContextNode;
+            c.highlightOnlyStartTag = this.highlightOnlyStartTag;
+            c.addErrorStripeMarkers = this.addErrorStripeMarkers;
+            c.highlightColor = this.highlightColor;
+            c.contextNodeColor = this.contextNodeColor;
+            return c;
+        }
+
+        public boolean isScrollFirstHitIntoVisibleArea() { return scrollFirstHitIntoVisibleArea; }
+        public void setScrollFirstHitIntoVisibleArea(boolean scrollFirstHitIntoVisibleArea) { this.scrollFirstHitIntoVisibleArea = scrollFirstHitIntoVisibleArea; }
+
+        public boolean isUseNodeAtCursorAsContextNode() { return useNodeAtCursorAsContextNode; }
+        public void setUseNodeAtCursorAsContextNode(boolean useNodeAtCursorAsContextNode) { this.useNodeAtCursorAsContextNode = useNodeAtCursorAsContextNode; }
+
+        public boolean isHighlightOnlyStartTag() { return highlightOnlyStartTag; }
+        public void setHighlightOnlyStartTag(boolean highlightOnlyStartTag) { this.highlightOnlyStartTag = highlightOnlyStartTag; }
+
+        public boolean isAddErrorStripeMarkers() { return addErrorStripeMarkers; }
+        public void setAddErrorStripeMarkers(boolean addErrorStripeMarkers) { this.addErrorStripeMarkers = addErrorStripeMarkers; }
+
+        public String getHighlightColor() { return highlightColor != null ? highlightColor : "#FFD578"; }
+        public void setHighlightColor(String highlightColor) { this.highlightColor = highlightColor; }
+
+        public String getContextNodeColor() { return contextNodeColor != null ? contextNodeColor : "#C2FFD4"; }
+        public void setContextNodeColor(String contextNodeColor) { this.contextNodeColor = contextNodeColor; }
+    }
+
+    // =========================================================================
+    // Backup and Sync Configuration
+    // =========================================================================
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class BackupSyncConfig {
+        private boolean enableBackupAndSync = false;
+        private String syncAccount = "15103202@iubat.edu";
+        private List<String> availableAccounts = new ArrayList<>(List.of("15103202@iubat.edu"));
+
+        public BackupSyncConfig() {}
+
+        public BackupSyncConfig copy() {
+            BackupSyncConfig c = new BackupSyncConfig();
+            c.enableBackupAndSync = this.enableBackupAndSync;
+            c.syncAccount = this.syncAccount;
+            c.availableAccounts = this.availableAccounts != null ? new ArrayList<>(this.availableAccounts) : new ArrayList<>();
+            return c;
+        }
+
+        public boolean isEnableBackupAndSync() { return enableBackupAndSync; }
+        public void setEnableBackupAndSync(boolean enableBackupAndSync) { this.enableBackupAndSync = enableBackupAndSync; }
+
+        public String getSyncAccount() { return syncAccount != null ? syncAccount : "15103202@iubat.edu"; }
+        public void setSyncAccount(String syncAccount) { this.syncAccount = syncAccount; }
+
+        public List<String> getAvailableAccounts() {
+            if (availableAccounts == null) availableAccounts = new ArrayList<>(List.of("15103202@iubat.edu"));
+            return availableAccounts;
+        }
+        public void setAvailableAccounts(List<String> availableAccounts) {
+            this.availableAccounts = availableAccounts != null ? new ArrayList<>(availableAccounts) : new ArrayList<>(List.of("15103202@iubat.edu"));
+        }
     }
 
     private static final Path FILE =
