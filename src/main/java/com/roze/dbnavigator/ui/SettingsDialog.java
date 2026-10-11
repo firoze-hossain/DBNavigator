@@ -51,6 +51,7 @@ import com.roze.dbnavigator.ui.colorscheme.XPathColorSchemePanel;
 import com.roze.dbnavigator.ui.colorscheme.XsltColorSchemePanel;
 import com.roze.dbnavigator.ui.colorscheme.ByScopeColorSchemePanel;
 import com.roze.dbnavigator.ui.colorscheme.ImagesColorSchemePanel;
+import com.roze.dbnavigator.ui.vcs.*;
 
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
@@ -898,7 +899,7 @@ public final class SettingsDialog {
     // Panel Builders
     // =========================================================================
 
-    static Node buildPanelForPath(String fullPath, AppSettingsStore.Settings settings,
+    public static Node buildPanelForPath(String fullPath, AppSettingsStore.Settings settings,
                                   Map<String, Object> inputs, java.util.function.Consumer<String> navigateTo) {
         CategoryDef cat = findCategoryByPath(fullPath, CATEGORIES);
         if (cat == null) {
@@ -979,10 +980,22 @@ public final class SettingsDialog {
             return buildKeymapPanel(settings, inputs, navigateTo);
         } else if ("Plugins".equals(fullPath)) {
             return new com.roze.dbnavigator.ui.plugin.PluginsPanel();
-        } else if ("Version Control / Git".equals(fullPath) || "Git".equals(fullPath)) {
-            return buildVersionControlPanel(cat, navigateTo);
+        } else if ("Version Control / Changelists".equals(fullPath) || "Changelists".equals(fullPath)) {
+            return new VcsChangelistsPanel(settings, inputs).createPanel();
         } else if ("Version Control / Commit".equals(fullPath) || "Commit".equals(fullPath)) {
-            return buildCommitPanel(cat);
+            return new VcsCommitPanel(settings, inputs, navigateTo).createPanel();
+        } else if ("Version Control / Confirmation".equals(fullPath) || "Confirmation".equals(fullPath)) {
+            return new VcsConfirmationPanel(settings, inputs).createPanel();
+        } else if ("Version Control / Directory Mappings".equals(fullPath) || "Directory Mappings".equals(fullPath)) {
+            return new VcsDirectoryMappingsPanel(settings, inputs).createPanel();
+        } else if ("Version Control / File Status Colors".equals(fullPath) || "File Status Colors".equals(fullPath)) {
+            return new VcsFileStatusColorsPanel(settings, inputs).createPanel();
+        } else if ("Version Control / Issue Navigation".equals(fullPath) || "Issue Navigation".equals(fullPath)) {
+            return new VcsIssueNavigationPanel(settings, inputs).createPanel();
+        } else if ("Version Control / Shelf".equals(fullPath) || "Shelf".equals(fullPath)) {
+            return new VcsShelfPanel(settings, inputs).createPanel();
+        } else if ("Version Control / Git".equals(fullPath) || "Git".equals(fullPath)) {
+            return new VcsGitPanel(settings, inputs).createPanel();
         } else if ("Languages / Markdown".equals(fullPath) || "Markdown".equals(fullPath)) {
             return buildMarkdownPanel(cat);
         } else if ("Languages / Mermaid".equals(fullPath) || "Mermaid".equals(fullPath)) {
@@ -10856,7 +10869,7 @@ public final class SettingsDialog {
     // =========================================================================
 
     @SuppressWarnings("unchecked")
-    static void applySettings(MainWindow mainWindow, AppSettingsStore.Settings settings, Map<String, Object> inputs) {
+    public static void applySettings(MainWindow mainWindow, AppSettingsStore.Settings settings, Map<String, Object> inputs) {
         // Theme & UI Appearance
         if (inputs.containsKey("appearance_uiTheme")) {
             Object obj = inputs.get("appearance_uiTheme");
@@ -12510,6 +12523,315 @@ public final class SettingsDialog {
         if (inputs.containsKey("codeEditing_tooltipDelayMs")) {
             Spinner<Integer> sp = (Spinner<Integer>) inputs.get("codeEditing_tooltipDelayMs");
             settings.setCodeEditingTooltipDelayMs(sp.getValue());
+        }
+
+        // Version Control settings
+        // Changelists
+        if (inputs.containsKey("vcs_createChangelistsAutomatically")) {
+            CheckBox cb = (CheckBox) inputs.get("vcs_createChangelistsAutomatically");
+            settings.getVcsChangelists().setCreateChangelistsAutomatically(cb.isSelected());
+        }
+        if (inputs.containsKey("vcs_allowPuttingChangesInDifferentChangelists")) {
+            CheckBox cb = (CheckBox) inputs.get("vcs_allowPuttingChangesInDifferentChangelists");
+            settings.getVcsChangelists().setAllowPuttingChangesInDifferentChangelists(cb.isSelected());
+        }
+        if (inputs.containsKey("vcs_highlightFilesFromInactiveChangelists")) {
+            CheckBox cb = (CheckBox) inputs.get("vcs_highlightFilesFromInactiveChangelists");
+            settings.getVcsChangelists().setHighlightFilesFromInactiveChangelists(cb.isSelected());
+        }
+        if (inputs.containsKey("vcs_showDialogOnEditFromInactiveChangelist")) {
+            CheckBox cb = (CheckBox) inputs.get("vcs_showDialogOnEditFromInactiveChangelist");
+            settings.getVcsChangelists().setShowDialogOnEditFromInactiveChangelist(cb.isSelected());
+        }
+        if (inputs.containsKey("vcs_whenEmptyChangelistBecomesInactive")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("vcs_whenEmptyChangelistBecomesInactive");
+            if (cb.getValue() != null) settings.getVcsChangelists().setWhenEmptyChangelistBecomesInactive(cb.getValue());
+        }
+        if (inputs.containsKey("vcs_highlightFilesWithChangelistConflicts")) {
+            CheckBox cb = (CheckBox) inputs.get("vcs_highlightFilesWithChangelistConflicts");
+            settings.getVcsChangelists().setHighlightFilesWithChangelistConflicts(cb.isSelected());
+        }
+        if (inputs.containsKey("vcs_ignoredConflictFiles")) {
+            List<String> list = (List<String>) inputs.get("vcs_ignoredConflictFiles");
+            settings.getVcsChangelists().setIgnoredConflictFiles(new ArrayList<>(list));
+        }
+
+        // Commit
+        if (inputs.containsKey("vcs_clearInitialCommitMessage")) {
+            CheckBox cb = (CheckBox) inputs.get("vcs_clearInitialCommitMessage");
+            settings.getVcsCommit().setClearInitialCommitMessage(cb.isSelected());
+        }
+        if (inputs.containsKey("vcs_commitInspections")) {
+            List<AppSettingsStore.CommitInspectionConfig> list = (List<AppSettingsStore.CommitInspectionConfig>) inputs.get("vcs_commitInspections");
+            List<AppSettingsStore.CommitInspectionConfig> copies = new ArrayList<>();
+            for (AppSettingsStore.CommitInspectionConfig c : list) {
+                copies.add(c.copy());
+            }
+            settings.getVcsCommit().setInspections(copies);
+        }
+        if (inputs.containsKey("vcs_reformatCode")) {
+            CheckBox cb = (CheckBox) inputs.get("vcs_reformatCode");
+            settings.getVcsCommit().setReformatCode(cb.isSelected());
+        }
+        if (inputs.containsKey("vcs_cleanup")) {
+            CheckBox cb = (CheckBox) inputs.get("vcs_cleanup");
+            settings.getVcsCommit().setCleanup(cb.isSelected());
+        }
+        if (inputs.containsKey("vcs_cleanupProfile")) {
+            settings.getVcsCommit().setCleanupProfile((String) inputs.get("vcs_cleanupProfile"));
+        }
+        if (inputs.containsKey("vcs_analyzeCode")) {
+            CheckBox cb = (CheckBox) inputs.get("vcs_analyzeCode");
+            settings.getVcsCommit().setAnalyzeCode(cb.isSelected());
+        }
+        if (inputs.containsKey("vcs_analyzeCodeProfile")) {
+            settings.getVcsCommit().setAnalyzeCodeProfile((String) inputs.get("vcs_analyzeCodeProfile"));
+        }
+        if (inputs.containsKey("vcs_checkTodo")) {
+            CheckBox cb = (CheckBox) inputs.get("vcs_checkTodo");
+            settings.getVcsCommit().setCheckTodo(cb.isSelected());
+        }
+        if (inputs.containsKey("vcs_checkTodoFilter")) {
+            settings.getVcsCommit().setCheckTodoFilter((String) inputs.get("vcs_checkTodoFilter"));
+        }
+        if (inputs.containsKey("vcs_runConfiguration")) {
+            CheckBox cb = (CheckBox) inputs.get("vcs_runConfiguration");
+            settings.getVcsCommit().setRunConfiguration(cb.isSelected());
+        }
+        if (inputs.containsKey("vcs_runConfigurationName")) {
+            settings.getVcsCommit().setRunConfigurationName((String) inputs.get("vcs_runConfigurationName"));
+        }
+        if (inputs.containsKey("vcs_runAdvancedChecksAfterCommit")) {
+            CheckBox cb = (CheckBox) inputs.get("vcs_runAdvancedChecksAfterCommit");
+            settings.getVcsCommit().setRunAdvancedChecksAfterCommit(cb.isSelected());
+        }
+
+        // Confirmation
+        if (inputs.containsKey("vcs_whenFilesCreated")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("vcs_whenFilesCreated");
+            if (cb.getValue() != null) settings.getVcsConfirmation().setWhenFilesCreated(cb.getValue());
+        }
+        if (inputs.containsKey("vcs_applyToFilesCreatedOutside")) {
+            CheckBox cb = (CheckBox) inputs.get("vcs_applyToFilesCreatedOutside");
+            settings.getVcsConfirmation().setApplyToFilesCreatedOutside(cb.isSelected());
+        }
+        if (inputs.containsKey("vcs_whenFilesDeleted")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("vcs_whenFilesDeleted");
+            if (cb.getValue() != null) settings.getVcsConfirmation().setWhenFilesDeleted(cb.getValue());
+        }
+        if (inputs.containsKey("vcs_showOptionsBeforeUpdate")) {
+            CheckBox cb = (CheckBox) inputs.get("vcs_showOptionsBeforeUpdate");
+            settings.getVcsConfirmation().setShowOptionsBeforeUpdate(cb.isSelected());
+        }
+        if (inputs.containsKey("vcs_askConfirmationToDropCommits")) {
+            CheckBox cb = (CheckBox) inputs.get("vcs_askConfirmationToDropCommits");
+            settings.getVcsConfirmation().setAskConfirmationToDropCommits(cb.isSelected());
+        }
+        if (inputs.containsKey("vcs_checkConflictsWithServer")) {
+            CheckBox cb = (CheckBox) inputs.get("vcs_checkConflictsWithServer");
+            settings.getVcsConfirmation().setCheckConflictsWithServer(cb.isSelected());
+        }
+        if (inputs.containsKey("vcs_checkConflictsMinutes")) {
+            Spinner<Integer> sp = (Spinner<Integer>) inputs.get("vcs_checkConflictsMinutes");
+            settings.getVcsConfirmation().setCheckConflictsMinutes(sp.getValue());
+        }
+        if (inputs.containsKey("vcs_highlightFilesChangedInLastDays")) {
+            CheckBox cb = (CheckBox) inputs.get("vcs_highlightFilesChangedInLastDays");
+            settings.getVcsConfirmation().setHighlightFilesChangedInLastDays(cb.isSelected());
+        }
+        if (inputs.containsKey("vcs_highlightFilesDays")) {
+            Spinner<Integer> sp = (Spinner<Integer>) inputs.get("vcs_highlightFilesDays");
+            settings.getVcsConfirmation().setHighlightFilesDays(sp.getValue());
+        }
+        if (inputs.containsKey("vcs_highlightDirectoriesWithModifiedFiles")) {
+            CheckBox cb = (CheckBox) inputs.get("vcs_highlightDirectoriesWithModifiedFiles");
+            settings.getVcsConfirmation().setHighlightDirectoriesWithModifiedFiles(cb.isSelected());
+        }
+        if (inputs.containsKey("vcs_whenPatchCreated")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("vcs_whenPatchCreated");
+            if (cb.getValue() != null) settings.getVcsConfirmation().setWhenPatchCreated(cb.getValue());
+        }
+        if (inputs.containsKey("vcs_restoreWorkspaceWhenSwitchingBranches")) {
+            CheckBox cb = (CheckBox) inputs.get("vcs_restoreWorkspaceWhenSwitchingBranches");
+            settings.getVcsConfirmation().setRestoreWorkspaceWhenSwitchingBranches(cb.isSelected());
+        }
+        if (inputs.containsKey("vcs_limitHistoryRows")) {
+            CheckBox cb = (CheckBox) inputs.get("vcs_limitHistoryRows");
+            settings.getVcsConfirmation().setLimitHistoryRows(cb.isSelected());
+        }
+        if (inputs.containsKey("vcs_maxHistoryRows")) {
+            Spinner<Integer> sp = (Spinner<Integer>) inputs.get("vcs_maxHistoryRows");
+            settings.getVcsConfirmation().setMaxHistoryRows(sp.getValue());
+        }
+        if (inputs.containsKey("vcs_highlightModifiedLinesInGutter")) {
+            CheckBox cb = (CheckBox) inputs.get("vcs_highlightModifiedLinesInGutter");
+            settings.getVcsConfirmation().setHighlightModifiedLinesInGutter(cb.isSelected());
+        }
+        if (inputs.containsKey("vcs_highlightModifiedLinesInErrorStripe")) {
+            CheckBox cb = (CheckBox) inputs.get("vcs_highlightModifiedLinesInErrorStripe");
+            settings.getVcsConfirmation().setHighlightModifiedLinesInErrorStripe(cb.isSelected());
+        }
+        if (inputs.containsKey("vcs_highlightWhitespaceOnlyModifications")) {
+            CheckBox cb = (CheckBox) inputs.get("vcs_highlightWhitespaceOnlyModifications");
+            settings.getVcsConfirmation().setHighlightWhitespaceOnlyModifications(cb.isSelected());
+        }
+
+        // Directory Mappings
+        if (inputs.containsKey("vcs_directoryMappings")) {
+            List<AppSettingsStore.VcsDirectoryMappingEntry> list = (List<AppSettingsStore.VcsDirectoryMappingEntry>) inputs.get("vcs_directoryMappings");
+            List<AppSettingsStore.VcsDirectoryMappingEntry> copies = new ArrayList<>();
+            for (AppSettingsStore.VcsDirectoryMappingEntry m : list) {
+                copies.add(m.copy());
+            }
+            settings.getVcsDirectoryMappings().setMappings(copies);
+        }
+        if (inputs.containsKey("vcs_enableAutomaticMappingDetection")) {
+            CheckBox cb = (CheckBox) inputs.get("vcs_enableAutomaticMappingDetection");
+            settings.getVcsDirectoryMappings().setEnableAutomaticMappingDetection(cb.isSelected());
+        }
+
+        // File Status Colors
+        if (inputs.containsKey("vcs_fileStatusColors")) {
+            List<AppSettingsStore.VcsFileStatusColorEntry> list = (List<AppSettingsStore.VcsFileStatusColorEntry>) inputs.get("vcs_fileStatusColors");
+            List<AppSettingsStore.VcsFileStatusColorEntry> copies = new ArrayList<>();
+            for (AppSettingsStore.VcsFileStatusColorEntry e : list) {
+                copies.add(e.copy());
+            }
+            settings.getVcsFileStatusColors().setStatusColors(copies);
+        }
+
+        // Issue Navigation
+        if (inputs.containsKey("vcs_issueNavigationPatterns")) {
+            List<AppSettingsStore.IssueNavigationPattern> list = (List<AppSettingsStore.IssueNavigationPattern>) inputs.get("vcs_issueNavigationPatterns");
+            List<AppSettingsStore.IssueNavigationPattern> copies = new ArrayList<>();
+            for (AppSettingsStore.IssueNavigationPattern p : list) {
+                copies.add(p.copy());
+            }
+            settings.getVcsIssueNavigation().setPatterns(copies);
+        }
+
+        // Shelf
+        if (inputs.containsKey("vcs_removeAppliedFiles")) {
+            CheckBox cb = (CheckBox) inputs.get("vcs_removeAppliedFiles");
+            settings.getVcsShelf().setRemoveAppliedFiles(cb.isSelected());
+        }
+        if (inputs.containsKey("vcs_shelveBaseRevisions")) {
+            CheckBox cb = (CheckBox) inputs.get("vcs_shelveBaseRevisions");
+            settings.getVcsShelf().setShelveBaseRevisions(cb.isSelected());
+        }
+        if (inputs.containsKey("vcs_shelvesLocation")) {
+            settings.getVcsShelf().setCustomShelvesLocation((String) inputs.get("vcs_shelvesLocation"));
+        }
+
+        // Git
+        if (inputs.containsKey("vcs_gitPath")) {
+            TextField tf = (TextField) inputs.get("vcs_gitPath");
+            String p = tf.getText();
+            if (p != null) {
+                if (p.startsWith("Auto-detected: ")) p = p.substring("Auto-detected: ".length()).trim();
+                settings.getVcsGit().setGitPath(p);
+            }
+        }
+        if (inputs.containsKey("vcs_gitSetPathOnlyForCurrentProject")) {
+            CheckBox cb = (CheckBox) inputs.get("vcs_gitSetPathOnlyForCurrentProject");
+            settings.getVcsGit().setSetPathOnlyForCurrentProject(cb.isSelected());
+        }
+        if (inputs.containsKey("vcs_gitAutomaticallyExcludeIgnoredDirectories")) {
+            CheckBox cb = (CheckBox) inputs.get("vcs_gitAutomaticallyExcludeIgnoredDirectories");
+            settings.getVcsGit().setAutomaticallyExcludeIgnoredDirectories(cb.isSelected());
+        }
+        if (inputs.containsKey("vcs_gitEnableStagingArea")) {
+            CheckBox cb = (CheckBox) inputs.get("vcs_gitEnableStagingArea");
+            settings.getVcsGit().setEnableStagingArea(cb.isSelected());
+        }
+        if (inputs.containsKey("vcs_gitWarnCrlfLineSeparators")) {
+            CheckBox cb = (CheckBox) inputs.get("vcs_gitWarnCrlfLineSeparators");
+            settings.getVcsGit().setWarnCrlfLineSeparators(cb.isSelected());
+        }
+        if (inputs.containsKey("vcs_gitWarnCommittingInDetachedHead")) {
+            CheckBox cb = (CheckBox) inputs.get("vcs_gitWarnCommittingInDetachedHead");
+            settings.getVcsGit().setWarnCommittingInDetachedHead(cb.isSelected());
+        }
+        if (inputs.containsKey("vcs_gitWarnCommitFilesLargerThan")) {
+            CheckBox cb = (CheckBox) inputs.get("vcs_gitWarnCommitFilesLargerThan");
+            settings.getVcsGit().setWarnCommitFilesLargerThan(cb.isSelected());
+        }
+        if (inputs.containsKey("vcs_gitWarnCommitFilesLargerThanMb")) {
+            Spinner<Integer> sp = (Spinner<Integer>) inputs.get("vcs_gitWarnCommitFilesLargerThanMb");
+            settings.getVcsGit().setWarnCommitFilesLargerThanMb(sp.getValue());
+        }
+        if (inputs.containsKey("vcs_gitWarnCommitNamesIssueOnOtherSystems")) {
+            CheckBox cb = (CheckBox) inputs.get("vcs_gitWarnCommitNamesIssueOnOtherSystems");
+            settings.getVcsGit().setWarnCommitNamesIssueOnOtherSystems(cb.isSelected());
+        }
+        if (inputs.containsKey("vcs_gitAddCherryPickedSuffix")) {
+            CheckBox cb = (CheckBox) inputs.get("vcs_gitAddCherryPickedSuffix");
+            settings.getVcsGit().setAddCherryPickedSuffix(cb.isSelected());
+        }
+        if (inputs.containsKey("vcs_gitGpgKey")) {
+            settings.getVcsGit().setGpgKey((String) inputs.get("vcs_gitGpgKey"));
+        }
+        if (inputs.containsKey("vcs_gitAutoUpdateIfPushRejected")) {
+            CheckBox cb = (CheckBox) inputs.get("vcs_gitAutoUpdateIfPushRejected");
+            settings.getVcsGit().setAutoUpdateIfPushRejected(cb.isSelected());
+        }
+        if (inputs.containsKey("vcs_gitShowPushDialogForCommitAndPush")) {
+            CheckBox cb = (CheckBox) inputs.get("vcs_gitShowPushDialogForCommitAndPush");
+            settings.getVcsGit().setShowPushDialogForCommitAndPush(cb.isSelected());
+        }
+        if (inputs.containsKey("vcs_gitShowPushDialogOnlyForProtectedBranches")) {
+            CheckBox cb = (CheckBox) inputs.get("vcs_gitShowPushDialogOnlyForProtectedBranches");
+            settings.getVcsGit().setShowPushDialogOnlyForProtectedBranches(cb.isSelected());
+        }
+        if (inputs.containsKey("vcs_gitProtectedBranches")) {
+            TextField tf = (TextField) inputs.get("vcs_gitProtectedBranches");
+            settings.getVcsGit().setProtectedBranches(tf.getText());
+        }
+        if (inputs.containsKey("vcs_gitLoadBranchProtectionFromGitHub")) {
+            CheckBox cb = (CheckBox) inputs.get("vcs_gitLoadBranchProtectionFromGitHub");
+            settings.getVcsGit().setLoadBranchProtectionFromGitHub(cb.isSelected());
+        }
+        if (inputs.containsKey("vcs_gitUpdateMethodGroup")) {
+            ToggleGroup tg = (ToggleGroup) inputs.get("vcs_gitUpdateMethodGroup");
+            if (tg.getSelectedToggle() instanceof RadioButton rb) {
+                settings.getVcsGit().setUpdateMethod(rb.getText());
+            }
+        }
+        if (inputs.containsKey("vcs_gitCleanTreeGroup")) {
+            ToggleGroup tg = (ToggleGroup) inputs.get("vcs_gitCleanTreeGroup");
+            if (tg.getSelectedToggle() instanceof RadioButton rb) {
+                settings.getVcsGit().setCleanWorkingTreeUsing(rb.getText());
+            }
+        }
+        if (inputs.containsKey("vcs_gitFilterUpdateProjectInfoByPaths")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("vcs_gitFilterUpdateProjectInfoByPaths");
+            if (cb.getValue() != null) settings.getVcsGit().setFilterUpdateProjectInfoByPaths(cb.getValue());
+        }
+        if (inputs.containsKey("vcs_gitFetchRemoteChangesAutomatically")) {
+            CheckBox cb = (CheckBox) inputs.get("vcs_gitFetchRemoteChangesAutomatically");
+            settings.getVcsGit().setFetchRemoteChangesAutomatically(cb.isSelected());
+        }
+        if (inputs.containsKey("vcs_gitCheckRemoteForIncomingChanges")) {
+            CheckBox cb = (CheckBox) inputs.get("vcs_gitCheckRemoteForIncomingChanges");
+            settings.getVcsGit().setCheckRemoteForIncomingChanges(cb.isSelected());
+        }
+        if (inputs.containsKey("vcs_gitFetchTags")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("vcs_gitFetchTags");
+            if (cb.getValue() != null) settings.getVcsGit().setFetchTags(cb.getValue());
+        }
+        if (inputs.containsKey("vcs_gitUseCredentialHelper")) {
+            CheckBox cb = (CheckBox) inputs.get("vcs_gitUseCredentialHelper");
+            settings.getVcsGit().setUseCredentialHelper(cb.isSelected());
+        }
+        if (inputs.containsKey("vcs_gitCombineStashesAndShelvesInOneTab")) {
+            CheckBox cb = (CheckBox) inputs.get("vcs_gitCombineStashesAndShelvesInOneTab");
+            settings.getVcsGit().setCombineStashesAndShelvesInOneTab(cb.isSelected());
+        }
+        if (inputs.containsKey("vcs_gitCompareStashedGroup")) {
+            ToggleGroup tg = (ToggleGroup) inputs.get("vcs_gitCompareStashedGroup");
+            if (tg.getSelectedToggle() instanceof RadioButton rb) {
+                settings.getVcsGit().setCompareStashedChangesWith(rb.getText().contains("parent") ? "parent" : "local");
+            }
         }
 
         // Persist
