@@ -52,6 +52,8 @@ import com.roze.dbnavigator.ui.colorscheme.XsltColorSchemePanel;
 import com.roze.dbnavigator.ui.colorscheme.ByScopeColorSchemePanel;
 import com.roze.dbnavigator.ui.colorscheme.ImagesColorSchemePanel;
 import com.roze.dbnavigator.ui.vcs.*;
+import com.roze.dbnavigator.ui.languages.*;
+import com.roze.dbnavigator.ui.tools.*;
 
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
@@ -997,23 +999,59 @@ public final class SettingsDialog {
         } else if ("Version Control / Git".equals(fullPath) || "Git".equals(fullPath)) {
             return new VcsGitPanel(settings, inputs).createPanel();
         } else if ("Languages / Markdown".equals(fullPath) || "Markdown".equals(fullPath)) {
-            return buildMarkdownPanel(cat);
+            return new MarkdownSettingsPanel(settings, inputs, navigateTo).createPanel();
         } else if ("Languages / Mermaid".equals(fullPath) || "Mermaid".equals(fullPath)) {
             return buildMermaidPanel(cat);
         } else if ("Languages / Schemas and DTDs".equals(fullPath) || "Schemas and DTDs".equals(fullPath)) {
-            return buildSchemasDtdsPanel(cat);
-        } else if ("Tools / Debugger".equals(fullPath) || "Debugger".equals(fullPath)) {
-            return buildDebuggerPanel(cat);
-        } else if ("Tools / Diff & Merge".equals(fullPath) || "Diff & Merge".equals(fullPath)) {
-            return buildDiffMergePanel(cat);
-        } else if ("Tools / Terminal".equals(fullPath) || "Terminal".equals(fullPath)) {
-            return buildToolsPanel(cat, navigateTo);
-        } else if ("Tools / SSH Configurations".equals(fullPath) || "SSH Configurations".equals(fullPath)) {
-            return buildSshPanel(cat);
-        } else if ("Tools / Diagrams".equals(fullPath) || "Diagrams".equals(fullPath)) {
-            return buildDiagramsPanel(cat);
-        } else if ("Tools / MCP Server".equals(fullPath) || "MCP Server".equals(fullPath)) {
-            return buildMcpServerPanel(cat);
+            return new SchemasDtdsPanel(settings, inputs).createPanel();
+        } else if ("Languages / Schemas and DTDs / Default XML Schemas".equals(fullPath) || "Default XML Schemas".equals(fullPath) || (cat != null && "schemas.xml_default".equals(cat.getId()))) {
+            return new DefaultXmlSchemasPanel(settings, inputs).createPanel();
+        } else if ("Languages / Schemas and DTDs / JSON Schema Mappings".equals(fullPath) || "JSON Schema Mappings".equals(fullPath) || (cat != null && "schemas.json_mappings".equals(cat.getId()))) {
+            return new JsonSchemaMappingsPanel(settings, inputs).createPanel();
+        } else if ("Languages / Schemas and DTDs / Remote JSON Schemas".equals(fullPath) || "Remote JSON Schemas".equals(fullPath) || (cat != null && "schemas.remote_json".equals(cat.getId()))) {
+            return new RemoteJsonSchemasPanel(settings, inputs).createPanel();
+        } else if ("Languages / Schemas and DTDs / XML Catalog".equals(fullPath) || "XML Catalog".equals(fullPath) || (cat != null && "schemas.xml_catalog".equals(cat.getId()))) {
+            return new XmlCatalogPanel(settings, inputs).createPanel();
+        } else if ("Languages / XSLT".equals(fullPath) || "XSLT".equals(fullPath) || (cat != null && "lang.xslt".equals(cat.getId()))) {
+            return new XsltSettingsPanel(settings, inputs).createPanel();
+        } else if ("Languages / XSLT File Associations".equals(fullPath) || "XSLT File Associations".equals(fullPath) || (cat != null && "lang.xslt_associations".equals(cat.getId()))) {
+            return new XsltFileAssociationsPanel(settings, inputs).createPanel();
+        } else if ("Tools / Build Tools".equals(fullPath) || "Build Tools".equals(fullPath) || (cat != null && "tools.build_tools".equals(cat.getId()))) {
+            return new BuildToolsPanel(settings, inputs).createPanel();
+        } else if ("Tools / Actions on Save".equals(fullPath) || "Actions on Save".equals(fullPath) || (cat != null && "tools.actions_on_save".equals(cat.getId()))) {
+            return new ActionsOnSavePanel(settings, inputs, navigateTo).createPanel();
+        } else if ("Tools / Coverage".equals(fullPath) || "Coverage".equals(fullPath) || (cat != null && "tools.coverage".equals(cat.getId()))) {
+            return new CoveragePanel(settings, inputs).createPanel();
+        } else if ("Tools / Debugger / Data Views".equals(fullPath) || "Data Views".equals(fullPath) || (cat != null && "tools.debugger.data_views".equals(cat.getId()))) {
+            return new DebuggerDataViewsPanel(settings, inputs).createPanel();
+        } else if ("Tools / Debugger / Stepping".equals(fullPath) || "Stepping".equals(fullPath) || (cat != null && "tools.debugger.stepping".equals(cat.getId()))) {
+            return new DebuggerSteppingPanel(settings, inputs).createPanel();
+        } else if ("Tools / Debugger".equals(fullPath) || "Debugger".equals(fullPath) || (cat != null && "tools.debugger".equals(cat.getId()))) {
+            return new DebuggerSettingsPanel(settings, inputs).createPanel();
+        } else if ("Tools / Diagrams".equals(fullPath) || "Diagrams".equals(fullPath) || (cat != null && "tools.diagrams".equals(cat.getId()))) {
+            return new DiagramsSettingsPanel(settings, inputs).createPanel();
+        } else if ("Tools / Diff & Merge / External Diff Tools".equals(fullPath) || "External Diff Tools".equals(fullPath) || (cat != null && "tools.diff_merge.external".equals(cat.getId()))) {
+            return new ExternalDiffToolsPanel(settings, inputs).createPanel();
+        } else if ("Tools / Diff & Merge".equals(fullPath) || "Diff & Merge".equals(fullPath) || (cat != null && "tools.diff_merge".equals(cat.getId()))) {
+            return new DiffMergeSettingsPanel(settings, inputs).createPanel();
+        } else if ("Tools / External Tools".equals(fullPath) || "External Tools".equals(fullPath) || (cat != null && "tools.external_tools".equals(cat.getId()))) {
+            return new ExternalToolsPanel(settings, inputs).createPanel();
+        } else if ("Tools / MCP Server / Exposed Tools".equals(fullPath) || "Exposed Tools".equals(fullPath) || (cat != null && "tools.mcp_server.exposed_tools".equals(cat.getId()))) {
+            return new McpExposedToolsPanel(settings, inputs).createPanel();
+        } else if ("Tools / MCP Server".equals(fullPath) || "MCP Server".equals(fullPath) || (cat != null && "tools.mcp_server".equals(cat.getId()))) {
+            return new McpServerPanel(settings, inputs, navigateTo).createPanel();
+        } else if ("Tools / Rsync".equals(fullPath) || "Rsync".equals(fullPath) || (cat != null && "tools.rsync".equals(cat.getId()))) {
+            return new RsyncPanel(settings, inputs).createPanel();
+        } else if ("Tools / SSH Configurations".equals(fullPath) || "SSH Configurations".equals(fullPath) || (cat != null && "tools.ssh".equals(cat.getId()))) {
+            return new SshConfigurationsPanel(settings, inputs).createPanel();
+        } else if ("Tools / Terminal".equals(fullPath) || "Terminal".equals(fullPath) || (cat != null && "tools.terminal".equals(cat.getId()))) {
+            return new TerminalPanel(settings, inputs, navigateTo).createPanel();
+        } else if ("Tools / Web Browsers and Preview".equals(fullPath) || "Web Browsers and Preview".equals(fullPath) || (cat != null && "tools.browsers".equals(cat.getId()))) {
+            return new WebBrowsersPanel(settings, inputs).createPanel();
+        } else if ("Tools / XPath Viewer".equals(fullPath) || "XPath Viewer".equals(fullPath) || (cat != null && "tools.xpath".equals(cat.getId()))) {
+            return new XPathViewerPanel(settings, inputs).createPanel();
+        } else if ("Backup and Sync".equals(fullPath) || (cat != null && "backup_sync".equals(cat.getId()))) {
+            return new BackupSyncPanel(settings, inputs).createPanel();
         } else if ("Editor / Color Scheme / General".equals(fullPath) || (cat != null && "cs.general".equals(cat.getId()))) {
             return buildColorSchemeGeneralPanel(settings, inputs, navigateTo);
         } else if ("Editor / Color Scheme / Language Defaults".equals(fullPath) || (cat != null && "cs.lang_defaults".equals(cat.getId()))) {
@@ -8272,29 +8310,8 @@ public final class SettingsDialog {
         return panel;
     }
 
-    private static VBox buildToolsPanel(CategoryDef cat, java.util.function.Consumer<String> navigateTo) {
-        Label title = new Label("Tools");
-        title.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: -text;");
-
-        Label shellLbl = new Label("Shell path:");
-        TextField shellPath = new TextField(System.getProperty("os.name", "").toLowerCase().contains("win") ? "cmd.exe" : "/bin/bash");
-        shellPath.setPrefWidth(280);
-
-        Label sshLbl = new Label("SSH executable:");
-        TextField sshPath = new TextField("ssh");
-        sshPath.setPrefWidth(280);
-
-        GridPane grid = new GridPane();
-        grid.setHgap(12);
-        grid.setVgap(10);
-        grid.add(shellLbl, 0, 0);
-        grid.add(shellPath, 1, 0);
-        grid.add(sshLbl, 0, 1);
-        grid.add(sshPath, 1, 1);
-
-        VBox panel = new VBox(14, title, grid);
-        panel.setPadding(new Insets(4, 8, 16, 8));
-        return panel;
+    private static Node buildToolsPanel(CategoryDef cat, java.util.function.Consumer<String> navigateTo) {
+        return new TerminalPanel(AppSettingsStore.load(), new HashMap<>(), navigateTo).createPanel();
     }
 
     private static VBox buildCommitPanel(CategoryDef cat) {
@@ -8318,25 +8335,8 @@ public final class SettingsDialog {
         return panel;
     }
 
-    private static VBox buildMarkdownPanel(CategoryDef cat) {
-        Label title = new Label("Markdown");
-        title.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: -text;");
-
-        Label layoutLabel = new Label("Default editor and preview layout:");
-        ComboBox<String> layoutCombo = new ComboBox<>();
-        layoutCombo.getItems().addAll("Split: Editor and Preview", "Preview Only", "Editor Only");
-        layoutCombo.getSelectionModel().select(0);
-        layoutCombo.setPrefWidth(220);
-
-        CheckBox autoScroll = new CheckBox("Auto-scroll preview synchronously with editor");
-        autoScroll.setSelected(true);
-
-        CheckBox renderTables = new CheckBox("Enable GitHub Flavored Markdown (tables, task lists)");
-        renderTables.setSelected(true);
-
-        VBox panel = new VBox(14, title, layoutLabel, layoutCombo, autoScroll, renderTables);
-        panel.setPadding(new Insets(4, 8, 16, 8));
-        return panel;
+    private static Node buildMarkdownPanel(CategoryDef cat) {
+        return new MarkdownSettingsPanel(AppSettingsStore.load(), new HashMap<>(), null).createPanel();
     }
 
     private static VBox buildMermaidPanel(CategoryDef cat) {
@@ -8357,275 +8357,28 @@ public final class SettingsDialog {
         return panel;
     }
 
-    private static VBox buildDiagramsPanel(CategoryDef cat) {
-        Label title = new Label("Diagrams");
-        title.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: -text;");
-
-        Label layoutLabel = new Label("Default ER diagram layout:");
-        ComboBox<String> layoutCombo = new ComboBox<>();
-        layoutCombo.getItems().addAll("Hierarchical", "Organic", "Orthogonal", "Circular");
-        layoutCombo.getSelectionModel().select("Hierarchical");
-        layoutCombo.setPrefWidth(200);
-
-        CheckBox showDataTypes = new CheckBox("Show column data types in table nodes");
-        showDataTypes.setSelected(true);
-
-        CheckBox showKeys = new CheckBox("Highlight primary and foreign key columns");
-        showKeys.setSelected(true);
-
-        CheckBox showComments = new CheckBox("Show table and column comments");
-        showComments.setSelected(false);
-
-        VBox panel = new VBox(14, title, layoutLabel, layoutCombo, showDataTypes, showKeys, showComments);
-        panel.setPadding(new Insets(4, 8, 16, 8));
-        return panel;
+    private static Node buildDiagramsPanel(CategoryDef cat) {
+        return new DiagramsSettingsPanel(AppSettingsStore.load(), new HashMap<>()).createPanel();
     }
 
-    private static VBox buildSchemasDtdsPanel(CategoryDef cat) {
-        // 1. External schemas and DTDs
-        Label externalLabel = new Label("External schemas and DTDs:");
-        externalLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: -text; -fx-font-size: 13px;");
-
-        Button addExtBtn = new Button("+");
-        addExtBtn.setTooltip(new Tooltip("Add External Schema or DTD"));
-        addExtBtn.setStyle("-fx-min-width: 26px; -fx-min-height: 22px;");
-
-        Button removeExtBtn = new Button("—");
-        removeExtBtn.setTooltip(new Tooltip("Remove"));
-        removeExtBtn.setStyle("-fx-min-width: 26px; -fx-min-height: 22px;");
-
-        Button editExtBtn = new Button("✏");
-        editExtBtn.setTooltip(new Tooltip("Edit"));
-        editExtBtn.setStyle("-fx-min-width: 26px; -fx-min-height: 22px;");
-
-        HBox extToolbar = new HBox(4, addExtBtn, removeExtBtn, editExtBtn);
-        extToolbar.setAlignment(Pos.CENTER_LEFT);
-
-        Label noResources = new Label("No external resources");
-        noResources.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 13px;");
-
-        StackPane emptyBox = new StackPane(noResources);
-        emptyBox.setPrefHeight(130);
-        emptyBox.setMaxHeight(150);
-        emptyBox.setStyle("-fx-background-color: #2b2d30; -fx-border-color: #3e4248; -fx-border-radius: 4; -fx-background-radius: 4;");
-
-        VBox extBox = new VBox(6, externalLabel, extToolbar, emptyBox);
-
-        // 2. Ignored schemas and DTDs
-        Label ignoredLabel = new Label("Ignored schemas and DTDs:");
-        ignoredLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: -text; -fx-font-size: 13px; -fx-padding: 8 0 0 0;");
-
-        Button addIgnoredBtn = new Button("+");
-        addIgnoredBtn.setTooltip(new Tooltip("Add Ignored Schema or DTD"));
-        addIgnoredBtn.setStyle("-fx-min-width: 26px; -fx-min-height: 22px;");
-
-        Button removeIgnoredBtn = new Button("—");
-        removeIgnoredBtn.setTooltip(new Tooltip("Remove"));
-        removeIgnoredBtn.setStyle("-fx-min-width: 26px; -fx-min-height: 22px;");
-
-        Button editIgnoredBtn = new Button("✏");
-        editIgnoredBtn.setTooltip(new Tooltip("Edit"));
-        editIgnoredBtn.setStyle("-fx-min-width: 26px; -fx-min-height: 22px;");
-
-        HBox ignoredToolbar = new HBox(4, addIgnoredBtn, removeIgnoredBtn, editIgnoredBtn);
-        ignoredToolbar.setAlignment(Pos.CENTER_LEFT);
-
-        ListView<String> ignoredList = new ListView<>();
-        ignoredList.getItems().addAll(
-                "http://exslt.org/common",
-                "http://exslt.org/dates-and-times",
-                "http://exslt.org/dynamic",
-                "http://exslt.org/math",
-                "http://exslt.org/sets",
-                "http://exslt.org/strings",
-                "http://relaxng.org/ns/compatibility/annotations/1.0",
-                "urn:idea:xslt-plugin#extensions"
-        );
-        ignoredList.setPrefHeight(180);
-        ignoredList.setStyle("-fx-background-color: #2b2d30; -fx-control-inner-background: #2b2d30; -fx-font-family: monospace; -fx-font-size: 12px;");
-        VBox.setVgrow(ignoredList, Priority.ALWAYS);
-
-        VBox ignoredBox = new VBox(6, ignoredLabel, ignoredToolbar, ignoredList);
-        VBox.setVgrow(ignoredBox, Priority.ALWAYS);
-
-        VBox panel = new VBox(12, extBox, ignoredBox);
-        panel.setPadding(new Insets(4, 8, 16, 8));
-        return panel;
+    private static Node buildSchemasDtdsPanel(CategoryDef cat) {
+        return new SchemasDtdsPanel(AppSettingsStore.load(), new HashMap<>()).createPanel();
     }
 
-    private static VBox buildDebuggerPanel(CategoryDef cat) {
-        CheckBox showDebugWindow = new CheckBox("Show debug window on breakpoint");
-        showDebugWindow.setSelected(true);
-
-        CheckBox focusApp = new CheckBox("Focus application on breakpoint");
-        focusApp.setSelected(true);
-        focusApp.setPadding(new Insets(0, 0, 0, 20));
-        focusApp.disableProperty().bind(showDebugWindow.selectedProperty().not());
-
-        CheckBox hideOnTermination = new CheckBox("Hide debug window on process termination");
-        hideOnTermination.setSelected(false);
-
-        CheckBox scrollToCenter = new CheckBox("Scroll execution point to center");
-        scrollToCenter.setSelected(false);
-
-        CheckBox clickLineRunToCursor = new CheckBox("Click line number to perform run to cursor");
-        clickLineRunToCursor.setSelected(true);
-
-        VBox checksBox = new VBox(10, showDebugWindow, focusApp, hideOnTermination, scrollToCenter, clickLineRunToCursor);
-
-        // Breakpoint removal section
-        Label removeBreakpointLabel = new Label("Remove breakpoint:");
-        removeBreakpointLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: -text; -fx-font-size: 13px; -fx-padding: 8 0 2 0;");
-
-        ToggleGroup removeGroup = new ToggleGroup();
-        RadioButton clickLeftMouse = new RadioButton("Click with left mouse button");
-        clickLeftMouse.setToggleGroup(removeGroup);
-        clickLeftMouse.setSelected(true);
-
-        RadioButton dragOrMiddleClick = new RadioButton("Drag to the editor or click with middle mouse button");
-        dragOrMiddleClick.setToggleGroup(removeGroup);
-
-        CheckBox confirmRemoval = new CheckBox("Confirm removal of conditional or logging breakpoints");
-        confirmRemoval.setSelected(false);
-        confirmRemoval.setPadding(new Insets(4, 0, 0, 0));
-
-        VBox removeBox = new VBox(8, removeBreakpointLabel, clickLeftMouse, dragOrMiddleClick, confirmRemoval);
-
-        VBox panel = new VBox(14, checksBox, removeBox);
-        panel.setPadding(new Insets(4, 8, 16, 8));
-        return panel;
+    private static Node buildDebuggerPanel(CategoryDef cat) {
+        return new DebuggerSettingsPanel(AppSettingsStore.load(), new HashMap<>()).createPanel();
     }
 
-    private static VBox buildDiffMergePanel(CategoryDef cat) {
-        // 1. Diff section
-        Label diffHeader = new Label("Diff");
-        diffHeader.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: -text;");
-
-        Label contextLinesLabel = new Label("Context lines:");
-        contextLinesLabel.setPrefWidth(90);
-        contextLinesLabel.setStyle("-fx-text-fill: -text;");
-
-        Slider contextSlider = new Slider(0, 4, 2); // 0=1, 1=2, 2=4, 3=8, 4=Disable
-        contextSlider.setMajorTickUnit(1);
-        contextSlider.setMinorTickCount(0);
-        contextSlider.setSnapToTicks(true);
-        contextSlider.setShowTickMarks(true);
-        contextSlider.setShowTickLabels(false);
-        contextSlider.setPrefWidth(160);
-
-        HBox sliderRow = new HBox(10, contextLinesLabel, contextSlider);
-        sliderRow.setAlignment(Pos.CENTER_LEFT);
-
-        Label tickLabel1 = new Label("1");
-        Label tickLabel2 = new Label("2");
-        Label tickLabel4 = new Label("4");
-        Label tickLabel8 = new Label("8");
-        Label tickLabelDisable = new Label("Disable");
-        HBox tickLabels = new HBox(22, tickLabel1, tickLabel2, tickLabel4, tickLabel8, tickLabelDisable);
-        tickLabels.setStyle("-fx-font-size: 10px; -fx-text-fill: -text-dim;");
-        tickLabels.setPadding(new Insets(-4, 0, 4, 102));
-
-        CheckBox nextFileCheck = new CheckBox("Go to the next file after reaching last change");
-        nextFileCheck.setSelected(true);
-
-        Label histLabel = new Label("Include diffs in navigation history:");
-        histLabel.setStyle("-fx-text-fill: -text;");
-        ComboBox<String> histCombo = new ComboBox<>();
-        histCombo.getItems().addAll("Until the diff is closed", "Always", "Never");
-        histCombo.getSelectionModel().select(0);
-        histCombo.setPrefWidth(180);
-        HBox histRow = new HBox(10, histLabel, histCombo);
-        histRow.setAlignment(Pos.CENTER_LEFT);
-
-        VBox diffBox = new VBox(8, diffHeader, sliderRow, tickLabels, nextFileCheck, histRow);
-
-        // 2. Merge section
-        Label mergeHeader = new Label("Merge");
-        mergeHeader.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: -text; -fx-padding: 8 0 0 0;");
-
-        CheckBox autoNonConflicting = new CheckBox("Automatically apply non-conflicting changes");
-        autoNonConflicting.setSelected(false);
-
-        CheckBox autoResolveImports = new CheckBox("Automatically resolve conflicts in import statements");
-        autoResolveImports.setSelected(false);
-
-        CheckBox highlightModifiedLines = new CheckBox("Highlight modified lines in gutter");
-        highlightModifiedLines.setSelected(true);
-
-        VBox mergeBox = new VBox(10, mergeHeader, autoNonConflicting, autoResolveImports, highlightModifiedLines);
-
-        VBox panel = new VBox(14, diffBox, mergeBox);
-        panel.setPadding(new Insets(4, 8, 16, 8));
-        return panel;
+    private static Node buildDiffMergePanel(CategoryDef cat) {
+        return new DiffMergeSettingsPanel(AppSettingsStore.load(), new HashMap<>()).createPanel();
     }
 
-    private static VBox buildMcpServerPanel(CategoryDef cat) {
-        CheckBox enableMcp = new CheckBox("Enable MCP Server");
-        enableMcp.setSelected(false);
-        enableMcp.setStyle("-fx-font-weight: bold; -fx-text-fill: -text;");
-
-        Label desc1 = new Label("The MCP Server allows external AI clients to use functionality from the IDE, integrating the power of your IDE into your AI tools. ");
-        desc1.setWrapText(true);
-        desc1.setMaxWidth(620);
-        desc1.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 12px;");
-
-        Hyperlink allMcpToolsLink = new Hyperlink("All MCP Tools ↗");
-        allMcpToolsLink.setStyle("-fx-text-fill: #3574F0; -fx-font-size: 12px; -fx-padding: 0; -fx-border-width: 0;");
-
-        HBox descRow = new HBox(4, desc1, allMcpToolsLink);
-        descRow.setAlignment(Pos.CENTER_LEFT);
-
-        Label desc2 = new Label("When enabled, these detected clients can be auto-configured to use IDE features in one click:\n• Junie\n• VSCode\n• Codex\n• GitHub Copilot CLI");
-        desc2.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 12px; -fx-line-spacing: 2;");
-
-        VBox infoBox = new VBox(8, enableMcp, descRow, desc2);
-
-        // Terminal Sessions section
-        Label terminalHeader = new Label("Terminal Sessions");
-        terminalHeader.setStyle("-fx-font-weight: bold; -fx-text-fill: -text; -fx-font-size: 13px; -fx-padding: 8 0 0 0;");
-
-        Separator sep = new Separator();
-
-        CheckBox terminalSuggestions = new CheckBox("Show setup suggestions for Codex and Claude terminal sessions");
-        terminalSuggestions.setSelected(true);
-
-        Label terminalHint = new Label("Shows the terminal banner when Codex or Claude starts without a matching DataGrip MCP setup.");
-        terminalHint.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 11px; -fx-padding: 0 0 0 22;");
-
-        VBox terminalBox = new VBox(6, terminalHeader, sep, terminalSuggestions, terminalHint);
-
-        VBox panel = new VBox(14, infoBox, terminalBox);
-        panel.setPadding(new Insets(4, 8, 16, 8));
-        return panel;
+    private static Node buildMcpServerPanel(CategoryDef cat) {
+        return new McpServerPanel(AppSettingsStore.load(), new HashMap<>(), null).createPanel();
     }
 
-    private static VBox buildSshPanel(CategoryDef cat) {
-        Label title = new Label("SSH Configurations");
-        title.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: -text;");
-
-        Label sshPathLbl = new Label("Path to SSH executable:");
-        TextField sshPath = new TextField("ssh");
-        sshPath.setPrefWidth(280);
-
-        Label timeoutLbl = new Label("Connection timeout (seconds):");
-        Spinner<Integer> timeoutSpinner = new Spinner<>(5, 300, 30, 5);
-        timeoutSpinner.setEditable(true);
-        timeoutSpinner.setPrefWidth(90);
-
-        CheckBox keepAlive = new CheckBox("Send Keep-Alive packets every 60 seconds");
-        keepAlive.setSelected(true);
-
-        GridPane grid = new GridPane();
-        grid.setHgap(12);
-        grid.setVgap(10);
-        grid.add(sshPathLbl, 0, 0);
-        grid.add(sshPath, 1, 0);
-        grid.add(timeoutLbl, 0, 1);
-        grid.add(timeoutSpinner, 1, 1);
-
-        VBox panel = new VBox(14, title, grid, keepAlive);
-        panel.setPadding(new Insets(4, 8, 16, 8));
-        return panel;
+    private static Node buildSshPanel(CategoryDef cat) {
+        return new SshConfigurationsPanel(AppSettingsStore.load(), new HashMap<>()).createPanel();
     }
 
     public static VBox buildColorSchemeGeneralPanel(AppSettingsStore.Settings settings,
@@ -12834,6 +12587,708 @@ public final class SettingsDialog {
             }
         }
 
+        // Languages > Markdown
+        if (inputs.containsKey("languages_markdown_previewRenderingEngine")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("languages_markdown_previewRenderingEngine");
+            if (cb.getValue() != null) settings.getMarkdown().setPreviewRenderingEngine(cb.getValue());
+        }
+        if (inputs.containsKey("languages_markdown_defaultLayout")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("languages_markdown_defaultLayout");
+            if (cb.getValue() != null) settings.getMarkdown().setDefaultLayout(cb.getValue());
+        }
+        if (inputs.containsKey("languages_markdown_previewLayout")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("languages_markdown_previewLayout");
+            if (cb.getValue() != null) settings.getMarkdown().setPreviewLayout(cb.getValue());
+        }
+        if (inputs.containsKey("languages_markdown_previewFontSize")) {
+            Spinner<Integer> sp = (Spinner<Integer>) inputs.get("languages_markdown_previewFontSize");
+            if (sp.getValue() != null) settings.getMarkdown().setPreviewFontSize(sp.getValue());
+        }
+        if (inputs.containsKey("languages_markdown_syncScroll")) {
+            CheckBox cb = (CheckBox) inputs.get("languages_markdown_syncScroll");
+            settings.getMarkdown().setSyncScroll(cb.isSelected());
+        }
+        if (inputs.containsKey("languages_markdown_injectLanguagesInCodeFences")) {
+            CheckBox cb = (CheckBox) inputs.get("languages_markdown_injectLanguagesInCodeFences");
+            settings.getMarkdown().setInjectLanguagesInCodeFences(cb.isSelected());
+        }
+        if (inputs.containsKey("languages_markdown_showProblemsInCodeFences")) {
+            CheckBox cb = (CheckBox) inputs.get("languages_markdown_showProblemsInCodeFences");
+            settings.getMarkdown().setShowProblemsInCodeFences(cb.isSelected());
+        }
+        if (inputs.containsKey("languages_markdown_groupDocumentsWithSameName")) {
+            CheckBox cb = (CheckBox) inputs.get("languages_markdown_groupDocumentsWithSameName");
+            settings.getMarkdown().setGroupDocumentsWithSameName(cb.isSelected());
+        }
+        if (inputs.containsKey("languages_markdown_detectCommandsCanRun")) {
+            CheckBox cb = (CheckBox) inputs.get("languages_markdown_detectCommandsCanRun");
+            settings.getMarkdown().setDetectCommandsCanRun(cb.isSelected());
+        }
+        if (inputs.containsKey("languages_markdown_plantUmlEnabled")) {
+            CheckBox cb = (CheckBox) inputs.get("languages_markdown_plantUmlEnabled");
+            settings.getMarkdown().setPlantUmlEnabled(cb.isSelected());
+        }
+        if (inputs.containsKey("languages_markdown_customCssLoadFromEnabled")) {
+            CheckBox cb = (CheckBox) inputs.get("languages_markdown_customCssLoadFromEnabled");
+            settings.getMarkdown().setCustomCssLoadFromEnabled(cb.isSelected());
+        }
+        if (inputs.containsKey("languages_markdown_customCssPath")) {
+            TextField tf = (TextField) inputs.get("languages_markdown_customCssPath");
+            settings.getMarkdown().setCustomCssPath(tf.getText());
+        }
+        if (inputs.containsKey("languages_markdown_customCssRulesEnabled")) {
+            CheckBox cb = (CheckBox) inputs.get("languages_markdown_customCssRulesEnabled");
+            settings.getMarkdown().setCustomCssRulesEnabled(cb.isSelected());
+        }
+        if (inputs.containsKey("languages_markdown_customCssRules")) {
+            TextArea ta = (TextArea) inputs.get("languages_markdown_customCssRules");
+            settings.getMarkdown().setCustomCssRules(ta.getText());
+        }
+        if (inputs.containsKey("languages_markdown_pandocExecutablePath")) {
+            TextField tf = (TextField) inputs.get("languages_markdown_pandocExecutablePath");
+            settings.getMarkdown().setPandocExecutablePath(tf.getText());
+        }
+        if (inputs.containsKey("languages_markdown_pandocWordImagesDir")) {
+            TextField tf = (TextField) inputs.get("languages_markdown_pandocWordImagesDir");
+            settings.getMarkdown().setPandocWordImagesDir(tf.getText());
+        }
+
+        // Languages > Schemas and DTDs
+        if (inputs.containsKey("languages_schemas_externalResources")) {
+            Object obj = inputs.get("languages_schemas_externalResources");
+            if (obj instanceof List<?> l) {
+                List<AppSettingsStore.ExternalResourceMapping> res = new ArrayList<>();
+                for (Object item : l) {
+                    if (item instanceof AppSettingsStore.ExternalResourceMapping m) {
+                        res.add(m.copy());
+                    }
+                }
+                settings.getSchemasDtds().setExternalResources(res);
+            }
+        }
+        if (inputs.containsKey("languages_schemas_ignoredResources")) {
+            Object obj = inputs.get("languages_schemas_ignoredResources");
+            if (obj instanceof List<?> l) {
+                List<String> res = new ArrayList<>();
+                for (Object item : l) {
+                    if (item != null) res.add(item.toString());
+                }
+                settings.getSchemasDtds().setIgnoredResources(res);
+            }
+        }
+
+        // Languages > Schemas and DTDs > Default XML Schemas
+        if (inputs.containsKey("languages_xml_htmlLanguageGroup")) {
+            ToggleGroup tg = (ToggleGroup) inputs.get("languages_xml_htmlLanguageGroup");
+            if (tg.getSelectedToggle() instanceof RadioButton rb) {
+                String text = rb.getText();
+                if (text.startsWith("HTML 4")) {
+                    settings.getDefaultXmlSchemas().setHtmlLanguageLevel("HTML 4");
+                } else if (text.startsWith("HTML 5")) {
+                    settings.getDefaultXmlSchemas().setHtmlLanguageLevel("HTML 5");
+                } else {
+                    settings.getDefaultXmlSchemas().setHtmlLanguageLevel("Other");
+                }
+            }
+        }
+        if (inputs.containsKey("languages_xml_htmlOtherDoctype")) {
+            TextField tf = (TextField) inputs.get("languages_xml_htmlOtherDoctype");
+            settings.getDefaultXmlSchemas().setHtmlOtherDoctype(tf.getText());
+        }
+        if (inputs.containsKey("languages_xml_schemaVersionGroup")) {
+            ToggleGroup tg = (ToggleGroup) inputs.get("languages_xml_schemaVersionGroup");
+            if (tg.getSelectedToggle() instanceof RadioButton rb) {
+                String text = rb.getText();
+                if (text.contains("1.1")) {
+                    settings.getDefaultXmlSchemas().setXmlSchemaVersion("1.1");
+                } else {
+                    settings.getDefaultXmlSchemas().setXmlSchemaVersion("1.0");
+                }
+            }
+        }
+
+        // Languages > Schemas and DTDs > JSON Schema Mappings
+        if (inputs.containsKey("languages_json_schemaMappings")) {
+            Object obj = inputs.get("languages_json_schemaMappings");
+            if (obj instanceof List<?> l) {
+                List<AppSettingsStore.JsonSchemaMappingItem> res = new ArrayList<>();
+                for (Object item : l) {
+                    if (item instanceof AppSettingsStore.JsonSchemaMappingItem mi) {
+                        res.add(mi.copy());
+                    }
+                }
+                settings.getJsonSchemaMappings().setMappings(res);
+            }
+        }
+
+        // Languages > Schemas and DTDs > Remote JSON Schemas
+        if (inputs.containsKey("languages_remoteJson_allowDownload")) {
+            CheckBox cb = (CheckBox) inputs.get("languages_remoteJson_allowDownload");
+            settings.getRemoteJsonSchemas().setAllowDownloadRemoteSchemas(cb.isSelected());
+        }
+        if (inputs.containsKey("languages_remoteJson_useSchemaStore")) {
+            CheckBox cb = (CheckBox) inputs.get("languages_remoteJson_useSchemaStore");
+            settings.getRemoteJsonSchemas().setUseSchemaStoreCatalog(cb.isSelected());
+        }
+        if (inputs.containsKey("languages_remoteJson_alwaysDownloadMostRecent")) {
+            CheckBox cb = (CheckBox) inputs.get("languages_remoteJson_alwaysDownloadMostRecent");
+            settings.getRemoteJsonSchemas().setAlwaysDownloadMostRecent(cb.isSelected());
+        }
+
+        // Languages > Schemas and DTDs > XML Catalog
+        if (inputs.containsKey("languages_xmlCatalog_propertyFile")) {
+            TextField tf = (TextField) inputs.get("languages_xmlCatalog_propertyFile");
+            settings.getXmlCatalog().setCatalogPropertyFile(tf.getText());
+        }
+
+        // Languages > XSLT
+        if (inputs.containsKey("languages_xslt_showAssociatedFiles")) {
+            CheckBox cb = (CheckBox) inputs.get("languages_xslt_showAssociatedFiles");
+            settings.getXslt().setShowAssociatedFilesInProjectView(cb.isSelected());
+        }
+
+        // Languages > XSLT File Associations
+        if (inputs.containsKey("languages_xslt_fileAssociations")) {
+            Object obj = inputs.get("languages_xslt_fileAssociations");
+            if (obj instanceof List<?> l) {
+                List<AppSettingsStore.XsltAssociationEntry> res = new ArrayList<>();
+                for (Object item : l) {
+                    if (item instanceof AppSettingsStore.XsltAssociationEntry entry) {
+                        res.add(entry.copy());
+                    }
+                }
+                settings.getXsltFileAssociations().setEntries(res);
+            }
+        }
+
+        // Tools > Build Tools
+        if (inputs.containsKey("tools_build_syncProjectAfterChanges")) {
+            CheckBox cb = (CheckBox) inputs.get("tools_build_syncProjectAfterChanges");
+            settings.getBuildTools().setSyncProjectAfterChanges(cb.isSelected());
+        }
+        if (inputs.containsKey("tools_build_syncTriggerGroup")) {
+            ToggleGroup tg = (ToggleGroup) inputs.get("tools_build_syncTriggerGroup");
+            if (tg.getSelectedToggle() instanceof RadioButton rb) {
+                settings.getBuildTools().setSyncTrigger(rb.getText());
+            }
+        }
+
+        // Tools > Actions on Save
+        if (inputs.containsKey("tools_actionsOnSave_reformatCode")) {
+            CheckBox cb = (CheckBox) inputs.get("tools_actionsOnSave_reformatCode");
+            settings.getActionsOnSave().setReformatCode(cb.isSelected());
+        }
+        if (inputs.containsKey("tools_actionsOnSave_selectedFileTypes")) {
+            Object obj = inputs.get("tools_actionsOnSave_selectedFileTypes");
+            if (obj instanceof Set<?> s) {
+                List<String> list = new ArrayList<>();
+                for (Object item : s) {
+                    if (item != null) list.add(item.toString());
+                }
+                settings.getActionsOnSave().setSelectedFileTypes(list);
+                settings.getActionsOnSave().setAllFileTypes(list.size() == AppSettingsStore.ActionsOnSaveConfig.defaultFileTypes().size());
+            }
+        }
+        if (inputs.containsKey("tools_actionsOnSave_activatedOn")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("tools_actionsOnSave_activatedOn");
+            if (cb.getValue() != null) settings.getActionsOnSave().setActivatedOn(cb.getValue());
+        }
+
+        // Tools > Coverage
+        if (inputs.containsKey("tools_coverage_whenGatheredGroup")) {
+            ToggleGroup tg = (ToggleGroup) inputs.get("tools_coverage_whenGatheredGroup");
+            if (tg.getSelectedToggle() instanceof RadioButton rb) {
+                settings.getCoverage().setWhenNewCoverageGathered(rb.getText());
+            }
+        }
+        if (inputs.containsKey("tools_coverage_activateView")) {
+            CheckBox cb = (CheckBox) inputs.get("tools_coverage_activateView");
+            settings.getCoverage().setActivateCoverageView(cb.isSelected());
+        }
+        if (inputs.containsKey("tools_coverage_showInProjectView")) {
+            CheckBox cb = (CheckBox) inputs.get("tools_coverage_showInProjectView");
+            settings.getCoverage().setShowCoverageInProjectView(cb.isSelected());
+        }
+
+        // Tools > Debugger
+        if (inputs.containsKey("tools_debugger_showDebugWindow")) {
+            CheckBox cb = (CheckBox) inputs.get("tools_debugger_showDebugWindow");
+            settings.getDebugger().setShowDebugWindowOnBreakpoint(cb.isSelected());
+        }
+        if (inputs.containsKey("tools_debugger_focusApp")) {
+            CheckBox cb = (CheckBox) inputs.get("tools_debugger_focusApp");
+            settings.getDebugger().setFocusApplicationOnBreakpoint(cb.isSelected());
+        }
+        if (inputs.containsKey("tools_debugger_hideOnTermination")) {
+            CheckBox cb = (CheckBox) inputs.get("tools_debugger_hideOnTermination");
+            settings.getDebugger().setHideDebugWindowOnProcessTermination(cb.isSelected());
+        }
+        if (inputs.containsKey("tools_debugger_scrollToCenter")) {
+            CheckBox cb = (CheckBox) inputs.get("tools_debugger_scrollToCenter");
+            settings.getDebugger().setScrollExecutionPointToCenter(cb.isSelected());
+        }
+        if (inputs.containsKey("tools_debugger_clickLineRunToCursor")) {
+            CheckBox cb = (CheckBox) inputs.get("tools_debugger_clickLineRunToCursor");
+            settings.getDebugger().setClickLineNumberToRunToCursor(cb.isSelected());
+        }
+        if (inputs.containsKey("tools_debugger_removeBreakpointGroup")) {
+            ToggleGroup tg = (ToggleGroup) inputs.get("tools_debugger_removeBreakpointGroup");
+            if (tg.getSelectedToggle() instanceof RadioButton rb) {
+                settings.getDebugger().setRemoveBreakpointMode(rb.getText());
+            }
+        }
+        if (inputs.containsKey("tools_debugger_confirmRemoval")) {
+            CheckBox cb = (CheckBox) inputs.get("tools_debugger_confirmRemoval");
+            settings.getDebugger().setConfirmRemovalOfConditionalOrLoggingBreakpoints(cb.isSelected());
+        }
+
+        // Tools > Debugger > Data Views
+        if (inputs.containsKey("tools_debugger_sortValuesAlphabetically")) {
+            CheckBox cb = (CheckBox) inputs.get("tools_debugger_sortValuesAlphabetically");
+            settings.getDebuggerDataViews().setSortValuesAlphabetically(cb.isSelected());
+        }
+        if (inputs.containsKey("tools_debugger_enableAutoExpressions")) {
+            CheckBox cb = (CheckBox) inputs.get("tools_debugger_enableAutoExpressions");
+            settings.getDebuggerDataViews().setEnableAutoExpressions(cb.isSelected());
+        }
+        if (inputs.containsKey("tools_debugger_showValuesInline")) {
+            CheckBox cb = (CheckBox) inputs.get("tools_debugger_showValuesInline");
+            settings.getDebuggerDataViews().setShowValuesInline(cb.isSelected());
+        }
+        if (inputs.containsKey("tools_debugger_showValueTooltip")) {
+            CheckBox cb = (CheckBox) inputs.get("tools_debugger_showValueTooltip");
+            settings.getDebuggerDataViews().setShowValueTooltip(cb.isSelected());
+        }
+        if (inputs.containsKey("tools_debugger_valueTooltipDelayMs")) {
+            Object obj = inputs.get("tools_debugger_valueTooltipDelayMs");
+            if (obj instanceof Spinner<?> sp && sp.getValue() instanceof Number num) {
+                settings.getDebuggerDataViews().setValueTooltipDelayMs(num.intValue());
+            }
+        }
+        if (inputs.containsKey("tools_debugger_showValueTooltipOnCodeSelection")) {
+            CheckBox cb = (CheckBox) inputs.get("tools_debugger_showValueTooltipOnCodeSelection");
+            settings.getDebuggerDataViews().setShowValueTooltipOnCodeSelection(cb.isSelected());
+        }
+
+        // Tools > Debugger > Stepping
+        if (inputs.containsKey("tools_debugger_steppingMode")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("tools_debugger_steppingMode");
+            if (cb.getValue() != null) settings.getDebuggerStepping().setSteppingMode(cb.getValue());
+        }
+        if (inputs.containsKey("tools_debugger_pauseAtBegin")) {
+            CheckBox cb = (CheckBox) inputs.get("tools_debugger_pauseAtBegin");
+            settings.getDebuggerStepping().setPauseAtBegin(cb.isSelected());
+        }
+
+        // Tools > Diagrams
+        if (inputs.containsKey("tools_diagrams_enabledCategories")) {
+            Object obj = inputs.get("tools_diagrams_enabledCategories");
+            if (obj instanceof Set<?> s) {
+                Set<String> set = new HashSet<>();
+                for (Object item : s) {
+                    if (item != null) set.add(item.toString());
+                }
+                settings.getDiagrams().setEnabledCategories(set);
+            }
+        }
+        if (inputs.containsKey("tools_diagrams_defaultScope")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("tools_diagrams_defaultScope");
+            if (cb.getValue() != null) settings.getDiagrams().setDefaultScope(cb.getValue());
+        }
+        if (inputs.containsKey("tools_diagrams_nodeItemStyle")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("tools_diagrams_nodeItemStyle");
+            if (cb.getValue() != null) settings.getDiagrams().setNodeItemStyle(cb.getValue());
+        }
+        if (inputs.containsKey("tools_diagrams_shortenLength")) {
+            Object obj = inputs.get("tools_diagrams_shortenLength");
+            if (obj instanceof Spinner<?> sp && sp.getValue() instanceof Number num) {
+                settings.getDiagrams().setShortenNodeItemsLength(num.intValue());
+            }
+        }
+        if (inputs.containsKey("tools_diagrams_showGrid")) {
+            CheckBox cb = (CheckBox) inputs.get("tools_diagrams_showGrid");
+            settings.getDiagrams().setShowGridByDefault(cb.isSelected());
+        }
+        if (inputs.containsKey("tools_diagrams_enableAnimations")) {
+            CheckBox cb = (CheckBox) inputs.get("tools_diagrams_enableAnimations");
+            settings.getDiagrams().setEnableAnimations(cb.isSelected());
+        }
+        if (inputs.containsKey("tools_diagrams_syntaxHighlighting")) {
+            CheckBox cb = (CheckBox) inputs.get("tools_diagrams_syntaxHighlighting");
+            settings.getDiagrams().setEnableNodeItemsSyntaxHighlighting(cb.isSelected());
+        }
+        if (inputs.containsKey("tools_diagrams_defaultLayout")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("tools_diagrams_defaultLayout");
+            if (cb.getValue() != null) settings.getDiagrams().setDefaultLayout(cb.getValue());
+        }
+        if (inputs.containsKey("tools_diagrams_layoutOnCategorySwitch")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("tools_diagrams_layoutOnCategorySwitch");
+            if (cb.getValue() != null) settings.getDiagrams().setLayoutOnCategorySwitch(cb.getValue());
+        }
+        if (inputs.containsKey("tools_diagrams_animationDuration")) {
+            Object obj = inputs.get("tools_diagrams_animationDuration");
+            if (obj instanceof Spinner<?> sp && sp.getValue() instanceof Number num) {
+                settings.getDiagrams().setLayoutAnimationDuration(num.intValue());
+            }
+        }
+        if (inputs.containsKey("tools_diagrams_fitContent")) {
+            CheckBox cb = (CheckBox) inputs.get("tools_diagrams_fitContent");
+            settings.getDiagrams().setFitContentAfterLayout(cb.isSelected());
+        }
+        if (inputs.containsKey("tools_diagrams_relayoutOnNewElements")) {
+            CheckBox cb = (CheckBox) inputs.get("tools_diagrams_relayoutOnNewElements");
+            settings.getDiagrams().setRelayoutWhenNewElementsAdded(cb.isSelected());
+        }
+
+        // Tools > Diff & Merge
+        if (inputs.containsKey("tools_diffmerge_contextSlider")) {
+            Slider sl = (Slider) inputs.get("tools_diffmerge_contextSlider");
+            int idx = (int) Math.round(sl.getValue());
+            if (idx >= 0 && idx < DiffMergeSettingsPanel.CONTEXT_VALUES.size()) {
+                settings.getDiffMerge().setContextLines(DiffMergeSettingsPanel.CONTEXT_VALUES.get(idx));
+            }
+        }
+        if (inputs.containsKey("tools_diffmerge_goToNextFile")) {
+            CheckBox cb = (CheckBox) inputs.get("tools_diffmerge_goToNextFile");
+            settings.getDiffMerge().setGoToNextFileAfterLastChange(cb.isSelected());
+        }
+        if (inputs.containsKey("tools_diffmerge_navHistory")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("tools_diffmerge_navHistory");
+            if (cb.getValue() != null) settings.getDiffMerge().setIncludeDiffsInNavigationHistory(cb.getValue());
+        }
+        if (inputs.containsKey("tools_diffmerge_autoApply")) {
+            CheckBox cb = (CheckBox) inputs.get("tools_diffmerge_autoApply");
+            settings.getDiffMerge().setAutoApplyNonConflictingChanges(cb.isSelected());
+        }
+        if (inputs.containsKey("tools_diffmerge_autoResolveImports")) {
+            CheckBox cb = (CheckBox) inputs.get("tools_diffmerge_autoResolveImports");
+            settings.getDiffMerge().setAutoResolveConflictsInImports(cb.isSelected());
+        }
+        if (inputs.containsKey("tools_diffmerge_highlightModified")) {
+            CheckBox cb = (CheckBox) inputs.get("tools_diffmerge_highlightModified");
+            settings.getDiffMerge().setHighlightModifiedLinesInGutter(cb.isSelected());
+        }
+
+        // Tools > Diff & Merge > External Diff Tools
+        if (inputs.containsKey("tools_external_diff_enable")) {
+            CheckBox cb = (CheckBox) inputs.get("tools_external_diff_enable");
+            settings.getExternalDiffTools().setEnableExternalTools(cb.isSelected());
+        }
+        if (inputs.containsKey("tools_external_diff_customTools")) {
+            Object obj = inputs.get("tools_external_diff_customTools");
+            if (obj instanceof List<?> l) {
+                List<AppSettingsStore.ExternalToolDefinition> list = new ArrayList<>();
+                for (Object item : l) {
+                    if (item instanceof AppSettingsStore.ExternalToolDefinition def) {
+                        list.add(def.copy());
+                    }
+                }
+                settings.getExternalDiffTools().setCustomTools(list);
+            }
+        }
+        if (inputs.containsKey("tools_external_diff_associations")) {
+            Object obj = inputs.get("tools_external_diff_associations");
+            if (obj instanceof List<?> l) {
+                List<AppSettingsStore.FileTypeToolAssociation> list = new ArrayList<>();
+                for (Object item : l) {
+                    if (item instanceof AppSettingsStore.FileTypeToolAssociation assoc) {
+                        list.add(assoc.copy());
+                    }
+                }
+                settings.getExternalDiffTools().setAssociations(list);
+            }
+        }
+
+        // Tools > External Tools
+        if (inputs.containsKey("tools_external_tools_list")) {
+            Object obj = inputs.get("tools_external_tools_list");
+            if (obj instanceof List<?> l) {
+                List<AppSettingsStore.ExternalToolItem> list = new ArrayList<>();
+                for (Object item : l) {
+                    if (item instanceof AppSettingsStore.ExternalToolItem ti) {
+                        list.add(ti.copy());
+                    }
+                }
+                settings.getExternalTools().setTools(list);
+            }
+        }
+
+        // Tools > MCP Server
+        if (inputs.containsKey("tools_mcp_enable")) {
+            CheckBox cb = (CheckBox) inputs.get("tools_mcp_enable");
+            settings.getMcpServer().setEnableMcpServer(cb.isSelected());
+        }
+        if (inputs.containsKey("tools_mcp_exposed_tools")) {
+            Object obj = inputs.get("tools_mcp_exposed_tools");
+            if (obj instanceof Set<?> s) {
+                Set<String> set = new HashSet<>();
+                for (Object item : s) {
+                    if (item != null) set.add(item.toString());
+                }
+                settings.getMcpServer().setEnabledExposedTools(set);
+            }
+        }
+
+        // Tools > Rsync
+        if (inputs.containsKey("tools_rsync_rsyncExecutablePath")) {
+            TextField tf = (TextField) inputs.get("tools_rsync_rsyncExecutablePath");
+            if (tf.getText() != null) settings.getRsync().setRsyncExecutablePath(tf.getText().trim());
+        }
+        if (inputs.containsKey("tools_rsync_rsyncOptions")) {
+            TextField tf = (TextField) inputs.get("tools_rsync_rsyncOptions");
+            if (tf.getText() != null) settings.getRsync().setRsyncOptions(tf.getText().trim());
+        }
+        if (inputs.containsKey("tools_rsync_shellExecutablePath")) {
+            TextField tf = (TextField) inputs.get("tools_rsync_shellExecutablePath");
+            if (tf.getText() != null) settings.getRsync().setShellExecutablePath(tf.getText().trim());
+        }
+
+        // Tools > SSH Configurations
+        if (inputs.containsKey("tools_ssh_configurations_list")) {
+            Object obj = inputs.get("tools_ssh_configurations_list");
+            if (obj instanceof List<?> l) {
+                List<AppSettingsStore.SshConfigurationEntry> list = new ArrayList<>();
+                for (Object item : l) {
+                    if (item instanceof AppSettingsStore.SshConfigurationEntry entry) {
+                        list.add(entry.copy());
+                    }
+                }
+                settings.getSshConfigurations().setConfigurations(list);
+            }
+        }
+
+        // Tools > Terminal
+        if (inputs.containsKey("tools_terminal_engine")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("tools_terminal_engine");
+            if (cb.getValue() != null) settings.getTerminal().setTerminalEngine(cb.getValue());
+        }
+        if (inputs.containsKey("tools_terminal_showCompletionPopup")) {
+            CheckBox cb = (CheckBox) inputs.get("tools_terminal_showCompletionPopup");
+            settings.getTerminal().setShowCompletionPopup(cb.isSelected());
+        }
+        if (inputs.containsKey("tools_terminal_completionTriggerGroup")) {
+            ToggleGroup tg = (ToggleGroup) inputs.get("tools_terminal_completionTriggerGroup");
+            if (tg.getSelectedToggle() instanceof RadioButton rb) {
+                settings.getTerminal().setCompletionTrigger(rb.getText());
+            }
+        }
+        if (inputs.containsKey("tools_terminal_showCompletionShortcutCheck")) {
+            CheckBox cb = (CheckBox) inputs.get("tools_terminal_showCompletionShortcutCheck");
+            settings.getTerminal().setShowCompletionShortcutEnabled(cb.isSelected());
+        }
+        if (inputs.containsKey("tools_terminal_completionShortcut")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("tools_terminal_completionShortcut");
+            if (cb.getValue() != null) settings.getTerminal().setCompletionShortcut(cb.getValue());
+        }
+        if (inputs.containsKey("tools_terminal_insertSuggestionWith")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("tools_terminal_insertSuggestionWith");
+            if (cb.getValue() != null) settings.getTerminal().setInsertSuggestionWith(cb.getValue());
+        }
+        if (inputs.containsKey("tools_terminal_startDirectory")) {
+            TextField tf = (TextField) inputs.get("tools_terminal_startDirectory");
+            if (tf.getText() != null) settings.getTerminal().setStartDirectory(tf.getText().trim());
+        }
+        if (inputs.containsKey("tools_terminal_environmentVariables")) {
+            TextField tf = (TextField) inputs.get("tools_terminal_environmentVariables");
+            if (tf.getText() != null) settings.getTerminal().setEnvironmentVariables(tf.getText().trim());
+        }
+        if (inputs.containsKey("tools_terminal_font")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("tools_terminal_font");
+            if (cb.getValue() != null) settings.getTerminal().setFont(cb.getValue());
+        }
+        if (inputs.containsKey("tools_terminal_fallbackFont")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("tools_terminal_fallbackFont");
+            if (cb.getValue() != null) settings.getTerminal().setFallbackFont(cb.getValue());
+        }
+        if (inputs.containsKey("tools_terminal_fontSize")) {
+            Object obj = inputs.get("tools_terminal_fontSize");
+            if (obj instanceof Spinner<?> sp && sp.getValue() instanceof Number num) {
+                settings.getTerminal().setFontSize(num.doubleValue());
+            }
+        }
+        if (inputs.containsKey("tools_terminal_lineHeight")) {
+            Object obj = inputs.get("tools_terminal_lineHeight");
+            if (obj instanceof Spinner<?> sp && sp.getValue() instanceof Number num) {
+                settings.getTerminal().setLineHeight(num.doubleValue());
+            }
+        }
+        if (inputs.containsKey("tools_terminal_columnWidth")) {
+            Object obj = inputs.get("tools_terminal_columnWidth");
+            if (obj instanceof Spinner<?> sp && sp.getValue() instanceof Number num) {
+                settings.getTerminal().setColumnWidth(num.doubleValue());
+            }
+        }
+        if (inputs.containsKey("tools_terminal_shellPath")) {
+            TextField tf = (TextField) inputs.get("tools_terminal_shellPath");
+            if (tf.getText() != null) settings.getTerminal().setShellPath(tf.getText().trim());
+        }
+        if (inputs.containsKey("tools_terminal_defaultTabName")) {
+            TextField tf = (TextField) inputs.get("tools_terminal_defaultTabName");
+            if (tf.getText() != null) settings.getTerminal().setDefaultTabName(tf.getText().trim());
+        }
+        if (inputs.containsKey("tools_terminal_useApplicationTitleAsTabName")) {
+            CheckBox cb = (CheckBox) inputs.get("tools_terminal_useApplicationTitleAsTabName");
+            settings.getTerminal().setUseApplicationTitleAsTabName(cb.isSelected());
+        }
+        if (inputs.containsKey("tools_terminal_appTitleModeGroup")) {
+            ToggleGroup tg = (ToggleGroup) inputs.get("tools_terminal_appTitleModeGroup");
+            if (tg.getSelectedToggle() instanceof RadioButton rb) {
+                settings.getTerminal().setApplicationTitleMode(rb.getText());
+            }
+        }
+        if (inputs.containsKey("tools_terminal_enforceMinimumContrastRatio")) {
+            CheckBox cb = (CheckBox) inputs.get("tools_terminal_enforceMinimumContrastRatio");
+            settings.getTerminal().setEnforceMinimumContrastRatio(cb.isSelected());
+        }
+        if (inputs.containsKey("tools_terminal_minimumContrastRatio")) {
+            TextField tf = (TextField) inputs.get("tools_terminal_minimumContrastRatio");
+            if (tf.getText() != null) {
+                try {
+                    settings.getTerminal().setMinimumContrastRatio(Double.parseDouble(tf.getText().trim()));
+                } catch (NumberFormatException ignored) {}
+            }
+        }
+        if (inputs.containsKey("tools_terminal_showSeparators")) {
+            CheckBox cb = (CheckBox) inputs.get("tools_terminal_showSeparators");
+            settings.getTerminal().setShowSeparatorsBetweenExecutedCommands(cb.isSelected());
+        }
+        if (inputs.containsKey("tools_terminal_audibleBell")) {
+            CheckBox cb = (CheckBox) inputs.get("tools_terminal_audibleBell");
+            settings.getTerminal().setAudibleBell(cb.isSelected());
+        }
+        if (inputs.containsKey("tools_terminal_closeSessionWhenItEnds")) {
+            CheckBox cb = (CheckBox) inputs.get("tools_terminal_closeSessionWhenItEnds");
+            settings.getTerminal().setCloseSessionWhenItEnds(cb.isSelected());
+        }
+        if (inputs.containsKey("tools_terminal_mouseReporting")) {
+            CheckBox cb = (CheckBox) inputs.get("tools_terminal_mouseReporting");
+            settings.getTerminal().setMouseReporting(cb.isSelected());
+        }
+        if (inputs.containsKey("tools_terminal_moveFocusToEditor")) {
+            CheckBox cb = (CheckBox) inputs.get("tools_terminal_moveFocusToEditor");
+            settings.getTerminal().setMoveFocusToEditor(cb.isSelected());
+        }
+        if (inputs.containsKey("tools_terminal_moveFocusKey")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("tools_terminal_moveFocusKey");
+            if (cb.getValue() != null) settings.getTerminal().setMoveFocusKey(cb.getValue());
+        }
+        if (inputs.containsKey("tools_terminal_pasteOnMiddleClick")) {
+            CheckBox cb = (CheckBox) inputs.get("tools_terminal_pasteOnMiddleClick");
+            settings.getTerminal().setPasteOnMiddleMouseButtonClick(cb.isSelected());
+        }
+        if (inputs.containsKey("tools_terminal_overrideIdeShortcuts")) {
+            CheckBox cb = (CheckBox) inputs.get("tools_terminal_overrideIdeShortcuts");
+            settings.getTerminal().setOverrideIdeShortcuts(cb.isSelected());
+        }
+        if (inputs.containsKey("tools_terminal_shellIntegration")) {
+            CheckBox cb = (CheckBox) inputs.get("tools_terminal_shellIntegration");
+            settings.getTerminal().setShellIntegration(cb.isSelected());
+        }
+        if (inputs.containsKey("tools_terminal_highlightHyperlinks")) {
+            CheckBox cb = (CheckBox) inputs.get("tools_terminal_highlightHyperlinks");
+            settings.getTerminal().setHighlightHyperlinks(cb.isSelected());
+        }
+        if (inputs.containsKey("tools_terminal_cursorShape")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("tools_terminal_cursorShape");
+            if (cb.getValue() != null) settings.getTerminal().setCursorShape(cb.getValue());
+        }
+
+        // Tools > Web Browsers and Preview
+        if (inputs.containsKey("tools_browsers_list")) {
+            Object obj = inputs.get("tools_browsers_list");
+            if (obj instanceof List<?> l) {
+                List<AppSettingsStore.WebBrowserItem> list = new ArrayList<>();
+                for (Object item : l) {
+                    if (item instanceof AppSettingsStore.WebBrowserItem b) {
+                        list.add(b.copy());
+                    }
+                }
+                settings.getWebBrowsers().setBrowsers(list);
+            }
+        }
+        if (inputs.containsKey("tools_browsers_defaultBrowser")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("tools_browsers_defaultBrowser");
+            if (cb.getValue() != null) settings.getWebBrowsers().setDefaultBrowser(cb.getValue());
+        }
+        if (inputs.containsKey("tools_browsers_customPath")) {
+            TextField tf = (TextField) inputs.get("tools_browsers_customPath");
+            if (tf.getText() != null) settings.getWebBrowsers().setCustomBrowserPath(tf.getText().trim());
+        }
+        if (inputs.containsKey("tools_browsers_popupHtml")) {
+            CheckBox cb = (CheckBox) inputs.get("tools_browsers_popupHtml");
+            settings.getWebBrowsers().setShowPopupForHtml(cb.isSelected());
+        }
+        if (inputs.containsKey("tools_browsers_popupXml")) {
+            CheckBox cb = (CheckBox) inputs.get("tools_browsers_popupXml");
+            settings.getWebBrowsers().setShowPopupForXml(cb.isSelected());
+        }
+        if (inputs.containsKey("tools_browsers_reloadBrowser")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("tools_browsers_reloadBrowser");
+            if (cb.getValue() != null) settings.getWebBrowsers().setReloadPageInBrowser(cb.getValue());
+        }
+        if (inputs.containsKey("tools_browsers_reloadPreview")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("tools_browsers_reloadPreview");
+            if (cb.getValue() != null) settings.getWebBrowsers().setReloadPageInBuiltInPreview(cb.getValue());
+        }
+        if (inputs.containsKey("tools_browsers_serverPort")) {
+            Object obj = inputs.get("tools_browsers_serverPort");
+            if (obj instanceof Spinner<?> sp && sp.getValue() instanceof Number num) {
+                settings.getWebBrowsers().setBuiltInServerPort(num.intValue());
+            }
+        }
+        if (inputs.containsKey("tools_browsers_acceptExternal")) {
+            CheckBox cb = (CheckBox) inputs.get("tools_browsers_acceptExternal");
+            settings.getWebBrowsers().setAcceptExternalConnections(cb.isSelected());
+        }
+        if (inputs.containsKey("tools_browsers_allowUnsigned")) {
+            CheckBox cb = (CheckBox) inputs.get("tools_browsers_allowUnsigned");
+            settings.getWebBrowsers().setAllowUnsignedRequests(cb.isSelected());
+        }
+
+        // Tools > XPath Viewer
+        if (inputs.containsKey("tools_xpath_scrollFirstHit")) {
+            CheckBox cb = (CheckBox) inputs.get("tools_xpath_scrollFirstHit");
+            settings.getXpathViewer().setScrollFirstHitIntoVisibleArea(cb.isSelected());
+        }
+        if (inputs.containsKey("tools_xpath_useNodeAtCursor")) {
+            CheckBox cb = (CheckBox) inputs.get("tools_xpath_useNodeAtCursor");
+            settings.getXpathViewer().setUseNodeAtCursorAsContextNode(cb.isSelected());
+        }
+        if (inputs.containsKey("tools_xpath_highlightOnlyStartTag")) {
+            CheckBox cb = (CheckBox) inputs.get("tools_xpath_highlightOnlyStartTag");
+            settings.getXpathViewer().setHighlightOnlyStartTag(cb.isSelected());
+        }
+        if (inputs.containsKey("tools_xpath_addErrorStripeMarkers")) {
+            CheckBox cb = (CheckBox) inputs.get("tools_xpath_addErrorStripeMarkers");
+            settings.getXpathViewer().setAddErrorStripeMarkers(cb.isSelected());
+        }
+        if (inputs.containsKey("tools_xpath_highlightColor")) {
+            Object obj = inputs.get("tools_xpath_highlightColor");
+            if (obj instanceof ColorPicker cp && cp.getValue() != null) {
+                settings.getXpathViewer().setHighlightColor(toHex(cp.getValue()));
+            } else if (obj instanceof String s) {
+                settings.getXpathViewer().setHighlightColor(s);
+            }
+        }
+        if (inputs.containsKey("tools_xpath_contextNodeColor")) {
+            Object obj = inputs.get("tools_xpath_contextNodeColor");
+            if (obj instanceof ColorPicker cp && cp.getValue() != null) {
+                settings.getXpathViewer().setContextNodeColor(toHex(cp.getValue()));
+            } else if (obj instanceof String s) {
+                settings.getXpathViewer().setContextNodeColor(s);
+            }
+        }
+
+        // Backup and Sync
+        if (inputs.containsKey("backup_sync_enable")) {
+            CheckBox cb = (CheckBox) inputs.get("backup_sync_enable");
+            settings.getBackupSync().setEnableBackupAndSync(cb.isSelected());
+        }
+        if (inputs.containsKey("backup_sync_account")) {
+            ComboBox<String> cb = (ComboBox<String>) inputs.get("backup_sync_account");
+            if (cb.getValue() != null) settings.getBackupSync().setSyncAccount(cb.getValue());
+        }
+
         // Persist
         AppSettingsStore.save(settings);
 
@@ -12843,5 +13298,13 @@ public final class SettingsDialog {
             mainWindow.refreshMenusAndToolbars();
             mainWindow.setStatus("Settings applied");
         }
+    }
+
+    private static String toHex(javafx.scene.paint.Color c) {
+        if (c == null) return "#FFFFFF";
+        return String.format("#%02X%02X%02X",
+                (int) Math.round(c.getRed() * 255),
+                (int) Math.round(c.getGreen() * 255),
+                (int) Math.round(c.getBlue() * 255));
     }
 }
