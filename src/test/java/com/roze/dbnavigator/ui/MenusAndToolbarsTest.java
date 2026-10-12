@@ -101,22 +101,15 @@ public class MenusAndToolbarsTest {
         List<String> newGroupItems = newGroup.getChildren().stream()
                 .map(MenuItemConfig::getText)
                 .toList();
-        assertTrue(newGroupItems.contains("New File"));
-        assertTrue(newGroupItems.contains("New"));
-
-        MenuItemConfig newFileGroup = newGroup.getChildren().stream()
-                .filter(m -> "New File".equals(m.getText()))
-                .findFirst()
-                .orElse(null);
-        assertNotNull(newFileGroup);
-        List<String> newFileItems = newFileGroup.getChildren().stream()
-                .map(MenuItemConfig::getText)
-                .toList();
-        assertTrue(newFileItems.contains("SQL File"));
-        assertTrue(newFileItems.contains("File"));
-        assertTrue(newFileItems.contains("Scratch File"));
-        assertTrue(newFileItems.contains("Directory/Package"));
-        assertTrue(newFileItems.contains("Web Development Templates"));
+        assertTrue(newGroupItems.contains("Project\u2026"));
+        assertTrue(newGroupItems.contains("SQL File"));
+        assertTrue(newGroupItems.contains("Scratch File"));
+        assertTrue(newGroupItems.contains("Query Console"));
+        assertTrue(newGroupItems.contains("Table"));
+        assertTrue(newGroupItems.contains("View"));
+        assertTrue(newGroupItems.contains("Data Source"));
+        assertTrue(newGroupItems.contains("Data Source from Cloud Provider"));
+        assertTrue(newGroupItems.contains("Driver"));
     }
 
     @Test
@@ -1295,49 +1288,39 @@ public class MenusAndToolbarsTest {
                 .map(MenuItemConfig::getId)
                 .toList();
 
-        // Check top-level items from Images 1-4 are present
-        assertTrue(actionIds.contains("file.open.actions"), "Should contain File Open Actions");
+        // Check top-level items from Screenshot 1 are present
         assertTrue(actionIds.contains("file.new"), "Should contain New group");
         assertTrue(actionIds.contains("file.open.sql"), "Should contain Open...");
         assertTrue(actionIds.contains("file.save.as"), "Should contain Save As...");
         assertTrue(actionIds.contains("file.recent"), "Should contain Recent Projects");
-        assertTrue(actionIds.contains("file.remote.dev.actions"), "Should contain Remote Development actions");
-        assertTrue(actionIds.contains("file.settings.actions"), "Should contain Settings actions");
+        assertTrue(actionIds.contains("file.close.project"), "Should contain Close Project");
+        assertTrue(actionIds.contains("file.rename.project"), "Should contain Rename Project...");
+        assertTrue(actionIds.contains("file.attach.directory"), "Should contain Attach Directory...");
+        assertTrue(actionIds.contains("file.settings"), "Should contain Settings...");
+        assertTrue(actionIds.contains("file.data.sources"), "Should contain Data Sources...");
         assertTrue(actionIds.contains("file.sql.dialects"), "Should contain SQL Dialects...");
         assertTrue(actionIds.contains("file.sql.scopes"), "Should contain SQL Resolution Scopes...");
         assertTrue(actionIds.contains("file.edit.datasources.xml"), "Should contain Edit dataSources.xml");
         assertTrue(actionIds.contains("file.properties"), "Should contain File Properties");
-        assertTrue(actionIds.contains("file.local.history.main.group"), "Should contain Local History main group");
+        assertTrue(actionIds.contains("file.local.history"), "Should contain Local History");
         assertTrue(actionIds.contains("file.save.all"), "Should contain Save All");
         assertTrue(actionIds.contains("file.reload.all"), "Should contain Reload All from Disk");
         assertTrue(actionIds.contains("file.manage.settings"), "Should contain Manage IDE Settings");
-        assertTrue(actionIds.contains("file.print.export.actions"), "Should contain Print/Export actions");
+        assertTrue(actionIds.contains("file.export"), "Should contain Export");
+        assertTrue(actionIds.contains("file.print"), "Should contain Print...");
         assertTrue(actionIds.contains("file.power.save"), "Should contain Power Save Mode");
         assertTrue(actionIds.contains("file.exit"), "Should contain Exit");
 
-        // Verify Recent Projects children (Image 2)
+        // Verify Recent Projects children (Screenshot 5)
         MenuItemConfig recentGroup = fileMenu.getChildren().stream()
                 .filter(c -> "file.recent".equals(c.getId()))
                 .findFirst().orElseThrow();
         List<String> recentIds = recentGroup.getChildren().stream().map(MenuItemConfig::getId).toList();
-        assertTrue(recentIds.contains("file.reopen.project"));
         assertTrue(recentIds.contains("file.manage.projects"));
-        assertTrue(recentIds.contains("file.close.project"));
-        assertTrue(recentIds.contains("file.rename.project"));
-        assertTrue(recentIds.contains("file.attach.directory"));
-
-        // Verify Settings Actions children (Image 2 & 4)
-        MenuItemConfig settingsGroup = fileMenu.getChildren().stream()
-                .filter(c -> "file.settings.actions".equals(c.getId()))
-                .findFirst().orElseThrow();
-        assertFalse(settingsGroup.isPopup(), "Settings Actions should be non-popup group");
-        List<String> settingsIds = settingsGroup.getChildren().stream().map(MenuItemConfig::getId).toList();
-        assertTrue(settingsIds.contains("file.settings"));
-        assertTrue(settingsIds.contains("file.project.structure"));
     }
 
     @Test
-    @DisplayName("Verify Cloud Data Source submenu has AWS, GCP, and Azure")
+    @DisplayName("Verify Cloud Data Source submenu has Google Cloud, AWS, and Azure Cloud Explorer")
     public void testFileMenuCloudProviders() {
         MenuItemConfig mainMenu = settings.getMenuConfig("root.main.menu");
         MenuItemConfig fileMenu = mainMenu.getChildren().stream()
@@ -1350,33 +1333,115 @@ public class MenusAndToolbarsTest {
                 .findFirst()
                 .orElseThrow();
 
-        MenuItemConfig newDbGroup = newGroup.getChildren().stream()
-                .filter(m -> "file.new.db.group".equals(m.getId()))
-                .findFirst()
-                .orElseThrow();
-
-        MenuItemConfig createDsGroup = newDbGroup.getChildren().stream()
-                .filter(m -> "file.new.create.datasource".equals(m.getId()))
-                .findFirst()
-                .orElseThrow();
-
-        MenuItemConfig cloudGroup = createDsGroup.getChildren().stream()
+        MenuItemConfig cloudGroup = newGroup.getChildren().stream()
                 .filter(m -> "file.new.datasource.cloud".equals(m.getId()))
                 .findFirst()
                 .orElseThrow();
 
-        assertEquals(3, cloudGroup.getChildren().size());
         List<String> cloudNames = cloudGroup.getChildren().stream().map(MenuItemConfig::getText).toList();
-        assertTrue(cloudNames.contains("Amazon AWS"));
         assertTrue(cloudNames.contains("Google Cloud"));
-        assertTrue(cloudNames.contains("Microsoft Azure"));
+        assertTrue(cloudNames.contains("AWS"));
+        assertTrue(cloudNames.contains("Azure Cloud Explorer"));
+    }
+
+    @Test
+    @DisplayName("Verify File submenus match DataGrip: File Properties, Local History, Manage IDE Settings, Export")
+    public void testFileMenuSubmenusMatchingDataGrip() {
+        MenuItemConfig mainMenu = settings.getMenuConfig("root.main.menu");
+        MenuItemConfig fileMenu = mainMenu.getChildren().stream()
+                .filter(m -> "File".equals(m.getText()) || "menu.file".equals(m.getId()))
+                .findFirst()
+                .orElseThrow();
+
+        // 1. File Properties & Line Separators (Screenshot 1)
+        MenuItemConfig fileProps = fileMenu.getChildren().stream()
+                .filter(c -> "file.properties".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> propIds = fileProps.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertEquals(5, propIds.size(), "File Properties should have 5 items (4 actions + Line Separators submenu)");
+        assertEquals("file.props.encoding", propIds.get(0));
+        assertEquals("file.remove.bom", propIds.get(1));
+        assertEquals("file.add.bom", propIds.get(2));
+        assertEquals("file.associate.file.type", propIds.get(3));
+        assertEquals("file.line.separators", propIds.get(4));
+
+        MenuItemConfig lineSep = fileProps.getChildren().stream()
+                .filter(c -> "file.line.separators".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> lineSepIds = lineSep.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertEquals(3, lineSepIds.size(), "Line Separators should contain CRLF, LF, CR");
+        assertEquals("file.line.sep.crlf", lineSepIds.get(0));
+        assertEquals("file.line.sep.lf", lineSepIds.get(1));
+        assertEquals("file.line.sep.cr", lineSepIds.get(2));
+
+        // 2. Local History (Screenshot 2)
+        MenuItemConfig localHist = fileMenu.getChildren().stream()
+                .filter(c -> "file.local.history".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> histIds = localHist.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertEquals(4, histIds.size(), "Local History should have exactly 4 items without separators");
+        assertEquals("history.show", histIds.get(0));
+        assertEquals("history.show.project", histIds.get(1));
+        assertEquals("history.recent.changes", histIds.get(2));
+        assertEquals("history.put.label", histIds.get(3));
+
+        // 3. Manage IDE Settings (Screenshot 3)
+        MenuItemConfig manageSettings = fileMenu.getChildren().stream()
+                .filter(c -> "file.manage.settings".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<String> manageIds = manageSettings.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertEquals(4, manageIds.size(), "Manage IDE Settings should have exactly 4 items without separators");
+        assertEquals("file.settings.import", manageIds.get(0));
+        assertEquals("file.settings.export", manageIds.get(1));
+        assertEquals("file.settings.restore", manageIds.get(2));
+        assertEquals("file.settings.backup.sync", manageIds.get(3));
+
+        // 4. Export (Screenshot 4)
+        MenuItemConfig exportGroup = fileMenu.getChildren().stream()
+                .filter(c -> "file.export".equals(c.getId()))
+                .findFirst().orElseThrow();
+        List<MenuItemConfig> exportChildren = exportGroup.getChildren();
+        assertEquals(1, exportChildren.size(), "Export should contain Files or Selection to HTML");
+        assertEquals("file.export.html", exportChildren.get(0).getId());
+        assertEquals("Files or Selection to HTML\u2026", exportChildren.get(0).getText());
+
+        // 5. Root File menu 27 items and 6 separators matching DataGrip Screenshot 1
+        List<MenuItemConfig> fileItems = fileMenu.getChildren();
+        assertEquals(27, fileItems.size(), "File menu must contain 21 items and 6 separators matching DataGrip Screenshot 1");
+        assertEquals("file.new", fileItems.get(0).getId());
+        assertEquals("file.open.sql", fileItems.get(1).getId());
+        assertEquals("file.save.as", fileItems.get(2).getId());
+        assertEquals("file.recent", fileItems.get(3).getId());
+        assertEquals("file.close.project", fileItems.get(4).getId());
+        assertEquals("file.rename.project", fileItems.get(5).getId());
+        assertEquals("file.attach.directory", fileItems.get(6).getId());
+        assertEquals(MenuItemConfig.Type.SEPARATOR, fileItems.get(7).getType());
+        assertEquals("file.settings", fileItems.get(8).getId());
+        assertEquals("file.data.sources", fileItems.get(9).getId());
+        assertEquals(MenuItemConfig.Type.SEPARATOR, fileItems.get(10).getType());
+        assertEquals("file.sql.dialects", fileItems.get(11).getId());
+        assertEquals("file.sql.scopes", fileItems.get(12).getId());
+        assertEquals("file.edit.datasources.xml", fileItems.get(13).getId());
+        assertEquals(MenuItemConfig.Type.SEPARATOR, fileItems.get(14).getType());
+        assertEquals("file.properties", fileItems.get(15).getId());
+        assertEquals("file.local.history", fileItems.get(16).getId());
+        assertEquals(MenuItemConfig.Type.SEPARATOR, fileItems.get(17).getType());
+        assertEquals("file.save.all", fileItems.get(18).getId());
+        assertEquals("file.reload.all", fileItems.get(19).getId());
+        assertEquals(MenuItemConfig.Type.SEPARATOR, fileItems.get(20).getType());
+        assertEquals("file.manage.settings", fileItems.get(21).getId());
+        assertEquals("file.export", fileItems.get(22).getId());
+        assertEquals("file.print", fileItems.get(23).getId());
+        assertEquals("file.power.save", fileItems.get(24).getId());
+        assertEquals(MenuItemConfig.Type.SEPARATOR, fileItems.get(25).getType());
+        assertEquals("file.exit", fileItems.get(26).getId());
     }
 
     @Test
     @DisplayName("Verify automatic migration of old truncated File menu in settings")
     public void testAutoMigrationOfOutdatedMainMenu() {
         AppSettingsStore.Settings staleSettings = new AppSettingsStore.Settings();
-        // Create an outdated File menu without file.open.actions
+        // Create an outdated File menu without file.close.project or file.new.table
         MenuItemConfig staleFileMenu = MenuItemConfig.group("menu.file", "File", List.of(
                 MenuItemConfig.action("file.new", "New"),
                 MenuItemConfig.action("file.open.sql", "Open\u2026"),
@@ -1398,10 +1463,10 @@ public class MenusAndToolbarsTest {
                 .orElseThrow();
 
         List<String> ids = migratedFile.getChildren().stream().map(MenuItemConfig::getId).toList();
-        assertTrue(ids.contains("file.open.actions"), "Migrated File menu must now include file.open.actions");
+        assertTrue(ids.contains("file.close.project"), "Migrated File menu must now include file.close.project");
         assertTrue(ids.contains("file.save.as"), "Migrated File menu must now include file.save.as");
         assertTrue(ids.contains("file.recent"), "Migrated File menu must now include file.recent");
-        assertTrue(ids.contains("file.settings.actions"), "Migrated File menu must now include file.settings.actions");
+        assertTrue(ids.contains("file.settings"), "Migrated File menu must now include file.settings");
     }
 
     @Test

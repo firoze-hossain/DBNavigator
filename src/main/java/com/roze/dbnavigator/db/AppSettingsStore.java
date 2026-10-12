@@ -24,6 +24,9 @@ import java.util.UUID;
  */
 public final class AppSettingsStore {
 
+    /** Central RozeHub API base URL for local development. Only change here or in Settings when going live. */
+    public static final String DEFAULT_ROZEHUB_API_BASE_URL = "http://127.0.0.1:8000/api/v1";
+
     public static String defaultKeymapPreset() {
         return Settings.defaultKeymapPreset();
     }
@@ -704,91 +707,105 @@ public final class AppSettingsStore {
             List<MenuItemConfig> mainMenuChildren = new ArrayList<>();
 
             // -------------------------------------------------------------
-            // Main Menu > File (Exact match to DataGrip Images 1, 2, 3, 4)
+            // Main Menu > File (Exact match to DataGrip Images 1, 2, 3, 4, 5)
             // -------------------------------------------------------------
-            // Image 1: New -> New File
-            List<MenuItemConfig> xmlChildren = new ArrayList<>();
-            xmlChildren.add(MenuItemConfig.action("file.new.html", "HTML File", "FILE_CODE"));
+            // Screenshot 3: File > New > Data Source >
+            List<MenuItemConfig> recentDsChildren = new ArrayList<>();
+            recentDsChildren.add(MenuItemConfig.action("file.new.datasource.header.recent", "Recent"));
+            recentDsChildren.add(MenuItemConfig.action("file.new.datasource.mysql", "MySQL", "DATABASE"));
+            recentDsChildren.add(MenuItemConfig.action("file.new.datasource.mariadb", "MariaDB", "DATABASE"));
+            recentDsChildren.add(MenuItemConfig.action("file.new.datasource.documentdb", "Amazon DocumentDB", "DATABASE"));
+            recentDsChildren.add(MenuItemConfig.action("file.new.datasource.postgres", "PostgreSQL", "DATABASE"));
+            recentDsChildren.add(MenuItemConfig.action("file.new.datasource.cassandra", "Apache Cassandra", "DATABASE"));
 
-            List<MenuItemConfig> webDevChildren = new ArrayList<>();
-            webDevChildren.add(MenuItemConfig.group("file.web.dev.xml", "XML", true, xmlChildren));
-            webDevChildren.add(MenuItemConfig.action("file.microservices.templates", "Microservices Templates"));
-            webDevChildren.add(MenuItemConfig.action("file.from.template", "From Template"));
-            webDevChildren.add(MenuItemConfig.action("file.xml.config.file", "XML Configuration File", "CODE"));
+            List<MenuItemConfig> completeDsChildren = new ArrayList<>();
+            completeDsChildren.add(MenuItemConfig.action("file.new.datasource.header.complete", "Complete Support"));
+            completeDsChildren.add(MenuItemConfig.action("file.new.datasource.aurora.mysql", "Amazon Aurora MySQL", "DATABASE"));
+            completeDsChildren.add(MenuItemConfig.action("file.new.datasource.dynamodb", "Amazon DynamoDB", "DATABASE"));
+            completeDsChildren.add(MenuItemConfig.action("file.new.datasource.redshift", "Amazon Redshift", "DATABASE"));
+            completeDsChildren.add(MenuItemConfig.action("file.new.datasource.derby", "Apache Derby", "DATABASE"));
+            completeDsChildren.add(MenuItemConfig.action("file.new.datasource.hive", "Apache Hive", "DATABASE"));
+            completeDsChildren.add(MenuItemConfig.action("file.new.datasource.azuresql", "Azure SQL Database", "DATABASE"));
+            completeDsChildren.add(MenuItemConfig.action("file.new.datasource.synapse", "Azure Synapse Analytics", "DATABASE"));
+            completeDsChildren.add(MenuItemConfig.action("file.new.datasource.clickhouse", "ClickHouse", "DATABASE"));
+            completeDsChildren.add(MenuItemConfig.action("file.new.datasource.cockroach", "CockroachDB", "DATABASE"));
+            completeDsChildren.add(MenuItemConfig.action("file.new.datasource.couchbase", "Couchbase Server", "DATABASE"));
+            completeDsChildren.add(MenuItemConfig.action("file.new.datasource.exasol", "Exasol", "DATABASE"));
+            completeDsChildren.add(MenuItemConfig.action("file.new.datasource.bigquery", "Google BigQuery", "DATABASE"));
+            completeDsChildren.add(MenuItemConfig.action("file.new.datasource.greenplum", "Greenplum", "DATABASE"));
+            completeDsChildren.add(MenuItemConfig.action("file.new.datasource.h2", "H2", "DATABASE"));
+            completeDsChildren.add(MenuItemConfig.action("file.new.datasource.hsqldb", "HSQLDB", "DATABASE"));
+            completeDsChildren.add(MenuItemConfig.action("file.new.datasource.db2", "IBM Db2 LUW", "DATABASE"));
+            completeDsChildren.add(MenuItemConfig.action("file.new.datasource.sqlserver", "Microsoft SQL Server", "DATABASE"));
+            completeDsChildren.add(MenuItemConfig.action("file.new.datasource.sqlserver.localdb", "Microsoft SQL Server LocalDB", "DATABASE"));
+            completeDsChildren.add(MenuItemConfig.action("file.new.datasource.mongodb", "MongoDB", "LEAF"));
+            completeDsChildren.add(MenuItemConfig.action("file.new.datasource.oracle", "Oracle", "DATABASE"));
+            completeDsChildren.add(MenuItemConfig.action("file.new.datasource.redis", "Redis", "DATABASE"));
+            completeDsChildren.add(MenuItemConfig.action("file.new.datasource.sqlite", "SQLite", "DATABASE"));
+            completeDsChildren.add(MenuItemConfig.action("file.new.datasource.stratos", "StratosDB", "DATABASE"));
+            completeDsChildren.add(MenuItemConfig.action("file.new.datasource.snowflake", "Snowflake", "DATABASE"));
+            completeDsChildren.add(MenuItemConfig.action("file.new.datasource.sybase", "Sybase ASE", "DATABASE"));
+            completeDsChildren.add(MenuItemConfig.action("file.new.datasource.vertica", "Vertica", "DATABASE"));
 
-            List<MenuItemConfig> newFileChildren = new ArrayList<>();
-            newFileChildren.add(MenuItemConfig.action("file.new.sqlfile", "SQL File", "FILE_CODE"));
-            newFileChildren.add(MenuItemConfig.separator());
-            newFileChildren.add(MenuItemConfig.action("file.new.generic.file", "File", "FILE"));
-            newFileChildren.add(MenuItemConfig.action("file.new.scratch", "Scratch File", "FILE_ALT"));
-            newFileChildren.add(MenuItemConfig.action("file.new.directory.package", "Directory/Package", "FOLDER"));
-            newFileChildren.add(MenuItemConfig.action("file.template.separator.group", "FileTemplateSeparatorGroup"));
-            newFileChildren.add(MenuItemConfig.group("file.web.dev.templates", "Web Development Templates", true, webDevChildren));
+            List<MenuItemConfig> dataSourceChildren = new ArrayList<>();
+            dataSourceChildren.addAll(recentDsChildren);
+            dataSourceChildren.addAll(completeDsChildren);
+            dataSourceChildren.add(MenuItemConfig.separator());
+            dataSourceChildren.add(MenuItemConfig.action("file.new.datasource.other", "Other\u2026", "PLUS_CIRCLE"));
 
-            // Image 1: New -> New (Add + Create Data Source)
-            List<MenuItemConfig> addChildren = new ArrayList<>();
-            addChildren.add(MenuItemConfig.action("file.new.queryfile.active", "Query File", "TERMINAL"));
-            addChildren.add(MenuItemConfig.action("file.new.queryfile", "Query File\u2026", "FILE_CODE"));
-            addChildren.add(MenuItemConfig.action("file.new.scratch.queryfile", "Scratch Query File", "TERMINAL"));
-            addChildren.add(MenuItemConfig.separator());
-            addChildren.add(MenuItemConfig.action("file.new.add.ddl.object", "Add Ddl Object", "DATABASE"));
-            addChildren.add(MenuItemConfig.separator());
-
+            // Screenshot 4: File > New > Data Source from Cloud Provider >
             List<MenuItemConfig> cloudChildren = new ArrayList<>();
-            cloudChildren.add(MenuItemConfig.action("cloud.aws", "Amazon AWS", "DATABASE"));
-            cloudChildren.add(MenuItemConfig.action("cloud.gcp", "Google Cloud", "DATABASE"));
-            cloudChildren.add(MenuItemConfig.action("cloud.azure", "Microsoft Azure", "DATABASE"));
+            cloudChildren.add(MenuItemConfig.action("cloud.header.connect", "Connect Provider"));
+            cloudChildren.add(MenuItemConfig.action("cloud.provider.gcp", "Google Cloud", "CLOUD"));
+            cloudChildren.add(MenuItemConfig.action("cloud.provider.aws", "AWS", "CLOUD"));
+            cloudChildren.add(MenuItemConfig.action("cloud.header.download", "Download Provider Plugin"));
+            cloudChildren.add(MenuItemConfig.action("cloud.provider.azure.explorer", "Azure Cloud Explorer", "CLOUD"));
 
-            List<MenuItemConfig> createDsChildren = new ArrayList<>();
-            createDsChildren.add(MenuItemConfig.group("file.new.datasource.cloud", "Data Source from Cloud Provider", true, "CLOUD", cloudChildren));
-            createDsChildren.add(MenuItemConfig.action("file.new.datasource.templates", "Data Source Templates", "LAYER_GROUP"));
-            createDsChildren.add(MenuItemConfig.action("file.new.datasource.file", "Data Source from File/Folder", "FOLDER_OPEN"));
-            createDsChildren.add(MenuItemConfig.action("file.new.datasource.url", "Data Source from URL", "LINK"));
-            createDsChildren.add(MenuItemConfig.action("file.new.datasource.selection", "Add Data Source from Selection\u2026"));
-            createDsChildren.add(MenuItemConfig.action("file.new.datasource.path", "Data Source in Path"));
-            createDsChildren.add(MenuItemConfig.action("file.new.datasource.clipboard", "Import from Clipboard"));
-            createDsChildren.add(MenuItemConfig.separator());
-            createDsChildren.add(MenuItemConfig.action("file.new.folder", "Create a New Folder", "FOLDER"));
-            createDsChildren.add(MenuItemConfig.action("file.new.driver", "Driver", "PLUG"));
-
-            List<MenuItemConfig> newDbChildren = new ArrayList<>();
-            newDbChildren.add(MenuItemConfig.group("file.new.add.group", "Add", false, addChildren));
-            newDbChildren.add(MenuItemConfig.group("file.new.create.datasource", "Create Data Source", true, createDsChildren));
-
+            // Screenshot 2: File > New >
             List<MenuItemConfig> fileNewChildren = new ArrayList<>();
-            fileNewChildren.add(MenuItemConfig.group("file.new.file.group", "New File", true, newFileChildren));
-            fileNewChildren.add(MenuItemConfig.group("file.new.db.group", "New", false, newDbChildren));
+            fileNewChildren.add(MenuItemConfig.action("file.new.project", "Project\u2026"));
+            fileNewChildren.add(MenuItemConfig.separator());
+            fileNewChildren.add(MenuItemConfig.action("file.new.sqlfile", "SQL File", "FILE_CODE"));
+            fileNewChildren.add(MenuItemConfig.action("file.new.scratch", "Scratch File", "FILE_ALT"));
+            fileNewChildren.add(MenuItemConfig.action("file.new.console", "Query Console", "TERMINAL"));
+            fileNewChildren.add(MenuItemConfig.action("file.new.queryfile", "Query File\u2026", "FILE_CODE"));
+            fileNewChildren.add(MenuItemConfig.separator());
+            fileNewChildren.add(MenuItemConfig.action("file.new.column", "Column", "COLUMNS"));
+            fileNewChildren.add(MenuItemConfig.action("file.new.uniquekey", "Unique Key", "KEY"));
+            fileNewChildren.add(MenuItemConfig.action("file.new.foreignkey", "Foreign Key", "LINK"));
+            fileNewChildren.add(MenuItemConfig.action("file.new.index", "Index", "INFO_CIRCLE"));
+            fileNewChildren.add(MenuItemConfig.action("file.new.check", "Check", "CHECK_CIRCLE"));
+            fileNewChildren.add(MenuItemConfig.action("file.new.table", "Table", "TABLE"));
+            fileNewChildren.add(MenuItemConfig.action("file.new.matview", "Materialized View", "CLONE"));
+            fileNewChildren.add(MenuItemConfig.action("file.new.view", "View", "EYE"));
+            fileNewChildren.add(MenuItemConfig.action("file.new.operator", "Operator", "PERCENT"));
+            fileNewChildren.add(MenuItemConfig.action("file.new.sequence", "Sequence", "SORT_NUMERIC_DOWN"));
+            fileNewChildren.add(MenuItemConfig.action("file.new.collation", "Collation", "SORT_ALPHA_DOWN"));
+            fileNewChildren.add(MenuItemConfig.action("file.new.schema", "Schema", "CUBES"));
+            fileNewChildren.add(MenuItemConfig.action("file.new.language", "Language", "GLOBE"));
+            fileNewChildren.add(MenuItemConfig.action("file.new.database", "Database", "DATABASE"));
+            fileNewChildren.add(MenuItemConfig.action("file.new.role", "Role", "USER_SHIELD"));
+            fileNewChildren.add(MenuItemConfig.action("file.new.user", "User", "USER"));
+            fileNewChildren.add(MenuItemConfig.separator());
+            fileNewChildren.add(MenuItemConfig.action("file.new.virtualcolumn", "Virtual Column", "COLUMNS"));
+            fileNewChildren.add(MenuItemConfig.action("file.new.virtualforeignkey", "Virtual Foreign Key", "LINK"));
+            fileNewChildren.add(MenuItemConfig.action("file.new.virtualview", "Virtual View", "TABLE"));
+            fileNewChildren.add(MenuItemConfig.separator());
+            fileNewChildren.add(MenuItemConfig.group("file.new.datasource.group", "Data Source", true, "DATABASE", dataSourceChildren));
+            fileNewChildren.add(MenuItemConfig.group("file.new.datasource.cloud", "Data Source from Cloud Provider", true, "CLOUD", cloudChildren));
+            fileNewChildren.add(MenuItemConfig.action("file.new.datasource.templates", "Data Source Templates", "LAYER_GROUP"));
+            fileNewChildren.add(MenuItemConfig.action("file.new.datasource.file", "Data Source from File/Folder", "FOLDER_OPEN"));
+            fileNewChildren.add(MenuItemConfig.action("file.new.datasource.url", "Data Source from URL", "LINK"));
+            fileNewChildren.add(MenuItemConfig.action("file.new.datasource.ddl", "DDL Data Source", "DATABASE"));
+            fileNewChildren.add(MenuItemConfig.separator());
+            fileNewChildren.add(MenuItemConfig.action("file.new.driver", "Driver", "PLUG"));
 
-            // Image 2: Recent Projects
+            // Screenshot 5: Recent Projects
             List<MenuItemConfig> recentChildren = new ArrayList<>();
-            recentChildren.add(MenuItemConfig.action("file.reopen.project", "Reopen Project"));
-            recentChildren.add(MenuItemConfig.separator());
             recentChildren.add(MenuItemConfig.action("file.manage.projects", "Manage Projects\u2026"));
-            recentChildren.add(MenuItemConfig.action("file.close.project", "Close Project"));
-            recentChildren.add(MenuItemConfig.action("file.rename.project", "Rename Project\u2026"));
             recentChildren.add(MenuItemConfig.separator());
-            recentChildren.add(MenuItemConfig.action("file.attach.directory", "Attach Directory to Project\u2026", "FOLDER_PLUS"));
 
-            // Image 2: Remote Development
-            List<MenuItemConfig> remoteDaemonChildren = new ArrayList<>();
-            remoteDaemonChildren.add(MenuItemConfig.action("file.remote.dev.daemon.action", "Remote Development\u2026"));
-
-            List<MenuItemConfig> remoteDevChildren = new ArrayList<>();
-            remoteDevChildren.add(MenuItemConfig.action("file.remote.dev", "Remote Development", "DESKTOP"));
-            remoteDevChildren.add(MenuItemConfig.group("file.remote.dev.daemon", "FileMenu.RemoteDevelopmentActions.Daemon", false, remoteDaemonChildren));
-
-            // Image 2 & 4: Settings Actions
-            List<MenuItemConfig> settingsChildren = new ArrayList<>();
-            settingsChildren.add(MenuItemConfig.action("file.settings", "Settings\u2026", "COG"));
-            settingsChildren.add(MenuItemConfig.action("file.project.structure", "Project Structure\u2026"));
-
-            // Image 3: File Properties
-            List<MenuItemConfig> removeBomChildren = new ArrayList<>();
-            removeBomChildren.add(MenuItemConfig.action("file.remove.bom", "Remove BOM"));
-
-            List<MenuItemConfig> addBomChildren = new ArrayList<>();
-            addBomChildren.add(MenuItemConfig.action("file.add.bom", "Add BOM"));
-
+            // Screenshot 1: File Properties & Line Separators
             List<MenuItemConfig> lineSepChildren = new ArrayList<>();
             lineSepChildren.add(MenuItemConfig.action("file.line.sep.crlf", "CRLF - Windows (\\r\\n)"));
             lineSepChildren.add(MenuItemConfig.action("file.line.sep.lf", "LF - Unix and macOS (\\n)"));
@@ -796,71 +813,55 @@ public final class AppSettingsStore {
 
             List<MenuItemConfig> filePropsChildren = new ArrayList<>();
             filePropsChildren.add(MenuItemConfig.action("file.props.encoding", "File Encoding"));
-            filePropsChildren.add(MenuItemConfig.group("file.remove.bom.group", "RemoveBom.Group", false, removeBomChildren));
-            filePropsChildren.add(MenuItemConfig.group("file.add.bom.group", "AddBom.Group", false, addBomChildren));
+            filePropsChildren.add(MenuItemConfig.action("file.remove.bom", "Remove BOM"));
+            filePropsChildren.add(MenuItemConfig.action("file.add.bom", "Add BOM"));
             filePropsChildren.add(MenuItemConfig.action("file.associate.file.type", "Associate with File Type\u2026"));
-            filePropsChildren.add(MenuItemConfig.action("file.change.template.lang", "Change Template Data Language"));
-            filePropsChildren.add(MenuItemConfig.action("file.toggle.readonly", "Toggle Read-Only Attribute"));
             filePropsChildren.add(MenuItemConfig.group("file.line.separators", "Line Separators", true, lineSepChildren));
-            filePropsChildren.add(MenuItemConfig.separator());
 
-            // Image 3: LocalHistory.MainMenuGroup
+            // Screenshot 2: Local History
             List<MenuItemConfig> localHistChildren = new ArrayList<>();
-            localHistChildren.add(MenuItemConfig.action("history.show", "Show History\u2026", "HISTORY"));
-            localHistChildren.add(MenuItemConfig.action("history.show.selection", "Show History for Selection\u2026"));
-            localHistChildren.add(MenuItemConfig.separator());
+            localHistChildren.add(MenuItemConfig.action("history.show", "Show History\u2026"));
             localHistChildren.add(MenuItemConfig.action("history.show.project", "Show Project History\u2026"));
             localHistChildren.add(MenuItemConfig.action("history.recent.changes", "Recent Changes"));
             localHistChildren.add(MenuItemConfig.action("history.put.label", "Put Label\u2026"));
 
-            List<MenuItemConfig> localHistMainChildren = new ArrayList<>();
-            localHistMainChildren.add(MenuItemConfig.separator());
-            localHistMainChildren.add(MenuItemConfig.group("file.local.history", "Local History", true, localHistChildren));
-            localHistMainChildren.add(MenuItemConfig.separator());
-
-            // Image 4: Manage IDE Settings
+            // Screenshot 3: Manage IDE Settings
             List<MenuItemConfig> manageSettingsChildren = new ArrayList<>();
             manageSettingsChildren.add(MenuItemConfig.action("file.settings.import", "Import Settings\u2026"));
             manageSettingsChildren.add(MenuItemConfig.action("file.settings.export", "Export Settings\u2026"));
-            manageSettingsChildren.add(MenuItemConfig.separator());
             manageSettingsChildren.add(MenuItemConfig.action("file.settings.restore", "Restore Default Settings\u2026"));
             manageSettingsChildren.add(MenuItemConfig.action("file.settings.backup.sync", "Backup and Sync\u2026"));
 
-            // Image 4: Print/Export Actions
+            // Screenshot 4: Export
             List<MenuItemConfig> exportSubChildren = new ArrayList<>();
-            exportSubChildren.add(MenuItemConfig.action("file.export.html", "Export Files or Selection to HTML\u2026"));
+            exportSubChildren.add(MenuItemConfig.action("file.export.html", "Files or Selection to HTML\u2026"));
 
-            List<MenuItemConfig> printExportChildren = new ArrayList<>();
-            printExportChildren.add(MenuItemConfig.separator());
-            printExportChildren.add(MenuItemConfig.group("file.export", "Export", true, exportSubChildren));
-            printExportChildren.add(MenuItemConfig.action("file.print", "Print\u2026", "PRINT"));
-
-            // Full File Menu assembling Images 1-4
+            // Full File Menu assembling Screenshot 1
             List<MenuItemConfig> fileMenu = new ArrayList<>();
-            fileMenu.add(MenuItemConfig.action("file.open.actions", "File Open Actions"));
             fileMenu.add(MenuItemConfig.group("file.new", "New", true, fileNewChildren));
             fileMenu.add(MenuItemConfig.action("file.open.sql", "Open\u2026", "FOLDER_OPEN"));
             fileMenu.add(MenuItemConfig.action("file.save.as", "Save As\u2026"));
             fileMenu.add(MenuItemConfig.group("file.recent", "Recent Projects", true, recentChildren));
+            fileMenu.add(MenuItemConfig.action("file.close.project", "Close Project"));
+            fileMenu.add(MenuItemConfig.action("file.rename.project", "Rename Project\u2026"));
+            fileMenu.add(MenuItemConfig.action("file.attach.directory", "Attach Directory to Project\u2026", "FOLDER_PLUS"));
             fileMenu.add(MenuItemConfig.separator());
-            fileMenu.add(MenuItemConfig.group("file.remote.dev.actions", "FileMenu.RemoteDevelopmentActions", false, remoteDevChildren));
-            fileMenu.add(MenuItemConfig.separator());
-            fileMenu.add(MenuItemConfig.group("file.settings.actions", "Settings Actions", false, settingsChildren));
+            fileMenu.add(MenuItemConfig.action("file.settings", "Settings\u2026", "COG"));
+            fileMenu.add(MenuItemConfig.action("file.data.sources", "Data Sources\u2026", "DATABASE"));
             fileMenu.add(MenuItemConfig.separator());
             fileMenu.add(MenuItemConfig.action("file.sql.dialects", "SQL Dialects\u2026"));
             fileMenu.add(MenuItemConfig.action("file.sql.scopes", "SQL Resolution Scopes\u2026"));
             fileMenu.add(MenuItemConfig.action("file.edit.datasources.xml", "Edit dataSources.xml"));
             fileMenu.add(MenuItemConfig.separator());
             fileMenu.add(MenuItemConfig.group("file.properties", "File Properties", true, filePropsChildren));
-            fileMenu.add(MenuItemConfig.separator());
-            fileMenu.add(MenuItemConfig.group("file.local.history.main.group", "LocalHistory.MainMenuGroup", false, localHistMainChildren));
+            fileMenu.add(MenuItemConfig.group("file.local.history", "Local History", true, localHistChildren));
             fileMenu.add(MenuItemConfig.separator());
             fileMenu.add(MenuItemConfig.action("file.save.all", "Save All", "SAVE"));
             fileMenu.add(MenuItemConfig.action("file.reload.all", "Reload All from Disk", "SYNC_ALT"));
             fileMenu.add(MenuItemConfig.separator());
             fileMenu.add(MenuItemConfig.group("file.manage.settings", "Manage IDE Settings", true, manageSettingsChildren));
-            fileMenu.add(MenuItemConfig.separator());
-            fileMenu.add(MenuItemConfig.group("file.print.export.actions", "Print/Export Actions", false, printExportChildren));
+            fileMenu.add(MenuItemConfig.group("file.export", "Export", true, exportSubChildren));
+            fileMenu.add(MenuItemConfig.action("file.print", "Print\u2026", "PRINT"));
             fileMenu.add(MenuItemConfig.action("file.power.save", "Power Save Mode"));
             fileMenu.add(MenuItemConfig.separator());
             fileMenu.add(MenuItemConfig.action("file.exit", "Exit"));
@@ -3779,12 +3780,109 @@ public final class AppSettingsStore {
         public String getUpdateEndpoint() { return updateEndpoint; }
         public void setUpdateEndpoint(String value) { this.updateEndpoint = value; }
 
+        /**
+         * Returns the effective RozeHub API base URL (default: "http://127.0.0.1:8000/api/v1").
+         * All API calls (updates, releases, marketplace) are built from this single base URL.
+         * When switching from local testing to production, only this base URL needs to be updated.
+         */
+        @JsonIgnore
+        public String getEffectiveRozeHubApiBase() {
+            if (updateEndpoint != null && !updateEndpoint.isBlank()) {
+                String trimmed = updateEndpoint.trim().replaceAll("/+$", "");
+                if (trimmed.endsWith("/api/v1")) {
+                    return trimmed;
+                }
+                if (trimmed.contains("/api/v1")) {
+                    int idx = trimmed.indexOf("/api/v1");
+                    return trimmed.substring(0, idx + "/api/v1".length());
+                }
+                return trimmed + "/api/v1";
+            }
+            return DEFAULT_ROZEHUB_API_BASE_URL;
+        }
+
+        /**
+         * Returns the effective RozeHub web base URL (e.g. "http://127.0.0.1:8000"),
+         * obtained by stripping "/api/v1" from the API base URL.
+         */
+        @JsonIgnore
+        public String getEffectiveRozeHubWebBase() {
+            String apiBase = getEffectiveRozeHubApiBase();
+            if (apiBase.endsWith("/api/v1")) {
+                return apiBase.substring(0, apiBase.length() - "/api/v1".length());
+            }
+            if (apiBase.endsWith("/api")) {
+                return apiBase.substring(0, apiBase.length() - "/api".length());
+            }
+            return apiBase;
+        }
+
+        /**
+         * Returns the full updates API endpoint for DBNavigator.
+         * Path: <apiBase>/updates/dbnavigator
+         */
+        @JsonIgnore
+        public String getRozeHubUpdatesApiUrl() {
+            return getEffectiveRozeHubApiBase() + "/updates/dbnavigator";
+        }
+
+        /**
+         * Returns the releases API endpoint for DBNavigator.
+         * Path: <apiBase>/updates/dbnavigator/releases
+         */
+        @JsonIgnore
+        public String getRozeHubReleasesApiUrl() {
+            return getEffectiveRozeHubApiBase() + "/updates/dbnavigator/releases";
+        }
+
+        /**
+         * Returns the marketplace catalog API endpoint for DBNavigator.
+         * Path: <apiBase>/marketplace/dbnavigator
+         */
+        @JsonIgnore
+        public String getRozeHubMarketplaceApiUrl() {
+            return getEffectiveRozeHubApiBase() + "/marketplace/dbnavigator";
+        }
+
+        /**
+         * Returns the marketplace item detail API endpoint.
+         * Path: <apiBase>/marketplace/dbnavigator/{slug}
+         */
+        @JsonIgnore
+        public String getRozeHubMarketplaceItemApiUrl(String slug) {
+            return getEffectiveRozeHubApiBase() + "/marketplace/dbnavigator/" + (slug != null ? slug.trim() : "");
+        }
+
+        /**
+         * Returns the marketplace release download API endpoint.
+         * Path: <apiBase>/marketplace/releases/{releaseId}/download
+         */
+        @JsonIgnore
+        public String getRozeHubMarketplaceDownloadApiUrl(String releaseId) {
+            return getEffectiveRozeHubApiBase() + "/marketplace/releases/" + releaseId + "/download";
+        }
+
+        /**
+         * Returns the marketplace web portal URL.
+         * Path: <webBase>/marketplace
+         */
+        @JsonIgnore
+        public String getRozeHubMarketplaceWebUrl() {
+            return getEffectiveRozeHubWebBase() + "/marketplace";
+        }
+
+        /**
+         * Returns the web portal URL for a specific marketplace plugin item.
+         * Path: <webBase>/marketplace/{slug}
+         */
+        @JsonIgnore
+        public String getRozeHubMarketplaceItemWebUrl(String slug) {
+            return getEffectiveRozeHubWebBase() + "/marketplace/" + (slug != null ? slug.trim() : "");
+        }
+
         @JsonIgnore
         public String getEffectiveRozeHubEndpoint() {
-            if (updateEndpoint != null && !updateEndpoint.isBlank()) {
-                return updateEndpoint.trim().replaceAll("/+$", "");
-            }
-            return "http://127.0.0.1:8000";
+            return getEffectiveRozeHubApiBase();
         }
         public int getQueryTimeoutSeconds() { return queryTimeoutSeconds; }
         public void setQueryTimeoutSeconds(int queryTimeoutSeconds) { this.queryTimeoutSeconds = queryTimeoutSeconds; }
@@ -4004,8 +4102,57 @@ public final class AppSettingsStore {
                                 .findFirst().orElse(null);
 
                         boolean needsMigration = false;
-                        if (fileMenu != null && fileMenu.getChildren().stream().noneMatch(c -> "file.open.actions".equalsIgnoreCase(c.getId()))) {
-                            needsMigration = true;
+                        if (fileMenu != null) {
+                            boolean hasCloseProject = fileMenu.getChildren().stream()
+                                    .anyMatch(c -> "file.close.project".equalsIgnoreCase(c.getId()));
+                            boolean hasOldOpenActions = fileMenu.getChildren().stream()
+                                    .anyMatch(c -> "file.open.actions".equalsIgnoreCase(c.getId()));
+                            MenuItemConfig fileNew = fileMenu.getChildren().stream()
+                                    .filter(c -> "file.new".equalsIgnoreCase(c.getId()))
+                                    .findFirst().orElse(null);
+                            boolean hasTableInNew = fileNew != null && fileNew.getChildren().stream()
+                                    .anyMatch(c -> "file.new.table".equalsIgnoreCase(c.getId()));
+                            MenuItemConfig fileProps = fileMenu.getChildren().stream()
+                                    .filter(c -> "file.properties".equalsIgnoreCase(c.getId()))
+                                    .findFirst().orElse(null);
+                            boolean hasRemoveBomGroup = fileProps != null && fileProps.getChildren().stream()
+                                    .anyMatch(c -> "file.remove.bom.group".equalsIgnoreCase(c.getId()));
+                            MenuItemConfig localHistory = fileMenu.getChildren().stream()
+                                    .filter(c -> "file.local.history".equalsIgnoreCase(c.getId()))
+                                    .findFirst().orElse(null);
+                            boolean hasShowSelectionInLocalHist = localHistory != null && localHistory.getChildren().stream()
+                                    .anyMatch(c -> "history.show.selection".equalsIgnoreCase(c.getId()));
+                            MenuItemConfig manageSettings = fileMenu.getChildren().stream()
+                                    .filter(c -> "file.manage.settings".equalsIgnoreCase(c.getId()))
+                                    .findFirst().orElse(null);
+                            boolean manageSettingsHasImport = manageSettings != null && manageSettings.getChildren().stream()
+                                    .anyMatch(c -> "file.settings.import".equalsIgnoreCase(c.getId()));
+                            MenuItemConfig exportSub = fileMenu.getChildren().stream()
+                                    .filter(c -> "file.export".equalsIgnoreCase(c.getId()))
+                                    .findFirst().orElse(null);
+                            boolean exportHasHtml = exportSub != null && exportSub.getChildren().stream()
+                                    .anyMatch(c -> "file.export.html".equalsIgnoreCase(c.getId()) && "Files or Selection to HTML\u2026".equalsIgnoreCase(c.getText()));
+
+                            int reloadIdx = -1;
+                            int manageIdx = -1;
+                            int renameIdx = -1;
+                            int attachIdx = -1;
+                            for (int k = 0; k < fileMenu.getChildren().size(); k++) {
+                                String cid = fileMenu.getChildren().get(k).getId();
+                                if ("file.reload.all".equalsIgnoreCase(cid)) reloadIdx = k;
+                                if ("file.manage.settings".equalsIgnoreCase(cid)) manageIdx = k;
+                                if ("file.rename.project".equalsIgnoreCase(cid)) renameIdx = k;
+                                if ("file.attach.directory".equalsIgnoreCase(cid)) attachIdx = k;
+                            }
+                            boolean hasSepBetweenReloadAndManage = (reloadIdx >= 0 && manageIdx == reloadIdx + 2
+                                    && fileMenu.getChildren().get(reloadIdx + 1).getType() == MenuItemConfig.Type.SEPARATOR);
+                            boolean hasNoSepBetweenRenameAndAttach = (renameIdx >= 0 && attachIdx == renameIdx + 1);
+
+                            if (!hasCloseProject || hasOldOpenActions || !hasTableInNew || hasRemoveBomGroup
+                                    || hasShowSelectionInLocalHist || !manageSettingsHasImport || !exportHasHtml
+                                    || !hasSepBetweenReloadAndManage || !hasNoSepBetweenRenameAndAttach) {
+                                needsMigration = true;
+                            }
                         }
                         if (editMenu != null && editMenu.getChildren().stream().noneMatch(c -> "edit.generate.root.group".equalsIgnoreCase(c.getId()))) {
                             needsMigration = true;
@@ -9158,5 +9305,29 @@ public final class AppSettingsStore {
         } catch (IOException e) {
             System.err.println("Could not save settings: " + e.getMessage());
         }
+    }
+
+    public static String getRozeHubApiBaseUrl() {
+        return load().getEffectiveRozeHubApiBase();
+    }
+
+    public static String getRozeHubWebBaseUrl() {
+        return load().getEffectiveRozeHubWebBase();
+    }
+
+    public static String getRozeHubUpdatesApiUrl() {
+        return load().getRozeHubUpdatesApiUrl();
+    }
+
+    public static String getRozeHubMarketplaceApiUrl() {
+        return load().getRozeHubMarketplaceApiUrl();
+    }
+
+    public static String getRozeHubMarketplacePluginWebsite(String slug) {
+        return load().getRozeHubMarketplaceItemWebUrl(slug);
+    }
+
+    public static String getRozeHubMarketplaceWebCatalogUrl() {
+        return load().getRozeHubMarketplaceWebUrl();
     }
 }

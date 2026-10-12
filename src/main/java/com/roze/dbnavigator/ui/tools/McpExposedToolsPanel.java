@@ -178,7 +178,7 @@ public class McpExposedToolsPanel {
 
         // 2. CodeInsightToolset
         addToolset(root, "CodeInsightToolset", List.of(
-                tool("CodeInsightToolset.get_symbol_info", "get_symbol_info", "Retrieves information about the symbol at the specified position in the specified file.Provides the same information as IntelliJ's Quick Documentation action, including declaration and docstring.")
+                tool("CodeInsightToolset.get_symbol_info", "get_symbol_info", "Retrieves information about the symbol at the specified position in the specified file. Provides quick documentation, declaration, and docstring.")
         ), selectedTools);
 
         // 3. ExecutionToolset
@@ -194,12 +194,12 @@ public class McpExposedToolsPanel {
                 tool("FileToolset.find_files_by_name_keyword", "find_files_by_name_keyword", "Searches for all files in the project whose names contain the specified keyword (case-insensitive).Use this tool to locate files when you only know part of the filename."),
                 tool("FileToolset.get_all_open_file_paths", "get_all_open_file_paths", "Returns active editor's and other open editors' file paths relative to the project root.Use this tool to explore what the user is currently looking at."),
                 tool("FileToolset.list_directory_tree", "list_directory_tree", "Provides a tree representation of the specified directory in the pseudo graphic format like 'tree' utility does.Use this tool to explore directory structure."),
-                tool("FileToolset.open_file_in_editor", "open_file_in_editor", "Opens the specified file in the JetBrains IDE editor.Requires a filePath parameter containing the path to the file to open.")
+                tool("FileToolset.open_file_in_editor", "open_file_in_editor", "Opens the specified file in the DBNavigator editor. Requires a filePath parameter containing the path to the file to open.")
         ), selectedTools);
 
         // 5. FormattingToolset
         addToolset(root, "FormattingToolset", List.of(
-                tool("FormattingToolset.reformat_file", "reformat_file", "Reformats a specified file in the JetBrains IDE.Use this tool to apply code formatting rules to a file identified by its path.")
+                tool("FormattingToolset.reformat_file", "reformat_file", "Reformats a specified file in DBNavigator. Use this tool to apply code formatting rules to a file identified by its path.")
         ), selectedTools);
 
         // 6. ReadToolset
@@ -229,8 +229,8 @@ public class McpExposedToolsPanel {
         addToolset(root, "TextToolset", List.of(
                 tool("TextToolset.get_file_text_by_path", "get_file_text_by_path", "Retrieves the text content of a file using its path relative to project root.Use this tool to read file contents directly."),
                 tool("TextToolset.replace_text_in_file", "replace_text_in_file", "Replaces text in a file with flexible options for find and replace operations.Use this tool to make targeted edits to file contents."),
-                tool("TextToolset.search_in_files_by_regex", "search_in_files_by_regex", "Searches with a regex pattern within all files in the project using IntelliJ's search engine.Prefer this tool over ripgrep when available."),
-                tool("TextToolset.search_in_files_by_text", "search_in_files_by_text", "Searches for a text substring within all files in the project using IntelliJ's search engine.Prefer this tool over ripgrep when available.")
+                tool("TextToolset.search_in_files_by_regex", "search_in_files_by_regex", "Searches with a regex pattern within all files in the project using the integrated search engine. Prefer this tool when available."),
+                tool("TextToolset.search_in_files_by_text", "search_in_files_by_text", "Searches for a text substring within all files in the project using the integrated search engine. Prefer this tool when available.")
         ), selectedTools);
 
         // 11. VcsToolset

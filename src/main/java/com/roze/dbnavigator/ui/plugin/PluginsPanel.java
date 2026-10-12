@@ -529,7 +529,9 @@ public class PluginsPanel extends BorderPane {
         websiteLink.setOnAction(e -> {
             try {
                 if (java.awt.Desktop.isDesktopSupported()) {
-                    String url = p.getWebsite().isBlank() ? "https://plugins.jetbrains.com" : p.getWebsite();
+                    String url = (p.getWebsite() == null || p.getWebsite().isBlank())
+                            ? AppSettingsStore.getRozeHubMarketplaceWebCatalogUrl()
+                            : p.getWebsite();
                     java.awt.Desktop.getDesktop().browse(java.net.URI.create(url));
                 }
             } catch (Exception ignored) {}
@@ -692,7 +694,7 @@ public class PluginsPanel extends BorderPane {
         grid.addRow(1, makeDimLabel("Vendor:"), makeValLabel(p.getVendor()));
         grid.addRow(2, makeDimLabel("Category:"), makeValLabel(p.getCategory()));
         grid.addRow(3, makeDimLabel("Downloads:"), makeValLabel(p.formattedDownloads()));
-        grid.addRow(4, makeDimLabel("License:"), makeValLabel("Commercial / JetBrains Proprietary"));
+        grid.addRow(4, makeDimLabel("License:"), makeValLabel("Roze Ecosystem License"));
         grid.addRow(5, makeDimLabel("Compatibility:"), makeValLabel("DBNavigator Pro 2.0.0+"));
 
         return grid;
@@ -836,7 +838,7 @@ public class PluginsPanel extends BorderPane {
         dialog.setTitle("Custom Plugin Repositories");
         dialog.setHeaderText("Add custom RozeHub or marketplace repository URLs:");
 
-        TextField repoInput = new TextField(AppSettingsStore.load().getEffectiveRozeHubEndpoint());
+        TextField repoInput = new TextField(AppSettingsStore.getRozeHubApiBaseUrl());
         repoInput.setPrefWidth(380);
 
         VBox content = new VBox(10, new Label("Repository URL:"), repoInput);

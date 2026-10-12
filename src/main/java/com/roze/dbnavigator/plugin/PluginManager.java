@@ -84,95 +84,100 @@ public final class PluginManager {
     }
 
     private void initBundledPlugins() {
-        // Core and bundled DataGrip-aligned plugins (from Images 3 & 4)
+        // Core and bundled Roze Ecosystem plugins for DBNavigator
         bundledPlugins.add(new Plugin(
-                "com.intellij.database", "Database Tools and SQL", "JetBrains s.r.o.", "262.10968.148", "Database",
-                "The core Database Tools and SQL plugin for database connection, query consoles, schema navigation, and data grid editing.",
-                "The Database Tools and SQL plugin provides all the same features as DataGrip, the standalone JetBrains IDE for databases.\n\n" +
+                "com.roze.database.engine", "Database Tools and SQL Engine", "Roze Ecosystem", "2.0.0", "Database",
+                "The core Database Tools and SQL engine for database connectivity, query consoles, schema navigation, and data grid editing.",
+                "The Database Tools and SQL engine provides complete database exploration, SQL editing, query execution, editable data grids, and schema refactoring.\n\n" +
                         "Main features:\n" +
                         "- Database explorer\n" +
-                        "- Ability to execute queries\n" +
+                        "- High-performance query execution\n" +
                         "- Editable data spreadsheet\n" +
                         "- Syntax highlighting and coding assistance for SQL\n" +
-                        "- Refactorings\n" +
-                        "- Import/Export options\n" +
-                        "- Diagrams\n\n" +
-                        "Discover all the features.",
+                        "- Schema refactoring and DDL generation\n" +
+                        "- Native connection management with RozeHub sync",
                 true, true, true, true, "db", "#4a88c7"
         ));
 
         bundledPlugins.add(new Plugin(
-                "com.roze.mcp.server", "MCP Server", "JetBrains s.r.o.", "262.10968.148", "AI-Powered",
+                "com.roze.mcp.server", "MCP Server for DBNavigator", "Roze Ecosystem", "2.0.0", "AI-Powered",
                 "Model Context Protocol server connecting DBNavigator to external LLMs and agentic sidecars.",
                 "The MCP Server plugin provides standard Model Context Protocol (MCP) server endpoints allowing AI agents, Claude, and local LLMs to interact with database schemas, inspect table DDL, and run safe queries.",
                 true, true, true, true, "mcp", "#3574f0"
         ));
 
         bundledPlugins.add(new Plugin(
-                "XPathView", "XPathView + XSLT", "JetBrains s.r.o.", "262.10968.148", "HTML and XML",
+                "com.roze.stratosdb", "StratosDB Connector & Tooling", "Roze Ecosystem", "2.0.0", "Database",
+                "Native StratosDB engine integration, storage engine exploration, and custom StratosDB SQL dialect support.",
+                "Direct connection integration and tooling for StratosDB, the developer-first database engine in the Roze Ecosystem.",
+                true, true, true, true, "db", "#e0a44c"
+        ));
+
+        bundledPlugins.add(new Plugin(
+                "com.roze.xml.xpath", "XPathView + XSLT", "Roze Ecosystem", "2.0.0", "HTML and XML",
                 "XPath expression evaluation and XSLT stylesheet execution for XML database fields.",
-                "XPathView and XSLT enables evaluating XPath 1.0/2.0 expressions against XML data, with real-time result highlighting and XSL transformations.",
+                "Enables evaluating XPath 1.0/2.0 expressions against XML data, with real-time result highlighting and XSL transformations.",
                 true, true, true, true, "xml", "#c77dbb"
         ));
 
         bundledPlugins.add(new Plugin(
-                "com.intellij.zh.cn", "Chinese (Simplified) Language Pack / 中文语言包", "JetBrains s.r.o.", "262.10968.148", "IDE Localization",
+                "com.roze.lang.zh", "Chinese (Simplified) Language Pack / 中文语言包", "Roze Ecosystem", "2.0.0", "IDE Localization",
                 "Simplified Chinese language pack for the IDE interface.",
                 "Provides Chinese (Simplified) translation for menus, dialogs, labels, and settings in DBNavigator Pro.",
                 true, true, true, true, "lang", "#d84315"
         ));
 
         bundledPlugins.add(new Plugin(
-                "com.intellij.ja.jp", "Japanese Language Pack / 日本語言語パック", "JetBrains s.r.o.", "262.10968.148", "IDE Localization",
+                "com.roze.lang.ja", "Japanese Language Pack / 日本語言語パック", "Roze Ecosystem", "2.0.0", "IDE Localization",
                 "Japanese language pack for the IDE interface.",
                 "Provides Japanese translation for menus, dialogs, labels, and settings in DBNavigator Pro.",
                 true, true, true, true, "lang", "#d84315"
         ));
 
         bundledPlugins.add(new Plugin(
-                "com.intellij.ko.kr", "Korean Language Pack / 한국어 언어 팩", "JetBrains s.r.o.", "262.10968.148", "IDE Localization",
+                "com.roze.lang.ko", "Korean Language Pack / 한국어 언어 팩", "Roze Ecosystem", "2.0.0", "IDE Localization",
                 "Korean language pack for the IDE interface.",
                 "Provides Korean translation for menus, dialogs, labels, and settings in DBNavigator Pro.",
                 true, true, true, true, "lang", "#d84315"
         ));
 
         bundledPlugins.add(new Plugin(
-                "com.intellij.completion.full.line", "Full Line Code Completion", "JetBrains s.r.o.", "262.10968.148", "Local AI/ML Tools",
+                "com.roze.ml.completion.full", "Full Line SQL Completion", "Roze Ecosystem", "2.0.0", "Local AI/ML Tools",
                 "Local neural network-based multi-token and full line SQL completion.",
                 "Predicts and completes entire lines of SQL queries locally on your machine with zero latency and complete privacy.",
                 true, true, true, true, "ml", "#9c27b0"
         ));
 
         bundledPlugins.add(new Plugin(
-                "com.intellij.ml.completion", "Machine Learning Code Completion", "JetBrains s.r.o.", "262.10968.148", "Local AI/ML Tools",
-                "Re-ranks completion suggestions using deep learning models trained on millions of queries.",
+                "com.roze.ml.completion", "Machine Learning Query Completion", "Roze Ecosystem", "2.0.0", "Local AI/ML Tools",
+                "Re-ranks completion suggestions using deep learning models trained on database query contexts.",
                 "Applies offline machine-learned models to score and order SQL completion items based on current statement context.",
                 true, true, true, true, "ml", "#455a64"
         ));
 
         bundledPlugins.add(new Plugin(
-                "com.intellij.json", "JSON", "JetBrains s.r.o.", "262.10968.148", "Code Tools",
+                "com.roze.json", "JSON & JSONB Column Tools", "Roze Ecosystem", "2.0.0", "Code Tools",
                 "JSON syntax highlighting, JSON schema validation, and formatting for JSON column values.",
                 "Supports editing, validating, and formatting JSON and JSONB column values directly in table data editors and query consoles.",
                 true, true, true, true, "code", "#868a91"
         ));
 
         bundledPlugins.add(new Plugin(
-                "com.intellij.markdown", "Markdown", "JetBrains s.r.o.", "262.10968.148", "Code Tools",
+                "com.roze.markdown", "Markdown Documentation", "Roze Ecosystem", "2.0.0", "Code Tools",
                 "Markdown support with live preview, math equations, and diagram rendering.",
                 "Allows authoring database documentation, scratch notes, and execution guides with GitHub Flavored Markdown and live HTML preview.",
                 true, true, true, true, "code", "#868a91"
         ));
 
         bundledPlugins.add(new Plugin(
-                "com.intellij.yaml", "YAML", "JetBrains s.r.o.", "262.10968.148", "Code Tools",
+                "com.roze.yaml", "YAML Config Editor", "Roze Ecosystem", "2.0.0", "Code Tools",
                 "YAML editor with schema validation and syntax checking for config files.",
                 "Supports editing database deployment configurations, Docker manifests, and connection secrets with YAML schema validation.",
                 true, true, true, true, "code", "#868a91"
         ));
 
         bundledPlugins.add(new Plugin(
-                "com.intellij.textmate", "TextMate Bundles", "JetBrains s.r.o.", "262.10968.148", "Code Tools",
+                "com.roze.textmate", "TextMate Grammar Bundles", "Roze Ecosystem", "2.0.0", "Code Tools",
                 "Syntax highlighting using TextMate grammars for custom database scripting languages.",
                 "Import TextMate grammar bundles (.tmLanguage) to provide syntax highlighting for any proprietary SQL dialect or script.",
                 true, true, true, true, "code", "#868a91"
@@ -322,8 +327,7 @@ public final class PluginManager {
      * If RozeHub is offline, provides the built-in marketplace catalog with offline indicator.
      */
     public CompletableFuture<MarketplaceResult> fetchMarketplacePlugins(String query, String category) {
-        String endpoint = AppSettingsStore.load().getEffectiveRozeHubEndpoint();
-        String url = endpoint + "/api/v1/marketplace/dbnavigator";
+        String url = AppSettingsStore.getRozeHubMarketplaceApiUrl();
         List<String> params = new ArrayList<>();
         if (query != null && !query.isBlank()) params.add("q=" + encode(query.trim()));
         if (category != null && !category.isBlank() && !"All".equalsIgnoreCase(category)) params.add("category=" + encode(category.trim()));
@@ -341,7 +345,7 @@ public final class PluginManager {
                     if (res.statusCode() / 100 != 2) {
                         throw new RuntimeException("RozeHub returned HTTP " + res.statusCode());
                     }
-                    return parseRozeHubMarketplace(res.body(), endpoint);
+                    return parseRozeHubMarketplace(res.body(), AppSettingsStore.getRozeHubWebBaseUrl());
                 })
                 .exceptionally(ex -> {
                     // Graceful fallback to rich local catalog when RozeHub localport is not yet running
@@ -371,7 +375,7 @@ public final class PluginManager {
                     Plugin p = new Plugin();
                     p.setId(i.path("id").asText(""));
                     p.setName(i.path("name").asText(""));
-                    p.setVendor(i.path("vendor").asText("JetBrains s.r.o."));
+                    p.setVendor(i.path("vendor").asText("Roze Ecosystem"));
                     p.setCategory(i.path("category").asText("Other"));
                     p.setSummary(i.path("summary").asText(""));
                     p.setDescription(i.path("description").asText(""));
@@ -429,11 +433,11 @@ public final class PluginManager {
     private MarketplaceResult fallbackMarketplaceCatalog(String query, String category) {
         List<Plugin> all = new ArrayList<>();
 
-        // 1. Air (Image 2)
+        // 1. Roze AI SQL Assistant
         Plugin air = new Plugin(
-                "org.jetbrains.air", "Air", "JetBrains s.r.o.", "262.8665.481", "AI-Powered",
-                "Air is a workspace for agentic development inside your JetBrains IDE.",
-                "Air is a workspace for agentic development inside your JetBrains IDE.\n\n" +
+                "com.roze.ai.sql", "Roze AI SQL Assistant", "Roze Ecosystem", "2.0.0", "AI-Powered",
+                "Agentic SQL assistant for schema-aware query generation, performance optimization, and autonomous migration verification.",
+                "Roze AI SQL Assistant provides schema-aware agentic AI capabilities inside DBNavigator.\n\n" +
                         "Key Features:\n" +
                         "• Agentic SQL authoring with schema-aware LLM agents\n" +
                         "• Real-time query performance insight and rewrite recommendations\n" +
@@ -441,87 +445,167 @@ public final class PluginManager {
                         "• Natural language to complex ANSI SQL statement generator",
                 true, false, false, false, "air", "#4a88c7"
         );
-        air.setTags(List.of("AI", "Code Tools", "Miscellaneous", "Productivity"));
-        air.setDownloadsCount(41200);
-        air.setRating(4.37);
-        air.setReviewsCount(142);
-        air.setWebsite("https://plugins.jetbrains.com/plugin/air");
+        air.setTags(List.of("AI", "SQL Tools", "Productivity"));
+        air.setDownloadsCount(48500);
+        air.setRating(4.85);
+        air.setReviewsCount(190);
+        air.setWebsite(AppSettingsStore.getRozeHubMarketplacePluginWebsite("roze-ai-sql"));
         all.add(air);
 
-        // 2. IdeaVim (Image 2)
+        // 2. Modal Editing & Vim Keymap
         Plugin vim = new Plugin(
-                "IdeaVIM", "IdeaVim", "JetBrains s.r.o.", "2.15.0", "Editor",
-                "Vim emulation plugin for IntelliJ Platform based IDEs.",
-                "IdeaVim brings the power of Vim keybindings and modal editing into the DBNavigator query editor.\n\n" +
-                        "Supports Normal, Insert, Visual, and Command modes, macros, registers, marks, surround, and multiple cursors.",
+                "com.roze.vim.keymap", "Modal Editing & Vim Keymap", "Roze Ecosystem", "1.4.0", "Editor",
+                "Vim modal editing emulation for DBNavigator query consoles and SQL editors.",
+                "Brings modal editing into the DBNavigator query editor.\n\n" +
+                        "Supports Normal, Insert, Visual, and Command modes, macros, registers, marks, and multiple cursors.",
                 true, false, false, false, "ideavim", "#2e7d32"
         );
         vim.setTags(List.of("Editor", "Keymap", "Productivity"));
-        vim.setDownloadsCount(22300000);
-        vim.setRating(4.44);
-        vim.setReviewsCount(1850);
-        vim.setWebsite("https://plugins.jetbrains.com/plugin/ideavim");
+        vim.setDownloadsCount(32100);
+        vim.setRating(4.74);
+        vim.setReviewsCount(210);
+        vim.setWebsite(AppSettingsStore.getRozeHubMarketplacePluginWebsite("vim-keymap"));
         all.add(vim);
 
-        // 3. .ignore (Image 2)
-        Plugin ignore = new Plugin(
-                "mobi.hsz.idea.gitignore", ".ignore", "JetBrains s.r.o.", "4.5.3", "Version Control",
-                ".ignore is a plugin for .gitignore, .hgignore, .npmignore, and other ignore files.",
-                "Syntax highlighting, templates, and path autocompletion for ignore files (.gitignore, .dockerignore, .helmignore).",
-                true, false, false, false, "ignore", "#78909c"
+        // 3. Schema Visualizer & ER Diagrammer
+        Plugin diagram = new Plugin(
+                "com.roze.schema.diagram", "Schema Visualizer & ER Diagrammer", "Roze Ecosystem", "2.1.0", "Database",
+                "Interactive ER diagram generation, relationship mapping, and visual schema inspection.",
+                "Visualizes table relationships, foreign key constraints, and entity dependencies with auto-layout and vector export.",
+                true, false, false, false, "database", "#78909c"
         );
-        ignore.setTags(List.of("VCS", "Git", "Utilities"));
-        ignore.setDownloadsCount(19900000);
-        ignore.setRating(3.75);
-        ignore.setReviewsCount(920);
-        ignore.setWebsite("https://plugins.jetbrains.com/plugin/ignore");
-        all.add(ignore);
+        diagram.setTags(List.of("Database", "Schema", "Diagrams"));
+        diagram.setDownloadsCount(41200);
+        diagram.setRating(4.88);
+        diagram.setReviewsCount(310);
+        diagram.setWebsite(AppSettingsStore.getRozeHubMarketplacePluginWebsite("schema-diagram"));
+        all.add(diagram);
 
-        // 4. Big Data Tools (Image 2)
-        Plugin bigData = new Plugin(
-                "com.intellij.bigdatatools", "Big Data Tools", "JetBrains s.r.o.", "242.20224.300", "Database",
-                "Provides tools for working with Hadoop, Spark, Zeppelin, AWS S3, and Google Cloud Storage.",
-                "Integrates Apache Spark monitoring, Hadoop HDFS, and Cloud Object Storage directly into DBNavigator's Database Explorer panel.",
+        // 4. Parquet, Excel & Feather Data Exchange
+        Plugin dataExchange = new Plugin(
+                "com.roze.data.exchange", "Parquet, Excel & Feather Data Exchange", "Roze Ecosystem", "1.5.0", "Import & Export",
+                "High-throughput column-oriented data import and export supporting Parquet, Excel (XLSX), Arrow Feather, and CSV.",
+                "Stream millions of records to and from columnar files directly in DBNavigator result sets with schema preservation.",
                 true, false, false, false, "bigdata", "#9c27b0"
         );
-        bigData.setTags(List.of("Database", "Big Data", "Cloud"));
-        bigData.setDownloadsCount(3500000);
-        bigData.setRating(3.96);
-        bigData.setReviewsCount(310);
-        bigData.setWebsite("https://plugins.jetbrains.com/plugin/big-data-tools");
-        all.add(bigData);
+        dataExchange.setTags(List.of("Data Tools", "Import & Export", "Columnar"));
+        dataExchange.setDownloadsCount(28900);
+        dataExchange.setRating(4.72);
+        dataExchange.setReviewsCount(145);
+        dataExchange.setWebsite(AppSettingsStore.getRozeHubMarketplacePluginWebsite("data-exchange"));
+        all.add(dataExchange);
 
-        // 5. WakaTime (Images 2 & 5)
-        Plugin waka = new Plugin(
-                "com.wakatime.intellij.plugin", "WakaTime", "WakaTime", "16.1.2", "Productivity",
-                "Metrics, insights, and time tracking automatically generated from your programming activity.",
-                "Metrics, insights, and time tracking automatically generated from your programming activity.\n\n" +
-                        "Installation:\n" +
-                        "1. Install this plugin\n" +
-                        "2. Enter your WakaTime API key\n" +
-                        "3. Inspect automatic programming activity metrics.",
+        // 5. Query Performance & Explain Visualizer
+        Plugin explain = new Plugin(
+                "com.roze.query.explain", "Query Performance & Explain Visualizer", "Roze Ecosystem", "1.8.0", "SQL Tools",
+                "Visual execution plan analysis, index recommendation engine, and query bottleneck profiler.",
+                "Transforms textual EXPLAIN and EXPLAIN ANALYZE output into interactive node-link execution trees with cost breakdowns.",
                 false, false, true, true, "wakatime", "#3574f0"
         );
-        waka.setTags(List.of("Productivity", "Analytics", "Time Tracking"));
-        waka.setDownloadsCount(2100000);
-        waka.setRating(4.18);
-        waka.setReviewsCount(480);
-        waka.setWebsite("https://wakatime.com");
-        all.add(waka);
+        explain.setTags(List.of("SQL Tools", "Performance", "Optimization"));
+        explain.setDownloadsCount(35400);
+        explain.setRating(4.81);
+        explain.setReviewsCount(260);
+        explain.setWebsite(AppSettingsStore.getRozeHubMarketplacePluginWebsite("query-explain"));
+        all.add(explain);
 
-        // 6. Cloud (IaC) Security (Image 2)
+        // 6. Database Security & Audit Scanner
         Plugin cloudSec = new Plugin(
-                "com.cloudiac.security", "Cloud (IaC) Security", "Dmitrii Protsenko", "1.1.2", "Security",
-                "Security scanner for cloud infrastructure, database credentials, and container configs.",
+                "com.roze.security.audit", "Database Security & Audit Scanner", "Roze Ecosystem", "1.2.0", "Security",
+                "Automated scanner for database connection permissions, exposed secrets, and SQL injection vulnerabilities.",
                 "Scans SQL migration scripts and connection properties for exposed secrets, weak credentials, and compliance vulnerabilities.",
                 false, false, false, false, "cloud", "#00bcd4"
         );
-        cloudSec.setTags(List.of("Security", "Cloud", "Compliance"));
-        cloudSec.setDownloadsCount(70000);
+        cloudSec.setTags(List.of("Security", "Compliance", "Audit"));
+        cloudSec.setDownloadsCount(18500);
         cloudSec.setRating(4.79);
         cloudSec.setReviewsCount(85);
-        cloudSec.setWebsite("https://plugins.jetbrains.com");
+        cloudSec.setWebsite(AppSettingsStore.getRozeHubMarketplacePluginWebsite("security-audit"));
         all.add(cloudSec);
+
+        // 7. Rainbow Delimiters & Nested SQL Colorizer
+        Plugin rainbow = new Plugin(
+                "com.roze.rainbow.brackets", "Rainbow Delimiters & Nested SQL Colorizer", "Roze Ecosystem", "1.6.0", "Editor",
+                "Colorizes matching parentheses, brackets, and quotes in complex nested queries and CTEs.",
+                "Colors matching brackets and parentheses in different colors to make complex nested SQL queries easier to read.",
+                false, false, false, false, "rainbow", "#e91e63"
+        );
+        rainbow.setTags(List.of("Editor", "UI", "Appearance"));
+        rainbow.setDownloadsCount(52100);
+        rainbow.setRating(4.91);
+        rainbow.setReviewsCount(410);
+        rainbow.setWebsite(AppSettingsStore.getRozeHubMarketplacePluginWebsite("rainbow-delimiters"));
+        all.add(rainbow);
+
+        // 8. Key Promoter & Productivity Coach
+        Plugin keyPromoter = new Plugin(
+                "com.roze.key.promoter", "Key Promoter & Productivity Coach", "Roze Ecosystem", "1.1.0", "Productivity",
+                "Teaches essential keyboard shortcuts and navigation patterns for database development.",
+                "Shows non-intrusive notifications with shortcut recommendations when you use the mouse instead of a keyboard shortcut.",
+                false, false, false, false, "keyboard", "#ff9800"
+        );
+        keyPromoter.setTags(List.of("Productivity", "Keymap", "Education"));
+        keyPromoter.setDownloadsCount(23800);
+        keyPromoter.setRating(4.75);
+        keyPromoter.setReviewsCount(115);
+        keyPromoter.setWebsite(AppSettingsStore.getRozeHubMarketplacePluginWebsite("key-promoter"));
+        all.add(keyPromoter);
+
+        // 9. Git Repository & VCS Integrations
+        Plugin gitToolBox = new Plugin(
+                "com.roze.git.toolbox", "Git Repository & VCS Integrations", "Roze Ecosystem", "2.0.0", "Version Control",
+                "Direct Git repository tracking, SQL file blame, migration branch sync, and commit history integration.",
+                "Extends VCS integration with inline Git blame, status bar indicators, behind/ahead counters, and branch clean up.",
+                false, false, false, false, "git", "#f4511e"
+        );
+        gitToolBox.setTags(List.of("VCS", "Git", "Code Review"));
+        gitToolBox.setDownloadsCount(38200);
+        gitToolBox.setRating(4.82);
+        gitToolBox.setReviewsCount(190);
+        gitToolBox.setWebsite(AppSettingsStore.getRozeHubMarketplacePluginWebsite("git-toolbox"));
+        all.add(gitToolBox);
+
+        // 10. Database Migration & DDL Versioning
+        Plugin dbMigration = new Plugin(
+                "com.roze.db.migration", "Database Migration & DDL Versioning", "Roze Ecosystem", "1.3.0", "SQL Tools",
+                "Schema diffing, automated migration script generation, and Flyway/Liquibase changelog integration.",
+                "Automates database migration creation, tracks applied version checksums, and alerts on breaking DDL changes.",
+                false, false, false, false, "translation", "#2196f3"
+        );
+        dbMigration.setTags(List.of("SQL Tools", "Migration", "DDL"));
+        dbMigration.setDownloadsCount(31000);
+        dbMigration.setRating(4.86);
+        dbMigration.setReviewsCount(220);
+        dbMigration.setWebsite(AppSettingsStore.getRozeHubMarketplacePluginWebsite("db-migration"));
+        all.add(dbMigration);
+
+        // 11. SQL String & Identifier Manipulation
+        Plugin stringManip = new Plugin(
+                "com.roze.string.manipulation", "SQL String & Identifier Manipulation", "Roze Ecosystem", "2.2.0", "Editor",
+                "Context-aware string transforms, case conversion, SQL quoting, escaping, and identifier naming conventions.",
+                "Context-aware string manipulation actions for SQL identifiers, text constants, and code formatting.",
+                false, false, false, false, "string", "#009688"
+        );
+        stringManip.setTags(List.of("Editor", "Text", "Productivity"));
+        stringManip.setDownloadsCount(45000);
+        stringManip.setRating(4.89);
+        stringManip.setReviewsCount(340);
+        stringManip.setWebsite(AppSettingsStore.getRozeHubMarketplacePluginWebsite("string-manipulation"));
+        all.add(stringManip);
+
+        // 12. Cyberpunk & Nord Pro Dark Themes
+        Plugin themes = new Plugin(
+                "com.roze.themes.pro", "Cyberpunk & Nord Pro Dark Themes", "Roze Ecosystem", "1.0.0", "Themes",
+                "High-contrast dark themes curated for data analysts and database engineers.",
+                "Includes Nord Pro, Cyberpunk Neon, and Deep Slate high-contrast themes optimized for SQL syntax and table data grids.",
+                false, false, false, false, "database", "#3f51b5"
+        );
+        themes.setTags(List.of("Themes", "UI", "Appearance"));
+        themes.setDownloadsCount(27600);
+        themes.setRating(4.78);
+        themes.setReviewsCount(160);
+        themes.setWebsite(AppSettingsStore.getRozeHubMarketplacePluginWebsite("themes-pro"));
+        all.add(themes);
 
         // Filter by query and category
         List<Plugin> filtered = all.stream().filter(p -> {
@@ -540,8 +624,8 @@ public final class PluginManager {
             p.setEnabled(isPluginEnabled(p.getId()));
         }
 
-        String endpoint = AppSettingsStore.load().getEffectiveRozeHubEndpoint();
-        return new MarketplaceResult(filtered, false, "RozeHub endpoint (" + endpoint + ") - Ready for live sync");
+        String apiBase = AppSettingsStore.getRozeHubApiBaseUrl();
+        return new MarketplaceResult(filtered, false, "RozeHub API (" + apiBase + ") - Ready for live sync");
     }
 
     /**
