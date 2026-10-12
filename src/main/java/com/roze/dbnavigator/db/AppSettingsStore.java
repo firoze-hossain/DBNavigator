@@ -5674,6 +5674,16 @@ public final class AppSettingsStore {
         public void setBackupSync(BackupSyncConfig backupSync) {
             this.backupSync = backupSync != null ? backupSync : new BackupSyncConfig();
         }
+
+        private AdvancedSettingsConfig advancedSettings = new AdvancedSettingsConfig();
+
+        public AdvancedSettingsConfig getAdvancedSettings() {
+            if (advancedSettings == null) advancedSettings = new AdvancedSettingsConfig();
+            return advancedSettings;
+        }
+        public void setAdvancedSettings(AdvancedSettingsConfig advancedSettings) {
+            this.advancedSettings = advancedSettings != null ? advancedSettings : new AdvancedSettingsConfig();
+        }
     }
 
     public static class UserParameterPattern {
@@ -8501,6 +8511,619 @@ public final class AppSettingsStore {
         }
         public void setAvailableAccounts(List<String> availableAccounts) {
             this.availableAccounts = availableAccounts != null ? new ArrayList<>(availableAccounts) : new ArrayList<>(List.of("15103202@iubat.edu"));
+        }
+    }
+
+    // =========================================================================
+    // Advanced Settings Configuration
+    // =========================================================================
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class AdvancedSettingsConfig {
+        // 1. Appearance
+        private boolean enableIslandsUIForCustomThemes = false;
+
+        // 2. Bookmarks
+        private boolean showOnlyLineBookmarksInPopup = true;
+        private boolean enableBookmarkContextRestorationOnBranchSwitching = true;
+
+        // 3. Code Completion
+        private boolean enableAutomaticCompletionOnTyping = true;
+
+        // 4. Code Review Tools
+        private boolean allInOneDiffForCodeReviews = false;
+        private boolean keepIncreasedMarginsForDiffThreads = true;
+
+        // 5. Container Environments: WSL, Docker
+        private String shellModeForFetchingEnvVars = "Login Interactive shell (`$SHELL -l -i -c printenv`)";
+
+        // 6. Database
+        private boolean showDatabaseTabInSearchEverywhere = false;
+        private String openFileAsTableIfDetectedByScriptedLoader = "All";
+        private String relatedRowsActionBehavior = "Navigate and filter all";
+        private boolean showClassesTabInSearchEverywhere = false;
+
+        // 7. Debugger
+        private int maxRecentExpressions = 50;
+        private boolean showInlayRunToCursorPopup = true;
+
+        // 8. Documentation Components
+        private String basicSyntaxHighlightingOfInlineCode = "As plain code";
+        private boolean basicSyntaxHighlightingOfMultilineCodeBlocks = true;
+        private boolean syntaxHighlightingOfLinksOnCodeElements = false;
+        private boolean addBackgroundToInlineAndMultilineCodeBlocks = true;
+        private boolean showQuickDocAutomaticallyDuringCompletionInModal = false;
+
+        // 9. Editor
+        private boolean useUndoTransparentCaretMovement = false;
+        private boolean dontCopyCutCurrentLineWithNoSelection = false;
+        private boolean dontSelectCopiedLineAfterCopyNoSelection = false;
+        private String whenPastingLineCopiedWithNoSelection = "Paste above the caret line";
+        private boolean renderSpecialCharactersUsingUnicodeAbbreviations = true;
+        private boolean showZoomIndicator = true;
+        private String tabCharacterRendering = "Horizontal line";
+        private int leftMarginInDistractionFreeMode = -1;
+        private int lineNumberFontDelta = -1;
+        private int forceSoftWrapLongLinesThreshold = 100000;
+        private boolean selectWhitespaceWithExtendSelection = true;
+        private boolean moveCaretDownAfterCommentWithLineComment = true;
+        private boolean hideFloatingToolbarForCodeEditing = false;
+
+        // 10. Editor Tabs
+        private boolean preferExistingTabInInactiveSplitPane = true;
+        private boolean openDeclarationSourceInSameTab = false;
+        private boolean openDeclarationSourceFromDetachedWindowInMain = false;
+        private boolean performHideRestoreToolWindowsWithDoubleClickOnEditorTab = true;
+        private boolean performMaximizeNormalizeSplitsWithDoubleClickOnEditorTab = false;
+        private boolean equalizeProportionsInNestedSplits = false;
+        private boolean keepPinnedTabsOnLeft = true;
+
+        // 11. Find/Replace
+        private boolean enableSimilarUsagesClustering = true;
+        private int maxResultsInFindInFilesPreview = 100;
+
+        // 12. IDE
+        private int maxRecentProjects = 50;
+        private int maxRecentFiles = 50;
+        private int maxRecentLocations = 25;
+        private int localHistoryDurationDays = 5;
+
+        // 13. Markdown
+        private boolean markdownHideFloatingToolbar = false;
+        private boolean squashMultipleDashesInHeaderAnchors = false;
+
+        // 14. Project View
+        private boolean projectViewIncreaseFontSize = false;
+        private boolean projectViewMoveFocusToEditorOnEnter = true;
+        private boolean projectViewCollapseAllExpandedUnderNode = true;
+        private boolean enableScratchesAndConsolesInProjectView = true;
+
+        // 15. Run/Debug
+        private int temporaryConfigurationsLimit = 5;
+        private boolean confirmRerunWithProcessTermination = true;
+        private boolean makeConfigurationsPinnedByDefault = false;
+        private int maxRecentRunConfigurations = 5;
+
+        // 16. SSH
+        private String sshConfigFilesParser = "OpenSSH";
+        private String customPathToOpenSshTool = "ssh";
+
+        // 17. Search Everywhere
+        private boolean searchEverywhereWaitForContributors = true;
+        private boolean searchEverywhereShowNotificationsAboveResults = true;
+        private int searchEverywhereContributorsTimeoutMs = 2000;
+        private boolean searchEverywhereShowRecentFilesAtTop = true;
+        private boolean searchEverywhereShowTextSearchResults = true;
+        private boolean searchEverywhereSortActionsMl = true;
+        private boolean searchEverywhereSortFilesMl = true;
+        private boolean searchEverywhereSortClassesMl = true;
+        private boolean searchEverywhereTypoTolerantSearch = true;
+
+        // 18. Search Scopes in Find, Replace, Rename
+        private boolean keepLastSelectedSearchScope = false;
+
+        // 19. Startup
+        private boolean openReadmeOnStartupIfNoOpenFiles = true;
+
+        // 20. Suggested refactoring
+        private boolean showHintForSuggestedRefactoring = false;
+
+        // 21. Terminal
+        private int terminalScrollbackBufferSize = 5000;
+        private boolean terminalTypeahead = true;
+        private int terminalTypeaheadLatencyThresholdMs = 100;
+        private boolean terminalLineSpacingAltScreenBuffer = true;
+        private boolean terminalFillCharacterBackgroundIncludingLineSpacing = false;
+        private String terminalCharacterEncoding = "UTF-8";
+        private int terminalNewOutputCapacityKb = 1024;
+        private boolean terminalSendEscCrOnShiftEnter = true;
+
+        // 22. Tool Windows
+        private boolean alwaysShowToolWindowHeaderIcons = false;
+        private boolean allowDraggingToolWindowsByHeader = true;
+
+        // 23. User Interface
+        private boolean useNativeFileChooserDialog = true;
+        private boolean mergeMainMenuWithWindowTitle = true;
+        private boolean showFileTypeIconInIdeFrameHeader = false;
+        private boolean useWordsInsteadOfSymbolsForMacShortcuts = false;
+        private boolean activateMenuItemsOnRightMouseButtonRelease = true;
+        private boolean cyclicScrollingInListsAndTrees = true;
+        private boolean positionMouseCursorOnDefaultButtonInDialogs = false;
+        private boolean disableDoubleModifierKeyShortcuts = false;
+        private boolean showSettingsWindowAsEditorTab = false;
+
+        // 24. Version Control
+        private boolean openDiffAsEditorTab = true;
+        private boolean vcsAllInOneDiff = false;
+        private boolean loadFileAnnotationsFromVcsOnOpen = false;
+        private boolean highlightIgnoredFiles = true;
+        private boolean enableCommitToolWindow = true;
+        private boolean toggleCommitControls = false;
+        private boolean autoCloseCommitToolWindowInFloatMode = true;
+        private boolean selectAllReposWithNewCommitsForPush = false;
+        private boolean doNotShowWarningWhenForcePushing = false;
+        private boolean useModalCommitInterface = false;
+
+        // 25. Version Control. Git
+        private boolean recursivelyCloneSubmodulesInProject = true;
+        private String applyContentTransformationReadingFromGit = "Filters";
+        private boolean useSafeForcePush = true;
+        private boolean checkForIncomingOutgoingCommits = true;
+        private boolean autoOpenUpdateInfoTabAfterUpdate = true;
+        private boolean doNotRunGitCommitHooks = false;
+        private String branchNameCleanupSymbol = "-";
+        private String showBranchNamesInRecentProjects = "All projects";
+        private boolean showGitTabInSearchEverywhere = false;
+
+        // Dynamic extra properties map for extensible settings
+        private Map<String, Object> extraProperties = new LinkedHashMap<>();
+
+        public AdvancedSettingsConfig() {}
+
+        public AdvancedSettingsConfig copy() {
+            AdvancedSettingsConfig c = new AdvancedSettingsConfig();
+            c.enableIslandsUIForCustomThemes = this.enableIslandsUIForCustomThemes;
+            c.showOnlyLineBookmarksInPopup = this.showOnlyLineBookmarksInPopup;
+            c.enableBookmarkContextRestorationOnBranchSwitching = this.enableBookmarkContextRestorationOnBranchSwitching;
+            c.enableAutomaticCompletionOnTyping = this.enableAutomaticCompletionOnTyping;
+            c.allInOneDiffForCodeReviews = this.allInOneDiffForCodeReviews;
+            c.keepIncreasedMarginsForDiffThreads = this.keepIncreasedMarginsForDiffThreads;
+            c.shellModeForFetchingEnvVars = this.shellModeForFetchingEnvVars;
+            c.showDatabaseTabInSearchEverywhere = this.showDatabaseTabInSearchEverywhere;
+            c.openFileAsTableIfDetectedByScriptedLoader = this.openFileAsTableIfDetectedByScriptedLoader;
+            c.relatedRowsActionBehavior = this.relatedRowsActionBehavior;
+            c.showClassesTabInSearchEverywhere = this.showClassesTabInSearchEverywhere;
+            c.maxRecentExpressions = this.maxRecentExpressions;
+            c.showInlayRunToCursorPopup = this.showInlayRunToCursorPopup;
+            c.basicSyntaxHighlightingOfInlineCode = this.basicSyntaxHighlightingOfInlineCode;
+            c.basicSyntaxHighlightingOfMultilineCodeBlocks = this.basicSyntaxHighlightingOfMultilineCodeBlocks;
+            c.syntaxHighlightingOfLinksOnCodeElements = this.syntaxHighlightingOfLinksOnCodeElements;
+            c.addBackgroundToInlineAndMultilineCodeBlocks = this.addBackgroundToInlineAndMultilineCodeBlocks;
+            c.showQuickDocAutomaticallyDuringCompletionInModal = this.showQuickDocAutomaticallyDuringCompletionInModal;
+            c.useUndoTransparentCaretMovement = this.useUndoTransparentCaretMovement;
+            c.dontCopyCutCurrentLineWithNoSelection = this.dontCopyCutCurrentLineWithNoSelection;
+            c.dontSelectCopiedLineAfterCopyNoSelection = this.dontSelectCopiedLineAfterCopyNoSelection;
+            c.whenPastingLineCopiedWithNoSelection = this.whenPastingLineCopiedWithNoSelection;
+            c.renderSpecialCharactersUsingUnicodeAbbreviations = this.renderSpecialCharactersUsingUnicodeAbbreviations;
+            c.showZoomIndicator = this.showZoomIndicator;
+            c.tabCharacterRendering = this.tabCharacterRendering;
+            c.leftMarginInDistractionFreeMode = this.leftMarginInDistractionFreeMode;
+            c.lineNumberFontDelta = this.lineNumberFontDelta;
+            c.forceSoftWrapLongLinesThreshold = this.forceSoftWrapLongLinesThreshold;
+            c.selectWhitespaceWithExtendSelection = this.selectWhitespaceWithExtendSelection;
+            c.moveCaretDownAfterCommentWithLineComment = this.moveCaretDownAfterCommentWithLineComment;
+            c.hideFloatingToolbarForCodeEditing = this.hideFloatingToolbarForCodeEditing;
+            c.preferExistingTabInInactiveSplitPane = this.preferExistingTabInInactiveSplitPane;
+            c.openDeclarationSourceInSameTab = this.openDeclarationSourceInSameTab;
+            c.openDeclarationSourceFromDetachedWindowInMain = this.openDeclarationSourceFromDetachedWindowInMain;
+            c.performHideRestoreToolWindowsWithDoubleClickOnEditorTab = this.performHideRestoreToolWindowsWithDoubleClickOnEditorTab;
+            c.performMaximizeNormalizeSplitsWithDoubleClickOnEditorTab = this.performMaximizeNormalizeSplitsWithDoubleClickOnEditorTab;
+            c.equalizeProportionsInNestedSplits = this.equalizeProportionsInNestedSplits;
+            c.keepPinnedTabsOnLeft = this.keepPinnedTabsOnLeft;
+            c.enableSimilarUsagesClustering = this.enableSimilarUsagesClustering;
+            c.maxResultsInFindInFilesPreview = this.maxResultsInFindInFilesPreview;
+            c.maxRecentProjects = this.maxRecentProjects;
+            c.maxRecentFiles = this.maxRecentFiles;
+            c.maxRecentLocations = this.maxRecentLocations;
+            c.localHistoryDurationDays = this.localHistoryDurationDays;
+            c.markdownHideFloatingToolbar = this.markdownHideFloatingToolbar;
+            c.squashMultipleDashesInHeaderAnchors = this.squashMultipleDashesInHeaderAnchors;
+            c.projectViewIncreaseFontSize = this.projectViewIncreaseFontSize;
+            c.projectViewMoveFocusToEditorOnEnter = this.projectViewMoveFocusToEditorOnEnter;
+            c.projectViewCollapseAllExpandedUnderNode = this.projectViewCollapseAllExpandedUnderNode;
+            c.enableScratchesAndConsolesInProjectView = this.enableScratchesAndConsolesInProjectView;
+            c.temporaryConfigurationsLimit = this.temporaryConfigurationsLimit;
+            c.confirmRerunWithProcessTermination = this.confirmRerunWithProcessTermination;
+            c.makeConfigurationsPinnedByDefault = this.makeConfigurationsPinnedByDefault;
+            c.maxRecentRunConfigurations = this.maxRecentRunConfigurations;
+            c.sshConfigFilesParser = this.sshConfigFilesParser;
+            c.customPathToOpenSshTool = this.customPathToOpenSshTool;
+            c.searchEverywhereWaitForContributors = this.searchEverywhereWaitForContributors;
+            c.searchEverywhereShowNotificationsAboveResults = this.searchEverywhereShowNotificationsAboveResults;
+            c.searchEverywhereContributorsTimeoutMs = this.searchEverywhereContributorsTimeoutMs;
+            c.searchEverywhereShowRecentFilesAtTop = this.searchEverywhereShowRecentFilesAtTop;
+            c.searchEverywhereShowTextSearchResults = this.searchEverywhereShowTextSearchResults;
+            c.searchEverywhereSortActionsMl = this.searchEverywhereSortActionsMl;
+            c.searchEverywhereSortFilesMl = this.searchEverywhereSortFilesMl;
+            c.searchEverywhereSortClassesMl = this.searchEverywhereSortClassesMl;
+            c.searchEverywhereTypoTolerantSearch = this.searchEverywhereTypoTolerantSearch;
+            c.keepLastSelectedSearchScope = this.keepLastSelectedSearchScope;
+            c.openReadmeOnStartupIfNoOpenFiles = this.openReadmeOnStartupIfNoOpenFiles;
+            c.showHintForSuggestedRefactoring = this.showHintForSuggestedRefactoring;
+            c.terminalScrollbackBufferSize = this.terminalScrollbackBufferSize;
+            c.terminalTypeahead = this.terminalTypeahead;
+            c.terminalTypeaheadLatencyThresholdMs = this.terminalTypeaheadLatencyThresholdMs;
+            c.terminalLineSpacingAltScreenBuffer = this.terminalLineSpacingAltScreenBuffer;
+            c.terminalFillCharacterBackgroundIncludingLineSpacing = this.terminalFillCharacterBackgroundIncludingLineSpacing;
+            c.terminalCharacterEncoding = this.terminalCharacterEncoding;
+            c.terminalNewOutputCapacityKb = this.terminalNewOutputCapacityKb;
+            c.terminalSendEscCrOnShiftEnter = this.terminalSendEscCrOnShiftEnter;
+            c.alwaysShowToolWindowHeaderIcons = this.alwaysShowToolWindowHeaderIcons;
+            c.allowDraggingToolWindowsByHeader = this.allowDraggingToolWindowsByHeader;
+            c.useNativeFileChooserDialog = this.useNativeFileChooserDialog;
+            c.mergeMainMenuWithWindowTitle = this.mergeMainMenuWithWindowTitle;
+            c.showFileTypeIconInIdeFrameHeader = this.showFileTypeIconInIdeFrameHeader;
+            c.useWordsInsteadOfSymbolsForMacShortcuts = this.useWordsInsteadOfSymbolsForMacShortcuts;
+            c.activateMenuItemsOnRightMouseButtonRelease = this.activateMenuItemsOnRightMouseButtonRelease;
+            c.cyclicScrollingInListsAndTrees = this.cyclicScrollingInListsAndTrees;
+            c.positionMouseCursorOnDefaultButtonInDialogs = this.positionMouseCursorOnDefaultButtonInDialogs;
+            c.disableDoubleModifierKeyShortcuts = this.disableDoubleModifierKeyShortcuts;
+            c.showSettingsWindowAsEditorTab = this.showSettingsWindowAsEditorTab;
+            c.openDiffAsEditorTab = this.openDiffAsEditorTab;
+            c.vcsAllInOneDiff = this.vcsAllInOneDiff;
+            c.loadFileAnnotationsFromVcsOnOpen = this.loadFileAnnotationsFromVcsOnOpen;
+            c.highlightIgnoredFiles = this.highlightIgnoredFiles;
+            c.enableCommitToolWindow = this.enableCommitToolWindow;
+            c.toggleCommitControls = this.toggleCommitControls;
+            c.autoCloseCommitToolWindowInFloatMode = this.autoCloseCommitToolWindowInFloatMode;
+            c.selectAllReposWithNewCommitsForPush = this.selectAllReposWithNewCommitsForPush;
+            c.doNotShowWarningWhenForcePushing = this.doNotShowWarningWhenForcePushing;
+            c.useModalCommitInterface = this.useModalCommitInterface;
+            c.recursivelyCloneSubmodulesInProject = this.recursivelyCloneSubmodulesInProject;
+            c.applyContentTransformationReadingFromGit = this.applyContentTransformationReadingFromGit;
+            c.useSafeForcePush = this.useSafeForcePush;
+            c.checkForIncomingOutgoingCommits = this.checkForIncomingOutgoingCommits;
+            c.autoOpenUpdateInfoTabAfterUpdate = this.autoOpenUpdateInfoTabAfterUpdate;
+            c.doNotRunGitCommitHooks = this.doNotRunGitCommitHooks;
+            c.branchNameCleanupSymbol = this.branchNameCleanupSymbol;
+            c.showBranchNamesInRecentProjects = this.showBranchNamesInRecentProjects;
+            c.showGitTabInSearchEverywhere = this.showGitTabInSearchEverywhere;
+            c.extraProperties = this.extraProperties != null ? new LinkedHashMap<>(this.extraProperties) : new LinkedHashMap<>();
+            return c;
+        }
+
+        public boolean isEnableIslandsUIForCustomThemes() { return enableIslandsUIForCustomThemes; }
+        public void setEnableIslandsUIForCustomThemes(boolean v) { this.enableIslandsUIForCustomThemes = v; }
+
+        public boolean isShowOnlyLineBookmarksInPopup() { return showOnlyLineBookmarksInPopup; }
+        public void setShowOnlyLineBookmarksInPopup(boolean v) { this.showOnlyLineBookmarksInPopup = v; }
+
+        public boolean isEnableBookmarkContextRestorationOnBranchSwitching() { return enableBookmarkContextRestorationOnBranchSwitching; }
+        public void setEnableBookmarkContextRestorationOnBranchSwitching(boolean v) { this.enableBookmarkContextRestorationOnBranchSwitching = v; }
+
+        public boolean isEnableAutomaticCompletionOnTyping() { return enableAutomaticCompletionOnTyping; }
+        public void setEnableAutomaticCompletionOnTyping(boolean v) { this.enableAutomaticCompletionOnTyping = v; }
+
+        public boolean isAllInOneDiffForCodeReviews() { return allInOneDiffForCodeReviews; }
+        public void setAllInOneDiffForCodeReviews(boolean v) { this.allInOneDiffForCodeReviews = v; }
+
+        public boolean isKeepIncreasedMarginsForDiffThreads() { return keepIncreasedMarginsForDiffThreads; }
+        public void setKeepIncreasedMarginsForDiffThreads(boolean v) { this.keepIncreasedMarginsForDiffThreads = v; }
+
+        public String getShellModeForFetchingEnvVars() { return shellModeForFetchingEnvVars != null ? shellModeForFetchingEnvVars : "Login Interactive shell (`$SHELL -l -i -c printenv`)"; }
+        public void setShellModeForFetchingEnvVars(String v) { this.shellModeForFetchingEnvVars = v; }
+
+        public boolean isShowDatabaseTabInSearchEverywhere() { return showDatabaseTabInSearchEverywhere; }
+        public void setShowDatabaseTabInSearchEverywhere(boolean v) { this.showDatabaseTabInSearchEverywhere = v; }
+
+        public String getOpenFileAsTableIfDetectedByScriptedLoader() { return openFileAsTableIfDetectedByScriptedLoader != null ? openFileAsTableIfDetectedByScriptedLoader : "All"; }
+        public void setOpenFileAsTableIfDetectedByScriptedLoader(String v) { this.openFileAsTableIfDetectedByScriptedLoader = v; }
+
+        public String getRelatedRowsActionBehavior() { return relatedRowsActionBehavior != null ? relatedRowsActionBehavior : "Navigate and filter all"; }
+        public void setRelatedRowsActionBehavior(String v) { this.relatedRowsActionBehavior = v; }
+
+        public boolean isShowClassesTabInSearchEverywhere() { return showClassesTabInSearchEverywhere; }
+        public void setShowClassesTabInSearchEverywhere(boolean v) { this.showClassesTabInSearchEverywhere = v; }
+
+        public int getMaxRecentExpressions() { return maxRecentExpressions; }
+        public void setMaxRecentExpressions(int v) { this.maxRecentExpressions = v; }
+
+        public boolean isShowInlayRunToCursorPopup() { return showInlayRunToCursorPopup; }
+        public void setShowInlayRunToCursorPopup(boolean v) { this.showInlayRunToCursorPopup = v; }
+
+        public String getBasicSyntaxHighlightingOfInlineCode() { return basicSyntaxHighlightingOfInlineCode != null ? basicSyntaxHighlightingOfInlineCode : "As plain code"; }
+        public void setBasicSyntaxHighlightingOfInlineCode(String v) { this.basicSyntaxHighlightingOfInlineCode = v; }
+
+        public boolean isBasicSyntaxHighlightingOfMultilineCodeBlocks() { return basicSyntaxHighlightingOfMultilineCodeBlocks; }
+        public void setBasicSyntaxHighlightingOfMultilineCodeBlocks(boolean v) { this.basicSyntaxHighlightingOfMultilineCodeBlocks = v; }
+
+        public boolean isSyntaxHighlightingOfLinksOnCodeElements() { return syntaxHighlightingOfLinksOnCodeElements; }
+        public void setSyntaxHighlightingOfLinksOnCodeElements(boolean v) { this.syntaxHighlightingOfLinksOnCodeElements = v; }
+
+        public boolean isAddBackgroundToInlineAndMultilineCodeBlocks() { return addBackgroundToInlineAndMultilineCodeBlocks; }
+        public void setAddBackgroundToInlineAndMultilineCodeBlocks(boolean v) { this.addBackgroundToInlineAndMultilineCodeBlocks = v; }
+
+        public boolean isShowQuickDocAutomaticallyDuringCompletionInModal() { return showQuickDocAutomaticallyDuringCompletionInModal; }
+        public void setShowQuickDocAutomaticallyDuringCompletionInModal(boolean v) { this.showQuickDocAutomaticallyDuringCompletionInModal = v; }
+
+        public boolean isUseUndoTransparentCaretMovement() { return useUndoTransparentCaretMovement; }
+        public void setUseUndoTransparentCaretMovement(boolean v) { this.useUndoTransparentCaretMovement = v; }
+
+        public boolean isDontCopyCutCurrentLineWithNoSelection() { return dontCopyCutCurrentLineWithNoSelection; }
+        public void setDontCopyCutCurrentLineWithNoSelection(boolean v) { this.dontCopyCutCurrentLineWithNoSelection = v; }
+
+        public boolean isDontSelectCopiedLineAfterCopyNoSelection() { return dontSelectCopiedLineAfterCopyNoSelection; }
+        public void setDontSelectCopiedLineAfterCopyNoSelection(boolean v) { this.dontSelectCopiedLineAfterCopyNoSelection = v; }
+
+        public String getWhenPastingLineCopiedWithNoSelection() { return whenPastingLineCopiedWithNoSelection != null ? whenPastingLineCopiedWithNoSelection : "Paste above the caret line"; }
+        public void setWhenPastingLineCopiedWithNoSelection(String v) { this.whenPastingLineCopiedWithNoSelection = v; }
+
+        public boolean isRenderSpecialCharactersUsingUnicodeAbbreviations() { return renderSpecialCharactersUsingUnicodeAbbreviations; }
+        public void setRenderSpecialCharactersUsingUnicodeAbbreviations(boolean v) { this.renderSpecialCharactersUsingUnicodeAbbreviations = v; }
+
+        public boolean isShowZoomIndicator() { return showZoomIndicator; }
+        public void setShowZoomIndicator(boolean v) { this.showZoomIndicator = v; }
+
+        public String getTabCharacterRendering() { return tabCharacterRendering != null ? tabCharacterRendering : "Horizontal line"; }
+        public void setTabCharacterRendering(String v) { this.tabCharacterRendering = v; }
+
+        public int getLeftMarginInDistractionFreeMode() { return leftMarginInDistractionFreeMode; }
+        public void setLeftMarginInDistractionFreeMode(int v) { this.leftMarginInDistractionFreeMode = v; }
+
+        public int getLineNumberFontDelta() { return lineNumberFontDelta; }
+        public void setLineNumberFontDelta(int v) { this.lineNumberFontDelta = v; }
+
+        public int getForceSoftWrapLongLinesThreshold() { return forceSoftWrapLongLinesThreshold; }
+        public void setForceSoftWrapLongLinesThreshold(int v) { this.forceSoftWrapLongLinesThreshold = v; }
+
+        public boolean isSelectWhitespaceWithExtendSelection() { return selectWhitespaceWithExtendSelection; }
+        public void setSelectWhitespaceWithExtendSelection(boolean v) { this.selectWhitespaceWithExtendSelection = v; }
+
+        public boolean isMoveCaretDownAfterCommentWithLineComment() { return moveCaretDownAfterCommentWithLineComment; }
+        public void setMoveCaretDownAfterCommentWithLineComment(boolean v) { this.moveCaretDownAfterCommentWithLineComment = v; }
+
+        public boolean isHideFloatingToolbarForCodeEditing() { return hideFloatingToolbarForCodeEditing; }
+        public void setHideFloatingToolbarForCodeEditing(boolean v) { this.hideFloatingToolbarForCodeEditing = v; }
+
+        public boolean isPreferExistingTabInInactiveSplitPane() { return preferExistingTabInInactiveSplitPane; }
+        public void setPreferExistingTabInInactiveSplitPane(boolean v) { this.preferExistingTabInInactiveSplitPane = v; }
+
+        public boolean isOpenDeclarationSourceInSameTab() { return openDeclarationSourceInSameTab; }
+        public void setOpenDeclarationSourceInSameTab(boolean v) { this.openDeclarationSourceInSameTab = v; }
+
+        public boolean isOpenDeclarationSourceFromDetachedWindowInMain() { return openDeclarationSourceFromDetachedWindowInMain; }
+        public void setOpenDeclarationSourceFromDetachedWindowInMain(boolean v) { this.openDeclarationSourceFromDetachedWindowInMain = v; }
+
+        public boolean isPerformHideRestoreToolWindowsWithDoubleClickOnEditorTab() { return performHideRestoreToolWindowsWithDoubleClickOnEditorTab; }
+        public void setPerformHideRestoreToolWindowsWithDoubleClickOnEditorTab(boolean v) { this.performHideRestoreToolWindowsWithDoubleClickOnEditorTab = v; }
+
+        public boolean isPerformMaximizeNormalizeSplitsWithDoubleClickOnEditorTab() { return performMaximizeNormalizeSplitsWithDoubleClickOnEditorTab; }
+        public void setPerformMaximizeNormalizeSplitsWithDoubleClickOnEditorTab(boolean v) { this.performMaximizeNormalizeSplitsWithDoubleClickOnEditorTab = v; }
+
+        public boolean isEqualizeProportionsInNestedSplits() { return equalizeProportionsInNestedSplits; }
+        public void setEqualizeProportionsInNestedSplits(boolean v) { this.equalizeProportionsInNestedSplits = v; }
+
+        public boolean isKeepPinnedTabsOnLeft() { return keepPinnedTabsOnLeft; }
+        public void setKeepPinnedTabsOnLeft(boolean v) { this.keepPinnedTabsOnLeft = v; }
+
+        public boolean isEnableSimilarUsagesClustering() { return enableSimilarUsagesClustering; }
+        public void setEnableSimilarUsagesClustering(boolean v) { this.enableSimilarUsagesClustering = v; }
+
+        public int getMaxResultsInFindInFilesPreview() { return maxResultsInFindInFilesPreview; }
+        public void setMaxResultsInFindInFilesPreview(int v) { this.maxResultsInFindInFilesPreview = v; }
+
+        public int getMaxRecentProjects() { return maxRecentProjects; }
+        public void setMaxRecentProjects(int v) { this.maxRecentProjects = v; }
+
+        public int getMaxRecentFiles() { return maxRecentFiles; }
+        public void setMaxRecentFiles(int v) { this.maxRecentFiles = v; }
+
+        public int getMaxRecentLocations() { return maxRecentLocations; }
+        public void setMaxRecentLocations(int v) { this.maxRecentLocations = v; }
+
+        public int getLocalHistoryDurationDays() { return localHistoryDurationDays; }
+        public void setLocalHistoryDurationDays(int v) { this.localHistoryDurationDays = v; }
+
+        public boolean isMarkdownHideFloatingToolbar() { return markdownHideFloatingToolbar; }
+        public void setMarkdownHideFloatingToolbar(boolean v) { this.markdownHideFloatingToolbar = v; }
+
+        public boolean isSquashMultipleDashesInHeaderAnchors() { return squashMultipleDashesInHeaderAnchors; }
+        public void setSquashMultipleDashesInHeaderAnchors(boolean v) { this.squashMultipleDashesInHeaderAnchors = v; }
+
+        public boolean isProjectViewIncreaseFontSize() { return projectViewIncreaseFontSize; }
+        public void setProjectViewIncreaseFontSize(boolean v) { this.projectViewIncreaseFontSize = v; }
+
+        public boolean isProjectViewMoveFocusToEditorOnEnter() { return projectViewMoveFocusToEditorOnEnter; }
+        public void setProjectViewMoveFocusToEditorOnEnter(boolean v) { this.projectViewMoveFocusToEditorOnEnter = v; }
+
+        public boolean isProjectViewCollapseAllExpandedUnderNode() { return projectViewCollapseAllExpandedUnderNode; }
+        public void setProjectViewCollapseAllExpandedUnderNode(boolean v) { this.projectViewCollapseAllExpandedUnderNode = v; }
+
+        public boolean isEnableScratchesAndConsolesInProjectView() { return enableScratchesAndConsolesInProjectView; }
+        public void setEnableScratchesAndConsolesInProjectView(boolean v) { this.enableScratchesAndConsolesInProjectView = v; }
+
+        public int getTemporaryConfigurationsLimit() { return temporaryConfigurationsLimit; }
+        public void setTemporaryConfigurationsLimit(int v) { this.temporaryConfigurationsLimit = v; }
+
+        public boolean isConfirmRerunWithProcessTermination() { return confirmRerunWithProcessTermination; }
+        public void setConfirmRerunWithProcessTermination(boolean v) { this.confirmRerunWithProcessTermination = v; }
+
+        public boolean isMakeConfigurationsPinnedByDefault() { return makeConfigurationsPinnedByDefault; }
+        public void setMakeConfigurationsPinnedByDefault(boolean v) { this.makeConfigurationsPinnedByDefault = v; }
+
+        public int getMaxRecentRunConfigurations() { return maxRecentRunConfigurations; }
+        public void setMaxRecentRunConfigurations(int v) { this.maxRecentRunConfigurations = v; }
+
+        public String getSshConfigFilesParser() { return sshConfigFilesParser != null ? sshConfigFilesParser : "OpenSSH"; }
+        public void setSshConfigFilesParser(String v) { this.sshConfigFilesParser = v; }
+
+        public String getCustomPathToOpenSshTool() { return customPathToOpenSshTool != null ? customPathToOpenSshTool : "ssh"; }
+        public void setCustomPathToOpenSshTool(String v) { this.customPathToOpenSshTool = v; }
+
+        public boolean isSearchEverywhereWaitForContributors() { return searchEverywhereWaitForContributors; }
+        public void setSearchEverywhereWaitForContributors(boolean v) { this.searchEverywhereWaitForContributors = v; }
+
+        public boolean isSearchEverywhereShowNotificationsAboveResults() { return searchEverywhereShowNotificationsAboveResults; }
+        public void setSearchEverywhereShowNotificationsAboveResults(boolean v) { this.searchEverywhereShowNotificationsAboveResults = v; }
+
+        public int getSearchEverywhereContributorsTimeoutMs() { return searchEverywhereContributorsTimeoutMs; }
+        public void setSearchEverywhereContributorsTimeoutMs(int v) { this.searchEverywhereContributorsTimeoutMs = v; }
+
+        public boolean isSearchEverywhereShowRecentFilesAtTop() { return searchEverywhereShowRecentFilesAtTop; }
+        public void setSearchEverywhereShowRecentFilesAtTop(boolean v) { this.searchEverywhereShowRecentFilesAtTop = v; }
+
+        public boolean isSearchEverywhereShowTextSearchResults() { return searchEverywhereShowTextSearchResults; }
+        public void setSearchEverywhereShowTextSearchResults(boolean v) { this.searchEverywhereShowTextSearchResults = v; }
+
+        public boolean isSearchEverywhereSortActionsMl() { return searchEverywhereSortActionsMl; }
+        public void setSearchEverywhereSortActionsMl(boolean v) { this.searchEverywhereSortActionsMl = v; }
+
+        public boolean isSearchEverywhereSortFilesMl() { return searchEverywhereSortFilesMl; }
+        public void setSearchEverywhereSortFilesMl(boolean v) { this.searchEverywhereSortFilesMl = v; }
+
+        public boolean isSearchEverywhereSortClassesMl() { return searchEverywhereSortClassesMl; }
+        public void setSearchEverywhereSortClassesMl(boolean v) { this.searchEverywhereSortClassesMl = v; }
+
+        public boolean isSearchEverywhereTypoTolerantSearch() { return searchEverywhereTypoTolerantSearch; }
+        public void setSearchEverywhereTypoTolerantSearch(boolean v) { this.searchEverywhereTypoTolerantSearch = v; }
+
+        public boolean isKeepLastSelectedSearchScope() { return keepLastSelectedSearchScope; }
+        public void setKeepLastSelectedSearchScope(boolean v) { this.keepLastSelectedSearchScope = v; }
+
+        public boolean isOpenReadmeOnStartupIfNoOpenFiles() { return openReadmeOnStartupIfNoOpenFiles; }
+        public void setOpenReadmeOnStartupIfNoOpenFiles(boolean v) { this.openReadmeOnStartupIfNoOpenFiles = v; }
+
+        public boolean isShowHintForSuggestedRefactoring() { return showHintForSuggestedRefactoring; }
+        public void setShowHintForSuggestedRefactoring(boolean v) { this.showHintForSuggestedRefactoring = v; }
+
+        public int getTerminalScrollbackBufferSize() { return terminalScrollbackBufferSize; }
+        public void setTerminalScrollbackBufferSize(int v) { this.terminalScrollbackBufferSize = v; }
+
+        public boolean isTerminalTypeahead() { return terminalTypeahead; }
+        public void setTerminalTypeahead(boolean v) { this.terminalTypeahead = v; }
+
+        public int getTerminalTypeaheadLatencyThresholdMs() { return terminalTypeaheadLatencyThresholdMs; }
+        public void setTerminalTypeaheadLatencyThresholdMs(int v) { this.terminalTypeaheadLatencyThresholdMs = v; }
+
+        public boolean isTerminalLineSpacingAltScreenBuffer() { return terminalLineSpacingAltScreenBuffer; }
+        public void setTerminalLineSpacingAltScreenBuffer(boolean v) { this.terminalLineSpacingAltScreenBuffer = v; }
+
+        public boolean isTerminalFillCharacterBackgroundIncludingLineSpacing() { return terminalFillCharacterBackgroundIncludingLineSpacing; }
+        public void setTerminalFillCharacterBackgroundIncludingLineSpacing(boolean v) { this.terminalFillCharacterBackgroundIncludingLineSpacing = v; }
+
+        public String getTerminalCharacterEncoding() { return terminalCharacterEncoding != null ? terminalCharacterEncoding : "UTF-8"; }
+        public void setTerminalCharacterEncoding(String v) { this.terminalCharacterEncoding = v; }
+
+        public int getTerminalNewOutputCapacityKb() { return terminalNewOutputCapacityKb; }
+        public void setTerminalNewOutputCapacityKb(int v) { this.terminalNewOutputCapacityKb = v; }
+
+        public boolean isTerminalSendEscCrOnShiftEnter() { return terminalSendEscCrOnShiftEnter; }
+        public void setTerminalSendEscCrOnShiftEnter(boolean v) { this.terminalSendEscCrOnShiftEnter = v; }
+
+        public boolean isAlwaysShowToolWindowHeaderIcons() { return alwaysShowToolWindowHeaderIcons; }
+        public void setAlwaysShowToolWindowHeaderIcons(boolean v) { this.alwaysShowToolWindowHeaderIcons = v; }
+
+        public boolean isAllowDraggingToolWindowsByHeader() { return allowDraggingToolWindowsByHeader; }
+        public void setAllowDraggingToolWindowsByHeader(boolean v) { this.allowDraggingToolWindowsByHeader = v; }
+
+        public boolean isUseNativeFileChooserDialog() { return useNativeFileChooserDialog; }
+        public void setUseNativeFileChooserDialog(boolean v) { this.useNativeFileChooserDialog = v; }
+
+        public boolean isMergeMainMenuWithWindowTitle() { return mergeMainMenuWithWindowTitle; }
+        public void setMergeMainMenuWithWindowTitle(boolean v) { this.mergeMainMenuWithWindowTitle = v; }
+
+        public boolean isShowFileTypeIconInIdeFrameHeader() { return showFileTypeIconInIdeFrameHeader; }
+        public void setShowFileTypeIconInIdeFrameHeader(boolean v) { this.showFileTypeIconInIdeFrameHeader = v; }
+
+        public boolean isUseWordsInsteadOfSymbolsForMacShortcuts() { return useWordsInsteadOfSymbolsForMacShortcuts; }
+        public void setUseWordsInsteadOfSymbolsForMacShortcuts(boolean v) { this.useWordsInsteadOfSymbolsForMacShortcuts = v; }
+
+        public boolean isActivateMenuItemsOnRightMouseButtonRelease() { return activateMenuItemsOnRightMouseButtonRelease; }
+        public void setActivateMenuItemsOnRightMouseButtonRelease(boolean v) { this.activateMenuItemsOnRightMouseButtonRelease = v; }
+
+        public boolean isCyclicScrollingInListsAndTrees() { return cyclicScrollingInListsAndTrees; }
+        public void setCyclicScrollingInListsAndTrees(boolean v) { this.cyclicScrollingInListsAndTrees = v; }
+
+        public boolean isPositionMouseCursorOnDefaultButtonInDialogs() { return positionMouseCursorOnDefaultButtonInDialogs; }
+        public void setPositionMouseCursorOnDefaultButtonInDialogs(boolean v) { this.positionMouseCursorOnDefaultButtonInDialogs = v; }
+
+        public boolean isDisableDoubleModifierKeyShortcuts() { return disableDoubleModifierKeyShortcuts; }
+        public void setDisableDoubleModifierKeyShortcuts(boolean v) { this.disableDoubleModifierKeyShortcuts = v; }
+
+        public boolean isShowSettingsWindowAsEditorTab() { return showSettingsWindowAsEditorTab; }
+        public void setShowSettingsWindowAsEditorTab(boolean v) { this.showSettingsWindowAsEditorTab = v; }
+
+        public boolean isOpenDiffAsEditorTab() { return openDiffAsEditorTab; }
+        public void setOpenDiffAsEditorTab(boolean v) { this.openDiffAsEditorTab = v; }
+
+        public boolean isVcsAllInOneDiff() { return vcsAllInOneDiff; }
+        public void setVcsAllInOneDiff(boolean v) { this.vcsAllInOneDiff = v; }
+
+        public boolean isLoadFileAnnotationsFromVcsOnOpen() { return loadFileAnnotationsFromVcsOnOpen; }
+        public void setLoadFileAnnotationsFromVcsOnOpen(boolean v) { this.loadFileAnnotationsFromVcsOnOpen = v; }
+
+        public boolean isHighlightIgnoredFiles() { return highlightIgnoredFiles; }
+        public void setHighlightIgnoredFiles(boolean v) { this.highlightIgnoredFiles = v; }
+
+        public boolean isEnableCommitToolWindow() { return enableCommitToolWindow; }
+        public void setEnableCommitToolWindow(boolean v) { this.enableCommitToolWindow = v; }
+
+        public boolean isToggleCommitControls() { return toggleCommitControls; }
+        public void setToggleCommitControls(boolean v) { this.toggleCommitControls = v; }
+
+        public boolean isAutoCloseCommitToolWindowInFloatMode() { return autoCloseCommitToolWindowInFloatMode; }
+        public void setAutoCloseCommitToolWindowInFloatMode(boolean v) { this.autoCloseCommitToolWindowInFloatMode = v; }
+
+        public boolean isSelectAllReposWithNewCommitsForPush() { return selectAllReposWithNewCommitsForPush; }
+        public void setSelectAllReposWithNewCommitsForPush(boolean v) { this.selectAllReposWithNewCommitsForPush = v; }
+
+        public boolean isDoNotShowWarningWhenForcePushing() { return doNotShowWarningWhenForcePushing; }
+        public void setDoNotShowWarningWhenForcePushing(boolean v) { this.doNotShowWarningWhenForcePushing = v; }
+
+        public boolean isUseModalCommitInterface() { return useModalCommitInterface; }
+        public void setUseModalCommitInterface(boolean v) { this.useModalCommitInterface = v; }
+
+        public boolean isRecursivelyCloneSubmodulesInProject() { return recursivelyCloneSubmodulesInProject; }
+        public void setRecursivelyCloneSubmodulesInProject(boolean v) { this.recursivelyCloneSubmodulesInProject = v; }
+
+        public String getApplyContentTransformationReadingFromGit() { return applyContentTransformationReadingFromGit != null ? applyContentTransformationReadingFromGit : "Filters"; }
+        public void setApplyContentTransformationReadingFromGit(String v) { this.applyContentTransformationReadingFromGit = v; }
+
+        public boolean isUseSafeForcePush() { return useSafeForcePush; }
+        public void setUseSafeForcePush(boolean v) { this.useSafeForcePush = v; }
+
+        public boolean isCheckForIncomingOutgoingCommits() { return checkForIncomingOutgoingCommits; }
+        public void setCheckForIncomingOutgoingCommits(boolean v) { this.checkForIncomingOutgoingCommits = v; }
+
+        public boolean isAutoOpenUpdateInfoTabAfterUpdate() { return autoOpenUpdateInfoTabAfterUpdate; }
+        public void setAutoOpenUpdateInfoTabAfterUpdate(boolean v) { this.autoOpenUpdateInfoTabAfterUpdate = v; }
+
+        public boolean isDoNotRunGitCommitHooks() { return doNotRunGitCommitHooks; }
+        public void setDoNotRunGitCommitHooks(boolean v) { this.doNotRunGitCommitHooks = v; }
+
+        public String getBranchNameCleanupSymbol() { return branchNameCleanupSymbol != null ? branchNameCleanupSymbol : "-"; }
+        public void setBranchNameCleanupSymbol(String v) { this.branchNameCleanupSymbol = v; }
+
+        public String getShowBranchNamesInRecentProjects() { return showBranchNamesInRecentProjects != null ? showBranchNamesInRecentProjects : "All projects"; }
+        public void setShowBranchNamesInRecentProjects(String v) { this.showBranchNamesInRecentProjects = v; }
+
+        public boolean isShowGitTabInSearchEverywhere() { return showGitTabInSearchEverywhere; }
+        public void setShowGitTabInSearchEverywhere(boolean v) { this.showGitTabInSearchEverywhere = v; }
+
+        public Map<String, Object> getExtraProperties() {
+            if (extraProperties == null) extraProperties = new LinkedHashMap<>();
+            return extraProperties;
+        }
+        public void setExtraProperties(Map<String, Object> extraProperties) {
+            this.extraProperties = extraProperties != null ? new LinkedHashMap<>(extraProperties) : new LinkedHashMap<>();
+        }
+
+        public Object getProperty(String key) {
+            return extraProperties != null ? extraProperties.get(key) : null;
+        }
+        public void setProperty(String key, Object value) {
+            if (extraProperties == null) extraProperties = new LinkedHashMap<>();
+            extraProperties.put(key, value);
         }
     }
 

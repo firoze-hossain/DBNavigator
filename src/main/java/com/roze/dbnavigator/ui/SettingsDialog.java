@@ -54,6 +54,7 @@ import com.roze.dbnavigator.ui.colorscheme.ImagesColorSchemePanel;
 import com.roze.dbnavigator.ui.vcs.*;
 import com.roze.dbnavigator.ui.languages.*;
 import com.roze.dbnavigator.ui.tools.*;
+import com.roze.dbnavigator.ui.advanced.*;
 
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
@@ -1052,6 +1053,8 @@ public final class SettingsDialog {
             return new XPathViewerPanel(settings, inputs).createPanel();
         } else if ("Backup and Sync".equals(fullPath) || (cat != null && "backup_sync".equals(cat.getId()))) {
             return new BackupSyncPanel(settings, inputs).createPanel();
+        } else if ("Advanced Settings".equals(fullPath) || (cat != null && "advanced_settings".equals(cat.getId()))) {
+            return new AdvancedSettingsPanel(settings, inputs).createPanel();
         } else if ("Editor / Color Scheme / General".equals(fullPath) || (cat != null && "cs.general".equals(cat.getId()))) {
             return buildColorSchemeGeneralPanel(settings, inputs, navigateTo);
         } else if ("Editor / Color Scheme / Language Defaults".equals(fullPath) || (cat != null && "cs.lang_defaults".equals(cat.getId()))) {
@@ -13288,6 +13291,9 @@ public final class SettingsDialog {
             ComboBox<String> cb = (ComboBox<String>) inputs.get("backup_sync_account");
             if (cb.getValue() != null) settings.getBackupSync().setSyncAccount(cb.getValue());
         }
+
+        // Advanced Settings
+        AdvancedSettingsPanel.applySettings(inputs, settings);
 
         // Persist
         AppSettingsStore.save(settings);
