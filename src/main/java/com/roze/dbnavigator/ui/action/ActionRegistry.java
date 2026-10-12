@@ -3,6 +3,7 @@ package com.roze.dbnavigator.ui.action;
 import com.roze.dbnavigator.model.ConnectionProfile;
 import com.roze.dbnavigator.ui.MainWindow;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
@@ -63,37 +64,146 @@ public final class ActionRegistry {
                 .onAction(MainWindow::openNewQueryFile)
                 .build();
 
-        // 6. Database
+        // 6. Column
+        AnAction newColumn = AnAction.builder("file.new.column", "Column")
+                .description("Add a column to a table")
+                .icon(FontAwesomeSolid.COLUMNS, "#4a88c7", 11)
+                .onAction(MainWindow::createNewColumnAction)
+                .build();
+
+        // 7. Unique Key
+        AnAction newUniqueKey = AnAction.builder("file.new.uniquekey", "Unique Key")
+                .description("Add a unique constraint")
+                .icon(FontAwesomeSolid.KEY, "#e0a44c", 11)
+                .onAction(MainWindow::createNewUniqueKeyAction)
+                .build();
+
+        // 8. Foreign Key
+        AnAction newForeignKey = AnAction.builder("file.new.foreignkey", "Foreign Key")
+                .description("Add a foreign key constraint")
+                .icon(FontAwesomeSolid.LINK, "#3592c4", 11)
+                .onAction(MainWindow::createNewForeignKeyAction)
+                .build();
+
+        // 9. Index
+        AnAction newIndex = AnAction.builder("file.new.index", "Index")
+                .description("Create an index")
+                .icon(FontAwesomeSolid.INFO_CIRCLE, "#57965c", 11)
+                .onAction(MainWindow::createNewIndexAction)
+                .build();
+
+        // 10. Check
+        AnAction newCheck = AnAction.builder("file.new.check", "Check")
+                .description("Add a check constraint")
+                .icon(FontAwesomeSolid.CHECK_CIRCLE, "#57965c", 11)
+                .onAction(MainWindow::createNewCheckConstraintAction)
+                .build();
+
+        // 11. Table
+        AnAction newTable = AnAction.builder("file.new.table", "Table")
+                .description("Create a new database table")
+                .icon(FontAwesomeSolid.TABLE, "#4a88c7", 11)
+                .onAction(MainWindow::createNewTableAction)
+                .build();
+
+        // 12. Materialized View
+        AnAction newMatView = AnAction.builder("file.new.matview", "Materialized View")
+                .description("Create a materialized view")
+                .icon(FontAwesomeSolid.CLONE, "#3592c4", 11)
+                .onAction(MainWindow::createNewMaterializedViewAction)
+                .build();
+
+        // 13. View
+        AnAction newView = AnAction.builder("file.new.view", "View")
+                .description("Create a database view")
+                .icon(FontAwesomeSolid.EYE, "#3592c4", 11)
+                .onAction(MainWindow::createNewViewAction)
+                .build();
+
+        // 14. Operator
+        AnAction newOperator = AnAction.builder("file.new.operator", "Operator")
+                .description("Create an operator")
+                .icon(FontAwesomeSolid.PERCENT, "#c77dbb", 11)
+                .onAction(MainWindow::createNewOperatorAction)
+                .build();
+
+        // 15. Sequence
+        AnAction newSequence = AnAction.builder("file.new.sequence", "Sequence")
+                .description("Create a database sequence")
+                .icon(FontAwesomeSolid.SORT_NUMERIC_DOWN, "#e0a44c", 11)
+                .onAction(MainWindow::createNewSequenceAction)
+                .build();
+
+        // 16. Collation
+        AnAction newCollation = AnAction.builder("file.new.collation", "Collation")
+                .description("Create a database collation")
+                .icon(FontAwesomeSolid.SORT_ALPHA_DOWN, "#a9b7c6", 11)
+                .onAction(MainWindow::createNewCollationAction)
+                .build();
+
+        // 17. Schema
+        AnAction newSchema = AnAction.builder("file.new.schema", "Schema")
+                .description("Create a database schema")
+                .icon(FontAwesomeSolid.CUBES, "#e0a44c", 11)
+                .onAction(MainWindow::createNewSchemaAction)
+                .build();
+
+        // 18. Language
+        AnAction newLanguage = AnAction.builder("file.new.language", "Language")
+                .description("Create a procedural language extension")
+                .icon(FontAwesomeSolid.GLOBE, "#6897bb", 11)
+                .onAction(MainWindow::createNewLanguageAction)
+                .build();
+
+        // 19. Database
         AnAction newDatabase = AnAction.builder("file.new.database", "Database")
                 .description("Create a new database on the active server")
                 .icon(FontAwesomeSolid.DATABASE, "#4a88c7", 11)
                 .onAction(MainWindow::createNewDatabaseAction)
                 .build();
 
-        // 7. Role
+        // 20. Role
         AnAction newRole = AnAction.builder("file.new.role", "Role")
                 .description("Create a new database role or permission group")
                 .icon(FontAwesomeSolid.USER_SHIELD, "#e0a44c", 11)
                 .onAction(MainWindow::createNewRoleAction)
                 .build();
 
-        // 8. User
+        // 21. User
         AnAction newUser = AnAction.builder("file.new.user", "User")
                 .description("Create a new database user account")
                 .icon(FontAwesomeSolid.USER, "#57965c", 11)
                 .onAction(MainWindow::createNewUserAction)
                 .build();
 
-        // 9. Virtual View
+        // 22. Virtual Column
+        AnAction newVirtualColumn = AnAction.builder("file.new.virtualcolumn", "Virtual Column")
+                .description("Create a virtual/generated column")
+                .icon(FontAwesomeSolid.COLUMNS, "#c77dbb", 11)
+                .onAction(MainWindow::createNewVirtualColumnAction)
+                .build();
+
+        // 23. Virtual Foreign Key
+        AnAction newVirtualForeignKey = AnAction.builder("file.new.virtualforeignkey", "Virtual Foreign Key")
+                .description("Create a virtual IDE foreign key relation")
+                .icon(FontAwesomeSolid.LINK, "#c77dbb", 11)
+                .onAction(MainWindow::createNewVirtualForeignKeyAction)
+                .build();
+
+        // 24. Virtual View
         AnAction newVirtualView = AnAction.builder("file.new.virtualview", "Virtual View")
                 .description("Create a new virtual view or custom query view")
                 .icon(FontAwesomeSolid.TABLE, "#c77dbb", 11)
                 .onAction(MainWindow::createNewVirtualViewAction)
                 .build();
 
-        // 10. Data Source >
+        // 25. Data Source >
         ActionGroup dataSourceGroup = new ActionGroup("file.new.datasource.group", "Data Source", true,
                 FontAwesomeSolid.DATABASE, "#57965c", 11, "Data Source");
+
+        // Section: Recent
+        dataSourceGroup.add(AnAction.builder("file.new.datasource.header.recent", "Recent")
+                .enabledWhen(ctx -> false).build());
         dataSourceGroup.add(AnAction.builder("file.new.datasource.mysql", "MySQL")
                 .icon(FontAwesomeSolid.DATABASE, "#4a88c7", 11)
                 .onAction(ctx -> ctx.showNewConnectionDialog(ConnectionProfile.DatabaseType.MYSQL))
@@ -102,23 +212,91 @@ public final class ActionRegistry {
                 .icon(FontAwesomeSolid.DATABASE, "#4a88c7", 11)
                 .onAction(ctx -> ctx.showNewConnectionDialog(ConnectionProfile.DatabaseType.MARIADB))
                 .build());
+        dataSourceGroup.add(AnAction.builder("file.new.datasource.documentdb", "Amazon DocumentDB")
+                .icon(FontAwesomeSolid.DATABASE, "#e0a44c", 11)
+                .onAction(ctx -> ctx.showNewConnectionDialog(ConnectionProfile.DatabaseType.MONGODB))
+                .build());
         dataSourceGroup.add(AnAction.builder("file.new.datasource.postgres", "PostgreSQL")
                 .icon(FontAwesomeSolid.DATABASE, "#3592c4", 11)
                 .onAction(ctx -> ctx.showNewConnectionDialog(ConnectionProfile.DatabaseType.POSTGRESQL))
                 .build());
-        dataSourceGroup.add(AnAction.builder("file.new.datasource.stratos", "StratosDB")
+        dataSourceGroup.add(AnAction.builder("file.new.datasource.cassandra", "Apache Cassandra")
                 .icon(FontAwesomeSolid.DATABASE, "#57965c", 11)
-                .onAction(ctx -> ctx.showNewConnectionDialog(ConnectionProfile.DatabaseType.STRATOSDB))
+                .onAction(ctx -> ctx.setStatus("Apache Cassandra Data Source"))
                 .build());
-        dataSourceGroup.add(AnAction.builder("file.new.datasource.sqlite", "SQLite")
+
+        // Section: Complete Support
+        dataSourceGroup.add(AnAction.builder("file.new.datasource.header.complete", "Complete Support")
+                .enabledWhen(ctx -> false).build());
+        dataSourceGroup.add(AnAction.builder("file.new.datasource.aurora.mysql", "Amazon Aurora MySQL")
                 .icon(FontAwesomeSolid.DATABASE, "#e0a44c", 11)
-                .onAction(ctx -> ctx.showNewConnectionDialog(ConnectionProfile.DatabaseType.SQLITE))
+                .onAction(ctx -> ctx.openDataSourceFromCloudDialog("AWS", ConnectionProfile.DatabaseType.MYSQL))
                 .build());
-        dataSourceGroup.add(AnAction.builder("file.new.datasource.oracle", "Oracle")
+        dataSourceGroup.add(AnAction.builder("file.new.datasource.dynamodb", "Amazon DynamoDB")
+                .icon(FontAwesomeSolid.DATABASE, "#e0a44c", 11)
+                .onAction(ctx -> ctx.setStatus("Amazon DynamoDB Data Source"))
+                .build());
+        dataSourceGroup.add(AnAction.builder("file.new.datasource.redshift", "Amazon Redshift")
                 .icon(FontAwesomeSolid.DATABASE, "#e05555", 11)
-                .onAction(ctx -> ctx.showNewConnectionDialog(ConnectionProfile.DatabaseType.ORACLE))
+                .onAction(ctx -> ctx.openDataSourceFromCloudDialog("AWS", ConnectionProfile.DatabaseType.POSTGRESQL))
+                .build());
+        dataSourceGroup.add(AnAction.builder("file.new.datasource.derby", "Apache Derby")
+                .icon(FontAwesomeSolid.DATABASE, "#c77dbb", 11)
+                .onAction(ctx -> ctx.setStatus("Apache Derby Data Source"))
+                .build());
+        dataSourceGroup.add(AnAction.builder("file.new.datasource.hive", "Apache Hive")
+                .icon(FontAwesomeSolid.DATABASE, "#e0a44c", 11)
+                .onAction(ctx -> ctx.setStatus("Apache Hive Data Source"))
+                .build());
+        dataSourceGroup.add(AnAction.builder("file.new.datasource.azuresql", "Azure SQL Database")
+                .icon(FontAwesomeSolid.DATABASE, "#c77dbb", 11)
+                .onAction(ctx -> ctx.openDataSourceFromCloudDialog("Azure", ConnectionProfile.DatabaseType.SQLSERVER))
+                .build());
+        dataSourceGroup.add(AnAction.builder("file.new.datasource.synapse", "Azure Synapse Analytics")
+                .icon(FontAwesomeSolid.DATABASE, "#3592c4", 11)
+                .onAction(ctx -> ctx.openDataSourceFromCloudDialog("Azure", ConnectionProfile.DatabaseType.SQLSERVER))
+                .build());
+        dataSourceGroup.add(AnAction.builder("file.new.datasource.clickhouse", "ClickHouse")
+                .icon(FontAwesomeSolid.DATABASE, "#e0a44c", 11)
+                .onAction(ctx -> ctx.setStatus("ClickHouse Data Source"))
+                .build());
+        dataSourceGroup.add(AnAction.builder("file.new.datasource.cockroach", "CockroachDB")
+                .icon(FontAwesomeSolid.DATABASE, "#57965c", 11)
+                .onAction(ctx -> ctx.showNewConnectionDialog(ConnectionProfile.DatabaseType.POSTGRESQL))
+                .build());
+        dataSourceGroup.add(AnAction.builder("file.new.datasource.couchbase", "Couchbase Server")
+                .icon(FontAwesomeSolid.DATABASE, "#e05555", 11)
+                .onAction(ctx -> ctx.setStatus("Couchbase Server Data Source"))
+                .build());
+        dataSourceGroup.add(AnAction.builder("file.new.datasource.exasol", "Exasol")
+                .icon(FontAwesomeSolid.DATABASE, "#3592c4", 11)
+                .onAction(ctx -> ctx.setStatus("Exasol Data Source"))
+                .build());
+        dataSourceGroup.add(AnAction.builder("file.new.datasource.bigquery", "Google BigQuery")
+                .icon(FontAwesomeSolid.DATABASE, "#4a88c7", 11)
+                .onAction(ctx -> ctx.openDataSourceFromCloudDialog("Google Cloud", ConnectionProfile.DatabaseType.POSTGRESQL))
+                .build());
+        dataSourceGroup.add(AnAction.builder("file.new.datasource.greenplum", "Greenplum")
+                .icon(FontAwesomeSolid.DATABASE, "#57965c", 11)
+                .onAction(ctx -> ctx.showNewConnectionDialog(ConnectionProfile.DatabaseType.POSTGRESQL))
+                .build());
+        dataSourceGroup.add(AnAction.builder("file.new.datasource.h2", "H2")
+                .icon(FontAwesomeSolid.DATABASE, "#e0a44c", 11)
+                .onAction(ctx -> ctx.setStatus("H2 Data Source"))
+                .build());
+        dataSourceGroup.add(AnAction.builder("file.new.datasource.hsqldb", "HSQLDB")
+                .icon(FontAwesomeSolid.DATABASE, "#3592c4", 11)
+                .onAction(ctx -> ctx.setStatus("HSQLDB Data Source"))
+                .build());
+        dataSourceGroup.add(AnAction.builder("file.new.datasource.db2", "IBM Db2 LUW")
+                .icon(FontAwesomeSolid.DATABASE, "#4a88c7", 11)
+                .onAction(ctx -> ctx.setStatus("IBM Db2 Data Source"))
                 .build());
         dataSourceGroup.add(AnAction.builder("file.new.datasource.sqlserver", "Microsoft SQL Server")
+                .icon(FontAwesomeSolid.DATABASE, "#c77dbb", 11)
+                .onAction(ctx -> ctx.showNewConnectionDialog(ConnectionProfile.DatabaseType.SQLSERVER))
+                .build());
+        dataSourceGroup.add(AnAction.builder("file.new.datasource.sqlserver.localdb", "Microsoft SQL Server LocalDB")
                 .icon(FontAwesomeSolid.DATABASE, "#c77dbb", 11)
                 .onAction(ctx -> ctx.showNewConnectionDialog(ConnectionProfile.DatabaseType.SQLSERVER))
                 .build());
@@ -126,92 +304,87 @@ public final class ActionRegistry {
                 .icon(FontAwesomeSolid.LEAF, "#57965c", 11)
                 .onAction(ctx -> ctx.showNewConnectionDialog(ConnectionProfile.DatabaseType.MONGODB))
                 .build());
+        dataSourceGroup.add(AnAction.builder("file.new.datasource.oracle", "Oracle")
+                .icon(FontAwesomeSolid.DATABASE, "#e05555", 11)
+                .onAction(ctx -> ctx.showNewConnectionDialog(ConnectionProfile.DatabaseType.ORACLE))
+                .build());
+        dataSourceGroup.add(AnAction.builder("file.new.datasource.redis", "Redis")
+                .icon(FontAwesomeSolid.DATABASE, "#e05555", 11)
+                .onAction(ctx -> ctx.setStatus("Redis Data Source"))
+                .build());
+        dataSourceGroup.add(AnAction.builder("file.new.datasource.sqlite", "SQLite")
+                .icon(FontAwesomeSolid.DATABASE, "#e0a44c", 11)
+                .onAction(ctx -> ctx.showNewConnectionDialog(ConnectionProfile.DatabaseType.SQLITE))
+                .build());
+        dataSourceGroup.add(AnAction.builder("file.new.datasource.stratos", "StratosDB")
+                .icon(FontAwesomeSolid.DATABASE, "#57965c", 11)
+                .onAction(ctx -> ctx.showNewConnectionDialog(ConnectionProfile.DatabaseType.STRATOSDB))
+                .build());
+        dataSourceGroup.add(AnAction.builder("file.new.datasource.snowflake", "Snowflake")
+                .icon(FontAwesomeSolid.DATABASE, "#3592c4", 11)
+                .onAction(ctx -> ctx.setStatus("Snowflake Data Source"))
+                .build());
+        dataSourceGroup.add(AnAction.builder("file.new.datasource.sybase", "Sybase ASE")
+                .icon(FontAwesomeSolid.DATABASE, "#4a88c7", 11)
+                .onAction(ctx -> ctx.setStatus("Sybase ASE Data Source"))
+                .build());
+        dataSourceGroup.add(AnAction.builder("file.new.datasource.vertica", "Vertica")
+                .icon(FontAwesomeSolid.DATABASE, "#3592c4", 11)
+                .onAction(ctx -> ctx.setStatus("Vertica Data Source"))
+                .build());
         dataSourceGroup.addSeparator();
-        dataSourceGroup.add(AnAction.builder("file.new.datasource.generic", "More / Connection Wizard…")
+        dataSourceGroup.add(AnAction.builder("file.new.datasource.other", "Other…")
                 .icon(FontAwesomeSolid.PLUS_CIRCLE, "#57965c", 11)
                 .onAction(MainWindow::showNewConnectionDialog)
                 .build());
 
-        // 11. Data Source from Cloud Provider >
+        // 26. Data Source from Cloud Provider >
         ActionGroup cloudGroup = new ActionGroup("file.new.datasource.cloud", "Data Source from Cloud Provider", true,
                 FontAwesomeSolid.CLOUD, "#4a88c7", 11, "Data Source from Cloud Provider");
-
-        ActionGroup awsGroup = new ActionGroup("file.new.datasource.cloud.aws", "Amazon AWS", true);
-        awsGroup.add(AnAction.builder("cloud.aws.aurora.mysql", "Amazon Aurora MySQL")
-                .icon(FontAwesomeSolid.DATABASE, "#e0a44c", 11)
-                .onAction(ctx -> ctx.openDataSourceFromCloudDialog("AWS", ConnectionProfile.DatabaseType.MYSQL))
-                .build());
-        awsGroup.add(AnAction.builder("cloud.aws.aurora.postgres", "Amazon Aurora PostgreSQL")
-                .icon(FontAwesomeSolid.DATABASE, "#3592c4", 11)
-                .onAction(ctx -> ctx.openDataSourceFromCloudDialog("AWS", ConnectionProfile.DatabaseType.POSTGRESQL))
-                .build());
-        awsGroup.add(AnAction.builder("cloud.aws.redshift", "Amazon Redshift")
-                .icon(FontAwesomeSolid.DATABASE, "#e05555", 11)
-                .onAction(ctx -> ctx.openDataSourceFromCloudDialog("AWS", ConnectionProfile.DatabaseType.POSTGRESQL))
-                .build());
-
-        ActionGroup gcpGroup = new ActionGroup("file.new.datasource.cloud.gcp", "Google Cloud", true);
-        gcpGroup.add(AnAction.builder("cloud.gcp.mysql", "Google Cloud SQL for MySQL")
-                .icon(FontAwesomeSolid.DATABASE, "#4a88c7", 11)
-                .onAction(ctx -> ctx.openDataSourceFromCloudDialog("Google Cloud", ConnectionProfile.DatabaseType.MYSQL))
-                .build());
-        gcpGroup.add(AnAction.builder("cloud.gcp.postgres", "Google Cloud SQL for PostgreSQL")
-                .icon(FontAwesomeSolid.DATABASE, "#3592c4", 11)
+        cloudGroup.add(AnAction.builder("cloud.header.connect", "Connect Provider").enabledWhen(ctx -> false).build());
+        cloudGroup.add(AnAction.builder("cloud.provider.gcp", "Google Cloud")
+                .icon(FontAwesomeSolid.CLOUD, "#4a88c7", 11)
                 .onAction(ctx -> ctx.openDataSourceFromCloudDialog("Google Cloud", ConnectionProfile.DatabaseType.POSTGRESQL))
                 .build());
-
-        ActionGroup azureGroup = new ActionGroup("file.new.datasource.cloud.azure", "Microsoft Azure", true);
-        azureGroup.add(AnAction.builder("cloud.azure.sql", "Azure SQL Database")
-                .icon(FontAwesomeSolid.DATABASE, "#c77dbb", 11)
+        cloudGroup.add(AnAction.builder("cloud.provider.aws", "AWS")
+                .icon(FontAwesomeSolid.CLOUD, "#e0a44c", 11)
+                .onAction(ctx -> ctx.openDataSourceFromCloudDialog("AWS", ConnectionProfile.DatabaseType.POSTGRESQL))
+                .build());
+        cloudGroup.add(AnAction.builder("cloud.header.download", "Download Provider Plugin").enabledWhen(ctx -> false).build());
+        cloudGroup.add(AnAction.builder("cloud.provider.azure.explorer", "Azure Cloud Explorer")
+                .icon(FontAwesomeSolid.CLOUD, "#3592c4", 11)
                 .onAction(ctx -> ctx.openDataSourceFromCloudDialog("Azure", ConnectionProfile.DatabaseType.SQLSERVER))
                 .build());
-        azureGroup.add(AnAction.builder("cloud.azure.mysql", "Azure Database for MySQL")
-                .icon(FontAwesomeSolid.DATABASE, "#4a88c7", 11)
-                .onAction(ctx -> ctx.openDataSourceFromCloudDialog("Azure", ConnectionProfile.DatabaseType.MYSQL))
-                .build());
-        azureGroup.add(AnAction.builder("cloud.azure.postgres", "Azure Database for PostgreSQL")
-                .icon(FontAwesomeSolid.DATABASE, "#3592c4", 11)
-                .onAction(ctx -> ctx.openDataSourceFromCloudDialog("Azure", ConnectionProfile.DatabaseType.POSTGRESQL))
-                .build());
 
-        cloudGroup.add(awsGroup).add(gcpGroup).add(azureGroup);
-
-        // 12. Data Source Templates
+        // 27. Data Source Templates
         AnAction dsTemplates = AnAction.builder("file.new.datasource.templates", "Data Source Templates")
                 .description("Pre-configured Docker, Localhost, and In-Memory database templates")
                 .icon(FontAwesomeSolid.LAYER_GROUP, "#a9b7c6", 11)
                 .onAction(MainWindow::showDataSourceTemplatesDialog)
                 .build();
 
-        // 13. Data Source from File/Folder
+        // 28. Data Source from File/Folder
         AnAction dsFromFile = AnAction.builder("file.new.datasource.file", "Data Source from File/Folder")
                 .description("Create a data source from a SQLite database file, JSON, or CSV file")
                 .icon(FontAwesomeSolid.FOLDER_OPEN, "#e0a44c", 11)
                 .onAction(MainWindow::openDataSourceFromFileOrFolder)
                 .build();
 
-        // 14. Data Source from URL
+        // 29. Data Source from URL
         AnAction dsFromUrl = AnAction.builder("file.new.datasource.url", "Data Source from URL")
                 .description("Connect via JDBC URL or MongoDB URI")
                 .icon(FontAwesomeSolid.LINK, "#3592c4", 11)
                 .onAction(MainWindow::openDataSourceFromUrlDialog)
                 .build();
 
-        // 15. DDL Data Source
+        // 30. DDL Data Source
         AnAction ddlDataSource = AnAction.builder("file.new.datasource.ddl", "DDL Data Source")
                 .description("Create an offline schema data source generated from DDL SQL files")
                 .icon(FontAwesomeSolid.DATABASE, "#57965c", 11)
                 .onAction(MainWindow::openDdlDataSourceDialog)
                 .build();
 
-        // 16. Folder
-        AnAction newFolder = AnAction.builder("file.new.folder", "Folder")
-                .description("Create a new organizational folder")
-                .icon(FontAwesomeSolid.FOLDER, "#e0a44c", 11)
-                .onAction(MainWindow::createNewFolderDialog)
-                .build();
-
-        // 17. Driver
+        // 31. Driver
         AnAction driverAction = AnAction.builder("file.new.driver", "Driver")
                 .description("View and manage installed JDBC and database drivers")
                 .icon(FontAwesomeSolid.PLUG, "#57965c", 11)
@@ -226,10 +399,25 @@ public final class ActionRegistry {
                 .add(newConsole)
                 .add(newQueryFile)
                 .addSeparator()
+                .add(newColumn)
+                .add(newUniqueKey)
+                .add(newForeignKey)
+                .add(newIndex)
+                .add(newCheck)
+                .add(newTable)
+                .add(newMatView)
+                .add(newView)
+                .add(newOperator)
+                .add(newSequence)
+                .add(newCollation)
+                .add(newSchema)
+                .add(newLanguage)
                 .add(newDatabase)
                 .add(newRole)
                 .add(newUser)
                 .addSeparator()
+                .add(newVirtualColumn)
+                .add(newVirtualForeignKey)
                 .add(newVirtualView)
                 .addSeparator()
                 .add(dataSourceGroup)
@@ -239,7 +427,6 @@ public final class ActionRegistry {
                 .add(dsFromUrl)
                 .add(ddlDataSource)
                 .addSeparator()
-                .add(newFolder)
                 .add(driverAction);
 
         // Open...
@@ -261,6 +448,10 @@ public final class ActionRegistry {
         ActionGroup recentProjectsGroup = new ActionGroup("file.recent", "Recent Projects");
         recentProjectsGroup.setOnMenuShowing((menu, ctx) -> {
             menu.getItems().clear();
+            MenuItem manage = new MenuItem("Manage Projects…");
+            manage.setOnAction(e -> ctx.manageProjectsDialog());
+            menu.getItems().add(manage);
+            menu.getItems().add(new SeparatorMenuItem());
             java.util.List<com.roze.dbnavigator.model.Project> recents = com.roze.dbnavigator.db.ProjectStore.getRecentProjects();
             if (recents.isEmpty()) {
                 MenuItem none = new MenuItem("No Recent Projects");
@@ -274,9 +465,14 @@ public final class ActionRegistry {
                 }
             }
         });
-        recentProjectsGroup.add(AnAction.builder("file.recent.none", "No Recent Projects")
-                .onAction(ctx -> {})
+        recentProjectsGroup.add(AnAction.builder("file.manage.projects", "Manage Projects…")
+                .onAction(MainWindow::manageProjectsDialog)
                 .build());
+
+        AnAction closeProject = AnAction.builder("file.close.project", "Close Project")
+                .description("Close the current project")
+                .onAction(MainWindow::closeCurrentProject)
+                .build();
 
         AnAction renameProject = AnAction.builder("file.rename.project", "Rename Project…")
                 .description("Rename the current project")
@@ -323,33 +519,57 @@ public final class ActionRegistry {
                 .onAction(MainWindow::editDataSourcesFile)
                 .build();
 
-        ActionGroup fileProps = new ActionGroup("file.properties", "File Properties");
-        fileProps.add(AnAction.builder("file.props.encoding", "File Encoding: UTF-8")
-                .onAction(ctx -> ctx.setStatus("File Encoding: UTF-8"))
+        // File Properties & Line Separators (DataGrip Screenshot 1)
+        ActionGroup lineSeparators = new ActionGroup("file.line.separators", "Line Separators", true);
+        lineSeparators.add(AnAction.builder("file.line.sep.crlf", "CRLF - Windows (\r\n)")
+                .description("Set line separator to CRLF (Windows)")
+                .onAction(ctx -> ctx.setStatus("Line Separator: CRLF"))
                 .build());
-        fileProps.add(AnAction.builder("file.props.line.sep", "Line Separators: LF - Unix and macOS")
+        lineSeparators.add(AnAction.builder("file.line.sep.lf", "LF - Unix and macOS (\n)")
+                .description("Set line separator to LF (Unix and macOS)")
                 .onAction(ctx -> ctx.setStatus("Line Separator: LF"))
                 .build());
+        lineSeparators.add(AnAction.builder("file.line.sep.cr", "CR - Classic Mac OS (\r)")
+                .description("Set line separator to CR (Classic Mac OS)")
+                .onAction(ctx -> ctx.setStatus("Line Separator: CR"))
+                .build());
 
-        // Local History Submenu Group
+        ActionGroup fileProps = new ActionGroup("file.properties", "File Properties");
+        fileProps.add(AnAction.builder("file.props.encoding", "File Encoding")
+                .description("Change file encoding")
+                .onAction(ctx -> ctx.setStatus("File Encoding: UTF-8"))
+                .build());
+        fileProps.add(AnAction.builder("file.remove.bom", "Remove BOM")
+                .description("Remove byte order mark (BOM)")
+                .onAction(ctx -> ctx.setStatus("Remove BOM"))
+                .build());
+        fileProps.add(AnAction.builder("file.add.bom", "Add BOM")
+                .description("Add byte order mark (BOM)")
+                .onAction(ctx -> ctx.setStatus("Add BOM"))
+                .build());
+        fileProps.add(AnAction.builder("file.associate.file.type", "Associate with File Type…")
+                .description("Associate current file with a file type")
+                .onAction(ctx -> ctx.setStatus("Associate with File Type"))
+                .build());
+        fileProps.add(lineSeparators);
+
+        // Local History Submenu Group (DataGrip Screenshot 7)
         ActionGroup localHistoryGroup = new ActionGroup("file.local.history", "Local History");
         localHistoryGroup.add(AnAction.builder("history.show", "Show History…")
                 .description("Show local revision history for current console")
-                .icon(FontAwesomeSolid.HISTORY, "#a9b7c6", 11)
                 .onAction(MainWindow::showLocalHistoryForCurrentConsole)
                 .build());
-        localHistoryGroup.add(AnAction.builder("history.show.selection", "Show History for Selection…")
-                .onAction(MainWindow::showHistoryForSelection)
-                .build());
         localHistoryGroup.add(AnAction.builder("history.show.project", "Show Project History…")
+                .description("Show project revision history")
                 .onAction(MainWindow::showProjectHistoryDialog)
                 .build());
         localHistoryGroup.add(AnAction.builder("history.recent.changes", "Recent Changes")
+                .description("Show recent local changes")
+                .accelerator(new KeyCodeCombination(KeyCode.C, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN))
                 .onAction(MainWindow::showRecentChangesDialog)
                 .build());
-        localHistoryGroup.addSeparator();
         localHistoryGroup.add(AnAction.builder("history.put.label", "Put Label…")
-                .icon(FontAwesomeSolid.TAG, "#a9b7c6", 11)
+                .description("Put label in local history")
                 .onAction(MainWindow::showPutLabelDialog)
                 .build());
 
@@ -375,18 +595,30 @@ public final class ActionRegistry {
                 .onAction(MainWindow::showInvalidateCachesDialog)
                 .build();
 
+        // Manage IDE Settings Submenu Group (DataGrip Screenshot 3)
         ActionGroup manageSettings = new ActionGroup("file.manage.settings", "Manage IDE Settings");
+        manageSettings.add(AnAction.builder("file.settings.import", "Import Settings…")
+                .description("Import IDE settings")
+                .onAction(ctx -> ctx.setStatus("Import Settings"))
+                .build());
         manageSettings.add(AnAction.builder("file.settings.export", "Export Settings…")
+                .description("Export current IDE settings")
                 .onAction(ctx -> ctx.setStatus("Settings exported"))
                 .build());
         manageSettings.add(AnAction.builder("file.settings.restore", "Restore Default Settings…")
+                .description("Restore default IDE settings")
                 .onAction(ctx -> ctx.setStatus("Default settings active"))
                 .build());
+        manageSettings.add(AnAction.builder("file.settings.backup.sync", "Backup and Sync…")
+                .description("Backup and synchronize IDE settings")
+                .onAction(ctx -> ctx.setStatus("Backup and Sync"))
+                .build());
 
+        // Export Submenu Group (DataGrip Screenshot 4)
         ActionGroup exportGroup = new ActionGroup("file.export", "Export");
-        exportGroup.add(AnAction.builder("file.export.data", "Export Data…")
-                .icon(FontAwesomeSolid.FILE_EXPORT, "#e0a44c", 11)
-                .onAction(ctx -> ctx.setStatus("Use Result Grid to export query results"))
+        exportGroup.add(AnAction.builder("file.export.html", "Files or Selection to HTML…")
+                .description("Export files or selection to HTML")
+                .onAction(ctx -> ctx.setStatus("Export to HTML"))
                 .build());
 
         AnAction printAction = AnAction.builder("file.print", "Print…")
@@ -395,8 +627,10 @@ public final class ActionRegistry {
                 .onAction(ctx -> {})
                 .build();
 
-        AnAction powerSave = AnAction.builder("file.power.save", "Power Save Mode")
-                .onAction(MainWindow::togglePowerSaveMode)
+        AnAction powerSave = ToggleAction.toggleBuilder("file.power.save", "Power Save Mode")
+                .description("Toggle power save mode to reduce CPU usage")
+                .isSelected(MainWindow::isPowerSaveMode)
+                .onToggle(MainWindow::setPowerSaveMode)
                 .build();
 
         AnAction exit = AnAction.builder("file.exit", "Exit")
@@ -409,12 +643,13 @@ public final class ActionRegistry {
                 .add(openSql)
                 .add(saveAs)
                 .add(recentProjectsGroup)
+                .add(closeProject)
                 .add(renameProject)
                 .add(attachDir)
                 .addSeparator()
                 .add(settings)
                 .add(dataSources)
-                .add(plugins)
+                .addSeparator()
                 .add(sqlDialects)
                 .add(sqlScopes)
                 .add(editDataSourcesXml)
@@ -424,10 +659,10 @@ public final class ActionRegistry {
                 .addSeparator()
                 .add(saveAll)
                 .add(reloadAll)
+                .addSeparator()
                 .add(manageSettings)
                 .add(exportGroup)
                 .add(printAction)
-                .addSeparator()
                 .add(powerSave)
                 .addSeparator()
                 .add(exit);
@@ -460,9 +695,9 @@ public final class ActionRegistry {
         manager.registerAction(AnAction.builder("file.reopen.project", "Reopen Project")
                 .onAction(ctx -> ctx.setStatus("Reopen Project")).build());
         manager.registerAction(AnAction.builder("file.manage.projects", "Manage Projects…")
-                .onAction(ctx -> ctx.setStatus("Manage Projects")).build());
+                .onAction(MainWindow::manageProjectsDialog).build());
         manager.registerAction(AnAction.builder("file.close.project", "Close Project")
-                .onAction(ctx -> ctx.setStatus("Close Project")).build());
+                .onAction(MainWindow::closeCurrentProject).build());
         manager.registerAction(AnAction.builder("file.remote.dev", "Remote Development")
                 .icon(FontAwesomeSolid.DESKTOP, "#4a88c7", 11).onAction(ctx -> ctx.setStatus("Remote Development")).build());
         manager.registerAction(AnAction.builder("file.remote.dev.daemon.action", "Remote Development…")
@@ -485,12 +720,20 @@ public final class ActionRegistry {
                 .onAction(ctx -> ctx.setStatus("Line Separator: LF")).build());
         manager.registerAction(AnAction.builder("file.line.sep.cr", "CR - Classic Mac OS (\r)")
                 .onAction(ctx -> ctx.setStatus("Line Separator: CR")).build());
+        manager.registerAction(AnAction.builder("file.props.line.sep", "Line Separators: LF - Unix and macOS")
+                .onAction(ctx -> ctx.setStatus("Line Separator: LF")).build());
+        manager.registerAction(AnAction.builder("history.show.selection", "Show History for Selection…")
+                .description("Show local history for current selection")
+                .onAction(MainWindow::showHistoryForSelection).build());
         manager.registerAction(AnAction.builder("file.settings.import", "Import Settings…")
                 .onAction(ctx -> ctx.setStatus("Import Settings")).build());
         manager.registerAction(AnAction.builder("file.settings.backup.sync", "Backup and Sync…")
                 .onAction(ctx -> ctx.setStatus("Backup and Sync")).build());
-        manager.registerAction(AnAction.builder("file.export.html", "Export Files or Selection to HTML…")
+        manager.registerAction(AnAction.builder("file.export.html", "Files or Selection to HTML…")
                 .onAction(ctx -> ctx.setStatus("Export to HTML")).build());
+        manager.registerAction(AnAction.builder("file.export.data", "Export Data…")
+                .icon(FontAwesomeSolid.FILE_EXPORT, "#e0a44c", 11)
+                .onAction(ctx -> ctx.setStatus("Use Result Grid to export query results")).build());
 
         // Groups for File Menu hierarchy
         manager.registerGroup(new ActionGroup("file.new.file.group", "New File", true));

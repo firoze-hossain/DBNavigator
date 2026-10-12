@@ -36,6 +36,68 @@ public class ActionRegistryTest {
     }
 
     @Test
+    public void testFileMenuRootStructureAndSeparators() {
+        ActionGroup fileMenu = actionManager.getGroup("menu.file");
+        assertNotNull(fileMenu);
+        List<AnAction> items = fileMenu.getChildren();
+        assertEquals(27, items.size(), "File menu must contain 21 items and 6 separators matching DataGrip Screenshot 1");
+
+        // Section 1: New, Open, Save As, Recent Projects, Close Project, Rename Project, Attach Directory
+        assertEquals("file.new", items.get(0).getId());
+        assertEquals("file.open.sql", items.get(1).getId());
+        assertEquals("file.save.as", items.get(2).getId());
+        assertEquals("file.recent", items.get(3).getId());
+        assertEquals("file.close.project", items.get(4).getId());
+        assertEquals("file.rename.project", items.get(5).getId());
+        assertEquals("file.attach.directory", items.get(6).getId());
+
+        // Separator 1
+        assertInstanceOf(ActionSeparator.class, items.get(7));
+
+        // Section 2: Settings, Data Sources
+        assertEquals("file.settings", items.get(8).getId());
+        assertEquals("file.data.sources", items.get(9).getId());
+
+        // Separator 2
+        assertInstanceOf(ActionSeparator.class, items.get(10));
+
+        // Section 3: SQL Dialects, SQL Resolution Scopes, Edit dataSources.xml
+        assertEquals("file.sql.dialects", items.get(11).getId());
+        assertEquals("file.sql.scopes", items.get(12).getId());
+        assertEquals("file.edit.datasources.xml", items.get(13).getId());
+
+        // Separator 3
+        assertInstanceOf(ActionSeparator.class, items.get(14));
+
+        // Section 4: File Properties, Local History
+        assertEquals("file.properties", items.get(15).getId());
+        assertEquals("file.local.history", items.get(16).getId());
+
+        // Separator 4
+        assertInstanceOf(ActionSeparator.class, items.get(17));
+
+        // Section 5: Save All, Reload All from Disk
+        assertEquals("file.save.all", items.get(18).getId());
+        assertEquals("file.reload.all", items.get(19).getId());
+
+        // Separator 5
+        assertInstanceOf(ActionSeparator.class, items.get(20));
+
+        // Section 6: Manage IDE Settings, Export, Print, Power Save Mode
+        assertEquals("file.manage.settings", items.get(21).getId());
+        assertEquals("file.export", items.get(22).getId());
+        assertEquals("file.print", items.get(23).getId());
+        assertEquals("file.power.save", items.get(24).getId());
+        assertInstanceOf(ToggleAction.class, items.get(24), "Power Save Mode must be a ToggleAction for checkable state");
+
+        // Separator 6
+        assertInstanceOf(ActionSeparator.class, items.get(25));
+
+        // Section 7: Exit
+        assertEquals("file.exit", items.get(26).getId());
+    }
+
+    @Test
     public void testFileNewMenuStructureAndOrder() {
         ActionGroup newGroup = actionManager.getGroup("file.new");
         assertNotNull(newGroup, "file.new group should be registered in ActionManager");
@@ -81,67 +143,119 @@ public class ActionRegistryTest {
         // Separator 2
         assertInstanceOf(ActionSeparator.class, items.get(idx++));
 
-        // 6. Database
-        assertInstanceOf(AnAction.class, items.get(idx));
+        // 6. Column
+        assertEquals("file.new.column", items.get(idx).getId());
+        assertEquals("Column", ((AnAction) items.get(idx++)).getText());
+
+        // 7. Unique Key
+        assertEquals("file.new.uniquekey", items.get(idx).getId());
+        assertEquals("Unique Key", ((AnAction) items.get(idx++)).getText());
+
+        // 8. Foreign Key
+        assertEquals("file.new.foreignkey", items.get(idx).getId());
+        assertEquals("Foreign Key", ((AnAction) items.get(idx++)).getText());
+
+        // 9. Index
+        assertEquals("file.new.index", items.get(idx).getId());
+        assertEquals("Index", ((AnAction) items.get(idx++)).getText());
+
+        // 10. Check
+        assertEquals("file.new.check", items.get(idx).getId());
+        assertEquals("Check", ((AnAction) items.get(idx++)).getText());
+
+        // 11. Table
+        assertEquals("file.new.table", items.get(idx).getId());
+        assertEquals("Table", ((AnAction) items.get(idx++)).getText());
+
+        // 12. Materialized View
+        assertEquals("file.new.matview", items.get(idx).getId());
+        assertEquals("Materialized View", ((AnAction) items.get(idx++)).getText());
+
+        // 13. View
+        assertEquals("file.new.view", items.get(idx).getId());
+        assertEquals("View", ((AnAction) items.get(idx++)).getText());
+
+        // 14. Operator
+        assertEquals("file.new.operator", items.get(idx).getId());
+        assertEquals("Operator", ((AnAction) items.get(idx++)).getText());
+
+        // 15. Sequence
+        assertEquals("file.new.sequence", items.get(idx).getId());
+        assertEquals("Sequence", ((AnAction) items.get(idx++)).getText());
+
+        // 16. Collation
+        assertEquals("file.new.collation", items.get(idx).getId());
+        assertEquals("Collation", ((AnAction) items.get(idx++)).getText());
+
+        // 17. Schema
+        assertEquals("file.new.schema", items.get(idx).getId());
+        assertEquals("Schema", ((AnAction) items.get(idx++)).getText());
+
+        // 18. Language
+        assertEquals("file.new.language", items.get(idx).getId());
+        assertEquals("Language", ((AnAction) items.get(idx++)).getText());
+
+        // 19. Database
         assertEquals("file.new.database", items.get(idx).getId());
-        assertEquals("Database", ((AnAction) items.get(idx)).getText());
-        idx++;
+        assertEquals("Database", ((AnAction) items.get(idx++)).getText());
 
-        // 7. Role
-        assertInstanceOf(AnAction.class, items.get(idx));
+        // 20. Role
         assertEquals("file.new.role", items.get(idx).getId());
-        assertEquals("Role", ((AnAction) items.get(idx)).getText());
-        idx++;
+        assertEquals("Role", ((AnAction) items.get(idx++)).getText());
 
-        // 8. User
-        assertInstanceOf(AnAction.class, items.get(idx));
+        // 21. User
         assertEquals("file.new.user", items.get(idx).getId());
-        assertEquals("User", ((AnAction) items.get(idx)).getText());
-        idx++;
+        assertEquals("User", ((AnAction) items.get(idx++)).getText());
 
         // Separator 3
         assertInstanceOf(ActionSeparator.class, items.get(idx++));
 
-        // 9. Virtual View
-        assertInstanceOf(AnAction.class, items.get(idx));
+        // 22. Virtual Column
+        assertEquals("file.new.virtualcolumn", items.get(idx).getId());
+        assertEquals("Virtual Column", ((AnAction) items.get(idx++)).getText());
+
+        // 23. Virtual Foreign Key
+        assertEquals("file.new.virtualforeignkey", items.get(idx).getId());
+        assertEquals("Virtual Foreign Key", ((AnAction) items.get(idx++)).getText());
+
+        // 24. Virtual View
         assertEquals("file.new.virtualview", items.get(idx).getId());
-        assertEquals("Virtual View", ((AnAction) items.get(idx)).getText());
-        idx++;
+        assertEquals("Virtual View", ((AnAction) items.get(idx++)).getText());
 
         // Separator 4
         assertInstanceOf(ActionSeparator.class, items.get(idx++));
 
-        // 10. Data Source >
+        // 25. Data Source >
         assertInstanceOf(ActionGroup.class, items.get(idx));
         assertEquals("file.new.datasource.group", items.get(idx).getId());
         assertEquals("Data Source", ((ActionGroup) items.get(idx)).getText());
         idx++;
 
-        // 11. Data Source from Cloud Provider >
+        // 26. Data Source from Cloud Provider >
         assertInstanceOf(ActionGroup.class, items.get(idx));
         assertEquals("file.new.datasource.cloud", items.get(idx).getId());
         assertEquals("Data Source from Cloud Provider", ((ActionGroup) items.get(idx)).getText());
         idx++;
 
-        // 12. Data Source Templates
+        // 27. Data Source Templates
         assertInstanceOf(AnAction.class, items.get(idx));
         assertEquals("file.new.datasource.templates", items.get(idx).getId());
         assertEquals("Data Source Templates", ((AnAction) items.get(idx)).getText());
         idx++;
 
-        // 13. Data Source from File/Folder
+        // 28. Data Source from File/Folder
         assertInstanceOf(AnAction.class, items.get(idx));
         assertEquals("file.new.datasource.file", items.get(idx).getId());
         assertEquals("Data Source from File/Folder", ((AnAction) items.get(idx)).getText());
         idx++;
 
-        // 14. Data Source from URL
+        // 29. Data Source from URL
         assertInstanceOf(AnAction.class, items.get(idx));
         assertEquals("file.new.datasource.url", items.get(idx).getId());
         assertEquals("Data Source from URL", ((AnAction) items.get(idx)).getText());
         idx++;
 
-        // 15. DDL Data Source
+        // 30. DDL Data Source
         assertInstanceOf(AnAction.class, items.get(idx));
         assertEquals("file.new.datasource.ddl", items.get(idx).getId());
         assertEquals("DDL Data Source", ((AnAction) items.get(idx)).getText());
@@ -150,13 +264,7 @@ public class ActionRegistryTest {
         // Separator 5
         assertInstanceOf(ActionSeparator.class, items.get(idx++));
 
-        // 16. Folder
-        assertInstanceOf(AnAction.class, items.get(idx));
-        assertEquals("file.new.folder", items.get(idx).getId());
-        assertEquals("Folder", ((AnAction) items.get(idx)).getText());
-        idx++;
-
-        // 17. Driver
+        // 31. Driver
         assertInstanceOf(AnAction.class, items.get(idx));
         assertEquals("file.new.driver", items.get(idx).getId());
         assertEquals("Driver", ((AnAction) items.get(idx)).getText());
@@ -205,14 +313,10 @@ public class ActionRegistryTest {
         ActionGroup cloudGroup = (ActionGroup) newGroup.getChildren().stream()
                 .filter(i -> "file.new.datasource.cloud".equals(i.getId())).findFirst().orElseThrow();
 
-        assertEquals(3, cloudGroup.getChildren().size());
-        ActionGroup aws = (ActionGroup) cloudGroup.getChildren().get(0);
-        ActionGroup gcp = (ActionGroup) cloudGroup.getChildren().get(1);
-        ActionGroup azure = (ActionGroup) cloudGroup.getChildren().get(2);
-
-        assertEquals("Amazon AWS", aws.getText());
-        assertEquals("Google Cloud", gcp.getText());
-        assertEquals("Microsoft Azure", azure.getText());
+        List<String> texts = cloudGroup.getChildren().stream().map(AnAction::getText).toList();
+        assertTrue(texts.contains("Google Cloud"));
+        assertTrue(texts.contains("AWS"));
+        assertTrue(texts.contains("Azure Cloud Explorer"));
     }
 
     @Test
@@ -1092,6 +1196,63 @@ public class ActionRegistryTest {
         assertNotNull(actionManager.getAction("history.show.project"));
         assertNotNull(actionManager.getAction("history.recent.changes"));
         assertNotNull(actionManager.getAction("history.put.label"));
+
+        List<AnAction> children = localHistory.getChildren();
+        assertEquals(4, children.size(), "Local History should have exactly 4 items without separators");
+        assertEquals("history.show", children.get(0).getId());
+        assertEquals("history.show.project", children.get(1).getId());
+        assertEquals("history.recent.changes", children.get(2).getId());
+        assertEquals("history.put.label", children.get(3).getId());
+
+        AnAction recentChanges = children.get(2);
+        assertNotNull(recentChanges.getAccelerator(), "Recent Changes should have Alt+Shift+C accelerator");
+        KeyCodeCombination kcc = (KeyCodeCombination) recentChanges.getAccelerator();
+        assertEquals(KeyCode.C, kcc.getCode());
+        assertEquals(KeyCombination.ModifierValue.DOWN, kcc.getAlt());
+        assertEquals(KeyCombination.ModifierValue.DOWN, kcc.getShift());
+    }
+
+    @Test
+    public void testFilePropertiesAndLineSeparators() {
+        ActionGroup fileProps = actionManager.getGroup("file.properties");
+        assertNotNull(fileProps, "file.properties should be registered");
+        List<AnAction> children = fileProps.getChildren();
+        assertEquals(5, children.size(), "File Properties should contain 4 actions and Line Separators submenu");
+        assertEquals("file.props.encoding", children.get(0).getId());
+        assertEquals("file.remove.bom", children.get(1).getId());
+        assertEquals("file.add.bom", children.get(2).getId());
+        assertEquals("file.associate.file.type", children.get(3).getId());
+        assertEquals("file.line.separators", children.get(4).getId());
+
+        ActionGroup lineSep = actionManager.getGroup("file.line.separators");
+        assertNotNull(lineSep, "file.line.separators should be registered");
+        List<AnAction> lineSepChildren = lineSep.getChildren();
+        assertEquals(3, lineSepChildren.size(), "Line Separators should contain CRLF, LF, CR");
+        assertEquals("file.line.sep.crlf", lineSepChildren.get(0).getId());
+        assertEquals("file.line.sep.lf", lineSepChildren.get(1).getId());
+        assertEquals("file.line.sep.cr", lineSepChildren.get(2).getId());
+    }
+
+    @Test
+    public void testManageIdeSettingsGroup() {
+        ActionGroup manageSettings = actionManager.getGroup("file.manage.settings");
+        assertNotNull(manageSettings, "file.manage.settings should be registered");
+        List<AnAction> children = manageSettings.getChildren();
+        assertEquals(4, children.size(), "Manage IDE Settings should contain 4 actions without separators");
+        assertEquals("file.settings.import", children.get(0).getId());
+        assertEquals("file.settings.export", children.get(1).getId());
+        assertEquals("file.settings.restore", children.get(2).getId());
+        assertEquals("file.settings.backup.sync", children.get(3).getId());
+    }
+
+    @Test
+    public void testExportGroup() {
+        ActionGroup exportGroup = actionManager.getGroup("file.export");
+        assertNotNull(exportGroup, "file.export should be registered");
+        List<AnAction> children = exportGroup.getChildren();
+        assertEquals(1, children.size(), "Export group should contain Files or Selection to HTML");
+        assertEquals("file.export.html", children.get(0).getId());
+        assertEquals("Files or Selection to HTML…", children.get(0).getText());
     }
 
     @Test

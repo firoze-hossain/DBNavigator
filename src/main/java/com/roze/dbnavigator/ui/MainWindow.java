@@ -639,6 +639,301 @@ public class MainWindow {
         });
     }
 
+    public void createNewTableAction() {
+        TextInputDialog dialog = (TextInputDialog) DialogTheme.apply(new TextInputDialog("new_table"));
+        dialog.initOwner(stage);
+        dialog.setTitle("New Table");
+        dialog.setHeaderText("Create Table");
+        dialog.setContentText("Table name:");
+        dialog.showAndWait().ifPresent(tableName -> {
+            if (!tableName.isBlank()) {
+                ConnectionProfile p = getActiveOrSelectedProfile();
+                String ddl = "CREATE TABLE " + tableName.trim() + " (\n"
+                        + "    id INT PRIMARY KEY,\n"
+                        + "    name VARCHAR(255) NOT NULL,\n"
+                        + "    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n"
+                        + ");\n";
+                if (p != null) {
+                    openQueryTab(p, null, ddl);
+                }
+                setStatus("Generated CREATE TABLE template for: " + tableName.trim());
+            }
+        });
+    }
+
+    public void createNewColumnAction() {
+        TextInputDialog dialog = (TextInputDialog) DialogTheme.apply(new TextInputDialog("new_column"));
+        dialog.initOwner(stage);
+        dialog.setTitle("New Column");
+        dialog.setHeaderText("Add Column to Table");
+        dialog.setContentText("Column definition (e.g. status VARCHAR(50)):");
+        dialog.showAndWait().ifPresent(colDef -> {
+            if (!colDef.isBlank()) {
+                ConnectionProfile p = getActiveOrSelectedProfile();
+                String ddl = "ALTER TABLE table_name ADD COLUMN " + colDef.trim() + ";\n";
+                if (p != null) {
+                    openQueryTab(p, null, ddl);
+                }
+                setStatus("Generated ADD COLUMN template: " + colDef.trim());
+            }
+        });
+    }
+
+    public void createNewUniqueKeyAction() {
+        TextInputDialog dialog = (TextInputDialog) DialogTheme.apply(new TextInputDialog("uq_table_column"));
+        dialog.initOwner(stage);
+        dialog.setTitle("New Unique Key");
+        dialog.setHeaderText("Add Unique Key Constraint");
+        dialog.setContentText("Constraint name:");
+        dialog.showAndWait().ifPresent(name -> {
+            if (!name.isBlank()) {
+                ConnectionProfile p = getActiveOrSelectedProfile();
+                String ddl = "ALTER TABLE table_name ADD CONSTRAINT " + name.trim() + " UNIQUE (column_name);\n";
+                if (p != null) {
+                    openQueryTab(p, null, ddl);
+                }
+                setStatus("Generated UNIQUE KEY template: " + name.trim());
+            }
+        });
+    }
+
+    public void createNewForeignKeyAction() {
+        TextInputDialog dialog = (TextInputDialog) DialogTheme.apply(new TextInputDialog("fk_table_ref"));
+        dialog.initOwner(stage);
+        dialog.setTitle("New Foreign Key");
+        dialog.setHeaderText("Add Foreign Key Constraint");
+        dialog.setContentText("Constraint name:");
+        dialog.showAndWait().ifPresent(name -> {
+            if (!name.isBlank()) {
+                ConnectionProfile p = getActiveOrSelectedProfile();
+                String ddl = "ALTER TABLE table_name ADD CONSTRAINT " + name.trim() + "\n"
+                        + "    FOREIGN KEY (col_name) REFERENCES ref_table (ref_col);\n";
+                if (p != null) {
+                    openQueryTab(p, null, ddl);
+                }
+                setStatus("Generated FOREIGN KEY template: " + name.trim());
+            }
+        });
+    }
+
+    public void createNewIndexAction() {
+        TextInputDialog dialog = (TextInputDialog) DialogTheme.apply(new TextInputDialog("idx_table_col"));
+        dialog.initOwner(stage);
+        dialog.setTitle("New Index");
+        dialog.setHeaderText("Create Index");
+        dialog.setContentText("Index name:");
+        dialog.showAndWait().ifPresent(name -> {
+            if (!name.isBlank()) {
+                ConnectionProfile p = getActiveOrSelectedProfile();
+                String ddl = "CREATE INDEX " + name.trim() + " ON table_name (column_name);\n";
+                if (p != null) {
+                    openQueryTab(p, null, ddl);
+                }
+                setStatus("Generated CREATE INDEX template: " + name.trim());
+            }
+        });
+    }
+
+    public void createNewCheckConstraintAction() {
+        TextInputDialog dialog = (TextInputDialog) DialogTheme.apply(new TextInputDialog("chk_table_condition"));
+        dialog.initOwner(stage);
+        dialog.setTitle("New Check Constraint");
+        dialog.setHeaderText("Add Check Constraint");
+        dialog.setContentText("Constraint name:");
+        dialog.showAndWait().ifPresent(name -> {
+            if (!name.isBlank()) {
+                ConnectionProfile p = getActiveOrSelectedProfile();
+                String ddl = "ALTER TABLE table_name ADD CONSTRAINT " + name.trim() + " CHECK (column_name > 0);\n";
+                if (p != null) {
+                    openQueryTab(p, null, ddl);
+                }
+                setStatus("Generated CHECK constraint template: " + name.trim());
+            }
+        });
+    }
+
+    public void createNewMaterializedViewAction() {
+        TextInputDialog dialog = (TextInputDialog) DialogTheme.apply(new TextInputDialog("mv_sample_view"));
+        dialog.initOwner(stage);
+        dialog.setTitle("New Materialized View");
+        dialog.setHeaderText("Create Materialized View");
+        dialog.setContentText("Materialized View name:");
+        dialog.showAndWait().ifPresent(name -> {
+            if (!name.isBlank()) {
+                ConnectionProfile p = getActiveOrSelectedProfile();
+                String ddl = "CREATE MATERIALIZED VIEW " + name.trim() + " AS\n"
+                        + "SELECT 1 AS id, 'sample' AS label;\n";
+                if (p != null) {
+                    openQueryTab(p, null, ddl);
+                }
+                setStatus("Generated CREATE MATERIALIZED VIEW template: " + name.trim());
+            }
+        });
+    }
+
+    public void createNewViewAction() {
+        createNewVirtualViewAction();
+    }
+
+    public void createNewOperatorAction() {
+        TextInputDialog dialog = (TextInputDialog) DialogTheme.apply(new TextInputDialog("custom_op"));
+        dialog.initOwner(stage);
+        dialog.setTitle("New Operator");
+        dialog.setHeaderText("Create Database Operator");
+        dialog.setContentText("Operator symbol/name:");
+        dialog.showAndWait().ifPresent(name -> {
+            if (!name.isBlank()) {
+                ConnectionProfile p = getActiveOrSelectedProfile();
+                String ddl = "-- PostgreSQL custom operator template\n"
+                        + "CREATE OPERATOR === (\n"
+                        + "    LEFTARG = int, RIGHTARG = int,\n"
+                        + "    PROCEDURE = int4eq,\n"
+                        + "    COMMUTATOR = ===\n"
+                        + ");\n";
+                if (p != null) {
+                    openQueryTab(p, null, ddl);
+                }
+                setStatus("Generated CREATE OPERATOR template: " + name.trim());
+            }
+        });
+    }
+
+    public void createNewSequenceAction() {
+        TextInputDialog dialog = (TextInputDialog) DialogTheme.apply(new TextInputDialog("seq_id"));
+        dialog.initOwner(stage);
+        dialog.setTitle("New Sequence");
+        dialog.setHeaderText("Create Sequence");
+        dialog.setContentText("Sequence name:");
+        dialog.showAndWait().ifPresent(name -> {
+            if (!name.isBlank()) {
+                ConnectionProfile p = getActiveOrSelectedProfile();
+                String ddl = "CREATE SEQUENCE " + name.trim() + " START WITH 1 INCREMENT BY 1;\n";
+                if (p != null) {
+                    openQueryTab(p, null, ddl);
+                }
+                setStatus("Generated CREATE SEQUENCE template: " + name.trim());
+            }
+        });
+    }
+
+    public void createNewCollationAction() {
+        TextInputDialog dialog = (TextInputDialog) DialogTheme.apply(new TextInputDialog("custom_collation"));
+        dialog.initOwner(stage);
+        dialog.setTitle("New Collation");
+        dialog.setHeaderText("Create Collation");
+        dialog.setContentText("Collation name:");
+        dialog.showAndWait().ifPresent(name -> {
+            if (!name.isBlank()) {
+                ConnectionProfile p = getActiveOrSelectedProfile();
+                String ddl = "CREATE COLLATION " + name.trim() + " (locale = 'en_US.utf8');\n";
+                if (p != null) {
+                    openQueryTab(p, null, ddl);
+                }
+                setStatus("Generated CREATE COLLATION template: " + name.trim());
+            }
+        });
+    }
+
+    public void createNewSchemaAction() {
+        TextInputDialog dialog = (TextInputDialog) DialogTheme.apply(new TextInputDialog("new_schema"));
+        dialog.initOwner(stage);
+        dialog.setTitle("New Schema");
+        dialog.setHeaderText("Create Database Schema");
+        dialog.setContentText("Schema name:");
+        dialog.showAndWait().ifPresent(name -> {
+            if (!name.isBlank()) {
+                ConnectionProfile p = getActiveOrSelectedProfile();
+                String ddl = "CREATE SCHEMA " + name.trim() + ";\n";
+                if (p != null) {
+                    openQueryTab(p, null, ddl);
+                }
+                setStatus("Generated CREATE SCHEMA template: " + name.trim());
+            }
+        });
+    }
+
+    public void createNewLanguageAction() {
+        TextInputDialog dialog = (TextInputDialog) DialogTheme.apply(new TextInputDialog("plpgsql"));
+        dialog.initOwner(stage);
+        dialog.setTitle("New Procedural Language");
+        dialog.setHeaderText("Create Procedural Language");
+        dialog.setContentText("Language name:");
+        dialog.showAndWait().ifPresent(name -> {
+            if (!name.isBlank()) {
+                ConnectionProfile p = getActiveOrSelectedProfile();
+                String ddl = "CREATE EXTENSION IF NOT EXISTS " + name.trim() + ";\n";
+                if (p != null) {
+                    openQueryTab(p, null, ddl);
+                }
+                setStatus("Generated procedural language extension template: " + name.trim());
+            }
+        });
+    }
+
+    public void createNewVirtualColumnAction() {
+        TextInputDialog dialog = (TextInputDialog) DialogTheme.apply(new TextInputDialog("v_col"));
+        dialog.initOwner(stage);
+        dialog.setTitle("New Virtual Column");
+        dialog.setHeaderText("Create Generated/Virtual Column");
+        dialog.setContentText("Virtual column expression (e.g. total_price AS (price * quantity) STORED):");
+        dialog.showAndWait().ifPresent(expr -> {
+            if (!expr.isBlank()) {
+                ConnectionProfile p = getActiveOrSelectedProfile();
+                String ddl = "ALTER TABLE table_name ADD COLUMN " + expr.trim() + ";\n";
+                if (p != null) {
+                    openQueryTab(p, null, ddl);
+                }
+                setStatus("Generated virtual column template: " + expr.trim());
+            }
+        });
+    }
+
+    public void createNewVirtualForeignKeyAction() {
+        TextInputDialog dialog = (TextInputDialog) DialogTheme.apply(new TextInputDialog("v_fk_ref"));
+        dialog.initOwner(stage);
+        dialog.setTitle("New Virtual Foreign Key");
+        dialog.setHeaderText("Create Virtual Foreign Key (IDE relationship)");
+        dialog.setContentText("Relationship name:");
+        dialog.showAndWait().ifPresent(name -> {
+            if (!name.isBlank()) {
+                setStatus("Created virtual relationship metadata: " + name.trim());
+            }
+        });
+    }
+
+    public void closeCurrentProject() {
+        if (currentProject != null) {
+            String closedName = currentProject.getName();
+            Project defaultProj = ProjectStore.findByName("default");
+            if (defaultProj == null) {
+                defaultProj = ProjectStore.getCurrentProject();
+            }
+            if (defaultProj != null && !defaultProj.getName().equalsIgnoreCase(currentProject.getName())) {
+                setProject(defaultProj);
+                ProjectStore.setCurrentProject(defaultProj);
+            }
+            setStatus("Closed project: " + closedName);
+        }
+    }
+
+    public void manageProjectsDialog() {
+        List<Project> allProjects = ProjectStore.load();
+        if (allProjects.isEmpty()) {
+            Alert alert = (Alert) DialogTheme.apply(new Alert(Alert.AlertType.INFORMATION, "No projects registered."));
+            alert.initOwner(stage);
+            alert.setHeaderText("Manage Projects");
+            alert.showAndWait();
+            return;
+        }
+        ChoiceDialog<Project> dialog = (ChoiceDialog<Project>) DialogTheme.apply(
+                new ChoiceDialog<>(currentProject != null ? currentProject : allProjects.get(0), allProjects));
+        dialog.initOwner(stage);
+        dialog.setTitle("Manage Projects");
+        dialog.setHeaderText("Select a project to switch to:");
+        dialog.setContentText("Project:");
+        dialog.showAndWait().ifPresent(this::switchProjectFlow);
+    }
+
     public void openDataSourceFromCloudDialog(String provider, ConnectionProfile.DatabaseType type) {
         showNewConnectionDialog(type);
         setStatus("Configuring " + provider + " " + type.getDisplayName() + " Data Source");
@@ -854,9 +1149,17 @@ public class MainWindow {
     }
 
     private boolean powerSaveMode = false;
-    public void togglePowerSaveMode() {
-        powerSaveMode = !powerSaveMode;
+    public boolean isPowerSaveMode() {
+        return powerSaveMode;
+    }
+
+    public void setPowerSaveMode(boolean powerSaveMode) {
+        this.powerSaveMode = powerSaveMode;
         setStatus("Power Save Mode: " + (powerSaveMode ? "Enabled" : "Disabled"));
+    }
+
+    public void togglePowerSaveMode() {
+        setPowerSaveMode(!powerSaveMode);
     }
 
     public void saveConsoleAs() {

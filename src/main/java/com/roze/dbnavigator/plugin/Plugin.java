@@ -10,7 +10,7 @@ public class Plugin {
 
     private String id;
     private String name;
-    private String vendor = "JetBrains s.r.o.";
+    private String vendor = "Roze Ecosystem";
     private String version = "1.0.0";
     private String category = "Other";
     private List<String> tags = new ArrayList<>();
@@ -59,7 +59,7 @@ public class Plugin {
     public String getName() { return name != null ? name : ""; }
     public void setName(String name) { this.name = name; }
 
-    public String getVendor() { return vendor != null ? vendor : "JetBrains s.r.o."; }
+    public String getVendor() { return vendor != null ? vendor : "Roze Ecosystem"; }
     public void setVendor(String vendor) { this.vendor = vendor; }
 
     public String getVersion() { return version != null ? version : "1.0.0"; }

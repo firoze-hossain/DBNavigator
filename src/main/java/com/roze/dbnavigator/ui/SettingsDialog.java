@@ -1777,13 +1777,14 @@ public final class SettingsDialog {
         channel.getSelectionModel().select(settings.getUpdateChannel());
         channel.setPrefWidth(180);
 
-        Label endpointLabel = new Label("RozeHub endpoint:");
+        Label endpointLabel = new Label("RozeHub Base URL:");
         endpointLabel.getStyleClass().add("connection-field-label");
         TextField endpoint = new TextField(settings.getUpdateEndpoint());
-        endpoint.setPromptText("Leave blank to use the configured RozeHub endpoint");
+        endpoint.setPromptText("Default: " + AppSettingsStore.DEFAULT_ROZEHUB_API_BASE_URL);
         endpoint.setPrefWidth(420);
 
-        Label hint = new Label("Updates are verified with SHA-256 before installation.");
+        Label hint = new Label("Central RozeHub API Base URL (default: " + AppSettingsStore.DEFAULT_ROZEHUB_API_BASE_URL
+                + "). Powers application updates, release downloads, and plugin marketplace. When deploying to live, only change this single URL.");
         hint.getStyleClass().add("console-status");
         hint.setWrapText(true);
         hint.setMaxWidth(500);

@@ -24,7 +24,7 @@ import java.util.function.Consumer;
  * DBNavigator is running.
  */
 public final class AppUpdateService {
-    public static final String DEFAULT_ENDPOINT = "http://127.0.0.1:8000/api/v1/updates/dbnavigator";
+    public static final String DEFAULT_ENDPOINT = AppSettingsStore.DEFAULT_ROZEHUB_API_BASE_URL + "/updates/dbnavigator";
     private static final Path UPDATE_DIR = Path.of(System.getProperty("user.home"), ".dbnavigator", "updates");
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final HttpClient HTTP = HttpClient.newBuilder()
@@ -61,13 +61,18 @@ public final class AppUpdateService {
     public static CompletableFuture<AppUpdate> checkForUpdate(String endpoint, String channel) {
         String base;
         if (endpoint == null || endpoint.isBlank()) {
-            base = DEFAULT_ENDPOINT;
+            base = AppSettingsStore.getRozeHubUpdatesApiUrl();
         } else {
             String trimmed = endpoint.trim().replaceAll("/+$", "");
-            if (!trimmed.contains("/api/v1/updates")) {
-                base = trimmed + "/api/v1/updates/dbnavigator";
-            } else {
+            if (trimmed.endsWith("/api/v1/updates/dbnavigator")) {
                 base = trimmed;
+            } else if (trimmed.endsWith("/api/v1")) {
+                base = trimmed + "/updates/dbnavigator";
+            } else if (trimmed.contains("/api/v1")) {
+                int idx = trimmed.indexOf("/api/v1");
+                base = trimmed.substring(0, idx + "/api/v1".length()) + "/updates/dbnavigator";
+            } else {
+                base = trimmed + "/api/v1/updates/dbnavigator";
             }
         }
         String separator = base.contains("?") ? "&" : "?";
