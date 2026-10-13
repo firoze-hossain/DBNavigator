@@ -307,6 +307,16 @@
 /* ---------- schema tree detail (counts, column types) ---------- */
 .tree-name   { -fx-text-fill: -text; }
 .tree-detail { -fx-text-fill: #6f7680; -fx-font-size: 11px; }
+.tree-detail-pill {
+    -fx-padding: 1 5 1 5;
+    -fx-background-radius: 8px;
+    -fx-border-radius: 8px;
+    -fx-cursor: hand;
+}
+.tree-detail-pill:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.10);
+    -fx-text-fill: #b9c4d4;
+}
 .schema-tree .tree-cell:selected .tree-name   { -fx-text-fill: white; }
 .schema-tree .tree-cell:selected .tree-detail { -fx-text-fill: #b9c4d4; }
 

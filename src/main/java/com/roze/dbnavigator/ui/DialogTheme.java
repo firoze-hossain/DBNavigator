@@ -1,5 +1,6 @@
 package com.roze.dbnavigator.ui;
 
+import javafx.scene.Scene;
 import javafx.scene.control.Dialog;
 
 /**
@@ -33,5 +34,13 @@ public final class DialogTheme {
         dialog.getDialogPane().getStylesheets().add(STYLESHEET);
         dialog.getDialogPane().getStyleClass().add("themed-dialog");
         return dialog;
+    }
+
+    /** Attaches the app's dark theme to a Scene; returns the same scene for fluent chaining. */
+    public static Scene applyToScene(Scene scene) {
+        if (!scene.getStylesheets().contains(STYLESHEET)) {
+            scene.getStylesheets().add(STYLESHEET);
+        }
+        return scene;
     }
 }

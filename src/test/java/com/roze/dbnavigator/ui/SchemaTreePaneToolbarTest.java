@@ -4,9 +4,14 @@ import com.roze.dbnavigator.model.ConnectionProfile;
 import com.roze.dbnavigator.model.DbObject;
 import com.roze.dbnavigator.model.DbObject.Kind;
 import javafx.application.Platform;
+import javafx.scene.control.ContextMenu;
+import javafx.scene.control.Menu;
+import javafx.scene.control.MenuItem;
 import javafx.scene.control.TreeItem;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -339,4 +344,298 @@ public class SchemaTreePaneToolbarTest {
         assertFalse(pane.getGoToDdlButton().isDisabled());
         assertTrue(pane.getEditDataButton().isDisabled(), "Edit Data must be INACTIVE for database");
     }
+
+    private Menu findMenu(ContextMenu menu, String text) {
+        for (MenuItem item : menu.getItems()) {
+            if (item instanceof Menu m && m.getText() != null && m.getText().startsWith(text)) {
+                return m;
+            }
+        }
+        return null;
+    }
+
+    private boolean menuHasItem(Menu parent, String text) {
+        if (parent == null) return false;
+        for (MenuItem item : parent.getItems()) {
+            if (item.getText() != null && item.getText().startsWith(text)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Test
+    public void testPostgreSQLContextMenuDynamicOptions() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = createPostgreSqlProfile();
+        DbObject connObj = new DbObject(profile.getName(), Kind.CONNECTION);
+        ContextMenu menu = pane.buildConnectionMenu(null, connObj, profile);
+        assertNotNull(menu);
+
+        Menu newMenu = findMenu(menu, "New");
+        assertNotNull(newMenu, "New menu must exist");
+        assertTrue(menuHasItem(newMenu, "Query Console"));
+        assertTrue(menuHasItem(newMenu, "Query File"));
+        assertTrue(menuHasItem(newMenu, "Database"), "PostgreSQL must have Database in New menu");
+        assertTrue(menuHasItem(newMenu, "Role"), "PostgreSQL must have Role in New menu");
+        assertTrue(menuHasItem(newMenu, "User"), "PostgreSQL must have User in New menu");
+        assertFalse(menuHasItem(newMenu, "Schema"), "PostgreSQL must NOT have Schema in root New menu");
+
+        Menu objActions = findMenu(menu, "Object Actions");
+        assertNotNull(objActions);
+        assertTrue(menuHasItem(objActions, "Show / Hide Databases"));
+        assertFalse(menuHasItem(objActions, "Show / Hide Schemas"));
+
+        Menu tools = findMenu(menu, "Tools");
+        assertNotNull(tools);
+        assertTrue(menuHasItem(tools, "Manage Databases"));
+        assertTrue(menuHasItem(tools, "Verify Connection"));
+
+        Menu impExp = findMenu(menu, "Import/Export");
+        assertNotNull(impExp);
+        assertTrue(menuHasItem(impExp, "Dump with pg_dump"));
+
+        assertEquals("database", SchemaTreePane.schemaOrDatabaseNoun(profile.getType()));
+    }
+
+    @Test
+    public void testMySQLContextMenuDynamicOptions() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = new ConnectionProfile();
+        profile.setId("mysql-1");
+        profile.setName("mysql@localhost");
+        profile.setType(ConnectionProfile.DatabaseType.MYSQL);
+        DbObject connObj = new DbObject(profile.getName(), Kind.CONNECTION);
+        ContextMenu menu = pane.buildConnectionMenu(null, connObj, profile);
+        assertNotNull(menu);
+
+        Menu newMenu = findMenu(menu, "New");
+        assertNotNull(newMenu);
+        assertTrue(menuHasItem(newMenu, "Schema"), "MySQL must have Schema in New menu");
+        assertTrue(menuHasItem(newMenu, "User"), "MySQL must have User in New menu");
+        assertTrue(menuHasItem(newMenu, "Role"), "MySQL must have Role in New menu");
+        assertFalse(menuHasItem(newMenu, "Database"), "MySQL must NOT have Database in New menu");
+
+        Menu objActions = findMenu(menu, "Object Actions");
+        assertNotNull(objActions);
+        assertTrue(menuHasItem(objActions, "Show / Hide Schemas"));
+        assertFalse(menuHasItem(objActions, "Show / Hide Databases"));
+
+        Menu tools = findMenu(menu, "Tools");
+        assertNotNull(tools);
+        assertTrue(menuHasItem(tools, "Manage Schemas"));
+        assertTrue(menuHasItem(tools, "Verify Connection"));
+
+        Menu impExp = findMenu(menu, "Import/Export");
+        assertNotNull(impExp);
+        assertTrue(menuHasItem(impExp, "Dump with mysqldump"));
+
+        assertEquals("schema", SchemaTreePane.schemaOrDatabaseNoun(profile.getType()));
+    }
+
+    @Test
+    public void testMariaDBContextMenuDynamicOptions() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = new ConnectionProfile();
+        profile.setId("maria-1");
+        profile.setName("mariadb@localhost");
+        profile.setType(ConnectionProfile.DatabaseType.MARIADB);
+        DbObject connObj = new DbObject(profile.getName(), Kind.CONNECTION);
+        ContextMenu menu = pane.buildConnectionMenu(null, connObj, profile);
+        assertNotNull(menu);
+
+        Menu newMenu = findMenu(menu, "New");
+        assertNotNull(newMenu);
+        assertTrue(menuHasItem(newMenu, "Schema"), "MariaDB must have Schema in New menu");
+        assertTrue(menuHasItem(newMenu, "User"), "MariaDB must have User in New menu");
+        assertTrue(menuHasItem(newMenu, "Role"), "MariaDB must have Role in New menu");
+        assertFalse(menuHasItem(newMenu, "Database"), "MariaDB must NOT have Database in New menu");
+
+        Menu objActions = findMenu(menu, "Object Actions");
+        assertNotNull(objActions);
+        assertTrue(menuHasItem(objActions, "Show / Hide Schemas"));
+        assertFalse(menuHasItem(objActions, "Show / Hide Databases"));
+
+        Menu tools = findMenu(menu, "Tools");
+        assertNotNull(tools);
+        assertTrue(menuHasItem(tools, "Manage Schemas"));
+
+        Menu impExp = findMenu(menu, "Import/Export");
+        assertNotNull(impExp);
+        assertTrue(menuHasItem(impExp, "Dump with mariadb-dump"));
+
+        assertEquals("schema", SchemaTreePane.schemaOrDatabaseNoun(profile.getType()));
+    }
+
+    @Test
+    public void testMongoDBContextMenuDynamicOptions() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = new ConnectionProfile();
+        profile.setId("mongo-1");
+        profile.setName("mongo@localhost");
+        profile.setType(ConnectionProfile.DatabaseType.MONGODB);
+        DbObject connObj = new DbObject(profile.getName(), Kind.CONNECTION);
+        ContextMenu menu = pane.buildConnectionMenu(null, connObj, profile);
+        assertNotNull(menu);
+
+        Menu newMenu = findMenu(menu, "New");
+        assertNotNull(newMenu);
+        assertFalse(menuHasItem(newMenu, "Schema"), "MongoDB must NOT have Schema in New menu");
+        assertFalse(menuHasItem(newMenu, "Database"), "MongoDB must NOT have Database in New menu");
+        assertFalse(menuHasItem(newMenu, "Role"), "MongoDB must NOT have Role in New menu");
+        assertFalse(menuHasItem(newMenu, "User"), "MongoDB must NOT have User in New menu");
+        assertTrue(menuHasItem(newMenu, "Virtual View"));
+        assertTrue(menuHasItem(newMenu, "Data Source"));
+
+        Menu objActions = findMenu(menu, "Object Actions");
+        assertNotNull(objActions);
+        assertTrue(menuHasItem(objActions, "Show / Hide Databases"));
+
+        Menu tools = findMenu(menu, "Tools");
+        assertNotNull(tools);
+        assertTrue(menuHasItem(tools, "Manage Databases"));
+
+        Menu impExp = findMenu(menu, "Import/Export");
+        assertNotNull(impExp);
+        assertTrue(menuHasItem(impExp, "Dump with mongodump"));
+
+        assertEquals("database", SchemaTreePane.schemaOrDatabaseNoun(profile.getType()));
+    }
+
+    @Test
+    public void testSQLiteContextMenuDynamicOptions() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = new ConnectionProfile();
+        profile.setId("sqlite-1");
+        profile.setName("sqlite_local");
+        profile.setType(ConnectionProfile.DatabaseType.SQLITE);
+        DbObject connObj = new DbObject(profile.getName(), Kind.CONNECTION);
+        ContextMenu menu = pane.buildConnectionMenu(null, connObj, profile);
+        assertNotNull(menu);
+
+        Menu newMenu = findMenu(menu, "New");
+        assertNotNull(newMenu);
+        assertFalse(menuHasItem(newMenu, "Schema"), "SQLite must NOT have Schema in New menu");
+        assertFalse(menuHasItem(newMenu, "Database"), "SQLite must NOT have Database in New menu");
+        assertFalse(menuHasItem(newMenu, "Role"), "SQLite must NOT have Role in New menu");
+        assertFalse(menuHasItem(newMenu, "User"), "SQLite must NOT have User in New menu");
+
+        Menu objActions = findMenu(menu, "Object Actions");
+        assertNotNull(objActions);
+        assertFalse(menuHasItem(objActions, "Show / Hide Databases"), "SQLite has no show/hide databases");
+        assertTrue(menuHasItem(objActions, "Forget Saved Passwords"));
+
+        Menu tools = findMenu(menu, "Tools");
+        assertNotNull(tools);
+        assertFalse(menuHasItem(tools, "Manage Databases"), "SQLite has no manage databases");
+        assertTrue(menuHasItem(tools, "Verify Connection"));
+
+        Menu impExp = findMenu(menu, "Import/Export");
+        assertNotNull(impExp);
+        assertTrue(menuHasItem(impExp, "Export SQLite Database"));
+    }
+
+    @Test
+    public void testOracleAndSqlServerNouns() {
+        assertEquals("schema", SchemaTreePane.schemaOrDatabaseNoun(ConnectionProfile.DatabaseType.ORACLE));
+        assertEquals("database", SchemaTreePane.schemaOrDatabaseNoun(ConnectionProfile.DatabaseType.SQLSERVER));
+    }
+
+    @Test
+    public void testSqlServerContextMenuDynamicOptions() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = new ConnectionProfile();
+        profile.setId("mssql-1");
+        profile.setName("sqlserver@localhost");
+        profile.setType(ConnectionProfile.DatabaseType.SQLSERVER);
+        DbObject connObj = new DbObject(profile.getName(), Kind.CONNECTION);
+        ContextMenu menu = pane.buildConnectionMenu(null, connObj, profile);
+        assertNotNull(menu);
+
+        Menu newMenu = findMenu(menu, "New");
+        assertNotNull(newMenu);
+        assertTrue(menuHasItem(newMenu, "Query Console"));
+        assertTrue(menuHasItem(newMenu, "Query File"));
+        assertTrue(menuHasItem(newMenu, "Database"), "SQL Server must have Database in New menu");
+        assertTrue(menuHasItem(newMenu, "Server Principal"), "SQL Server must have Server Principal in New menu");
+        assertFalse(menuHasItem(newMenu, "Schema"), "SQL Server root must NOT have Schema in New menu");
+        assertFalse(menuHasItem(newMenu, "Role"), "SQL Server root must NOT have Role in New menu");
+        assertFalse(menuHasItem(newMenu, "User"), "SQL Server root must NOT have generic User in New menu");
+
+        Menu objActions = findMenu(menu, "Object Actions");
+        assertNotNull(objActions, "SQL Server must have Object Actions menu");
+        assertTrue(menuHasItem(objActions, "Show / Hide Databases"));
+        assertTrue(menuHasItem(objActions, "Forget Saved Passwords"));
+
+        Menu tools = findMenu(menu, "Tools");
+        assertNotNull(tools);
+        assertTrue(menuHasItem(tools, "Manage Databases"));
+        assertTrue(menuHasItem(tools, "Verify Connection"));
+
+        Menu impExp = findMenu(menu, "Import/Export");
+        assertNotNull(impExp);
+        assertTrue(menuHasItem(impExp, "Export Database with bcp"));
+        assertTrue(menuHasItem(impExp, "Restore"));
+
+        assertEquals("database", SchemaTreePane.schemaOrDatabaseNoun(profile.getType()));
+    }
+
+    @Test
+    public void testOracleContextMenuDynamicOptions() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = new ConnectionProfile();
+        profile.setId("oracle-1");
+        profile.setName("oracle@localhost");
+        profile.setType(ConnectionProfile.DatabaseType.ORACLE);
+        DbObject connObj = new DbObject(profile.getName(), Kind.CONNECTION);
+        ContextMenu menu = pane.buildConnectionMenu(null, connObj, profile);
+        assertNotNull(menu);
+
+        // In DataGrip Image 2: Oracle has "Download Driver Files" at the very top of menu
+        assertTrue(menu.getItems().stream().anyMatch(it -> it.getText() != null && it.getText().startsWith("Download Driver Files")),
+                "Oracle menu must start with Download Driver Files");
+
+        Menu newMenu = findMenu(menu, "New");
+        assertNotNull(newMenu);
+        assertTrue(menuHasItem(newMenu, "Query Console"));
+        assertTrue(menuHasItem(newMenu, "Query File"));
+        // Oracle has neither Database, Schema, User, nor Role at root New menu
+        assertFalse(menuHasItem(newMenu, "Database"), "Oracle root New menu must NOT have Database");
+        assertFalse(menuHasItem(newMenu, "Schema"), "Oracle root New menu must NOT have Schema");
+        assertFalse(menuHasItem(newMenu, "User"), "Oracle root New menu must NOT have User");
+        assertFalse(menuHasItem(newMenu, "Role"), "Oracle root New menu must NOT have Role");
+        assertTrue(menuHasItem(newMenu, "Virtual View"));
+        assertTrue(menuHasItem(newMenu, "Data Source"));
+
+        // In DataGrip Image 2: Object Actions is omitted on Oracle root
+        Menu objActions = findMenu(menu, "Object Actions");
+        assertNull(objActions, "Oracle connection menu must NOT have Object Actions menu");
+
+        Menu tools = findMenu(menu, "Tools");
+        assertNotNull(tools);
+        assertTrue(menuHasItem(tools, "Manage Schemas"));
+        assertTrue(menuHasItem(tools, "Verify Connection"));
+
+        Menu impExp = findMenu(menu, "Import/Export");
+        assertNotNull(impExp);
+        assertTrue(menuHasItem(impExp, "Export with expdp"));
+        assertTrue(menuHasItem(impExp, "Restore"));
+
+        assertEquals("schema", SchemaTreePane.schemaOrDatabaseNoun(profile.getType()));
+    }
+
+    @Test
+    public void testDatabaseIconsGeneratedForAllEngines() {
+        for (ConnectionProfile.DatabaseType type : ConnectionProfile.DatabaseType.values()) {
+            javafx.scene.Node icon16Connected = DatabaseIcon.create(type, 16, true);
+            assertNotNull(icon16Connected, "Vector icon must be created for " + type + " (connected)");
+
+            javafx.scene.Node icon16Disconnected = DatabaseIcon.create(type, 16, false);
+            assertNotNull(icon16Disconnected, "Vector icon must be created for " + type + " (disconnected)");
+
+            javafx.scene.Node iconFromIconsHelper = Icons.forDatabase(type, 16, true);
+            assertNotNull(iconFromIconsHelper, "Icons.forDatabase helper must return icon for " + type);
+        }
+    }
 }
+

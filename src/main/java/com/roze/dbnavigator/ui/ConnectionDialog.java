@@ -388,8 +388,8 @@ public class ConnectionDialog extends Dialog<ConnectionProfile> {
             case STRATOSDB -> "#2eb8a6";
             case MONGODB -> "#57965c";
         };
-        typeIconHolder.getChildren().setAll(Icons.of(FontAwesomeSolid.DATABASE, color, 20));
-        typeIconHolder.setStyle("-fx-background-color: " + color + "22;");
+        typeIconHolder.getChildren().setAll(Icons.forDatabase(type, 24, true));
+        typeIconHolder.setStyle("-fx-background-color: " + color + "22; -fx-background-radius: 6;");
     }
 
     private void applyTypeDefaults(DatabaseType type) {

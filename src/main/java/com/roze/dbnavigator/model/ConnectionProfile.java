@@ -87,6 +87,8 @@ public class ConnectionProfile {
     private String oracleConnectString = "";
     /** The project this connection belongs to; defaults to "default". */
     private String projectName = "default";
+    /** Group / folder for organizing connections. */
+    private String group = "";
 
     public ConnectionProfile() {}
 
@@ -317,10 +319,13 @@ public class ConnectionProfile {
         c.oracleSid = oracleSid;
         c.oracleConnectString = oracleConnectString;
         c.projectName = (projectName != null && !projectName.isBlank()) ? projectName : "default";
+        c.group = group != null ? group : "";
         return c;
     }
 
     // Getters / setters (Jackson needs these)
+    public String getGroup() { return group != null ? group : ""; }
+    public void setGroup(String group) { this.group = group == null ? "" : group; }
     public String getProjectName() {
         return (projectName != null && !projectName.isBlank()) ? projectName : "default";
     }

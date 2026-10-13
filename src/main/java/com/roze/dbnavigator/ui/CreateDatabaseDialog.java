@@ -83,7 +83,7 @@ public final class CreateDatabaseDialog {
         Window owner = mainWindow.getOwnerWindow();
         stage.initOwner(owner);
         stage.initModality(Modality.APPLICATION_MODAL);
-        stage.setTitle("Create");
+        stage.setTitle("Create Database");
         stage.setResizable(true);
         stage.setMinWidth(560);
         stage.setMinHeight(520);
@@ -239,13 +239,13 @@ public final class CreateDatabaseDialog {
         Window owner = mainWindow.getOwnerWindow();
         stage.initOwner(owner);
         stage.initModality(Modality.APPLICATION_MODAL);
-        stage.setTitle("Create");
+        stage.setTitle("Create Schema");
         stage.setResizable(true);
         stage.setMinWidth(520);
         stage.setMinHeight(340);
 
         TextField nameField = new TextField();
-        nameField.setPromptText("database_name");
+        nameField.setPromptText("schema_name");
         ComboBox<String> charsetCombo = new ComboBox<>();
         charsetCombo.setEditable(true);
         charsetCombo.getItems().add("utf8mb4");
@@ -315,7 +315,7 @@ public final class CreateDatabaseDialog {
         ok.setOnAction(e -> {
             String name = nameField.getText().trim();
             if (name.isBlank()) {
-                DialogTheme.apply(new Alert(Alert.AlertType.WARNING, "Enter a database name.")).showAndWait();
+                DialogTheme.apply(new Alert(Alert.AlertType.WARNING, "Enter a schema name.")).showAndWait();
                 return;
             }
             String sql = buildMySqlSql(name, charsetCombo.getEditor().getText().trim(),
@@ -371,8 +371,8 @@ public final class CreateDatabaseDialog {
     }
 
     private static String buildMySqlSql(String name, String charset, String collation) {
-        String dbName = name == null || name.isBlank() ? "database_name" : name.trim();
-        StringBuilder sql = new StringBuilder("CREATE DATABASE ").append(backtick(dbName));
+        String dbName = name == null || name.isBlank() ? "schema_name" : name.trim();
+        StringBuilder sql = new StringBuilder("CREATE SCHEMA ").append(backtick(dbName));
         if (charset != null && !charset.isBlank()) {
             sql.append(" CHARACTER SET ").append(charset.trim());
         }
@@ -900,14 +900,20 @@ public final class CreateDatabaseDialog {
                     String trimmed = statement.trim();
                     if (!trimmed.isEmpty()) stmt.execute(trimmed);
                 }
+                String noun = profile.getType() == ConnectionProfile.DatabaseType.MYSQL
+                        || profile.getType() == ConnectionProfile.DatabaseType.MARIADB
+                        || profile.getType() == ConnectionProfile.DatabaseType.ORACLE ? "schema" : "database";
                 Platform.runLater(() -> {
-                    mainWindow.setStatus("Created database " + name);
+                    mainWindow.setStatus("Created " + noun + " " + name);
                     mainWindow.refreshSchemaExplorer();
                 });
             } catch (Exception ex) {
                 String msg = ex.getMessage() == null ? ex.toString() : ex.getMessage();
+                String noun = profile.getType() == ConnectionProfile.DatabaseType.MYSQL
+                        || profile.getType() == ConnectionProfile.DatabaseType.MARIADB
+                        || profile.getType() == ConnectionProfile.DatabaseType.ORACLE ? "schema" : "database";
                 Platform.runLater(() -> DialogTheme.apply(new Alert(Alert.AlertType.ERROR,
-                        "Could not create database: " + msg)).showAndWait());
+                        "Could not create " + noun + ": " + msg)).showAndWait());
             }
         });
     }
