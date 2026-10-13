@@ -370,41 +370,118 @@ public final class DdlGeneratorService {
     // ------------------------------------------------------------ Sequence DDL
 
     private static String generateSequenceDdl(ConnectionProfile profile, DbObject seq) {
-        if (profile.getType() == DatabaseType.POSTGRESQL) {
-            String sql = "SELECT sequence_name, start_value, minimum_value, maximum_value, increment " +
-                    "FROM information_schema.sequences WHERE sequence_schema = ? AND sequence_name = ?";
-            try (Connection conn = ClientRegistry.jdbc(profile, seq.getCatalog()).getConnection();
-                 PreparedStatement stmt = conn.prepareStatement(sql)) {
-                stmt.setString(1, seq.getSchema() != null ? seq.getSchema() : "public");
-                stmt.setString(2, seq.getName());
-                try (ResultSet rs = stmt.executeQuery()) {
-                    if (rs.next()) {
-                        StringBuilder sb = new StringBuilder();
-                        sb.append("-- auto-generated definition\n");
-                        sb.append("create sequence ").append(seq.getName());
-                        String inc = rs.getString("increment");
-                        String min = rs.getString("minimum_value");
-                        String max = rs.getString("maximum_value");
-                        String start = rs.getString("start_value");
-
-                        if (inc != null) sb.append("\n    increment by ").append(inc);
-                        if (min != null) sb.append("\n    minvalue ").append(min);
-                        if (max != null) sb.append("\n    maxvalue ").append(max);
-                        if (start != null) sb.append("\n    start with ").append(start);
-                        sb.append(";\n");
-
-                        String owner = queryTableOwner(profile, seq);
-                        if (owner != null) {
-                            sb.append("\nalter sequence ").append(seq.getName())
-                                    .append(" owner to ").append(owner).append(";\n");
-                        }
-                        return sb.toString();
-                    }
-                }
-            } catch (Exception ignored) {}
+        if (profile != null && profile.getType() == DatabaseType.POSTGRESQL) {
+            return generatePostgresSequenceDdl(profile, seq);
         }
 
-        return "-- auto-generated definition\ncreate sequence " + seq.getName() + ";\n";
+        return "-- auto-generated definition\ncreate sequence " + (seq != null ? seq.getName() : "") + ";\n";
+    }
+
+    private static String generatePostgresSequenceDdl(ConnectionProfile profile, DbObject seq) {
+        String schema = seq.getSchema() != null ? seq.getSchema() : "public";
+        String seqName = seq.getName();
+        String catalog = seq.getCatalog() != null ? seq.getCatalog() : profile.getDatabase();
+
+        String owner = null;
+        String startVal = null;
+        String incVal = null;
+        String minVal = null;
+        String maxVal = null;
+        String cacheVal = null;
+        boolean cycle = false;
+
+        // Query sequence parameters and owner from pg_class + pg_sequence
+        String metaSql = "SELECT s.seqstart, s.seqincrement, s.seqmax, s.seqmin, s.seqcache, s.seqcycle, " +
+                "pg_get_userbyid(c.relowner) AS owner " +
+                "FROM pg_class c " +
+                "JOIN pg_namespace n ON n.oid = c.relnamespace " +
+                "LEFT JOIN pg_sequence s ON s.seqrelid = c.oid " +
+                "WHERE n.nspname = ? AND c.relname = ? AND c.relkind = 'S'";
+
+        try (Connection conn = ClientRegistry.jdbc(profile, catalog).getConnection();
+             PreparedStatement stmt = conn.prepareStatement(metaSql)) {
+            stmt.setString(1, schema);
+            stmt.setString(2, seqName);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    owner = rs.getString("owner");
+                    startVal = rs.getString("seqstart");
+                    incVal = rs.getString("seqincrement");
+                    maxVal = rs.getString("seqmax");
+                    minVal = rs.getString("seqmin");
+                    cacheVal = rs.getString("seqcache");
+                    cycle = rs.getBoolean("seqcycle");
+                }
+            }
+        } catch (Exception ignored) {}
+
+        if (owner == null || owner.isBlank()) {
+            owner = profile.getUsername();
+        }
+
+        // Query column dependency via pg_depend (owned by <table>.<column>)
+        String ownedBy = null;
+        String depSql = "SELECT t.relname AS table_name, a.attname AS column_name " +
+                "FROM pg_depend d " +
+                "JOIN pg_class s ON s.oid = d.objid " +
+                "JOIN pg_namespace sn ON sn.oid = s.relnamespace " +
+                "JOIN pg_class t ON t.oid = d.refobjid " +
+                "JOIN pg_attribute a ON a.attrelid = d.refobjid AND a.attnum = d.refobjsubid " +
+                "WHERE sn.nspname = ? AND s.relname = ? AND s.relkind = 'S' AND d.deptype IN ('a', 'i')";
+
+        try (Connection conn = ClientRegistry.jdbc(profile, catalog).getConnection();
+             PreparedStatement stmt = conn.prepareStatement(depSql)) {
+            stmt.setString(1, schema);
+            stmt.setString(2, seqName);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    String tName = rs.getString("table_name");
+                    String colName = rs.getString("column_name");
+                    if (tName != null && colName != null) {
+                        ownedBy = tName + "." + colName;
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("-- auto-generated definition\n");
+        sb.append("create sequence ").append(seqName);
+
+        if (incVal != null && !incVal.equals("1")) {
+            sb.append("\n    increment by ").append(incVal);
+        }
+        if (minVal != null && !minVal.equals("1")) {
+            sb.append("\n    minvalue ").append(minVal);
+        }
+        if (maxVal != null && !isPostgresDefaultMax(maxVal)) {
+            sb.append("\n    maxvalue ").append(maxVal);
+        }
+        if (startVal != null && !startVal.equals("1")) {
+            sb.append("\n    start with ").append(startVal);
+        }
+        if (cacheVal != null && !cacheVal.equals("1")) {
+            sb.append("\n    cache ").append(cacheVal);
+        }
+        if (cycle) {
+            sb.append("\n    cycle");
+        }
+        sb.append(";\n");
+
+        if (owner != null && !owner.isBlank()) {
+            sb.append("\nalter sequence ").append(seqName).append(" owner to ").append(owner).append(";\n");
+        }
+
+        if (ownedBy != null && !ownedBy.isBlank()) {
+            sb.append("\nalter sequence ").append(seqName).append(" owned by ").append(ownedBy).append(";\n");
+        }
+
+        return sb.toString();
+    }
+
+    private static boolean isPostgresDefaultMax(String max) {
+        if (max == null) return true;
+        return max.equals("9223372036854775807") || max.equals("2147483647") || max.equals("32767");
     }
 
     // ------------------------------------------------------------ Index DDL

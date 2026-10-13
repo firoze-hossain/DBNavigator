@@ -1031,5 +1031,57 @@ public class SchemaTreePaneToolbarTest {
         assertEquals("postgres@localhost/pg_stat_activity", dataTab.getQualifiedTableReference(),
                 "Qualified reference must use pg_stat_activity");
     }
+
+    @Test
+    public void testSequenceSelectedToolbarState() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = createPostgreSqlProfile();
+        pane.addConnectionNode(profile);
+
+        TreeItem<DbObject> connItem = pane.getTree().getRoot().getChildren().get(0);
+        DbObject seq = new DbObject("addresses_id_seq", Kind.SEQUENCE, "thunder_db", "public");
+        seq.setDetail("bigint");
+        TreeItem<DbObject> seqItem = new TreeItem<>(seq);
+        connItem.getChildren().add(seqItem);
+
+        pane.updateToolbarState(seqItem);
+
+        assertFalse(pane.getJumpToConsoleButton().isDisabled(), "Jump to Console must be active for SEQUENCE");
+        assertFalse(pane.getGoToDdlButton().isDisabled(), "Go to DDL must be active for SEQUENCE");
+        assertTrue(pane.getEditDataButton().isDisabled(), "Edit Data must be inactive for SEQUENCE");
+    }
+
+    @Test
+    public void testSequenceContextMenuAndIcon() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = createPostgreSqlProfile();
+        pane.addConnectionNode(profile);
+
+        DbObject seq = new DbObject("addresses_id_seq", Kind.SEQUENCE, "thunder_db", "public");
+        seq.setDetail("bigint");
+        TreeItem<DbObject> seqItem = new TreeItem<>(seq);
+
+        ContextMenu menu = pane.buildMenuForTest(seq, profile);
+        assertNotNull(menu, "Sequence context menu must not be null");
+
+        List<String> itemTexts = menu.getItems().stream().map(MenuItem::getText).filter(java.util.Objects::nonNull).toList();
+        assertTrue(itemTexts.contains("Go to DDL"), "Sequence menu must contain 'Go to DDL'");
+        assertTrue(itemTexts.contains("Jump to Query Console"), "Sequence menu must contain 'Jump to Query Console'");
+        assertTrue(itemTexts.contains("Refresh"), "Sequence menu must contain 'Refresh'");
+
+        assertNotNull(Icons.forObject(seq, profile, false), "Sequence must have non-null icon");
+    }
+
+    @Test
+    public void testLoadSchemaChildrenFallback() {
+        ConnectionProfile profile = createPostgreSqlProfile();
+        DbObject schema = new DbObject("public", Kind.SCHEMA, "thunder_db", "public");
+
+        // When offline, falls back safely to default object folders
+        List<DbObject> children = com.roze.dbnavigator.db.MetadataService.loadSchemaChildren(profile, schema);
+        assertNotNull(children);
+        assertFalse(children.isEmpty());
+        assertTrue(children.stream().anyMatch(c -> c.getKind() == Kind.TABLES_FOLDER));
+    }
 }
 

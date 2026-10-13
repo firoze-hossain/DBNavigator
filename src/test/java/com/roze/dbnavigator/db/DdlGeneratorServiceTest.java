@@ -47,6 +47,19 @@ public class DdlGeneratorServiceTest {
     }
 
     @Test
+    public void testGenerateSequenceDdl() throws Exception {
+        ConnectionProfile profile = createPostgreSqlProfile();
+        DbObject seqObj = new DbObject("addresses_id_seq", Kind.SEQUENCE, "thunder_db", "public");
+
+        String ddl = DdlGeneratorService.generateDdl(profile, seqObj);
+
+        assertNotNull(ddl);
+        assertTrue(ddl.contains("-- auto-generated definition"), "Should contain DataGrip auto-generated header");
+        assertTrue(ddl.contains("create sequence addresses_id_seq;"), "Should contain create sequence statement");
+        assertTrue(ddl.contains("alter sequence addresses_id_seq owner to postgres;"), "Should set sequence owner");
+    }
+
+    @Test
     public void testGenerateNullHandling() throws Exception {
         String ddl = DdlGeneratorService.generateDdl(null, null);
         assertTrue(ddl.contains("-- No object selected"));

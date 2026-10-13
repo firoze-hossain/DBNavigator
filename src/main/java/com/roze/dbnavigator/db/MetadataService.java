@@ -507,7 +507,124 @@ public final class MetadataService {
 
     /** Children of a SCHEMA node. */
     public static List<DbObject> loadSchemaChildren(DbObject schema) {
+        return loadSchemaChildren(null, schema);
+    }
+
+    /** Children of a SCHEMA node with engine-specific filtering (e.g. PostgreSQL dynamic folders). */
+    public static List<DbObject> loadSchemaChildren(ConnectionProfile profile, DbObject schema) {
+        if (profile != null && profile.getType() == DatabaseType.POSTGRESQL) {
+            return loadPostgresSchemaChildren(profile, schema);
+        }
         return objectFolders(schema.getCatalog(), schema.getSchema());
+    }
+
+    private static List<DbObject> loadPostgresSchemaChildren(ConnectionProfile profile, DbObject schema) {
+        String catalog = (schema.getCatalog() != null && !schema.getCatalog().isBlank())
+                ? schema.getCatalog() : profile.getDatabase();
+        String schemaName = schema.getSchema();
+        if (schemaName == null || schemaName.isBlank()) {
+            schemaName = schema.getName();
+        }
+        if (schemaName == null || schemaName.isBlank()) {
+            schemaName = "public";
+        }
+
+        int tablesCount = 0;
+        int viewsCount = 0;
+        int seqsCount = 0;
+        int procsCount = 0;
+        int funcsCount = 0;
+
+        try (Connection conn = client(profile, catalog).getConnection()) {
+            // Count tables, views, sequences from pg_class
+            String classSql = "SELECT " +
+                    "COUNT(CASE WHEN c.relkind IN ('r', 'p', 'f') AND NOT EXISTS (SELECT 1 FROM pg_inherits i WHERE i.inhrelid = c.oid) THEN 1 END) AS tables_cnt, " +
+                    "COUNT(CASE WHEN c.relkind IN ('v', 'm') THEN 1 END) AS views_cnt, " +
+                    "COUNT(CASE WHEN c.relkind = 'S' THEN 1 END) AS seqs_cnt " +
+                    "FROM pg_class c " +
+                    "JOIN pg_namespace n ON n.oid = c.relnamespace " +
+                    "WHERE n.nspname = ?";
+            try (PreparedStatement stmt = conn.prepareStatement(classSql)) {
+                stmt.setString(1, schemaName);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        tablesCount = rs.getInt(1);
+                        viewsCount = rs.getInt(2);
+                        seqsCount = rs.getInt(3);
+                    }
+                }
+            }
+
+            // Count procedures and functions from pg_proc
+            try {
+                String procSql = "SELECT " +
+                        "COUNT(CASE WHEN p.prokind = 'p' THEN 1 END) AS procs_cnt, " +
+                        "COUNT(CASE WHEN p.prokind IS NULL OR p.prokind <> 'p' THEN 1 END) AS funcs_cnt " +
+                        "FROM pg_proc p " +
+                        "JOIN pg_namespace n ON n.oid = p.pronamespace " +
+                        "WHERE n.nspname = ?";
+                try (PreparedStatement stmt = conn.prepareStatement(procSql)) {
+                    stmt.setString(1, schemaName);
+                    try (ResultSet rs = stmt.executeQuery()) {
+                        if (rs.next()) {
+                            procsCount = rs.getInt(1);
+                            funcsCount = rs.getInt(2);
+                        }
+                    }
+                }
+            } catch (SQLException ignored) {
+                // PostgreSQL < 11 compatibility fallback: all routines are functions
+                try (PreparedStatement stmt = conn.prepareStatement(
+                        "SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = ?")) {
+                    stmt.setString(1, schemaName);
+                    try (ResultSet rs = stmt.executeQuery()) {
+                        if (rs.next()) funcsCount = rs.getInt(1);
+                    }
+                } catch (SQLException ignored2) {}
+            }
+        } catch (Exception e) {
+            // Safe fallback to default folders on connection error
+            return objectFolders(catalog, schemaName);
+        }
+
+        List<DbObject> folders = new ArrayList<>();
+
+        // tables folder: always present, with count detail if > 0
+        DbObject tablesFolder = folder("tables", Kind.TABLES_FOLDER, catalog, schemaName);
+        if (tablesCount > 0) {
+            tablesFolder.setDetail(String.valueOf(tablesCount));
+        }
+        folders.add(tablesFolder);
+
+        // views folder: only show if viewsCount > 0
+        if (viewsCount > 0) {
+            DbObject viewsFolder = folder("views", Kind.VIEWS_FOLDER, catalog, schemaName);
+            viewsFolder.setDetail(String.valueOf(viewsCount));
+            folders.add(viewsFolder);
+        }
+
+        // sequences folder: only show if seqsCount > 0
+        if (seqsCount > 0) {
+            DbObject seqsFolder = folder("sequences", Kind.SEQUENCES_FOLDER, catalog, schemaName);
+            seqsFolder.setDetail(String.valueOf(seqsCount));
+            folders.add(seqsFolder);
+        }
+
+        // procedures folder: only show if procsCount > 0
+        if (procsCount > 0) {
+            DbObject procsFolder = folder("procedures", Kind.PROCEDURES_FOLDER, catalog, schemaName);
+            procsFolder.setDetail(String.valueOf(procsCount));
+            folders.add(procsFolder);
+        }
+
+        // functions folder: only show if funcsCount > 0
+        if (funcsCount > 0) {
+            DbObject funcsFolder = folder("functions", Kind.FUNCTIONS_FOLDER, catalog, schemaName);
+            funcsFolder.setDetail(String.valueOf(funcsCount));
+            folders.add(funcsFolder);
+        }
+
+        return folders;
     }
 
     private static List<DbObject> objectFolders(String catalog, String schema) {
@@ -706,9 +823,10 @@ public final class MetadataService {
     }
 
     private static List<DbObject> loadSequences(ConnectionProfile profile, String catalog, String schema) {
+        if (profile.getType() == DatabaseType.POSTGRESQL) {
+            return loadPostgresSequences(profile, catalog, schema);
+        }
         String sql = switch (profile.getType()) {
-            case POSTGRESQL -> "SELECT sequence_name FROM information_schema.sequences WHERE sequence_schema = '"
-                    + schema + "'";
             case ORACLE -> "SELECT sequence_name FROM all_sequences WHERE sequence_owner = '" + schema + "'";
             case SQLSERVER -> "SELECT name AS sequence_name FROM sys.sequences";
             default -> null;
@@ -721,6 +839,36 @@ public final class MetadataService {
              ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
                 result.add(new DbObject(rs.getString(1), Kind.SEQUENCE, catalog, schema));
+            }
+        } catch (SQLException ignored) {
+            return List.of();
+        }
+        return result;
+    }
+
+    private static List<DbObject> loadPostgresSequences(ConnectionProfile profile, String catalog, String schema) {
+        String targetSchema = (schema != null && !schema.isBlank()) ? schema : "public";
+        String sql = "SELECT c.relname AS seqname, " +
+                "COALESCE(format_type(s.seqtypid, null), 'bigint') AS seqtype " +
+                "FROM pg_class c " +
+                "JOIN pg_namespace n ON n.oid = c.relnamespace " +
+                "LEFT JOIN pg_sequence s ON s.seqrelid = c.oid " +
+                "WHERE c.relkind = 'S' AND n.nspname = ? " +
+                "ORDER BY c.relname";
+        List<DbObject> result = new ArrayList<>();
+        try (Connection conn = client(profile, catalog).getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, targetSchema);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    String seqName = rs.getString(1);
+                    String seqType = rs.getString(2);
+                    DbObject obj = new DbObject(seqName, Kind.SEQUENCE, catalog, targetSchema);
+                    if (seqType != null && !seqType.isBlank()) {
+                        obj.setDetail(seqType);
+                    }
+                    result.add(obj);
+                }
             }
         } catch (SQLException ignored) {
             return List.of();
