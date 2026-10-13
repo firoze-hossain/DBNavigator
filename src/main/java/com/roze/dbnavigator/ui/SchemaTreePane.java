@@ -12,6 +12,8 @@ import com.roze.dbnavigator.util.AppExecutor;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.scene.control.*;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -44,6 +46,13 @@ public class SchemaTreePane extends VBox {
     private final ProjectWidget projectWidget;
     private final VBox emptyWelcomeView;
 
+    private final Button addButton;
+    private final Button propertiesButton;
+    private final Button refreshButton;
+    private final Button jumpToConsoleButton;
+    private final Button goToDdlButton;
+    private final Button editDataButton;
+
     public SchemaTreePane(MainWindow mainWindow) {
         this.mainWindow = mainWindow;
         getStyleClass().add("schema-pane");
@@ -55,29 +64,56 @@ public class SchemaTreePane extends VBox {
 
         this.projectWidget = new ProjectWidget(mainWindow);
 
-        Button addButton = new Button();
-        addButton.setGraphic(Icons.of(FontAwesomeSolid.PLUS, "#57965c", 11));
-        addButton.setTooltip(new Tooltip("New Data Source"));
-        addButton.setOnAction(e -> mainWindow.showNewConnectionDialog());
-
-        Button refreshButton = new Button();
-        refreshButton.setGraphic(Icons.of(FontAwesomeSolid.SYNC_ALT, "#6897bb", 11));
-        refreshButton.setTooltip(new Tooltip("Reload connections"));
-        refreshButton.setOnAction(e -> reload());
-
-        javafx.scene.layout.Region spacer = new javafx.scene.layout.Region();
+        Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-        HBox headerBox = new HBox(6, header, spacer, projectWidget, addButton, refreshButton);
+        HBox headerBox = new HBox(6, header, spacer, projectWidget);
         headerBox.setAlignment(Pos.CENTER_LEFT);
-        headerBox.setPadding(new Insets(8, 8, 8, 10));
+        headerBox.setPadding(new Insets(6, 8, 4, 10));
         headerBox.getStyleClass().add("panel-header-box");
         headerBox.setMinHeight(Region.USE_PREF_SIZE);
+
+        this.addButton = createToolButton(Icons.of(FontAwesomeSolid.PLUS, "#57965c", 11),
+                "New Data Source", e -> mainWindow.showNewConnectionDialog());
+
+        this.propertiesButton = createToolButton(Icons.of(FontAwesomeSolid.SLIDERS_H, "#a9b7c6", 11),
+                "Data Source Properties", e -> openSelectedProperties());
+
+        this.refreshButton = createToolButton(Icons.of(FontAwesomeSolid.SYNC_ALT, "#6897bb", 11),
+                "Refresh (Ctrl+F5)", e -> refreshSelectedOrAll());
+
+        this.jumpToConsoleButton = createToolButton(Icons.of(FontAwesomeSolid.TERMINAL, "#6897bb", 11),
+                "Jump to Query Console... Ctrl+Shift+F10", e -> jumpToQueryConsole());
+
+        Label ddlLabel = new Label("DDL");
+        ddlLabel.setStyle("-fx-font-size: 10px; -fx-font-weight: bold; -fx-padding: 0 1 0 1; -fx-text-fill: inherit;");
+        this.goToDdlButton = createToolButton(ddlLabel,
+                "Go to DDL", e -> goToDdl());
+
+        this.editDataButton = createToolButton(Icons.of(FontAwesomeSolid.TABLE, "#57965c", 11),
+                "Edit Data F4", e -> editData());
+
+        // Initially disabled until selection
+        propertiesButton.setDisable(true);
+        jumpToConsoleButton.setDisable(true);
+        goToDdlButton.setDisable(true);
+        editDataButton.setDisable(true);
+
+        HBox toolbarBox = new HBox(4, addButton, propertiesButton, refreshButton,
+                jumpToConsoleButton, goToDdlButton, editDataButton);
+        toolbarBox.setAlignment(Pos.CENTER_LEFT);
+        toolbarBox.setPadding(new Insets(3, 6, 4, 6));
+        toolbarBox.getStyleClass().add("schema-pane-toolbar");
+        toolbarBox.setMinHeight(Region.USE_PREF_SIZE);
 
         tree.setRoot(root);
         tree.setShowRoot(false);
         tree.setCellFactory(tv -> new DbObjectCell());
         tree.getStyleClass().add("schema-tree");
         VBox.setVgrow(tree, Priority.ALWAYS);
+
+        tree.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
+            updateToolbarState(newVal);
+        });
 
         tree.setOnMouseClicked(e -> {
             if (e.getClickCount() == 2) {
@@ -86,11 +122,31 @@ public class SchemaTreePane extends VBox {
             }
         });
 
+        tree.setOnKeyPressed(e -> {
+            if (e.getCode() == KeyCode.F4 && !e.isControlDown() && !e.isAltDown() && !e.isShiftDown() && !e.isMetaDown()) {
+                if (!editDataButton.isDisabled()) {
+                    editData();
+                    e.consume();
+                }
+            } else if (e.getCode() == KeyCode.F10 && (e.isControlDown() || e.isMetaDown()) && e.isShiftDown()) {
+                if (!jumpToConsoleButton.isDisabled()) {
+                    jumpToQueryConsole();
+                    e.consume();
+                }
+            } else if (e.getCode() == KeyCode.ENTER && !e.isControlDown() && !e.isAltDown() && !e.isShiftDown() && !e.isMetaDown()) {
+                TreeItem<DbObject> item = tree.getSelectionModel().getSelectedItem();
+                if (item != null) {
+                    openObject(item);
+                    e.consume();
+                }
+            }
+        });
+
         this.emptyWelcomeView = buildEmptyWelcomeView();
         StackPane contentPane = new StackPane(tree, emptyWelcomeView);
         VBox.setVgrow(contentPane, Priority.ALWAYS);
 
-        getChildren().addAll(headerBox, contentPane);
+        getChildren().addAll(headerBox, toolbarBox, contentPane);
 
         reload();
     }
@@ -124,6 +180,7 @@ public class SchemaTreePane extends VBox {
         if (!isEmpty && !expanded.isEmpty()) {
             restoreExpansion(root, expanded);
         }
+        updateToolbarState(tree.getSelectionModel().getSelectedItem());
     }
 
     private VBox buildEmptyWelcomeView() {
@@ -811,7 +868,11 @@ public class SchemaTreePane extends VBox {
                     MenuItem openData = new MenuItem("Open Data");
                     openData.setOnAction(e -> mainWindow.openDataTab(profile, obj));
                     MenuItem editData = new MenuItem("Edit Data");
-                    editData.setOnAction(e -> mainWindow.openDataTab(profile, obj));
+                    editData.setOnAction(e -> editData());
+                    MenuItem goToDdl = new MenuItem("Go to DDL");
+                    goToDdl.setOnAction(e -> goToDdl());
+                    MenuItem jumpConsole = new MenuItem("Jump to Query Console");
+                    jumpConsole.setOnAction(e -> jumpToQueryConsole());
                     MenuItem structure = new MenuItem("Show Structure");
                     structure.setOnAction(e -> mainWindow.openStructureTab(profile, obj));
                     MenuItem modifyTable = new MenuItem("Modify Table\u2026");
@@ -855,7 +916,7 @@ public class SchemaTreePane extends VBox {
                     count.setOnAction(e -> mainWindow.openQueryTab(profile, obj.getCatalog(),
                             "SELECT COUNT(*) FROM " + obj.qualifiedName() + ";"));
 
-                    menu.getItems().addAll(openData, editData, structure, new SeparatorMenuItem(),
+                    menu.getItems().addAll(openData, editData, goToDdl, jumpConsole, structure, new SeparatorMenuItem(),
                             modifyTable, refreshTable, new SeparatorMenuItem(),
                             importExportMenu, diagramsMenu, new SeparatorMenuItem(), select, count);
                 }
@@ -880,13 +941,10 @@ public class SchemaTreePane extends VBox {
                     MenuItem newConsole = new MenuItem("New Query Console on " + obj.getName());
                     newConsole.setOnAction(e ->
                             mainWindow.openQueryTab(profile, obj.getCatalog(), null));
+                    MenuItem goToDdl = new MenuItem("Go to DDL");
+                    goToDdl.setOnAction(e -> goToDdl());
 
                     if (profile.getType() == ConnectionProfile.DatabaseType.MONGODB) {
-                        // MongoDB has no ALTER DATABASE-style properties to modify, no
-                        // rename-database operation, and dump/restore here would need
-                        // shelling out to mongodump/mongorestore (a separate feature,
-                        // not built yet) — so this stays a smaller, honestly-scoped
-                        // menu rather than showing SQL-only items that would fail.
                         menu.getItems().addAll(newConsole, new SeparatorMenuItem(), refreshDb);
                         return menu;
                     }
@@ -933,7 +991,7 @@ public class SchemaTreePane extends VBox {
 
                     menu.getItems().addAll(modifyDb, refreshDb, new SeparatorMenuItem(),
                             renameDb, new SeparatorMenuItem(),
-                            newConsole, dump, restore, diagramsMenu,
+                            newConsole, goToDdl, dump, restore, diagramsMenu,
                             new SeparatorMenuItem(), deleteDb);
                 }
                 case SCHEMA -> {
@@ -941,16 +999,13 @@ public class SchemaTreePane extends VBox {
                     refreshSchema.setOnAction(e -> refreshNode(getTreeItem(), obj, obj.getName()));
                     MenuItem newConsole = new MenuItem("New Query Console on " + obj.getName());
                     newConsole.setOnAction(e -> {
-                        // Oracle schemas are top-level (no enclosing database
-                        // to speak of — see MetadataService), so the schema's
-                        // own name IS the scope. Postgres/MySQL/SQL Server
-                        // schemas sit inside a database; obj.getCatalog()
-                        // is that enclosing database's name.
                         String catalog = profile.getType() == ConnectionProfile.DatabaseType.ORACLE
                                 ? obj.getName() : obj.getCatalog();
                         mainWindow.openQueryTab(profile, catalog, null);
                     });
-                    menu.getItems().addAll(newConsole, new SeparatorMenuItem(), refreshSchema);
+                    MenuItem goToDdl = new MenuItem("Go to DDL");
+                    goToDdl.setOnAction(e -> goToDdl());
+                    menu.getItems().addAll(newConsole, goToDdl, new SeparatorMenuItem(), refreshSchema);
                 }
                 case PROCEDURE, FUNCTION -> {
                     String kindLabel = obj.getKind() == Kind.FUNCTION ? "Function" : "Procedure";
@@ -958,6 +1013,8 @@ public class SchemaTreePane extends VBox {
                     run.setOnAction(e -> mainWindow.openRoutineRunTab(profile, obj));
                     MenuItem editSource = new MenuItem("Edit Source");
                     editSource.setOnAction(e -> mainWindow.openRoutineSourceTab(profile, obj));
+                    MenuItem goToDdl = new MenuItem("Go to DDL");
+                    goToDdl.setOnAction(e -> goToDdl());
                     MenuItem rename = new MenuItem("Rename\u2026");
                     rename.setOnAction(e -> renameRoutine(profile, obj));
                     MenuItem refresh = new MenuItem("Refresh");
@@ -969,7 +1026,7 @@ public class SchemaTreePane extends VBox {
                     MenuItem drop = new MenuItem("Drop\u2026");
                     drop.setOnAction(e -> dropRoutine(profile, obj, kindLabel));
 
-                    menu.getItems().addAll(run, editSource, new SeparatorMenuItem(),
+                    menu.getItems().addAll(run, editSource, goToDdl, new SeparatorMenuItem(),
                             rename, refresh, new SeparatorMenuItem(), drop);
                 }
                 default -> {
@@ -1085,5 +1142,202 @@ public class SchemaTreePane extends VBox {
                         "Could not drop " + obj.getName() + ": " + msg)).showAndWait());
             }
         });
+    }
+
+    // ------------------------------------------------------------------ toolbar & actions
+
+    private Button createToolButton(javafx.scene.Node graphic, String tooltip,
+                                    javafx.event.EventHandler<javafx.event.ActionEvent> handler) {
+        Button btn = new Button();
+        btn.setGraphic(graphic);
+        btn.setTooltip(new Tooltip(tooltip));
+        btn.getStyleClass().add("schema-tool-button");
+        btn.setOnAction(handler);
+        return btn;
+    }
+
+    public void updateToolbarState(TreeItem<DbObject> selectedItem) {
+        if (selectedItem == null || selectedItem.getValue() == null) {
+            propertiesButton.setDisable(true);
+            jumpToConsoleButton.setDisable(true);
+            goToDdlButton.setDisable(true);
+            editDataButton.setDisable(true);
+            return;
+        }
+
+        DbObject obj = selectedItem.getValue();
+        ConnectionProfile profile = profileFor(selectedItem);
+
+        if (profile == null || obj.getKind() == Kind.MESSAGE) {
+            propertiesButton.setDisable(true);
+            jumpToConsoleButton.setDisable(true);
+            goToDdlButton.setDisable(true);
+            editDataButton.setDisable(true);
+            return;
+        }
+
+        propertiesButton.setDisable(false);
+
+        // 1. Jump to Query Console... (Ctrl+Shift+F10):
+        // Active for any real object belonging to a connection profile
+        jumpToConsoleButton.setDisable(false);
+
+        // 2. Go to DDL:
+        // Active for DDL-bearing schema objects: Database, Schema, Table, View, Partition, Procedure, Function, Sequence, Index
+        // Inactive for: Connection root, category folders (tables, views, routines, sequences, etc.)
+        boolean hasDdl = switch (obj.getKind()) {
+            case DATABASE, SCHEMA, TABLE, VIEW, PARTITION, PROCEDURE, FUNCTION, SEQUENCE, INDEX -> true;
+            default -> false;
+        };
+        goToDdlButton.setDisable(!hasDdl);
+
+        // 3. Edit Data (F4):
+        // Active ONLY for data-bearing objects (Table, View, Partition, Mongo Collection)
+        // Inactive for: Database, Schema, Folders, Routines, Sequences, Connections, etc.
+        boolean hasData = switch (obj.getKind()) {
+            case TABLE, VIEW, PARTITION, COLLECTION -> true;
+            default -> false;
+        };
+        editDataButton.setDisable(!hasData);
+    }
+
+    public void jumpToQueryConsole() {
+        TreeItem<DbObject> item = tree.getSelectionModel().getSelectedItem();
+        ConnectionProfile profile = item != null ? profileFor(item) : null;
+        if (profile == null) {
+            mainWindow.openConsoleForSelectedConnection();
+            return;
+        }
+
+        DbObject obj = item.getValue();
+        String catalog = resolveCatalogFor(item, obj);
+
+        // Check if an existing console tab is open for this profile/catalog
+        for (TabPane pane : mainWindow.editorTabPanes()) {
+            for (Tab tab : pane.getTabs()) {
+                if (tab instanceof QueryTab qt) {
+                    if (qt.getProfile().getId().equals(profile.getId())) {
+                        if (catalog == null || catalog.equalsIgnoreCase(qt.getCatalog())) {
+                            mainWindow.selectTab(qt);
+                            Platform.runLater(qt::focusEditor);
+                            mainWindow.setStatus("Jumped to Query Console for " + profile.getName());
+                            return;
+                        }
+                    }
+                } else if (tab instanceof MongoConsoleTab mt) {
+                    if (mt.getProfile().getId().equals(profile.getId())) {
+                        mainWindow.selectTab(mt);
+                        Platform.runLater(mt::focusEditor);
+                        mainWindow.setStatus("Jumped to Mongo Console for " + profile.getName());
+                        return;
+                    }
+                }
+            }
+        }
+
+        // None open: open new query console
+        mainWindow.openQueryTab(profile, catalog, null);
+        mainWindow.setStatus("Opened Query Console for " + profile.getName());
+    }
+
+    public void goToDdl() {
+        TreeItem<DbObject> item = tree.getSelectionModel().getSelectedItem();
+        if (item == null) return;
+        DbObject obj = item.getValue();
+        ConnectionProfile profile = profileFor(item);
+        if (profile == null || obj == null) return;
+
+        mainWindow.openDdlTab(profile, obj);
+    }
+
+    public void editData() {
+        TreeItem<DbObject> item = tree.getSelectionModel().getSelectedItem();
+        if (item == null) return;
+        DbObject obj = item.getValue();
+        ConnectionProfile profile = profileFor(item);
+        if (profile == null || obj == null) return;
+
+        if (obj.getKind() == Kind.COLLECTION) {
+            mainWindow.openMongoTab(profile, obj);
+        } else {
+            mainWindow.openDataTab(profile, obj);
+        }
+    }
+
+    private void openSelectedProperties() {
+        TreeItem<DbObject> item = tree.getSelectionModel().getSelectedItem();
+        ConnectionProfile profile = item != null ? profileFor(item) : null;
+        if (profile != null) {
+            mainWindow.showEditConnectionDialog(profile);
+        } else {
+            mainWindow.showNewConnectionDialog();
+        }
+    }
+
+    private void refreshSelectedOrAll() {
+        TreeItem<DbObject> item = tree.getSelectionModel().getSelectedItem();
+        if (item != null && item.getValue() != null && item.getValue().getKind() != Kind.MESSAGE) {
+            DbObject obj = item.getValue();
+            if (obj.getKind() == Kind.CONNECTION) {
+                ConnectionProfile p = connectionItems.get(item);
+                if (p != null) refreshConnection(item, p);
+            } else {
+                refreshNode(item, obj, obj.getName());
+            }
+        } else {
+            reload();
+        }
+    }
+
+    private String resolveCatalogFor(TreeItem<DbObject> item, DbObject obj) {
+        if (obj != null && obj.getKind() == Kind.DATABASE) {
+            return obj.getName();
+        }
+        if (obj != null && obj.getCatalog() != null && !obj.getCatalog().isBlank()) {
+            return obj.getCatalog();
+        }
+        TreeItem<DbObject> curr = item != null ? item.getParent() : null;
+        while (curr != null) {
+            if (curr.getValue() != null && curr.getValue().getKind() == Kind.DATABASE) {
+                return curr.getValue().getName();
+            }
+            curr = curr.getParent();
+        }
+        ConnectionProfile profile = profileFor(item);
+        return profile != null ? profile.getDatabase() : null;
+    }
+
+    public ConnectionProfile getSelectedProfile() {
+        TreeItem<DbObject> item = tree.getSelectionModel().getSelectedItem();
+        return item != null ? profileFor(item) : null;
+    }
+
+    public DbObject getSelectedDbObject() {
+        TreeItem<DbObject> item = tree.getSelectionModel().getSelectedItem();
+        return item != null ? item.getValue() : null;
+    }
+
+    public TreeItem<DbObject> getSelectedItem() {
+        return tree.getSelectionModel().getSelectedItem();
+    }
+
+    public Button getJumpToConsoleButton() {
+        return jumpToConsoleButton;
+    }
+
+    public Button getGoToDdlButton() {
+        return goToDdlButton;
+    }
+
+    public Button getEditDataButton() {
+        return editDataButton;
+    }
+
+    public Button getPropertiesButton() {
+        return propertiesButton;
+    }
+
+    public TreeView<DbObject> getTree() {
+        return tree;
     }
 }

@@ -1980,7 +1980,39 @@ public class MainWindow {
     }
 
     public void openDataTab(ConnectionProfile profile, DbObject table) {
+        if (profile == null || table == null) return;
+        for (TabPane pane : editorTabPanes()) {
+            for (Tab tab : pane.getTabs()) {
+                if (tab instanceof DataTab dt) {
+                    if (dt.getProfileForReopen() != null && dt.getTableForReopen() != null
+                            && dt.getProfileForReopen().getId().equals(profile.getId())
+                            && dt.getTableForReopen().qualifiedName().equalsIgnoreCase(table.qualifiedName())) {
+                        selectTab(dt);
+                        setStatus("Selected data for " + table.getName());
+                        return;
+                    }
+                }
+            }
+        }
         addAndSelect(new DataTab(profile, table));
+    }
+
+    public void openDdlTab(ConnectionProfile profile, DbObject obj) {
+        if (profile == null || obj == null) return;
+        for (TabPane pane : editorTabPanes()) {
+            for (Tab tab : pane.getTabs()) {
+                if (tab instanceof DdlTab dt) {
+                    if (dt.getProfile().getId().equals(profile.getId())
+                            && dt.getObject().getName().equalsIgnoreCase(obj.getName())
+                            && dt.getObject().getKind() == obj.getKind()) {
+                        selectTab(dt);
+                        setStatus("Selected DDL for " + obj.getName());
+                        return;
+                    }
+                }
+            }
+        }
+        addAndSelect(new DdlTab(this, profile, obj));
     }
 
     public void openStructureTab(ConnectionProfile profile, DbObject table) {
@@ -2882,6 +2914,10 @@ public class MainWindow {
     }
 
     public void jumpToQueryConsole() {
+        if (schemaPane != null && schemaPane.getSelectedProfile() != null) {
+            schemaPane.jumpToQueryConsole();
+            return;
+        }
         for (TabPane pane : editorTabPanes()) {
             for (Tab tab : pane.getTabs()) {
                 if (tab instanceof QueryTab qt) {
@@ -2892,6 +2928,18 @@ public class MainWindow {
             }
         }
         openConsoleForSelectedConnection();
+    }
+
+    public void editSelectedData() {
+        if (schemaPane != null) {
+            schemaPane.editData();
+        }
+    }
+
+    public void goToSelectedDdl() {
+        if (schemaPane != null) {
+            schemaPane.goToDdl();
+        }
     }
 
     public void selectInTarget() {

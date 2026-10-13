@@ -125,6 +125,31 @@
     -fx-background-color: -bg-mid;
     -fx-border-color: transparent transparent -border transparent;
 }
+.schema-pane-toolbar {
+    -fx-background-color: -bg-mid;
+    -fx-border-color: transparent transparent -border transparent;
+    -fx-border-width: 0 0 1 0;
+}
+.schema-tool-button {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 3 5 3 5;
+    -fx-cursor: hand;
+    -fx-background-radius: 4;
+    -fx-min-width: 22px;
+    -fx-min-height: 22px;
+    -fx-alignment: center;
+}
+.schema-tool-button:hover {
+    -fx-background-color: #35373c;
+}
+.schema-tool-button:pressed {
+    -fx-background-color: #43454b;
+}
+.schema-tool-button:disabled {
+    -fx-opacity: 0.35;
+    -fx-cursor: default;
+}
 .panel-header {
     -fx-font-size: 12px;
     -fx-font-weight: bold;

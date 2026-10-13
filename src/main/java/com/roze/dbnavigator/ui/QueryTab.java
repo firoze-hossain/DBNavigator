@@ -286,6 +286,12 @@ public class QueryTab extends Tab {
         return editor;
     }
 
+    public void focusEditor() {
+        if (editor != null) {
+            editor.requestFocus();
+        }
+    }
+
     public void formatSql() {
         String selected = editor.getSelectedText();
         if (selected != null && !selected.isBlank()) {

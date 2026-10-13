@@ -201,10 +201,12 @@ public class MongoConsoleTab extends Tab {
 
     /** Used by MainWindow's Split Right/Down and Reopen Closed Tab. */
     public ConnectionProfile getProfileForReopen() { return profile; }
+    public ConnectionProfile getProfile() { return profile; }
     public String getCurrentDatabase() { return currentDatabase; }
     public String getScriptText() { return editor.getText(); }
     public void setScriptText(String text) { editor.replaceText(text); }
     public CodeArea getEditor() { return editor; }
+    public void focusEditor() { if (editor != null) editor.requestFocus(); }
     public void execute() { runCurrentStatement(); }
 
     private void log(String line) {
