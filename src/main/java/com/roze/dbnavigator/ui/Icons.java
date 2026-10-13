@@ -41,8 +41,14 @@ public final class Icons {
         }
         return switch (obj.getKind()) {
             case CONNECTION -> of(FontAwesomeSolid.DATABASE, connected ? "#57965c" : "#868a91", 13);
-            case DATABASE   -> of(FontAwesomeSolid.DATABASE, "#3592c4", 12);
-            case SCHEMA     -> of(FontAwesomeSolid.FOLDER_OPEN, "#c77dbb", 12);
+            case DATABASE   -> {
+                if (profile != null && (profile.getType() == ConnectionProfile.DatabaseType.MYSQL
+                        || profile.getType() == ConnectionProfile.DatabaseType.MARIADB)) {
+                    yield of(FontAwesomeSolid.PROJECT_DIAGRAM, "#c77dbb", 12);
+                }
+                yield of(FontAwesomeSolid.DATABASE, "#3592c4", 12);
+            }
+            case SCHEMA     -> of(FontAwesomeSolid.PROJECT_DIAGRAM, "#c77dbb", 12);
             case SERVER_OBJECTS -> of(FontAwesomeSolid.SERVER, "#3592c4", 12);
             case ROLES_FOLDER, TABLESPACES_FOLDER -> of(FontAwesomeSolid.FOLDER, "#3592c4", 12);
             case DATABASE_OBJECTS -> of(FontAwesomeSolid.FOLDER, "#3592c4", 12);
