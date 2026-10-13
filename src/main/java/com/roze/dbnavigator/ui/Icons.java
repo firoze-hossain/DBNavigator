@@ -1,6 +1,8 @@
 package com.roze.dbnavigator.ui;
 
+import com.roze.dbnavigator.model.ConnectionProfile;
 import com.roze.dbnavigator.model.DbObject;
+import javafx.scene.Node;
 import javafx.scene.paint.Color;
 import org.kordamp.ikonli.fontawesome5.FontAwesomeSolid;
 import org.kordamp.ikonli.javafx.FontIcon;
@@ -17,7 +19,26 @@ public final class Icons {
         return fi;
     }
 
-    public static FontIcon forObject(DbObject obj, boolean connected) {
+    public static Node forDatabase(ConnectionProfile.DatabaseType type) {
+        return DatabaseIcon.create(type, 14, true);
+    }
+
+    public static Node forDatabase(ConnectionProfile.DatabaseType type, int size) {
+        return DatabaseIcon.create(type, size, true);
+    }
+
+    public static Node forDatabase(ConnectionProfile.DatabaseType type, int size, boolean connected) {
+        return DatabaseIcon.create(type, size, connected);
+    }
+
+    public static Node forObject(DbObject obj, boolean connected) {
+        return forObject(obj, null, connected);
+    }
+
+    public static Node forObject(DbObject obj, ConnectionProfile profile, boolean connected) {
+        if (obj.getKind() == DbObject.Kind.CONNECTION && profile != null) {
+            return DatabaseIcon.create(profile.getType(), 14, connected);
+        }
         return switch (obj.getKind()) {
             case CONNECTION -> of(FontAwesomeSolid.DATABASE, connected ? "#57965c" : "#868a91", 13);
             case DATABASE   -> of(FontAwesomeSolid.DATABASE, "#3592c4", 12);

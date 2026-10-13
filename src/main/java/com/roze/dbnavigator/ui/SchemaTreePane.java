@@ -13,13 +13,19 @@ import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.scene.control.*;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.ClipboardContent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import org.kordamp.ikonli.fontawesome5.FontAwesomeSolid;
+import javafx.stage.FileChooser;
 
+import java.io.File;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -585,18 +591,25 @@ public class SchemaTreePane extends VBox {
         mainWindow.setStatus("Refreshed " + statusLabel);
     }
 
-    /** Opens the DataGrip-style show/hide databases (or, for Oracle, schemas) popup. */
-    private void showDatabaseFilterDialog(TreeItem<DbObject> connectionItem,
+    public static String schemaOrDatabaseNoun(ConnectionProfile.DatabaseType type) {
+        return switch (type) {
+            case MYSQL, MARIADB, ORACLE -> "schema";
+            default -> "database";
+        };
+    }
+
+    /** Opens the DataGrip-style show/hide databases (or, for MySQL/MariaDB/Oracle, schemas) popup. */
+    public void showDatabaseFilterDialog(TreeItem<DbObject> connectionItem,
                                           ConnectionProfile profile) {
         AppExecutor.run(() -> {
             try {
                 List<String> allDatabases = MetadataService.listDatabaseNames(profile);
                 Platform.runLater(() -> {
-                    boolean oracle = profile.getType() == ConnectionProfile.DatabaseType.ORACLE;
-                    DatabaseFilterDialog dialog = oracle
-                            ? new DatabaseFilterDialog(profile, allDatabases, "schema", profile.getUsername())
-                            : new DatabaseFilterDialog(profile, allDatabases);
-                    dialog.initOwner(getScene().getWindow());
+                    String noun = schemaOrDatabaseNoun(profile.getType());
+                    String defaultName = profile.getType() == ConnectionProfile.DatabaseType.ORACLE
+                            ? profile.getUsername() : profile.getDatabase();
+                    DatabaseFilterDialog dialog = new DatabaseFilterDialog(profile, allDatabases, noun, defaultName);
+                    dialog.initOwner(getScene() == null ? null : getScene().getWindow());
                     dialog.showAndWait().ifPresent(selected -> {
                         profile.setVisibleDatabases(selected);
                         ConnectionStore.saveOrUpdate(profile);
@@ -769,6 +782,493 @@ public class SchemaTreePane extends VBox {
         });
     }
 
+    private static void copyToClipboard(String text) {
+        if (text == null) return;
+        ClipboardContent content = new ClipboardContent();
+        content.putString(text);
+        Clipboard.getSystemClipboard().setContent(content);
+    }
+
+    private void promptAndOpenQueryFile(ConnectionProfile profile) {
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Open SQL Query File");
+        chooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("SQL Files (*.sql)", "*.sql"),
+                new FileChooser.ExtensionFilter("All Files (*.*)", "*.*")
+        );
+        File file = chooser.showOpenDialog(getScene() == null ? null : getScene().getWindow());
+        if (file != null) {
+            try {
+                String sql = java.nio.file.Files.readString(file.toPath());
+                mainWindow.openQueryTab(profile, null, sql);
+            } catch (Exception ex) {
+                mainWindow.setStatus("Could not open file: " + ex.getMessage());
+            }
+        }
+    }
+
+    private void promptRunSqlScript(ConnectionProfile profile) {
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Run SQL Script");
+        chooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("SQL Scripts (*.sql)", "*.sql"),
+                new FileChooser.ExtensionFilter("All Files (*.*)", "*.*")
+        );
+        File file = chooser.showOpenDialog(getScene() == null ? null : getScene().getWindow());
+        if (file != null) {
+            try {
+                String sql = java.nio.file.Files.readString(file.toPath());
+                mainWindow.openQueryTab(profile, null, sql);
+                mainWindow.setStatus("Loaded script: " + file.getName());
+            } catch (Exception ex) {
+                mainWindow.setStatus("Could not run script: " + ex.getMessage());
+            }
+        }
+    }
+
+    private void showVirtualViewInfo(ConnectionProfile profile) {
+        TextInputDialog dialog = DialogTheme.apply(new TextInputDialog(""));
+        dialog.setTitle("New Virtual View");
+        dialog.setHeaderText("Create Virtual View for " + profile.getName());
+        dialog.setContentText("View Query / Name:");
+        dialog.initOwner(getScene() == null ? null : getScene().getWindow());
+        dialog.showAndWait().ifPresent(viewDef -> {
+            if (!viewDef.isBlank()) {
+                mainWindow.openQueryTab(profile, null, "-- Virtual View: " + viewDef + "\nSELECT * FROM " + viewDef + ";\n");
+            }
+        });
+    }
+
+    private void showQuickDocumentation(ConnectionProfile profile) {
+        boolean connected = ClientRegistry.isConnected(profile);
+        StringBuilder sb = new StringBuilder();
+        sb.append("Data Source: ").append(profile.getName()).append("\n");
+        sb.append("Database Type: ").append(profile.getType().getDisplayName()).append("\n");
+        sb.append("Status: ").append(connected ? "Connected" : "Disconnected").append("\n");
+        if (profile.getType() != ConnectionProfile.DatabaseType.SQLITE) {
+            sb.append("Host: ").append(profile.getHost()).append(":").append(profile.getPort()).append("\n");
+            if (profile.getUsername() != null && !profile.getUsername().isBlank()) {
+                sb.append("User: ").append(profile.getUsername()).append("\n");
+            }
+        }
+        if (profile.getDatabase() != null && !profile.getDatabase().isBlank()) {
+            sb.append(schemaOrDatabaseNoun(profile.getType()).equalsIgnoreCase("schema") ? "Schema: " : "Database: ")
+                    .append(profile.getDatabase()).append("\n");
+        }
+        if (profile.getJdbcUrl() != null && !profile.getJdbcUrl().isBlank()) {
+            sb.append("URL: ").append(profile.getJdbcUrl()).append("\n");
+        }
+        if (profile.getGroup() != null && !profile.getGroup().isBlank()) {
+            sb.append("Group: ").append(profile.getGroup()).append("\n");
+        }
+
+        Alert alert = DialogTheme.apply(new Alert(Alert.AlertType.INFORMATION, sb.toString(), ButtonType.OK));
+        alert.setTitle("Quick Documentation");
+        alert.setHeaderText("Data Source Details — " + profile.getName());
+        alert.initOwner(getScene() == null ? null : getScene().getWindow());
+        alert.showAndWait();
+    }
+
+    private void promptMoveToGroup(ConnectionProfile profile) {
+        TextInputDialog dialog = DialogTheme.apply(new TextInputDialog(profile.getGroup()));
+        dialog.setTitle("Move to Group");
+        dialog.setHeaderText("Assign \"" + profile.getName() + "\" to a group folder");
+        dialog.setContentText("Group name (leave empty for root):");
+        dialog.initOwner(getScene() == null ? null : getScene().getWindow());
+        dialog.showAndWait().ifPresent(groupName -> {
+            profile.setGroup(groupName.trim());
+            ConnectionStore.saveOrUpdate(profile);
+            reload();
+            mainWindow.setStatus("Moved " + profile.getName() + " to group: " + (groupName.isBlank() ? "root" : groupName.trim()));
+        });
+    }
+
+    private void verifyConnection(ConnectionProfile profile) {
+        mainWindow.setStatus("Verifying connection to " + profile.getName() + "…");
+        AppExecutor.run(() -> {
+            try {
+                if (profile.getType() == ConnectionProfile.DatabaseType.MONGODB) {
+                    var client = ClientRegistry.mongo(profile);
+                    client.listDatabases();
+                } else {
+                    try (var conn = ClientRegistry.jdbc(profile, null).getConnection()) {
+                        conn.getMetaData();
+                    }
+                }
+                Platform.runLater(() -> {
+                    mainWindow.setStatus("Connection to " + profile.getName() + " verified successfully.");
+                    Alert ok = DialogTheme.apply(new Alert(Alert.AlertType.INFORMATION,
+                            "Connection to " + profile.getName() + " was successfully verified."));
+                    ok.setTitle("Verify Connection");
+                    ok.setHeaderText("Connection Successful");
+                    ok.initOwner(getScene() == null ? null : getScene().getWindow());
+                    ok.showAndWait();
+                });
+            } catch (Exception ex) {
+                String msg = ex.getMessage() != null ? ex.getMessage() : ex.toString();
+                Platform.runLater(() -> {
+                    mainWindow.setStatus("Connection verification failed: " + msg);
+                    Alert err = DialogTheme.apply(new Alert(Alert.AlertType.ERROR,
+                            "Failed to connect to " + profile.getName() + ":\n" + msg));
+                    err.setTitle("Verify Connection");
+                    err.setHeaderText("Connection Failed");
+                    err.initOwner(getScene() == null ? null : getScene().getWindow());
+                    err.showAndWait();
+                });
+            }
+        });
+    }
+
+    /**
+     * Builds the comprehensive DataGrip-style context menu for a connection root node.
+     * Package-private so unit tests can inspect and verify the dynamic hierarchy.
+     */
+    ContextMenu buildConnectionMenu(TreeItem<DbObject> item, DbObject obj, ConnectionProfile profile) {
+        ContextMenu menu = new ContextMenu();
+        if (profile == null) return menu;
+        boolean connected = ClientRegistry.isConnected(profile);
+        String noun = schemaOrDatabaseNoun(profile.getType());
+        String capNoun = Character.toUpperCase(noun.charAt(0)) + noun.substring(1);
+
+        // For Oracle: DataGrip shows "Download Driver Files" at the very top of connection menu
+        if (profile.getType() == ConnectionProfile.DatabaseType.ORACLE) {
+            MenuItem downloadDriver = new MenuItem("Download Driver Files",
+                    Icons.of(FontAwesomeSolid.EXCLAMATION_TRIANGLE, "#e05555", 12));
+            downloadDriver.setOnAction(e -> mainWindow.setStatus("Oracle driver files"));
+            menu.getItems().add(downloadDriver);
+        }
+
+        // 1. Properties (Ctrl+Alt+Shift+S)
+        MenuItem properties = new MenuItem("Properties…");
+        properties.setAccelerator(new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN));
+        properties.setOnAction(e -> mainWindow.showEditConnectionDialog(profile));
+
+        // 2. New >
+        Menu newMenu = new Menu("New");
+        MenuItem queryConsole = new MenuItem("Query Console");
+        queryConsole.setAccelerator(new KeyCodeCombination(KeyCode.Q, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN));
+        queryConsole.setOnAction(e -> mainWindow.openQueryTab(profile, null, null));
+
+        MenuItem queryFile = new MenuItem("Query File…");
+        queryFile.setAccelerator(new KeyCodeCombination(KeyCode.Q, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN));
+        queryFile.setOnAction(e -> promptAndOpenQueryFile(profile));
+
+        newMenu.getItems().addAll(queryConsole, queryFile);
+
+        // Dynamic engine-specific creation items matching DataGrip screenshots:
+        // - PostgreSQL: Database..., Role..., User...
+        // - MySQL: Schema..., User..., Role...
+        // - MariaDB: Schema..., User..., Role...
+        // - SQL Server: Database, Server Principal (matching Image 1)
+        // - Oracle: none at root New (matching Image 2)
+        // - MongoDB, SQLite: none at root New
+        switch (profile.getType()) {
+            case POSTGRESQL -> {
+                MenuItem newDb = new MenuItem("Database…");
+                newDb.setOnAction(e -> CreateDatabaseDialog.show(mainWindow, profile));
+                MenuItem newRole = new MenuItem("Role…");
+                newRole.setOnAction(e -> CreateRoleDialog.show(mainWindow, profile));
+                MenuItem newUser = new MenuItem("User…");
+                newUser.setOnAction(e -> CreateUserDialog.show(mainWindow, profile));
+                newMenu.getItems().addAll(new SeparatorMenuItem(), newDb, newRole, newUser);
+            }
+            case MYSQL, MARIADB -> {
+                MenuItem newSchema = new MenuItem("Schema…");
+                newSchema.setOnAction(e -> CreateDatabaseDialog.show(mainWindow, profile));
+                MenuItem newUser = new MenuItem("User…");
+                newUser.setOnAction(e -> CreateUserDialog.show(mainWindow, profile));
+                MenuItem newRole = new MenuItem("Role…");
+                newRole.setOnAction(e -> CreateRoleDialog.show(mainWindow, profile));
+                newMenu.getItems().addAll(new SeparatorMenuItem(), newSchema, newUser, newRole);
+            }
+            case SQLSERVER -> {
+                MenuItem newDb = new MenuItem("Database");
+                newDb.setOnAction(e -> CreateDatabaseDialog.show(mainWindow, profile));
+                MenuItem serverPrincipal = new MenuItem("Server Principal");
+                serverPrincipal.setOnAction(e -> CreateUserDialog.show(mainWindow, profile));
+                newMenu.getItems().addAll(new SeparatorMenuItem(), newDb, serverPrincipal);
+            }
+            case ORACLE -> {
+                // In DataGrip Image 2: Oracle has neither Database, Schema, User nor Role in root New menu.
+                // It goes directly to Virtual View.
+            }
+            default -> {
+                // SQLite, MongoDB, StratosDB: do not expose Database/Schema/User/Role creation in New
+            }
+        }
+
+        MenuItem virtualView = new MenuItem("Virtual View");
+        virtualView.setOnAction(e -> showVirtualViewInfo(profile));
+
+        Menu dataSourceSub = new Menu("Data Source");
+        MenuItem dsPg = new MenuItem("PostgreSQL…", Icons.forDatabase(ConnectionProfile.DatabaseType.POSTGRESQL, 13));
+        dsPg.setOnAction(e -> mainWindow.showNewConnectionDialog(ConnectionProfile.DatabaseType.POSTGRESQL));
+        MenuItem dsMy = new MenuItem("MySQL…", Icons.forDatabase(ConnectionProfile.DatabaseType.MYSQL, 13));
+        dsMy.setOnAction(e -> mainWindow.showNewConnectionDialog(ConnectionProfile.DatabaseType.MYSQL));
+        MenuItem dsMaria = new MenuItem("MariaDB…", Icons.forDatabase(ConnectionProfile.DatabaseType.MARIADB, 13));
+        dsMaria.setOnAction(e -> mainWindow.showNewConnectionDialog(ConnectionProfile.DatabaseType.MARIADB));
+        MenuItem dsLite = new MenuItem("SQLite…", Icons.forDatabase(ConnectionProfile.DatabaseType.SQLITE, 13));
+        dsLite.setOnAction(e -> mainWindow.showNewConnectionDialog(ConnectionProfile.DatabaseType.SQLITE));
+        MenuItem dsMongo = new MenuItem("MongoDB…", Icons.forDatabase(ConnectionProfile.DatabaseType.MONGODB, 13));
+        dsMongo.setOnAction(e -> mainWindow.showNewConnectionDialog(ConnectionProfile.DatabaseType.MONGODB));
+        MenuItem dsMssql = new MenuItem("Microsoft SQL Server…", Icons.forDatabase(ConnectionProfile.DatabaseType.SQLSERVER, 13));
+        dsMssql.setOnAction(e -> mainWindow.showNewConnectionDialog(ConnectionProfile.DatabaseType.SQLSERVER));
+        MenuItem dsOracle = new MenuItem("Oracle…", Icons.forDatabase(ConnectionProfile.DatabaseType.ORACLE, 13));
+        dsOracle.setOnAction(e -> mainWindow.showNewConnectionDialog(ConnectionProfile.DatabaseType.ORACLE));
+        MenuItem dsAll = new MenuItem("All Data Sources…");
+        dsAll.setOnAction(e -> mainWindow.showNewConnectionDialog());
+        dataSourceSub.getItems().addAll(dsPg, dsMy, dsMaria, dsLite, dsMongo, dsMssql, dsOracle, new SeparatorMenuItem(), dsAll);
+
+        Menu cloudSub = new Menu("Data Source from Cloud Provider");
+        MenuItem cpGcp = new MenuItem("Google Cloud…");
+        cpGcp.setOnAction(e -> mainWindow.setStatus("Google Cloud provider"));
+        MenuItem cpAws = new MenuItem("Amazon Web Services (AWS)…");
+        cpAws.setOnAction(e -> mainWindow.setStatus("AWS provider"));
+        MenuItem cpAzure = new MenuItem("Microsoft Azure…");
+        cpAzure.setOnAction(e -> mainWindow.setStatus("Azure provider"));
+        cloudSub.getItems().addAll(cpGcp, cpAws, cpAzure);
+
+        MenuItem dsTemplates = new MenuItem("Data Source Templates (Beta)");
+        dsTemplates.setOnAction(e -> mainWindow.setStatus("Data Source Templates"));
+
+        MenuItem dsFromFile = new MenuItem("Data Source from File/Folder…");
+        dsFromFile.setOnAction(e -> mainWindow.showNewConnectionDialog(ConnectionProfile.DatabaseType.SQLITE));
+
+        MenuItem dsFromUrl = new MenuItem("Data Source from URL…");
+        dsFromUrl.setOnAction(e -> mainWindow.showNewConnectionDialog());
+
+        MenuItem ddlDs = new MenuItem("DDL Data Source…");
+        ddlDs.setOnAction(e -> mainWindow.setStatus("DDL Data Source"));
+
+        MenuItem folderItem = new MenuItem("Folder");
+        folderItem.setOnAction(e -> promptMoveToGroup(profile));
+
+        MenuItem driverItem = new MenuItem("Driver…");
+        driverItem.setOnAction(e -> mainWindow.setStatus("Driver Configuration"));
+
+        newMenu.getItems().addAll(
+                new SeparatorMenuItem(),
+                virtualView,
+                new SeparatorMenuItem(),
+                dataSourceSub,
+                cloudSub,
+                dsTemplates,
+                dsFromFile,
+                dsFromUrl,
+                ddlDs,
+                new SeparatorMenuItem(),
+                folderItem,
+                driverItem
+        );
+
+        // 3. Copy/Paste >
+        Menu copyPasteMenu = new Menu("Copy/Paste");
+        MenuItem copyName = new MenuItem("Copy");
+        copyName.setAccelerator(new KeyCodeCombination(KeyCode.C, KeyCombination.CONTROL_DOWN));
+        copyName.setOnAction(e -> {
+            copyToClipboard(profile.getName());
+            mainWindow.setStatus("Copied to clipboard: " + profile.getName());
+        });
+        MenuItem copyPath = new MenuItem("Copy Path/Reference…");
+        copyPath.setAccelerator(new KeyCodeCombination(KeyCode.C, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN));
+        copyPath.setOnAction(e -> {
+            String ref = profile.getJdbcUrl() != null && !profile.getJdbcUrl().isBlank()
+                    ? profile.getJdbcUrl() : profile.getName();
+            copyToClipboard(ref);
+            mainWindow.setStatus("Copied reference: " + ref);
+        });
+        copyPasteMenu.getItems().addAll(copyName, copyPath);
+
+        // 4. Refresh (Ctrl+F5)
+        MenuItem refresh = new MenuItem("Refresh");
+        refresh.setAccelerator(new KeyCodeCombination(KeyCode.F5, KeyCombination.CONTROL_DOWN));
+        refresh.setOnAction(e -> {
+            if (item != null) refreshNode(item, obj, profile.getName());
+            else reload();
+        });
+
+        // 5. Deactivate / Activate (Ctrl+F2)
+        MenuItem activateToggle = new MenuItem(connected ? "Deactivate" : "Activate");
+        activateToggle.setAccelerator(new KeyCodeCombination(KeyCode.F2, KeyCombination.CONTROL_DOWN));
+        activateToggle.setOnAction(e -> {
+            if (connected) {
+                ClientRegistry.disconnect(profile);
+                reload();
+                mainWindow.setStatus("Deactivated " + profile.getName());
+            } else {
+                if (item != null) refreshNode(item, obj, profile.getName());
+                else reload();
+                mainWindow.setStatus("Activated " + profile.getName());
+            }
+        });
+
+        // 6. Rename... (Shift+F6)
+        MenuItem rename = new MenuItem("Rename…");
+        rename.setAccelerator(new KeyCodeCombination(KeyCode.F6, KeyCombination.SHIFT_DOWN));
+        rename.setOnAction(e -> renameConnectionLabel(profile));
+
+        // 7. Move >
+        Menu moveMenu = new Menu("Move");
+        MenuItem moveToGroup = new MenuItem("Move to Group…");
+        moveToGroup.setOnAction(e -> promptMoveToGroup(profile));
+        moveMenu.getItems().add(moveToGroup);
+
+        // 8. Quick Documentation (Ctrl+Q)
+        MenuItem quickDoc = new MenuItem("Quick Documentation");
+        quickDoc.setAccelerator(new KeyCodeCombination(KeyCode.Q, KeyCombination.CONTROL_DOWN));
+        quickDoc.setOnAction(e -> showQuickDocumentation(profile));
+
+        // 9. Compare Schema Structure (Ctrl+D)
+        MenuItem compareStructure = new MenuItem("Compare Schema Structure");
+        compareStructure.setAccelerator(new KeyCodeCombination(KeyCode.D, KeyCombination.CONTROL_DOWN));
+        compareStructure.setDisable(true);
+
+        // 10. Navigation >
+        Menu navMenu = new Menu("Navigation");
+        MenuItem jumpConsole = new MenuItem("Jump to Query Console");
+        jumpConsole.setOnAction(e -> mainWindow.openQueryTab(profile, null, null));
+        MenuItem selectInTree = new MenuItem("Select in Database Explorer");
+        selectInTree.setAccelerator(new KeyCodeCombination(KeyCode.F1, KeyCombination.ALT_DOWN));
+        selectInTree.setOnAction(e -> {
+            if (item != null) tree.getSelectionModel().select(item);
+        });
+        navMenu.getItems().addAll(jumpConsole, selectInTree);
+
+        // 11. Introspection Level >
+        Menu introMenu = new Menu("Introspection Level");
+        ToggleGroup introGroup = new ToggleGroup();
+        RadioMenuItem introAuto = new RadioMenuItem("Auto");
+        introAuto.setToggleGroup(introGroup);
+        introAuto.setSelected(true);
+        RadioMenuItem introHigh = new RadioMenuItem("High");
+        introHigh.setToggleGroup(introGroup);
+        RadioMenuItem introMed = new RadioMenuItem("Medium");
+        introMed.setToggleGroup(introGroup);
+        RadioMenuItem introLow = new RadioMenuItem("Low");
+        introLow.setToggleGroup(introGroup);
+        introMenu.getItems().addAll(introAuto, introHigh, introMed, introLow);
+
+        // 12. SQL Scripts >
+        Menu sqlScripts = new Menu("SQL Scripts");
+        MenuItem openConsole = new MenuItem("Open Query Console");
+        openConsole.setOnAction(e -> mainWindow.openQueryTab(profile, null, null));
+        MenuItem runSqlScript = new MenuItem("Run SQL Script…");
+        runSqlScript.setOnAction(e -> promptRunSqlScript(profile));
+        sqlScripts.getItems().addAll(openConsole, runSqlScript);
+
+        // 13. Object Actions >
+        Menu objActions = new Menu("Object Actions");
+        if (MetadataService.supportsDatabaseFilter(profile)) {
+            MenuItem showHideDbs = new MenuItem("Show / Hide " + capNoun + "s…");
+            showHideDbs.setOnAction(e -> showDatabaseFilterDialog(item, profile));
+            objActions.getItems().add(showHideDbs);
+        }
+        MenuItem forgetPw = new MenuItem("Forget Saved Passwords");
+        forgetPw.setOnAction(e -> {
+            profile.setPassword("");
+            ConnectionStore.saveOrUpdate(profile);
+            mainWindow.setStatus("Forgot saved password for " + profile.getName());
+        });
+        objActions.getItems().add(forgetPw);
+
+        // 14. Tools >
+        Menu toolsMenu = new Menu("Tools");
+        if (MetadataService.supportsDatabaseFilter(profile)) {
+            MenuItem manageDbs = new MenuItem("Manage " + capNoun + "s…");
+            manageDbs.setOnAction(e -> showDatabaseFilterDialog(item, profile));
+            toolsMenu.getItems().add(manageDbs);
+        }
+        MenuItem verifyConn = new MenuItem("Verify Connection");
+        verifyConn.setOnAction(e -> verifyConnection(profile));
+        toolsMenu.getItems().add(verifyConn);
+
+        // 15. Import/Export >
+        Menu importExport = new Menu("Import/Export");
+        String dumpName = switch (profile.getType()) {
+            case POSTGRESQL -> "Dump with pg_dump…";
+            case MYSQL -> "Dump with mysqldump…";
+            case MARIADB -> "Dump with mariadb-dump…";
+            case SQLITE -> "Export SQLite Database…";
+            case MONGODB -> "Dump with mongodump…";
+            case SQLSERVER -> "Export Database with bcp…";
+            case ORACLE -> "Export with expdp…";
+            default -> "Dump Database…";
+        };
+        MenuItem dumpItem = new MenuItem(dumpName);
+        dumpItem.setOnAction(e -> mainWindow.setStatus(dumpName.replace("…", "")));
+        MenuItem restoreItem = new MenuItem("Restore…");
+        restoreItem.setOnAction(e -> mainWindow.setStatus("Restore database"));
+        importExport.getItems().addAll(dumpItem, restoreItem);
+
+        // 16. Diagrams >
+        Menu diagrams = new Menu("Diagrams");
+        MenuItem showViz = new MenuItem("Show Visualization…");
+        showViz.setOnAction(e -> mainWindow.setStatus("Visualization for " + profile.getName()));
+        diagrams.getItems().add(showViz);
+
+        // 17. DDL Mapping >
+        Menu ddlMapping = new Menu("DDL Mapping");
+        MenuItem editDdlMap = new MenuItem("Edit DDL Mapping…");
+        editDdlMap.setOnAction(e -> mainWindow.setStatus("Edit DDL Mapping"));
+        ddlMapping.getItems().add(editDdlMap);
+
+        // 18. Diagnostics >
+        Menu diagnostics = new Menu("Diagnostics");
+        MenuItem diagRefresh = new MenuItem("Diagnostic Refresh");
+        diagRefresh.setOnAction(e -> {
+            if (item != null) refreshNode(item, obj, profile.getName());
+            else reload();
+            mainWindow.setStatus("Diagnostic refresh performed for " + profile.getName());
+        });
+        diagnostics.getItems().add(diagRefresh);
+
+        // 19. Remove Data Source... (Delete)
+        MenuItem remove = new MenuItem("Remove Data Source…");
+        remove.setAccelerator(new KeyCodeCombination(KeyCode.DELETE));
+        remove.setOnAction(e -> {
+            Alert confirm = (Alert) DialogTheme.apply(new Alert(Alert.AlertType.CONFIRMATION,
+                    "Remove connection \"" + profile.getName() + "\"?",
+                    ButtonType.YES, ButtonType.NO));
+            confirm.showAndWait().ifPresent(bt -> {
+                if (bt == ButtonType.YES) {
+                    ClientRegistry.disconnect(profile);
+                    ConnectionStore.delete(profile);
+                    reload();
+                    mainWindow.setStatus("Removed data source " + profile.getName());
+                }
+            });
+        });
+
+        menu.getItems().addAll(
+                properties,
+                newMenu,
+                copyPasteMenu,
+                refresh,
+                activateToggle,
+                rename,
+                moveMenu,
+                quickDoc,
+                compareStructure,
+                navMenu,
+                introMenu,
+                sqlScripts
+        );
+        if (profile.getType() != ConnectionProfile.DatabaseType.ORACLE) {
+            menu.getItems().add(objActions);
+        }
+        menu.getItems().addAll(
+                toolsMenu,
+                importExport,
+                diagrams,
+                ddlMapping,
+                diagnostics,
+                new SeparatorMenuItem(),
+                remove
+        );
+
+        return menu;
+    }
+
     private static TreeItem<DbObject> loadingNode() {
         return new TreeItem<>(new DbObject("Loading…", Kind.MESSAGE));
     }
@@ -798,12 +1298,23 @@ public class SchemaTreePane extends VBox {
 
             Label nameLabel = new Label(obj.getName());
             nameLabel.getStyleClass().add("tree-name");
-            HBox box = new HBox(6, Icons.forObject(obj, connected), nameLabel);
+            HBox box = new HBox(6, Icons.forObject(obj, profile, connected), nameLabel);
             box.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
             if (obj.getDetail() != null && !obj.getDetail().isBlank()) {
-                Label detailLabel =
-                        new Label(obj.getDetail());
+                Label detailLabel = new Label(obj.getDetail());
                 detailLabel.getStyleClass().add("tree-detail");
+                if (obj.getKind() == Kind.CONNECTION && profile != null && MetadataService.supportsDatabaseFilter(profile)) {
+                    detailLabel.setCursor(javafx.scene.Cursor.HAND);
+                    String n = schemaOrDatabaseNoun(profile.getType());
+                    detailLabel.setTooltip(new Tooltip("Choose " + n + "s to show in the tree…"));
+                    detailLabel.getStyleClass().add("tree-detail-pill");
+                    detailLabel.setOnMouseClicked(e -> {
+                        if (e.getButton() == javafx.scene.input.MouseButton.PRIMARY) {
+                            e.consume();
+                            showDatabaseFilterDialog(getTreeItem(), profile);
+                        }
+                    });
+                }
                 box.getChildren().add(detailLabel);
             }
             setText(null);
@@ -813,61 +1324,12 @@ public class SchemaTreePane extends VBox {
 
         private ContextMenu buildMenu(DbObject obj, ConnectionProfile profile) {
             if (profile == null) return null;
+            if (obj.getKind() == Kind.CONNECTION) {
+                return buildConnectionMenu(getTreeItem(), obj, profile);
+            }
             ContextMenu menu = new ContextMenu();
 
             switch (obj.getKind()) {
-                case CONNECTION -> {
-                    Menu newMenu = new Menu("New");
-                    MenuItem newDatabase = new MenuItem("Database\u2026");
-                    newDatabase.setOnAction(e -> CreateDatabaseDialog.show(mainWindow, profile));
-                    newMenu.getItems().add(newDatabase);
-
-                    MenuItem refreshConnection = new MenuItem("Refresh");
-                    refreshConnection.setOnAction(e -> refreshNode(getTreeItem(), obj, profile.getName()));
-
-                    MenuItem renameConnection = new MenuItem("Rename\u2026");
-                    renameConnection.setOnAction(e -> renameConnectionLabel(profile));
-
-                    MenuItem newConsole = new MenuItem("New Query Console");
-                    newConsole.setOnAction(e -> mainWindow.openQueryTab(profile, null, null));
-                    MenuItem filterDbs = new MenuItem(profile.getType() == ConnectionProfile.DatabaseType.ORACLE
-                            ? "Show / Hide Schemas…" : "Show / Hide Databases…");
-                    filterDbs.setOnAction(e -> showDatabaseFilterDialog(getTreeItem(), profile));
-                    MenuItem edit = new MenuItem("Edit Connection…");
-                    edit.setOnAction(e -> mainWindow.showEditConnectionDialog(profile));
-                    MenuItem disconnect = new MenuItem("Disconnect");
-                    disconnect.setOnAction(e -> {
-                        ClientRegistry.disconnect(profile);
-                        reload();
-                    });
-                    MenuItem delete = new MenuItem("Remove Connection");
-                    delete.setOnAction(e -> {
-                        Alert confirm = (Alert) DialogTheme.apply(new Alert(Alert.AlertType.CONFIRMATION,
-                                "Remove connection \"" + profile.getName() + "\"?",
-                                ButtonType.YES, ButtonType.NO));
-                        confirm.showAndWait().ifPresent(bt -> {
-                            if (bt == ButtonType.YES) {
-                                ClientRegistry.disconnect(profile);
-                                ConnectionStore.delete(profile);
-                                reload();
-                            }
-                        });
-                    });
-                    if (CreateDatabaseDialog.supportsCreate(profile.getType())) {
-                        menu.getItems().add(newMenu);
-                    }
-                    menu.getItems().addAll(refreshConnection, new SeparatorMenuItem(), renameConnection,
-                            new SeparatorMenuItem());
-                    // openQueryTab already dispatches to a MongoConsoleTab for
-                    // MongoDB and a SQL QueryTab for everything else — every
-                    // connection type has some kind of console, so this item
-                    // always applies.
-                    menu.getItems().addAll(newConsole, new SeparatorMenuItem());
-                    if (MetadataService.supportsDatabaseFilter(profile)) {
-                        menu.getItems().add(filterDbs);
-                    }
-                    menu.getItems().addAll(edit, disconnect, new SeparatorMenuItem(), delete);
-                }
                 case TABLE, VIEW, PARTITION -> {
                     MenuItem openData = new MenuItem("Open Data");
                     openData.setOnAction(e -> mainWindow.openDataTab(profile, obj));
