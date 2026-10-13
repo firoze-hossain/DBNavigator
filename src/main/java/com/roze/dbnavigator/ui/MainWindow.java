@@ -2476,7 +2476,7 @@ public class MainWindow {
         };
     }
 
-    private Tab currentSelectedTab() {
+    public Tab currentSelectedTab() {
         if (activeTabPane != null) {
             Tab selected = activeTabPane.getSelectionModel().getSelectedItem();
             if (selected != null) return selected;
@@ -2955,16 +2955,14 @@ public class MainWindow {
     }
 
     public void scrollFromEditor() {
-        Tab tab = currentSelectedTab();
-        if (tab instanceof QueryTab qt && qt.getProfile() != null) {
-            if (!isDatabaseExplorerVisible()) {
-                toggleDatabaseExplorer();
-            }
-            schemaPane.requestFocus();
-            setStatus("Located " + qt.getProfile().getName() + " in Explorer");
-        } else {
-            setStatus("No active database editor to locate");
+        if (!isDatabaseExplorerVisible()) {
+            toggleDatabaseExplorer();
         }
+        schemaPane.scrollFromEditor();
+    }
+
+    public SchemaTreePane getSchemaPane() {
+        return schemaPane;
     }
 
     public void jumpToNavigationBar() {

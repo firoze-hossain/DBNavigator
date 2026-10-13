@@ -52,6 +52,7 @@ public class SchemaTreePane extends VBox {
     private final Button jumpToConsoleButton;
     private final Button goToDdlButton;
     private final Button editDataButton;
+    private final Button scrollFromEditorButton;
 
     public SchemaTreePane(MainWindow mainWindow) {
         this.mainWindow = mainWindow;
@@ -64,9 +65,12 @@ public class SchemaTreePane extends VBox {
 
         this.projectWidget = new ProjectWidget(mainWindow);
 
+        this.scrollFromEditorButton = createToolButton(Icons.of(FontAwesomeSolid.CROSSHAIRS, "#a9b7c6", 11),
+                "Scroll from Editor", e -> scrollFromEditor());
+
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-        HBox headerBox = new HBox(6, header, spacer, projectWidget);
+        HBox headerBox = new HBox(6, header, spacer, scrollFromEditorButton, projectWidget);
         headerBox.setAlignment(Pos.CENTER_LEFT);
         headerBox.setPadding(new Insets(6, 8, 4, 10));
         headerBox.getStyleClass().add("panel-header-box");
@@ -1339,5 +1343,317 @@ public class SchemaTreePane extends VBox {
 
     public TreeView<DbObject> getTree() {
         return tree;
+    }
+
+    public Button getScrollFromEditorButton() {
+        return scrollFromEditorButton;
+    }
+
+    /**
+     * DataGrip-style "Scroll from Editor": locates the active editor tab's
+     * table/schema/database object in the Database Explorer tree, asynchronously
+     * expanding intermediate parent nodes as needed, selects it, scrolls it into
+     * view, and updates the explorer toolbar state (Jump to Console, Go to DDL, Edit Data).
+     */
+    public void scrollFromEditor() {
+        Tab tab = mainWindow != null ? mainWindow.currentSelectedTab() : null;
+        if (tab == null) {
+            if (mainWindow != null) mainWindow.setStatus("No active database editor to locate");
+            return;
+        }
+
+        ConnectionProfile profile = null;
+        DbObject targetObject = null;
+
+        if (tab instanceof DataTab dt) {
+            profile = dt.getProfileForReopen();
+            targetObject = dt.getTableForReopen();
+        } else if (tab instanceof DdlTab ddlTab) {
+            profile = ddlTab.getProfile();
+            targetObject = ddlTab.getObject();
+        } else if (tab instanceof StructureTab st) {
+            profile = st.getProfile();
+            targetObject = st.getTable();
+        } else if (tab instanceof MongoCollectionTab mt) {
+            profile = mt.getProfileForReopen();
+            targetObject = mt.getCollectionForReopen();
+        } else if (tab instanceof QueryTab qt) {
+            profile = qt.getProfile();
+            if (profile != null && qt.getCatalog() != null && !qt.getCatalog().isBlank()) {
+                targetObject = new DbObject(qt.getCatalog(), Kind.DATABASE, qt.getCatalog(), null);
+            }
+        } else if (tab instanceof MongoConsoleTab mt) {
+            profile = mt.getProfile();
+        }
+
+        if (profile == null) {
+            if (mainWindow != null) mainWindow.setStatus("No active database editor to locate");
+            return;
+        }
+
+        selectObjectInTree(profile, targetObject);
+    }
+
+    /**
+     * Traverses down the connection tree to locate, expand, and select the given target object.
+     * Handles lazy-loaded parent nodes gracefully at every level.
+     */
+    public void selectObjectInTree(ConnectionProfile profile, DbObject target) {
+        if (profile == null) return;
+
+        TreeItem<DbObject> connItem = findConnectionItem(profile);
+        if (connItem == null) {
+            if (mainWindow != null) mainWindow.setStatus("Connection " + profile.getName() + " not found in Explorer");
+            return;
+        }
+
+        if (target == null || target.getKind() == Kind.CONNECTION) {
+            highlightAndSelect(connItem);
+            return;
+        }
+
+        expandNodeAndThen(connItem, () -> navigateFromConnection(connItem, profile, target));
+    }
+
+    public TreeItem<DbObject> findConnectionItem(ConnectionProfile profile) {
+        if (profile == null) return null;
+        for (Map.Entry<TreeItem<DbObject>, ConnectionProfile> entry : connectionItems.entrySet()) {
+            if (entry.getValue() != null && profile.getId() != null && profile.getId().equals(entry.getValue().getId())) {
+                return entry.getKey();
+            }
+        }
+        for (Map.Entry<TreeItem<DbObject>, ConnectionProfile> entry : connectionItems.entrySet()) {
+            if (entry.getValue() != null && profile.getName() != null && profile.getName().equalsIgnoreCase(entry.getValue().getName())) {
+                return entry.getKey();
+            }
+        }
+        return null;
+    }
+
+    private void navigateFromConnection(TreeItem<DbObject> connItem, ConnectionProfile profile, DbObject target) {
+        // 1. Look for matching DATABASE nodes
+        List<TreeItem<DbObject>> dbItems = connItem.getChildren().stream()
+                .filter(c -> c.getValue() != null && c.getValue().getKind() == Kind.DATABASE)
+                .toList();
+
+        if (!dbItems.isEmpty()) {
+            String targetCatalog = target.getCatalog();
+            if (targetCatalog == null || targetCatalog.isBlank()) {
+                targetCatalog = profile.getDatabase();
+            }
+
+            TreeItem<DbObject> targetDb = null;
+            if (targetCatalog != null) {
+                for (TreeItem<DbObject> db : dbItems) {
+                    if (targetCatalog.equalsIgnoreCase(db.getValue().getName())) {
+                        targetDb = db;
+                        break;
+                    }
+                }
+            }
+            if (targetDb == null && dbItems.size() == 1) {
+                targetDb = dbItems.get(0);
+            }
+            if (targetDb == null) {
+                targetDb = dbItems.get(0);
+            }
+
+            if (target.getKind() == Kind.DATABASE) {
+                highlightAndSelect(targetDb);
+                return;
+            }
+
+            TreeItem<DbObject> matchedDb = targetDb;
+            expandNodeAndThen(matchedDb, () -> navigateFromDatabase(matchedDb, profile, target));
+            return;
+        }
+
+        // 2. Look for matching SCHEMA nodes directly under connection (e.g. Oracle)
+        List<TreeItem<DbObject>> schemaItems = connItem.getChildren().stream()
+                .filter(c -> c.getValue() != null && c.getValue().getKind() == Kind.SCHEMA)
+                .toList();
+
+        if (!schemaItems.isEmpty()) {
+            TreeItem<DbObject> targetSchema = findSchemaItem(schemaItems, target.getSchema());
+            if (target.getKind() == Kind.SCHEMA) {
+                if (targetSchema != null) highlightAndSelect(targetSchema);
+                else highlightAndSelect(connItem);
+                return;
+            }
+            if (targetSchema != null) {
+                TreeItem<DbObject> matchedSchema = targetSchema;
+                expandNodeAndThen(matchedSchema, () -> navigateFromFolders(matchedSchema, profile, target));
+                return;
+            }
+        }
+
+        // 3. Directly folder nodes under connection (e.g. SQLite)
+        navigateFromFolders(connItem, profile, target);
+    }
+
+    private void navigateFromDatabase(TreeItem<DbObject> dbItem, ConnectionProfile profile, DbObject target) {
+        // Under database: check if there are SCHEMA nodes (PostgreSQL, SQL Server)
+        List<TreeItem<DbObject>> schemaItems = dbItem.getChildren().stream()
+                .filter(c -> c.getValue() != null && c.getValue().getKind() == Kind.SCHEMA)
+                .toList();
+
+        if (!schemaItems.isEmpty()) {
+            TreeItem<DbObject> targetSchema = findSchemaItem(schemaItems, target.getSchema());
+            if (target.getKind() == Kind.SCHEMA) {
+                if (targetSchema != null) highlightAndSelect(targetSchema);
+                else highlightAndSelect(dbItem);
+                return;
+            }
+            if (targetSchema != null) {
+                TreeItem<DbObject> matchedSchema = targetSchema;
+                expandNodeAndThen(matchedSchema, () -> navigateFromFolders(matchedSchema, profile, target));
+                return;
+            }
+        }
+
+        // Otherwise database directly contains folders (MySQL, MongoDB)
+        navigateFromFolders(dbItem, profile, target);
+    }
+
+    private void navigateFromFolders(TreeItem<DbObject> parentItem, ConnectionProfile profile, DbObject target) {
+        Kind folderKind = folderKindFor(target.getKind());
+        TreeItem<DbObject> folderItem = null;
+        for (TreeItem<DbObject> c : parentItem.getChildren()) {
+            if (c.getValue() != null) {
+                if (c.getValue().getKind() == folderKind || isMatchingFolderName(c.getValue(), target.getKind())) {
+                    folderItem = c;
+                    break;
+                }
+            }
+        }
+
+        if (folderItem == null) {
+            TreeItem<DbObject> direct = findChildByName(parentItem, target.getName());
+            if (direct != null) {
+                highlightAndSelect(direct);
+            } else {
+                highlightAndSelect(parentItem);
+            }
+            return;
+        }
+
+        if (target.getKind() == folderKind) {
+            highlightAndSelect(folderItem);
+            return;
+        }
+
+        TreeItem<DbObject> matchedFolder = folderItem;
+        expandNodeAndThen(matchedFolder, () -> {
+            TreeItem<DbObject> targetItem = findChildByName(matchedFolder, target.getName());
+            if (targetItem != null) {
+                highlightAndSelect(targetItem);
+            } else {
+                highlightAndSelect(matchedFolder);
+            }
+        });
+    }
+
+    private Kind folderKindFor(Kind kind) {
+        return switch (kind) {
+            case TABLE, PARTITION -> Kind.TABLES_FOLDER;
+            case VIEW -> Kind.VIEWS_FOLDER;
+            case COLLECTION -> Kind.COLLECTIONS_FOLDER;
+            case PROCEDURE -> Kind.PROCEDURES_FOLDER;
+            case FUNCTION -> Kind.FUNCTIONS_FOLDER;
+            case SEQUENCE -> Kind.SEQUENCES_FOLDER;
+            default -> Kind.TABLES_FOLDER;
+        };
+    }
+
+    private boolean isMatchingFolderName(DbObject folderObj, Kind targetKind) {
+        if (folderObj == null || folderObj.getName() == null) return false;
+        String name = folderObj.getName().toLowerCase();
+        return switch (targetKind) {
+            case TABLE, PARTITION -> name.contains("table");
+            case VIEW -> name.contains("view");
+            case COLLECTION -> name.contains("collection");
+            case PROCEDURE -> name.contains("procedure");
+            case FUNCTION -> name.contains("function");
+            case SEQUENCE -> name.contains("sequence");
+            default -> false;
+        };
+    }
+
+    private TreeItem<DbObject> findChildByName(TreeItem<DbObject> parent, String name) {
+        if (parent == null || name == null) return null;
+        for (TreeItem<DbObject> child : parent.getChildren()) {
+            if (child.getValue() != null && name.equalsIgnoreCase(child.getValue().getName())) {
+                return child;
+            }
+        }
+        return null;
+    }
+
+    private TreeItem<DbObject> findSchemaItem(List<TreeItem<DbObject>> schemaItems, String schemaName) {
+        if (schemaItems == null || schemaItems.isEmpty()) return null;
+        if (schemaName != null && !schemaName.isBlank()) {
+            for (TreeItem<DbObject> s : schemaItems) {
+                if (schemaName.equalsIgnoreCase(s.getValue().getName())) {
+                    return s;
+                }
+            }
+        }
+        for (TreeItem<DbObject> s : schemaItems) {
+            if ("public".equalsIgnoreCase(s.getValue().getName())) {
+                return s;
+            }
+        }
+        return schemaItems.get(0);
+    }
+
+    private boolean isAlreadyPopulated(TreeItem<DbObject> item) {
+        if (item == null) return false;
+        if (item.getValue() != null && item.getValue().isLoaded()) return true;
+        if (!item.getChildren().isEmpty()) {
+            TreeItem<DbObject> first = item.getChildren().get(0);
+            if (first.getValue() != null && first.getValue().getKind() == Kind.MESSAGE && "Loading…".equals(first.getValue().getName())) {
+                return false;
+            }
+            return true;
+        }
+        return false;
+    }
+
+    private void expandNodeAndThen(TreeItem<DbObject> item, Runnable continuation) {
+        if (item == null) return;
+        DbObject obj = item.getValue();
+        if (obj == null) return;
+
+        boolean populated = isAlreadyPopulated(item);
+        if (item.isExpanded() && populated) {
+            continuation.run();
+            return;
+        }
+
+        if (populated) {
+            obj.setLoaded(true);
+            item.setExpanded(true);
+            continuation.run();
+            return;
+        }
+
+        pendingLoadCallbacks.put(item, continuation);
+        item.setExpanded(true);
+    }
+
+    public void highlightAndSelect(TreeItem<DbObject> item) {
+        if (item == null) return;
+        tree.getSelectionModel().select(item);
+        updateToolbarState(item);
+        tree.requestFocus();
+        if (mainWindow != null && item.getValue() != null) {
+            mainWindow.setStatus("Selected " + item.getValue().getName() + " in Database Explorer");
+        }
+        Platform.runLater(() -> {
+            int row = tree.getRow(item);
+            if (row >= 0) {
+                tree.scrollTo(row);
+            }
+        });
     }
 }
