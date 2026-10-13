@@ -637,5 +637,139 @@ public class SchemaTreePaneToolbarTest {
             assertNotNull(iconFromIconsHelper, "Icons.forDatabase helper must return icon for " + type);
         }
     }
+
+    @Test
+    public void testPostgresServerObjectsHierarchyAndToolbar() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = createPostgreSqlProfile();
+        pane.addConnectionNode(profile);
+
+        TreeItem<DbObject> connItem = pane.findConnectionItem(profile);
+        assertNotNull(connItem);
+        connItem.getChildren().clear();
+
+        // 1. Database nodes and Server Objects node matching DataGrip Image 1
+        DbObject dbObj = new DbObject("thunder_db", Kind.DATABASE, "thunder_db", null);
+        TreeItem<DbObject> dbItem = new TreeItem<>(dbObj);
+        DbObject serverObjectsObj = new DbObject("Server Objects", Kind.SERVER_OBJECTS);
+        TreeItem<DbObject> serverObjectsItem = new TreeItem<>(serverObjectsObj);
+        connItem.getChildren().addAll(dbItem, serverObjectsItem);
+
+        // Verify Server Objects toolbar state
+        pane.updateToolbarState(serverObjectsItem);
+        assertFalse(pane.getJumpToConsoleButton().isDisabled(), "Jump to Console must be ACTIVE for Server Objects");
+        assertTrue(pane.getGoToDdlButton().isDisabled(), "Go to DDL must be INACTIVE for Server Objects container");
+        assertTrue(pane.getEditDataButton().isDisabled(), "Edit Data must be INACTIVE for Server Objects container");
+
+        // 2. roles and tablespaces folders matching DataGrip Image 2
+        DbObject rolesFolderObj = new DbObject("roles", Kind.ROLES_FOLDER);
+        rolesFolderObj.setDetail("16");
+        TreeItem<DbObject> rolesFolderItem = new TreeItem<>(rolesFolderObj);
+
+        DbObject tablespacesFolderObj = new DbObject("tablespaces", Kind.TABLESPACES_FOLDER);
+        tablespacesFolderObj.setDetail("2");
+        TreeItem<DbObject> tablespacesFolderItem = new TreeItem<>(tablespacesFolderObj);
+
+        serverObjectsItem.getChildren().addAll(rolesFolderItem, tablespacesFolderItem);
+
+        // Verify roles folder toolbar state
+        pane.updateToolbarState(rolesFolderItem);
+        assertFalse(pane.getJumpToConsoleButton().isDisabled());
+        assertTrue(pane.getGoToDdlButton().isDisabled());
+        assertTrue(pane.getEditDataButton().isDisabled());
+
+        // 3. Specific role and tablespace items matching DataGrip Image 3
+        DbObject roleObj = new DbObject("pg_checkpoint", Kind.ROLE);
+        TreeItem<DbObject> roleItem = new TreeItem<>(roleObj);
+        rolesFolderItem.getChildren().add(roleItem);
+
+        DbObject tsObj = new DbObject("pg_default", Kind.TABLESPACE);
+        TreeItem<DbObject> tsItem = new TreeItem<>(tsObj);
+        tablespacesFolderItem.getChildren().add(tsItem);
+
+        // Verify role toolbar state: Jump to Console ACTIVE, Go to DDL ACTIVE, Edit Data INACTIVE!
+        pane.updateToolbarState(roleItem);
+        assertFalse(pane.getJumpToConsoleButton().isDisabled(), "Jump to Console must be ACTIVE for role");
+        assertFalse(pane.getGoToDdlButton().isDisabled(), "Go to DDL must be ACTIVE for role (Image 4)");
+        assertTrue(pane.getEditDataButton().isDisabled(), "Edit Data must be INACTIVE for role");
+
+        // Verify tablespace toolbar state: Jump to Console ACTIVE, Go to DDL ACTIVE, Edit Data INACTIVE!
+        pane.updateToolbarState(tsItem);
+        assertFalse(pane.getJumpToConsoleButton().isDisabled(), "Jump to Console must be ACTIVE for tablespace");
+        assertFalse(pane.getGoToDdlButton().isDisabled(), "Go to DDL must be ACTIVE for tablespace (Image 5)");
+        assertTrue(pane.getEditDataButton().isDisabled(), "Edit Data must be INACTIVE for tablespace");
+    }
+
+    @Test
+    public void testServerObjectsNavigationAndSelection() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = createPostgreSqlProfile();
+        pane.addConnectionNode(profile);
+
+        TreeItem<DbObject> connItem = pane.findConnectionItem(profile);
+        assertNotNull(connItem);
+        connItem.getChildren().clear();
+
+        DbObject serverObjectsObj = new DbObject("Server Objects", Kind.SERVER_OBJECTS);
+        TreeItem<DbObject> serverObjectsItem = new TreeItem<>(serverObjectsObj);
+        connItem.getChildren().add(serverObjectsItem);
+
+        DbObject rolesFolderObj = new DbObject("roles", Kind.ROLES_FOLDER);
+        TreeItem<DbObject> rolesFolderItem = new TreeItem<>(rolesFolderObj);
+        DbObject tsFolderObj = new DbObject("tablespaces", Kind.TABLESPACES_FOLDER);
+        TreeItem<DbObject> tsFolderItem = new TreeItem<>(tsFolderObj);
+        serverObjectsItem.getChildren().addAll(rolesFolderItem, tsFolderItem);
+
+        DbObject roleObj = new DbObject("pg_checkpoint", Kind.ROLE);
+        TreeItem<DbObject> roleItem = new TreeItem<>(roleObj);
+        rolesFolderItem.getChildren().add(roleItem);
+
+        DbObject tsObj = new DbObject("pg_default", Kind.TABLESPACE);
+        TreeItem<DbObject> tsItem = new TreeItem<>(tsObj);
+        tsFolderItem.getChildren().add(tsItem);
+
+        // Select role pg_checkpoint in tree
+        pane.selectObjectInTree(profile, roleObj);
+        assertTrue(connItem.isExpanded());
+        assertTrue(serverObjectsItem.isExpanded());
+        assertTrue(rolesFolderItem.isExpanded());
+        assertEquals(roleItem, pane.getSelectedItem());
+
+        // Select tablespace pg_default in tree
+        pane.selectObjectInTree(profile, tsObj);
+        assertTrue(tsFolderItem.isExpanded());
+        assertEquals(tsItem, pane.getSelectedItem());
+    }
+
+    @Test
+    public void testServerObjectsDdlGeneration() throws Exception {
+        ConnectionProfile profile = createPostgreSqlProfile();
+
+        // 1. Role DDL matching Image 4
+        DbObject role = new DbObject("pg_checkpoint", Kind.ROLE);
+        String roleDdl = com.roze.dbnavigator.db.DdlGeneratorService.generateDdl(profile, role);
+        assertNotNull(roleDdl);
+        assertTrue(roleDdl.contains("-- auto-generated definition"), "Must contain auto-generated definition header");
+        assertTrue(roleDdl.contains("create role pg_checkpoint"), "Must contain create role pg_checkpoint matching Image 4");
+
+        // 2. Tablespace DDL matching Image 5
+        DbObject tablespace = new DbObject("pg_default", Kind.TABLESPACE);
+        String tsDdl = com.roze.dbnavigator.db.DdlGeneratorService.generateDdl(profile, tablespace);
+        assertNotNull(tsDdl);
+        assertTrue(tsDdl.contains("-- auto-generated definition"));
+        assertTrue(tsDdl.contains("create tablespace pg_default owner postgres location ???;"),
+                "Must contain exact DataGrip definition matching Image 5");
+    }
+
+    @Test
+    public void testServerObjectsIcons() {
+        ConnectionProfile profile = createPostgreSqlProfile();
+
+        assertNotNull(Icons.forObject(new DbObject("Server Objects", Kind.SERVER_OBJECTS), profile, true));
+        assertNotNull(Icons.forObject(new DbObject("roles", Kind.ROLES_FOLDER), profile, true));
+        assertNotNull(Icons.forObject(new DbObject("tablespaces", Kind.TABLESPACES_FOLDER), profile, true));
+        assertNotNull(Icons.forObject(new DbObject("pg_checkpoint", Kind.ROLE), profile, true));
+        assertNotNull(Icons.forObject(new DbObject("pg_default", Kind.TABLESPACE), profile, true));
+    }
 }
 

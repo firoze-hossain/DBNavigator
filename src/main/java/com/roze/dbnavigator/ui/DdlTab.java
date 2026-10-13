@@ -40,7 +40,7 @@ public class DdlTab extends Tab {
         this.object = object;
 
         setText(object.getName() + " (DDL) [" + profile.getName() + "]");
-        setGraphic(Icons.of(FontAwesomeSolid.FILE_CODE, "#c77dbb", 11));
+        setGraphic(Icons.forObject(object, profile, true));
         setTooltip(new Tooltip(profile.getName()
                 + (object.getCatalog() != null ? " ▸ " + object.getCatalog() : "")
                 + (object.getSchema() != null ? " ▸ " + object.getSchema() : "")

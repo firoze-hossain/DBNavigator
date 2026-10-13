@@ -222,6 +222,63 @@ public final class MetadataService {
     }
 
     /**
+     * Loads PostgreSQL cluster-level Server Objects container: roles and tablespaces,
+     * matching DataGrip's Explorer tree hierarchy and live counts.
+     */
+    public static List<DbObject> loadServerObjects(ConnectionProfile profile) throws Exception {
+        int rolesCount = 0;
+        int tablespacesCount = 0;
+        try (Connection conn = client(profile, null).getConnection();
+             Statement stmt = conn.createStatement()) {
+            try (ResultSet rs = stmt.executeQuery("SELECT count(*) FROM pg_roles")) {
+                if (rs.next()) rolesCount = rs.getInt(1);
+            }
+            try (ResultSet rs = stmt.executeQuery("SELECT count(*) FROM pg_tablespace")) {
+                if (rs.next()) tablespacesCount = rs.getInt(1);
+            }
+        }
+        DbObject rolesFolder = new DbObject("roles", Kind.ROLES_FOLDER);
+        rolesFolder.setDetail(String.valueOf(rolesCount));
+
+        DbObject tablespacesFolder = new DbObject("tablespaces", Kind.TABLESPACES_FOLDER);
+        tablespacesFolder.setDetail(String.valueOf(tablespacesCount));
+
+        return List.of(rolesFolder, tablespacesFolder);
+    }
+
+    /**
+     * Queries PostgreSQL pg_roles to list cluster-level roles/users.
+     */
+    public static List<DbObject> loadRoles(ConnectionProfile profile) throws Exception {
+        List<DbObject> list = new ArrayList<>();
+        try (Connection conn = client(profile, null).getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SELECT rolname FROM pg_roles ORDER BY rolname")) {
+            while (rs.next()) {
+                String name = rs.getString(1);
+                list.add(new DbObject(name, Kind.ROLE));
+            }
+        }
+        return list;
+    }
+
+    /**
+     * Queries PostgreSQL pg_tablespace to list cluster-level tablespaces.
+     */
+    public static List<DbObject> loadTablespaces(ConnectionProfile profile) throws Exception {
+        List<DbObject> list = new ArrayList<>();
+        try (Connection conn = client(profile, null).getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SELECT spcname FROM pg_tablespace ORDER BY spcname")) {
+            while (rs.next()) {
+                String name = rs.getString(1);
+                list.add(new DbObject(name, Kind.TABLESPACE));
+            }
+        }
+        return list;
+    }
+
+    /**
      * Real DATABASE nodes for a real, multi-database StratosCluster - the
      * same real shape PostgreSQL's own connection tree already has, since
      * StratosDB's own real cluster support genuinely is that same shape
