@@ -125,6 +125,7 @@ public class MainWindow {
     ));
 
     private Project currentProject;
+    private boolean isExiting = false;
 
     public MainWindow(Stage stage) {
         this(stage, ProjectStore.getCurrentProject());
@@ -201,9 +202,17 @@ public class MainWindow {
         });
 
         stage.setOnCloseRequest(e -> {
+            if (isExiting) return;
+            if (!confirmExitIfEnabled()) {
+                e.consume();
+                return;
+            }
+            isExiting = true;
             saveWindowState();
             saveSession();
-            schemaPane.saveTreeState();
+            if (schemaPane != null) {
+                schemaPane.saveTreeState();
+            }
         });
         updateWindowTitle();
     }
@@ -1291,10 +1300,37 @@ public class MainWindow {
         AppSettingsStore.save(s);
     }
 
+    public static boolean confirmExitIfEnabled(javafx.stage.Window owner) {
+        AppSettingsStore.Settings s = AppSettingsStore.get();
+        if (s == null || !s.isConfirmExit()) {
+            return true;
+        }
+        ConfirmExitDialog.Result result = ConfirmExitDialog.show(owner);
+        if (result != null && result.isConfirmed()) {
+            if (result.isDontAskAgain()) {
+                s.setConfirmExit(false);
+                AppSettingsStore.save(s);
+            }
+            return true;
+        }
+        return false;
+    }
+
+    public boolean confirmExitIfEnabled() {
+        return confirmExitIfEnabled(stage);
+    }
+
     public void closeWindow() {
+        if (isExiting) return;
+        if (!confirmExitIfEnabled()) {
+            return;
+        }
+        isExiting = true;
         saveWindowState();
         saveSession();
-        schemaPane.saveTreeState();
+        if (schemaPane != null) {
+            schemaPane.saveTreeState();
+        }
         stage.close();
     }
 
