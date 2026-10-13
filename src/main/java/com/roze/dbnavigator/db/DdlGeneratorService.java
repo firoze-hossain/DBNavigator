@@ -1,0 +1,430 @@
+package com.roze.dbnavigator.db;
+
+import com.roze.dbnavigator.model.ConnectionProfile;
+import com.roze.dbnavigator.model.ConnectionProfile.DatabaseType;
+import com.roze.dbnavigator.model.DbObject;
+import com.roze.dbnavigator.model.QueryResult;
+
+import java.sql.Connection;
+import java.sql.DatabaseMetaData;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.*;
+
+/**
+ * Service to generate DataGrip-compatible DDL for database objects
+ * (tables, views, schemas, databases, routines, sequences, indexes).
+ */
+public final class DdlGeneratorService {
+
+    private DdlGeneratorService() {}
+
+    /**
+     * Generates a DataGrip-style DDL definition for the specified object.
+     */
+    public static String generateDdl(ConnectionProfile profile, DbObject obj) throws Exception {
+        if (profile == null || obj == null) return "-- No object selected";
+
+        return switch (obj.getKind()) {
+            case TABLE, PARTITION -> generateTableDdl(profile, obj);
+            case VIEW -> generateViewDdl(profile, obj);
+            case SCHEMA -> generateSchemaDdl(profile, obj);
+            case DATABASE -> generateDatabaseDdl(profile, obj);
+            case PROCEDURE, FUNCTION -> generateRoutineDdl(profile, obj);
+            case SEQUENCE -> generateSequenceDdl(profile, obj);
+            case INDEX -> generateIndexDdl(profile, obj);
+            default -> "-- DDL not available for " + obj.getKind() + ": " + obj.getName();
+        };
+    }
+
+    // ------------------------------------------------------------ Table DDL
+
+    private static String generateTableDdl(ConnectionProfile profile, DbObject table) throws Exception {
+        QueryResult columns = MetadataService.loadTableStructure(profile, table);
+        QueryResult indexes = MetadataService.loadTableIndexes(profile, table);
+        List<String> pk = new ArrayList<>();
+        try {
+            pk.addAll(MetadataService.loadPrimaryKeys(profile, table));
+        } catch (Exception ignored) {}
+
+        // Foreign keys map: fkColumnName -> ForeignKeyDef
+        Map<String, ForeignKeyDef> singleColFks = new LinkedHashMap<>();
+        List<CompositeForeignKeyDef> compositeFks = new ArrayList<>();
+        loadForeignKeys(profile, table, singleColFks, compositeFks);
+
+        // Fetch owner if PostgreSQL
+        String owner = (profile.getType() == DatabaseType.POSTGRESQL)
+                ? queryTableOwner(profile, table)
+                : null;
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("-- auto-generated definition\n");
+        sb.append("create table ").append(table.getName()).append("\n(\n");
+
+        List<String> bodyLines = new ArrayList<>();
+
+        for (List<String> row : columns.getRows()) {
+            // row: [Column, Type, Size, Nullable, Default, Key]
+            String colName = row.get(0);
+            String rawType = row.get(1);
+            String size = row.get(2);
+            boolean nullable = "YES".equalsIgnoreCase(row.get(3));
+            String def = row.get(4);
+
+            String formattedType = formatDataType(profile.getType(), rawType, size);
+            StringBuilder line = new StringBuilder("    ")
+                    .append(colName).append(' ').append(formattedType);
+
+            // Default value (if not null / not empty)
+            if (def != null && !def.isBlank() && !def.equalsIgnoreCase("null")) {
+                line.append(" default ").append(def);
+            }
+
+            // Not null
+            if (!nullable) {
+                line.append(" not null");
+            }
+
+            // Column-level constraint/foreign key (DataGrip style)
+            ForeignKeyDef fk = singleColFks.get(colName);
+            if (fk != null) {
+                line.append("\n        constraint ").append(fk.name())
+                        .append("\n            references ").append(fk.targetTable());
+                if (fk.targetColumn() != null && !fk.targetColumn().equalsIgnoreCase("id")
+                        && !fk.targetColumn().equalsIgnoreCase(colName)) {
+                    line.append(" (").append(fk.targetColumn()).append(')');
+                }
+            }
+
+            bodyLines.add(line.toString());
+        }
+
+        // Composite foreign keys
+        for (CompositeForeignKeyDef cfk : compositeFks) {
+            String cfkLine = "    constraint " + cfk.name() + " foreign key ("
+                    + String.join(", ", cfk.localColumns()) + ") references "
+                    + cfk.targetTable() + " (" + String.join(", ", cfk.foreignColumns()) + ")";
+            bodyLines.add(cfkLine);
+        }
+
+        // Primary key
+        if (!pk.isEmpty()) {
+            bodyLines.add("    primary key (" + String.join(", ", pk) + ")");
+        }
+
+        sb.append(String.join(",\n", bodyLines));
+        sb.append("\n);\n");
+
+        // Owner statement
+        if (owner != null && !owner.isBlank()) {
+            sb.append("\nalter table ").append(table.getName())
+                    .append("\n    owner to ").append(owner).append(";\n");
+        }
+
+        // Secondary Indexes (excluding primary key indexes)
+        Map<String, List<String>> indexColumns = new LinkedHashMap<>();
+        Map<String, Boolean> uniqueMap = new LinkedHashMap<>();
+        for (List<String> row : indexes.getRows()) {
+            String idxName = row.get(0);
+            if (idxName == null || isPkIndex(idxName, pk)) continue;
+            indexColumns.computeIfAbsent(idxName, k -> new ArrayList<>()).add(row.get(1));
+            uniqueMap.put(idxName, "YES".equalsIgnoreCase(row.get(2)));
+        }
+
+        for (var entry : indexColumns.entrySet()) {
+            String idxName = entry.getKey();
+            boolean isUnique = Boolean.TRUE.equals(uniqueMap.get(idxName));
+            sb.append('\n');
+            if (isUnique) {
+                sb.append("create unique index ").append(idxName)
+                        .append("\n    on ").append(table.getName())
+                        .append(" (").append(String.join(", ", entry.getValue())).append(");\n");
+            } else {
+                sb.append("create index ").append(idxName)
+                        .append("\n    on ").append(table.getName())
+                        .append(" (").append(String.join(", ", entry.getValue())).append(");\n");
+            }
+        }
+
+        return sb.toString();
+    }
+
+    private static boolean isPkIndex(String indexName, List<String> pk) {
+        if (indexName == null) return false;
+        String lower = indexName.toLowerCase(Locale.ROOT);
+        return lower.endsWith("_pkey") || lower.equals("primary") || lower.startsWith("pk_");
+    }
+
+    private static String formatDataType(DatabaseType dbType, String rawType, String size) {
+        String type = (rawType != null ? rawType.toLowerCase(Locale.ROOT) : "text");
+
+        // Map PostgreSQL internal type names to standard SQL names
+        if (dbType == DatabaseType.POSTGRESQL) {
+            type = switch (type) {
+                case "int8" -> "bigint";
+                case "int4" -> "integer";
+                case "int2" -> "smallint";
+                case "bool" -> "boolean";
+                case "character varying" -> "varchar";
+                case "timestamptz" -> "timestamp with time zone";
+                case "bpchar" -> "char";
+                default -> type;
+            };
+        }
+
+        if (needsSize(type) && size != null && !size.equals("0") && !size.equals("2147483647")) {
+            return type + "(" + size + ")";
+        }
+        return type;
+    }
+
+    private static boolean needsSize(String type) {
+        return type.contains("varchar") || type.equals("char")
+                || type.equals("varbinary") || type.equals("binary");
+    }
+
+    private static void loadForeignKeys(ConnectionProfile profile, DbObject table,
+                                       Map<String, ForeignKeyDef> singleColFks,
+                                       List<CompositeForeignKeyDef> compositeFks) {
+        try (Connection conn = ClientRegistry.jdbc(profile, table.getCatalog()).getConnection()) {
+            DatabaseMetaData meta = conn.getMetaData();
+            String cat = table.getCatalog();
+            if (profile.getType() == DatabaseType.POSTGRESQL) cat = null;
+
+            Map<String, List<String>> localCols = new LinkedHashMap<>();
+            Map<String, List<String>> targetCols = new LinkedHashMap<>();
+            Map<String, String> targetTables = new LinkedHashMap<>();
+
+            try (ResultSet rs = meta.getImportedKeys(cat, table.getSchema(), table.getName())) {
+                while (rs.next()) {
+                    String fkName = rs.getString("FK_NAME");
+                    String fkCol = rs.getString("FKCOLUMN_NAME");
+                    String pkTable = rs.getString("PKTABLE_NAME");
+                    String pkCol = rs.getString("PKCOLUMN_NAME");
+
+                    if (fkName == null) fkName = "fk_" + table.getName() + "_" + fkCol;
+
+                    localCols.computeIfAbsent(fkName, k -> new ArrayList<>()).add(fkCol);
+                    targetCols.computeIfAbsent(fkName, k -> new ArrayList<>()).add(pkCol);
+                    targetTables.putIfAbsent(fkName, pkTable);
+                }
+            }
+
+            for (String fkName : localCols.keySet()) {
+                List<String> lCols = localCols.get(fkName);
+                List<String> tCols = targetCols.get(fkName);
+                String tTable = targetTables.get(fkName);
+
+                if (lCols.size() == 1) {
+                    singleColFks.put(lCols.get(0), new ForeignKeyDef(fkName, tTable, tCols.get(0)));
+                } else {
+                    compositeFks.add(new CompositeForeignKeyDef(fkName, tTable, lCols, tCols));
+                }
+            }
+        } catch (Exception ignored) {
+            // Non-fatal, DDL will still generate without foreign key constraints
+        }
+    }
+
+    private static String queryTableOwner(ConnectionProfile profile, DbObject table) {
+        String sql = "SELECT tableowner FROM pg_tables WHERE schemaname = ? AND tablename = ?";
+        try (Connection conn = ClientRegistry.jdbc(profile, table.getCatalog()).getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, table.getSchema() != null ? table.getSchema() : "public");
+            stmt.setString(2, table.getName());
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString(1);
+                }
+            }
+        } catch (Exception ignored) {}
+        return profile.getUsername() != null && !profile.getUsername().isBlank()
+                ? profile.getUsername()
+                : "postgres";
+    }
+
+    // ------------------------------------------------------------ Schema DDL
+
+    private static String generateSchemaDdl(ConnectionProfile profile, DbObject schema) {
+        String owner = (profile.getType() == DatabaseType.POSTGRESQL)
+                ? querySchemaOwner(profile, schema.getName())
+                : profile.getUsername();
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("-- auto-generated definition\n");
+        sb.append("create schema ").append(schema.getName()).append(";\n");
+
+        if (owner != null && !owner.isBlank()) {
+            sb.append("\nalter schema ").append(schema.getName())
+                    .append(" owner to ").append(owner).append(";\n");
+        }
+        return sb.toString();
+    }
+
+    private static String querySchemaOwner(ConnectionProfile profile, String schemaName) {
+        String sql = "SELECT schema_owner FROM information_schema.schemata WHERE schema_name = ?";
+        try (Connection conn = ClientRegistry.jdbc(profile, null).getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, schemaName);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) return rs.getString(1);
+            }
+        } catch (Exception ignored) {}
+        return profile.getUsername() != null && !profile.getUsername().isBlank()
+                ? profile.getUsername()
+                : "postgres";
+    }
+
+    // ------------------------------------------------------------ Database DDL
+
+    private static String generateDatabaseDdl(ConnectionProfile profile, DbObject database) {
+        String owner = (profile.getType() == DatabaseType.POSTGRESQL)
+                ? queryDatabaseOwner(profile, database.getName())
+                : profile.getUsername();
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("-- auto-generated definition\n");
+        sb.append("create database ").append(database.getName());
+        if (owner != null && !owner.isBlank() && profile.getType() == DatabaseType.POSTGRESQL) {
+            sb.append("\n    with owner ").append(owner);
+        }
+        sb.append(";\n");
+        return sb.toString();
+    }
+
+    private static String queryDatabaseOwner(ConnectionProfile profile, String databaseName) {
+        String sql = "SELECT pg_catalog.pg_get_userbyid(datdba) FROM pg_database WHERE datname = ?";
+        try (Connection conn = ClientRegistry.jdbc(profile, null).getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, databaseName);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) return rs.getString(1);
+            }
+        } catch (Exception ignored) {}
+        return profile.getUsername() != null && !profile.getUsername().isBlank()
+                ? profile.getUsername()
+                : "postgres";
+    }
+
+    // ------------------------------------------------------------ View DDL
+
+    private static String generateViewDdl(ConnectionProfile profile, DbObject view) {
+        if (profile.getType() == DatabaseType.POSTGRESQL) {
+            String sql = "SELECT definition FROM pg_views WHERE schemaname = ? AND viewname = ?";
+            try (Connection conn = ClientRegistry.jdbc(profile, view.getCatalog()).getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, view.getSchema() != null ? view.getSchema() : "public");
+                stmt.setString(2, view.getName());
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        String def = rs.getString(1);
+                        if (def != null && !def.isBlank()) {
+                            StringBuilder sb = new StringBuilder();
+                            sb.append("-- auto-generated definition\n");
+                            sb.append("create view ").append(view.getName()).append(" as\n");
+                            sb.append(def.trim());
+                            if (!def.trim().endsWith(";")) sb.append(';');
+                            sb.append('\n');
+
+                            String owner = queryTableOwner(profile, view);
+                            if (owner != null) {
+                                sb.append("\nalter table ").append(view.getName())
+                                        .append(" owner to ").append(owner).append(";\n");
+                            }
+                            return sb.toString();
+                        }
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+
+        // Generic fallback
+        return "-- auto-generated definition\n"
+                + "create view " + view.getName() + " as\n"
+                + "select * from " + view.qualifiedName() + ";\n";
+    }
+
+    // ------------------------------------------------------------ Routine DDL
+
+    private static String generateRoutineDdl(ConnectionProfile profile, DbObject routine) throws Exception {
+        String source = MetadataService.getRoutineSource(profile, routine);
+        if (source != null && !source.isBlank()) {
+            if (!source.startsWith("--")) {
+                return "-- auto-generated definition\n" + source;
+            }
+            return source;
+        }
+        return "-- Routine source definition for " + routine.getName() + "\n"
+                + "CREATE OR REPLACE FUNCTION " + routine.qualifiedName() + "() ...;\n";
+    }
+
+    // ------------------------------------------------------------ Sequence DDL
+
+    private static String generateSequenceDdl(ConnectionProfile profile, DbObject seq) {
+        if (profile.getType() == DatabaseType.POSTGRESQL) {
+            String sql = "SELECT sequence_name, start_value, minimum_value, maximum_value, increment " +
+                    "FROM information_schema.sequences WHERE sequence_schema = ? AND sequence_name = ?";
+            try (Connection conn = ClientRegistry.jdbc(profile, seq.getCatalog()).getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, seq.getSchema() != null ? seq.getSchema() : "public");
+                stmt.setString(2, seq.getName());
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        StringBuilder sb = new StringBuilder();
+                        sb.append("-- auto-generated definition\n");
+                        sb.append("create sequence ").append(seq.getName());
+                        String inc = rs.getString("increment");
+                        String min = rs.getString("minimum_value");
+                        String max = rs.getString("maximum_value");
+                        String start = rs.getString("start_value");
+
+                        if (inc != null) sb.append("\n    increment by ").append(inc);
+                        if (min != null) sb.append("\n    minvalue ").append(min);
+                        if (max != null) sb.append("\n    maxvalue ").append(max);
+                        if (start != null) sb.append("\n    start with ").append(start);
+                        sb.append(";\n");
+
+                        String owner = queryTableOwner(profile, seq);
+                        if (owner != null) {
+                            sb.append("\nalter sequence ").append(seq.getName())
+                                    .append(" owner to ").append(owner).append(";\n");
+                        }
+                        return sb.toString();
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+
+        return "-- auto-generated definition\ncreate sequence " + seq.getName() + ";\n";
+    }
+
+    // ------------------------------------------------------------ Index DDL
+
+    private static String generateIndexDdl(ConnectionProfile profile, DbObject index) {
+        if (profile.getType() == DatabaseType.POSTGRESQL) {
+            String sql = "SELECT indexdef FROM pg_indexes WHERE schemaname = ? AND indexname = ?";
+            try (Connection conn = ClientRegistry.jdbc(profile, index.getCatalog()).getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, index.getSchema() != null ? index.getSchema() : "public");
+                stmt.setString(2, index.getName());
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        String def = rs.getString(1);
+                        if (def != null && !def.isBlank()) {
+                            return "-- auto-generated definition\n" + def.trim() + ";\n";
+                        }
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+        return "-- auto-generated definition\ncreate index " + index.getName() + ";\n";
+    }
+
+    // ------------------------------------------------------------ Records
+
+    private record ForeignKeyDef(String name, String targetTable, String targetColumn) {}
+
+    private record CompositeForeignKeyDef(String name, String targetTable,
+                                          List<String> localColumns, List<String> foreignColumns) {}
+}

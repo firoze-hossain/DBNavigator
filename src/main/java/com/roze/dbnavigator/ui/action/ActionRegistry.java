@@ -4182,7 +4182,8 @@ public final class ActionRegistry {
 
         AnAction editData = AnAction.builder("editor.edit.data", "Edit Data")
                 .icon(FontAwesomeSolid.TABLE, "#57965c", 11)
-                .onAction(ctx -> ctx.setStatus("Edit Data"))
+                .accelerator(new KeyCodeCombination(KeyCode.F4))
+                .onAction(MainWindow::editSelectedData)
                 .build();
         AnAction selectInDbExplorer = AnAction.builder("editor.select.in.db.explorer", "Select in Database Explorer")
                 .onAction(MainWindow::focusOrToggleSchemaExplorer)
@@ -4277,11 +4278,18 @@ public final class ActionRegistry {
         if (gotoRel != null) editorGoTo.add(gotoRel);
         AnAction gotoTest = manager.getAction("nav.goto.test");
         if (gotoTest != null) editorGoTo.add(gotoTest);
-        AnAction jumpDdl = manager.getAction("editor.jump.ddl");
-        if (jumpDdl != null) editorGoTo.add(jumpDdl);
-        else {
-            editorGoTo.add(AnAction.builder("editor.jump.ddl", "DDL").onAction(ctx -> ctx.setStatus("DDL")).build());
-        }
+        AnAction jumpDdl = AnAction.builder("editor.jump.ddl", "DDL")
+                .description("Go to DDL for the selected database object")
+                .onAction(MainWindow::goToSelectedDdl)
+                .build();
+        manager.registerAction(jumpDdl);
+        editorGoTo.add(jumpDdl);
+
+        AnAction goToDdlAction = AnAction.builder("navigate.go.to.ddl", "Go to DDL")
+                .description("Open auto-generated DDL definition for the selected object")
+                .onAction(MainWindow::goToSelectedDdl)
+                .build();
+        manager.registerAction(goToDdlAction);
         editorGoTo.add(editorGotoRow);
         editorGoTo.add(dbGoToGroup);
 
