@@ -398,7 +398,7 @@ public class SchemaTreePane extends VBox {
             case TABLE, VIEW, PARTITION, VIRTUAL_VIEW -> mainWindow.openDataTab(profile, obj);
             case COLLECTION  -> mainWindow.openMongoTab(profile, obj);
             case PROCEDURE, FUNCTION -> mainWindow.openRoutineSourceTab(profile, obj);
-            case ROLE, TABLESPACE, ACCESS_METHOD, CAST, EXTENSION, LANGUAGE -> mainWindow.openDdlTab(profile, obj);
+            case ROLE, TABLESPACE, ACCESS_METHOD, CAST, EXTENSION, LANGUAGE, SEQUENCE -> mainWindow.openDdlTab(profile, obj);
             case CONNECTION, SERVER_OBJECTS, ROLES_FOLDER, TABLESPACES_FOLDER,
                  DATABASE_OBJECTS, ACCESS_METHODS_FOLDER, CASTS_FOLDER, EXTENSIONS_FOLDER, LANGUAGES_FOLDER,
                  VIRTUAL_VIEWS_FOLDER -> item.setExpanded(!item.isExpanded());
@@ -477,7 +477,7 @@ public class SchemaTreePane extends VBox {
             throws Exception {
         return switch (obj.getKind()) {
             case DATABASE -> MetadataService.loadDatabaseChildren(profile, obj);
-            case SCHEMA   -> MetadataService.loadSchemaChildren(obj);
+            case SCHEMA   -> MetadataService.loadSchemaChildren(profile, obj);
             case TABLE, PARTITION -> MetadataService.loadTableChildren(profile, obj);
             case COLLECTION -> MetadataService.loadCollectionChildren(profile, obj);
             case SERVER_OBJECTS -> MetadataService.loadServerObjects(profile);
@@ -1300,6 +1300,11 @@ public class SchemaTreePane extends VBox {
         T get() throws Exception;
     }
 
+    ContextMenu buildMenuForTest(DbObject obj, ConnectionProfile profile) {
+        DbObjectCell cell = new DbObjectCell();
+        return cell.buildMenu(obj, profile);
+    }
+
     // ------------------------------------------------------------------ cell
 
     /** Renders each node with an icon, name, and dim detail text; builds context menus. */
@@ -1609,6 +1614,26 @@ public class SchemaTreePane extends VBox {
                         reload();
                     });
                     menu.getItems().addAll(openData, editData, goToDdl, jumpConsole, new SeparatorMenuItem(), refresh);
+                }
+                case SEQUENCE -> {
+                    MenuItem goToDdl = new MenuItem("Go to DDL");
+                    goToDdl.setOnAction(e -> goToDdl());
+                    MenuItem jumpConsole = new MenuItem("Jump to Query Console");
+                    jumpConsole.setOnAction(e -> jumpToQueryConsole());
+                    MenuItem refresh = new MenuItem("Refresh");
+                    refresh.setOnAction(e -> {
+                        obj.setLoaded(false);
+                        mainWindow.setStatus("Refreshed " + obj.getName());
+                        reload();
+                    });
+                    menu.getItems().addAll(goToDdl, jumpConsole, new SeparatorMenuItem(), refresh);
+                }
+                case TABLES_FOLDER, VIEWS_FOLDER, PROCEDURES_FOLDER, FUNCTIONS_FOLDER, SEQUENCES_FOLDER -> {
+                    MenuItem refresh = new MenuItem("Refresh");
+                    refresh.setOnAction(e -> refreshNode(getTreeItem(), obj, obj.getName()));
+                    MenuItem jumpConsole = new MenuItem("Jump to Query Console");
+                    jumpConsole.setOnAction(e -> jumpToQueryConsole());
+                    menu.getItems().addAll(jumpConsole, new SeparatorMenuItem(), refresh);
                 }
                 default -> {
                     return null;
