@@ -74,7 +74,9 @@ public class DataTab extends Tab {
         this.table = table;
 
         setText(table.getName());
-        setGraphic(Icons.of(FontAwesomeSolid.TABLE, "#4a88c7", 11));
+        setGraphic(table.getKind() == DbObject.Kind.VIRTUAL_VIEW
+                ? Icons.of(FontAwesomeSolid.TABLE, "#c77dbb", 11)
+                : Icons.of(FontAwesomeSolid.TABLE, "#4a88c7", 11));
         setTooltip(new Tooltip(breadcrumbText()));
 
         submitButton.setGraphic(Icons.of(FontAwesomeSolid.CHECK, "#57965c", 11));
@@ -257,7 +259,9 @@ public class DataTab extends Tab {
         if (table.getCatalog() != null && !table.getCatalog().isBlank()) {
             sb.append("  ▸  ").append(table.getCatalog());
         }
-        if (table.getSchema() != null && !table.getSchema().isBlank()) {
+        if (table.getKind() == DbObject.Kind.VIRTUAL_VIEW) {
+            sb.append("  ▸  virtual views");
+        } else if (table.getSchema() != null && !table.getSchema().isBlank()) {
             sb.append("  ▸  ").append(table.getSchema());
         }
         sb.append("  ▸  ").append(table.getName());
@@ -275,8 +279,10 @@ public class DataTab extends Tab {
             // PostgreSQL tables without a PK (typically partitions) are still
             // editable through their physical row identity. Both values are
             // needed because ctid can repeat in different child partitions.
+            // Views and virtual views do NOT have physical row identity (tableoid/ctid).
             if (pkColumns.isEmpty()
-                    && profile.getType() == ConnectionProfile.DatabaseType.POSTGRESQL) {
+                    && profile.getType() == ConnectionProfile.DatabaseType.POSTGRESQL
+                    && (table.getKind() == DbObject.Kind.TABLE || table.getKind() == DbObject.Kind.PARTITION)) {
                 useCtid = true;
                 pkColumns.add("tableoid");
                 pkColumns.add("ctid");
@@ -375,11 +381,26 @@ public class DataTab extends Tab {
         AppExecutor.run(() -> {
             try {
                 var client = ClientRegistry.jdbc(profile, table.getCatalog());
-                QueryResult result = client.fetchTablePage(
-                        table.qualifiedName(), currentPage * pageSize, pageSize,
-                        where, order, useCtid);
+                QueryResult result;
+                try {
+                    result = client.fetchTablePage(
+                            table.qualifiedName(), currentPage * pageSize, pageSize,
+                            where, order, useCtid);
+                } catch (Exception ex) {
+                    if (useCtid) {
+                        useCtid = false;
+                        pkColumns.remove("tableoid");
+                        pkColumns.remove("ctid");
+                        result = client.fetchTablePage(
+                                table.qualifiedName(), currentPage * pageSize, pageSize,
+                                where, order, false);
+                    } else {
+                        throw ex;
+                    }
+                }
                 if (totalRows < 0) {
-                    if (where.isBlank() && profile.getType() == ConnectionProfile.DatabaseType.POSTGRESQL) {
+                    if (where.isBlank() && profile.getType() == ConnectionProfile.DatabaseType.POSTGRESQL
+                            && (table.getKind() == DbObject.Kind.TABLE || table.getKind() == DbObject.Kind.PARTITION)) {
                         long estimate = MetadataService.estimateRowCount(profile, table);
                         if (estimate >= 0) {
                             totalRows = estimate;
@@ -401,26 +422,29 @@ public class DataTab extends Tab {
                         }
                     }
                 }
+                final QueryResult finalResult = result;
                 Platform.runLater(() -> {
-                    editManager.configure(table.qualifiedName(), pkColumns, columnTypes, result);
+                    editManager.configure(table.qualifiedName(), pkColumns, columnTypes, finalResult);
                     grid.setRowNumberOffset(currentPage * PAGE_SIZE);
-                    grid.showResult(result);
+                    grid.showResult(finalResult);
 
                     // Fewer rows than a full page means we've now directly observed the
                     // true end, regardless of what an earlier estimate suggested.
-                    if (result.getRows().size() < PAGE_SIZE) {
-                        totalRows = (long) currentPage * PAGE_SIZE + result.getRows().size();
+                    if (finalResult.getRows().size() < PAGE_SIZE) {
+                        totalRows = (long) currentPage * PAGE_SIZE + finalResult.getRows().size();
                         totalRowsExact = true;
                     }
                     refreshPager();
 
-                    statusLabel.setText(result.getRows().size() + " row(s) in "
-                            + result.getExecutionMillis() + " ms"
+                    statusLabel.setText(finalResult.getRows().size() + " row(s) in "
+                            + finalResult.getExecutionMillis() + " ms"
                             + (editManager.isEditable()
                                 ? (useCtid
                                     ? "  ·  editable via row id (no primary key)"
                                     : "  ·  double-click a cell to edit, select rows + Delete to remove")
-                                : "  ·  read-only (no primary key)"));
+                                : (table.getKind() == DbObject.Kind.VIRTUAL_VIEW
+                                    ? "  ·  virtual view (read-only)"
+                                    : "  ·  read-only (no primary key)")));
                 });
             } catch (Exception ex) {
                 String msg = ex.getMessage() == null ? ex.toString() : ex.getMessage();

@@ -6,11 +6,16 @@ public class DbObject {
     public enum Kind {
         CONNECTION, DATABASE, SCHEMA,
         SERVER_OBJECTS, ROLES_FOLDER, TABLESPACES_FOLDER,
+        DATABASE_OBJECTS,
+        ACCESS_METHODS_FOLDER, CASTS_FOLDER, EXTENSIONS_FOLDER, LANGUAGES_FOLDER,
+        VIRTUAL_VIEWS_FOLDER,
         TABLES_FOLDER, VIEWS_FOLDER, PROCEDURES_FOLDER, FUNCTIONS_FOLDER,
         SEQUENCES_FOLDER, COLLECTIONS_FOLDER,
         COLUMNS_FOLDER, INDEXES_FOLDER, PARTITIONS_FOLDER, KEYS_FOLDER, FOREIGN_KEYS_FOLDER, FIELDS_FOLDER,
         TABLE, VIEW, PROCEDURE, FUNCTION, SEQUENCE, COLLECTION,
         ROLE, TABLESPACE,
+        ACCESS_METHOD, CAST, EXTENSION, LANGUAGE,
+        VIRTUAL_VIEW,
         COLUMN, INDEX, PARTITION, KEY, FOREIGN_KEY, FIELD,
         MESSAGE
     }
@@ -63,6 +68,9 @@ public class DbObject {
 
     /** Fully qualified name for use in SQL. */
     public String qualifiedName() {
+        if (kind == Kind.VIRTUAL_VIEW && "sessions".equalsIgnoreCase(name)) {
+            return "pg_stat_activity";
+        }
         StringBuilder sb = new StringBuilder();
         if (schema != null && !schema.isBlank()) {
             sb.append(quote(schema)).append('.');

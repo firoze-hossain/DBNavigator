@@ -10,6 +10,7 @@ import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.*;
 
 /**
@@ -36,6 +37,11 @@ public final class DdlGeneratorService {
             case INDEX -> generateIndexDdl(profile, obj);
             case ROLE -> generateRoleDdl(profile, obj);
             case TABLESPACE -> generateTablespaceDdl(profile, obj);
+            case ACCESS_METHOD -> generateAccessMethodDdl(profile, obj);
+            case CAST -> generateCastDdl(profile, obj);
+            case EXTENSION -> generateExtensionDdl(profile, obj);
+            case LANGUAGE -> generateLanguageDdl(profile, obj);
+            case VIRTUAL_VIEW -> generateVirtualViewDdl(profile, obj);
             default -> "-- DDL not available for " + obj.getKind() + ": " + obj.getName();
         };
     }
@@ -502,6 +508,276 @@ public final class DdlGeneratorService {
         }
         return sb.toString();
     }
+
+    // ------------------------------------------------------------ Access Method DDL
+
+    private static String generateAccessMethodDdl(ConnectionProfile profile, DbObject obj) {
+        StringBuilder sb = new StringBuilder();
+        String amName = obj.getName();
+        sb.append("-- access method ").append(amName).append("\n\n");
+        String typeStr = "index";
+        String handler = amName + "handler";
+        String desc = null;
+
+        if (profile.getType() == DatabaseType.POSTGRESQL) {
+            String sql = "SELECT amname, amtype, amhandler::regproc::text AS handler, " +
+                         "obj_description(oid, 'pg_am') AS description FROM pg_am WHERE amname = ?";
+            try (Connection conn = ClientRegistry.jdbc(profile, obj.getCatalog()).getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, amName);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        String t = rs.getString("amtype");
+                        if ("t".equalsIgnoreCase(t)) typeStr = "table";
+                        else if ("i".equalsIgnoreCase(t)) typeStr = "index";
+                        String h = rs.getString("handler");
+                        if (h != null && !h.isBlank()) handler = h;
+                        desc = rs.getString("description");
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+
+        sb.append("create access method ").append(amName).append(" type ").append(typeStr);
+        if (handler != null && !handler.isBlank()) {
+            sb.append(" handler ").append(handler);
+        }
+        sb.append(";\n");
+
+        if (desc != null && !desc.isBlank()) {
+            sb.append("\ncomment on access method ").append(amName).append(" is '")
+              .append(desc.replace("'", "''")).append("';\n");
+        }
+        return sb.toString();
+    }
+
+    // ------------------------------------------------------------ Cast DDL
+
+    private static String generateCastDdl(ConnectionProfile profile, DbObject obj) {
+        StringBuilder sb = new StringBuilder();
+        String name = obj.getName();
+        String source = name;
+        String target = "";
+        if (name.contains(" as ")) {
+            String[] parts = name.split(" as ", 2);
+            source = parts[0].trim();
+            target = parts[1].trim();
+        }
+
+        sb.append("-- cast ").append(source).append(" as ").append(target).append("\n\n");
+        sb.append("create cast (").append(source).append(" as ").append(target).append(")");
+
+        String castFunc = target + "(" + source + ")";
+        String castContext = null;
+        String castMethod = "f";
+        String desc = null;
+
+        if (profile.getType() == DatabaseType.POSTGRESQL) {
+            String sql = """
+                SELECT
+                    CASE WHEN c.castfunc = 0 THEN NULL ELSE c.castfunc::regprocedure::text END AS cast_func,
+                    c.castcontext,
+                    c.castmethod,
+                    obj_description(c.oid, 'pg_cast') AS description
+                FROM pg_cast c
+                JOIN pg_type t1 ON c.castsource = t1.oid
+                JOIN pg_type t2 ON c.casttarget = t2.oid
+                WHERE t1.typname = ? AND t2.typname = ?
+            """;
+            try (Connection conn = ClientRegistry.jdbc(profile, obj.getCatalog()).getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, source);
+                stmt.setString(2, target);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        castFunc = rs.getString("cast_func");
+                        castContext = rs.getString("castcontext");
+                        castMethod = rs.getString("castmethod");
+                        desc = rs.getString("description");
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+
+        if ("b".equalsIgnoreCase(castMethod)) {
+            sb.append(" without function");
+        } else if ("i".equalsIgnoreCase(castMethod)) {
+            sb.append(" with inout");
+        } else if (castFunc != null && !castFunc.isBlank()) {
+            sb.append(" with function ").append(castFunc);
+        }
+
+        if ("a".equalsIgnoreCase(castContext)) {
+            sb.append(" as assignment");
+        } else if ("i".equalsIgnoreCase(castContext)) {
+            sb.append(" as implicit");
+        }
+        sb.append(";\n");
+
+        if (desc != null && !desc.isBlank()) {
+            sb.append("\ncomment on cast (").append(source).append(" as ").append(target)
+              .append(") is '").append(desc.replace("'", "''")).append("';\n");
+        }
+        return sb.toString();
+    }
+
+    // ------------------------------------------------------------ Extension DDL
+
+    private static String generateExtensionDdl(ConnectionProfile profile, DbObject obj) {
+        StringBuilder sb = new StringBuilder();
+        String extName = obj.getName();
+        sb.append("-- extension ").append(extName).append("\n\n");
+        String schema = "pg_catalog";
+        String version = "1.0";
+        String desc = null;
+
+        if (profile.getType() == DatabaseType.POSTGRESQL) {
+            String sql = """
+                SELECT e.extname, n.nspname AS extnamespace, e.extversion,
+                       obj_description(e.oid, 'pg_extension') AS description
+                FROM pg_extension e
+                LEFT JOIN pg_namespace n ON e.extnamespace = n.oid
+                WHERE e.extname = ?
+            """;
+            try (Connection conn = ClientRegistry.jdbc(profile, obj.getCatalog()).getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, extName);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        String s = rs.getString("extnamespace");
+                        if (s != null && !s.isBlank()) schema = s;
+                        String v = rs.getString("extversion");
+                        if (v != null && !v.isBlank()) version = v;
+                        desc = rs.getString("description");
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+
+        sb.append("create extension ").append(extName);
+        if (schema != null && !schema.isBlank()) {
+            sb.append(" schema ").append(schema);
+        }
+        if (version != null && !version.isBlank()) {
+            sb.append(" version '").append(version).append("'");
+        }
+        sb.append(";\n");
+
+        if (desc != null && !desc.isBlank()) {
+            sb.append("\ncomment on extension ").append(extName).append(" is '")
+              .append(desc.replace("'", "''")).append("';\n");
+        }
+        return sb.toString();
+    }
+
+    // ------------------------------------------------------------ Language DDL
+
+    private static String generateLanguageDdl(ConnectionProfile profile, DbObject obj) {
+        StringBuilder sb = new StringBuilder();
+        String langName = obj.getName();
+        sb.append("-- language ").append(langName).append("\n\n");
+        boolean isPl = false;
+        boolean trusted = false;
+        String callHandler = null;
+        String inlineHandler = null;
+        String validatorHandler = "c".equalsIgnoreCase(langName) ? "pg_catalog.fmgr_c_validator" : null;
+        String desc = "c".equalsIgnoreCase(langName) ? "ISO C language for functions" : null;
+
+        if (profile.getType() == DatabaseType.POSTGRESQL) {
+            String sql = """
+                SELECT
+                    l.lanname,
+                    l.lanispl,
+                    l.lanpltrusted,
+                    (SELECT n.nspname || '.' || p.proname FROM pg_proc p JOIN pg_namespace n ON p.pronamespace = n.oid WHERE p.oid = l.lanplcallfoid) AS call_handler,
+                    (SELECT n.nspname || '.' || p.proname FROM pg_proc p JOIN pg_namespace n ON p.pronamespace = n.oid WHERE p.oid = l.laninline) AS inline_handler,
+                    (SELECT n.nspname || '.' || p.proname FROM pg_proc p JOIN pg_namespace n ON p.pronamespace = n.oid WHERE p.oid = l.lanvalidator) AS validator_handler,
+                    obj_description(l.oid, 'pg_language') AS description
+                FROM pg_language l
+                WHERE l.lanname = ?
+            """;
+            try (Connection conn = ClientRegistry.jdbc(profile, obj.getCatalog()).getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, langName);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        isPl = rs.getBoolean("lanispl");
+                        trusted = rs.getBoolean("lanpltrusted");
+                        callHandler = rs.getString("call_handler");
+                        inlineHandler = rs.getString("inline_handler");
+                        validatorHandler = rs.getString("validator_handler");
+                        desc = rs.getString("description");
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+
+        sb.append("create ");
+        if (trusted && isPl) {
+            sb.append("trusted procedural ");
+        } else if (isPl) {
+            sb.append("procedural ");
+        }
+        sb.append("language ").append(langName);
+        if (callHandler != null && !callHandler.isBlank()) {
+            sb.append(" handler ").append(callHandler);
+        }
+        if (inlineHandler != null && !inlineHandler.isBlank()) {
+            sb.append(" inline ").append(inlineHandler);
+        }
+        if (validatorHandler != null && !validatorHandler.isBlank()) {
+            sb.append(" validator ").append(validatorHandler);
+        }
+        sb.append(";\n");
+
+        if (desc != null && !desc.isBlank()) {
+            sb.append("\ncomment on language ").append(langName).append(" is '")
+              .append(desc.replace("'", "''")).append("';\n");
+        }
+        return sb.toString();
+    }
+
+    // ------------------------------------------------------------ Virtual View DDL
+
+    private static String generateVirtualViewDdl(ConnectionProfile profile, DbObject obj) {
+        StringBuilder sb = new StringBuilder();
+        String catalog = obj.getCatalog() != null ? obj.getCatalog() : profile.getDatabase();
+        sb.append("-- virtual view ").append(catalog != null ? catalog + "." : "").append(obj.getName()).append("\n\n");
+        sb.append("create virtual view ").append(obj.getName()).append(" as\n");
+
+        List<String> cols = new ArrayList<>();
+        if (profile.getType() == DatabaseType.POSTGRESQL && "sessions".equalsIgnoreCase(obj.getName())) {
+            String sql = "SELECT column_name FROM information_schema.columns " +
+                         "WHERE table_name = 'pg_stat_activity' AND table_schema = 'pg_catalog' " +
+                         "ORDER BY ordinal_position";
+            try (Connection conn = ClientRegistry.jdbc(profile, obj.getCatalog()).getConnection();
+                 Statement stmt = conn.createStatement();
+                 ResultSet rs = stmt.executeQuery(sql)) {
+                while (rs.next()) {
+                    cols.add(rs.getString(1));
+                }
+            } catch (Exception ignored) {}
+        }
+
+        if (cols.isEmpty()) {
+            cols = List.of(
+                    "pid", "datname", "usename", "application_name",
+                    "client_addr", "client_port", "backend_start", "xact_start",
+                    "query_start", "state_change", "wait_event_type", "wait_event",
+                    "state", "backend_xid", "backend_xmin", "query_id", "query",
+                    "backend_type"
+            );
+        }
+
+        sb.append("select ").append(cols.get(0));
+        for (int i = 1; i < cols.size(); i++) {
+            sb.append(",\n       ").append(cols.get(i));
+        }
+        sb.append("\nfrom pg_stat_activity;\n");
+        return sb.toString();
+    }
+
+
 
     // ------------------------------------------------------------ Records
 
