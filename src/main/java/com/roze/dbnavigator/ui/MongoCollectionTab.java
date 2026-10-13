@@ -30,6 +30,8 @@ public class MongoCollectionTab extends Tab {
     /** Used by MainWindow's Split Right/Down and Reopen Closed Tab. */
     public ConnectionProfile getProfileForReopen() { return profile; }
     public DbObject getCollectionForReopen() { return collection; }
+    public ConnectionProfile getProfile() { return profile; }
+    public DbObject getCollection() { return collection; }
     private final ResultGrid grid = new ResultGrid();
     private final MongoGridEditManager editManager;
     private final TextField filterField = new TextField();

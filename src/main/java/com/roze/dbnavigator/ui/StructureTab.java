@@ -27,7 +27,12 @@ import java.util.*;
  */
 public class StructureTab extends Tab {
 
+    private final ConnectionProfile profile;
+    private final DbObject table;
+
     public StructureTab(ConnectionProfile profile, DbObject table) {
+        this.profile = profile;
+        this.table = table;
         setText(table.getName() + " [structure]");
         setGraphic(Icons.of(FontAwesomeSolid.SITEMAP, "#c77dbb", 11));
         setTooltip(new Tooltip(profile.getName()
@@ -95,6 +100,14 @@ public class StructureTab extends Tab {
                 });
             }
         });
+    }
+
+    public ConnectionProfile getProfile() {
+        return profile;
+    }
+
+    public DbObject getTable() {
+        return table;
     }
 
     // ------------------------------------------------------------ DDL builder
