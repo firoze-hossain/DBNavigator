@@ -175,7 +175,7 @@ public final class MetadataService {
                     yield loadSchemas(conn, profile, null);
                 }
             }
-            case SQLITE -> objectFolders(null, null);
+            case SQLITE -> List.of(new DbObject("main", Kind.SCHEMA, null, "main"));
             // Real, but conditional, just like the database filter above:
             // a real, multi-database StratosCluster gets real, individually
             // expandable DATABASE nodes (PostgreSQL's own pattern) - a plain,
@@ -515,7 +515,100 @@ public final class MetadataService {
         if (profile != null && profile.getType() == DatabaseType.POSTGRESQL) {
             return loadPostgresSchemaChildren(profile, schema);
         }
+        if (profile != null && profile.getType() == DatabaseType.SQLITE) {
+            return loadSqliteSchemaChildren(profile, schema);
+        }
+        if (profile != null && profile.getType() == DatabaseType.ORACLE) {
+            return loadOracleSchemaChildren(profile, schema);
+        }
         return objectFolders(schema.getCatalog(), schema.getSchema());
+    }
+
+    private static List<DbObject> loadOracleSchemaChildren(ConnectionProfile profile, DbObject schema) {
+        String owner = (schema.getSchema() != null && !schema.getSchema().isBlank())
+                ? schema.getSchema().toUpperCase(Locale.ROOT)
+                : schema.getName().toUpperCase(Locale.ROOT);
+
+        int tablesCount = 0;
+        int viewsCount = 0;
+        int routinesCount = 0;
+        int seqsCount = 0;
+
+        try (Connection conn = client(profile, null).getConnection();
+             PreparedStatement ps = conn.prepareStatement(
+                     "SELECT object_type, count(*) FROM all_objects WHERE owner = ? "
+                     + "AND object_type IN ('TABLE', 'VIEW', 'PROCEDURE', 'FUNCTION', 'PACKAGE', 'SEQUENCE') "
+                     + "GROUP BY object_type")) {
+            ps.setString(1, owner);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String type = rs.getString(1);
+                    int count = rs.getInt(2);
+                    if ("TABLE".equalsIgnoreCase(type)) tablesCount += count;
+                    else if ("VIEW".equalsIgnoreCase(type)) viewsCount += count;
+                    else if ("SEQUENCE".equalsIgnoreCase(type)) seqsCount += count;
+                    else routinesCount += count;
+                }
+            }
+        } catch (Exception ignored) {
+            return objectFolders(schema.getCatalog(), schema.getSchema());
+        }
+
+        List<DbObject> folders = new ArrayList<>();
+        if (tablesCount > 0) {
+            DbObject tablesFolder = folder("tables", Kind.TABLES_FOLDER, schema.getCatalog(), schema.getSchema());
+            tablesFolder.setDetail(String.valueOf(tablesCount));
+            folders.add(tablesFolder);
+        }
+        if (viewsCount > 0) {
+            DbObject viewsFolder = folder("views", Kind.VIEWS_FOLDER, schema.getCatalog(), schema.getSchema());
+            viewsFolder.setDetail(String.valueOf(viewsCount));
+            folders.add(viewsFolder);
+        }
+        if (routinesCount > 0) {
+            DbObject routinesFolder = folder("routines", Kind.PROCEDURES_FOLDER, schema.getCatalog(), schema.getSchema());
+            routinesFolder.setDetail(String.valueOf(routinesCount));
+            folders.add(routinesFolder);
+        }
+        if (seqsCount > 0) {
+            DbObject seqsFolder = folder("sequences", Kind.SEQUENCES_FOLDER, schema.getCatalog(), schema.getSchema());
+            seqsFolder.setDetail(String.valueOf(seqsCount));
+            folders.add(seqsFolder);
+        }
+
+        return folders.isEmpty() ? objectFolders(schema.getCatalog(), schema.getSchema()) : folders;
+    }
+
+    private static List<DbObject> loadSqliteSchemaChildren(ConnectionProfile profile, DbObject schema) {
+        int tablesCount = 0;
+        int viewsCount = 0;
+        try (Connection conn = client(profile, null).getConnection();
+             Statement stmt = conn.createStatement()) {
+            try (ResultSet rs = stmt.executeQuery(
+                    "SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'")) {
+                if (rs.next()) tablesCount = rs.getInt(1);
+            }
+            try (ResultSet rs = stmt.executeQuery(
+                    "SELECT count(*) FROM sqlite_master WHERE type = 'view'")) {
+                if (rs.next()) viewsCount = rs.getInt(1);
+            }
+        } catch (Exception ignored) {
+            return objectFolders(null, schema.getSchema());
+        }
+
+        List<DbObject> folders = new ArrayList<>();
+        DbObject tablesFolder = folder("tables", Kind.TABLES_FOLDER, null, schema.getSchema());
+        if (tablesCount > 0) {
+            tablesFolder.setDetail(String.valueOf(tablesCount));
+        }
+        folders.add(tablesFolder);
+
+        if (viewsCount > 0) {
+            DbObject viewsFolder = folder("views", Kind.VIEWS_FOLDER, null, schema.getSchema());
+            viewsFolder.setDetail(String.valueOf(viewsCount));
+            folders.add(viewsFolder);
+        }
+        return folders;
     }
 
     private static List<DbObject> loadPostgresSchemaChildren(ConnectionProfile profile, DbObject schema) {
@@ -699,10 +792,11 @@ public final class MetadataService {
             return loadPostgresTablesWithoutPartitions(profile, catalog, schema);
         }
 
+        String schemaPattern = (profile.getType() == DatabaseType.SQLITE) ? null : schema;
         List<DbObject> result = new ArrayList<>();
         try (Connection conn = client(profile, catalog).getConnection();
              ResultSet rs = conn.getMetaData().getTables(
-                     metaCatalog(profile, catalog), schema, "%", new String[]{type})) {
+                     metaCatalog(profile, catalog), schemaPattern, "%", new String[]{type})) {
             while (rs.next()) {
                 result.add(new DbObject(rs.getString("TABLE_NAME"), kind, catalog, schema));
             }

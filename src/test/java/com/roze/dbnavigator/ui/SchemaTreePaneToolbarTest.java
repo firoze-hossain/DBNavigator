@@ -354,6 +354,16 @@ public class SchemaTreePaneToolbarTest {
         return null;
     }
 
+    private MenuItem findItem(ContextMenu menu, String text) {
+        if (menu == null) return null;
+        for (MenuItem item : menu.getItems()) {
+            if (item.getText() != null && item.getText().startsWith(text)) {
+                return item;
+            }
+        }
+        return null;
+    }
+
     private boolean menuHasItem(Menu parent, String text) {
         if (parent == null) return false;
         for (MenuItem item : parent.getItems()) {
@@ -1082,6 +1092,301 @@ public class SchemaTreePaneToolbarTest {
         assertNotNull(children);
         assertFalse(children.isEmpty());
         assertTrue(children.stream().anyMatch(c -> c.getKind() == Kind.TABLES_FOLDER));
+    }
+
+    @Test
+    public void testPostgreSqlDatabaseContextMenuMatchingDataGripImage1() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = createPostgreSqlProfile();
+        DbObject dbObj = new DbObject("nexacom_db", Kind.DATABASE, "nexacom_db", null);
+        ContextMenu menu = pane.buildMenuForTest(dbObj, profile);
+        assertNotNull(menu, "PostgreSQL Database context menu must not be null");
+
+        MenuItem modify = findItem(menu, "Modify Database");
+        assertNotNull(modify, "PostgreSQL Database must have 'Modify Database…'");
+
+        Menu newMenu = findMenu(menu, "New");
+        assertNotNull(newMenu);
+        assertTrue(menuHasItem(newMenu, "Query Console"));
+        assertTrue(menuHasItem(newMenu, "Query File"));
+        assertTrue(menuHasItem(newMenu, "Schema"));
+        assertTrue(menuHasItem(newMenu, "Language"));
+        assertTrue(menuHasItem(newMenu, "Database"));
+        assertTrue(menuHasItem(newMenu, "Role"));
+        assertTrue(menuHasItem(newMenu, "User"));
+        assertTrue(menuHasItem(newMenu, "Virtual View"));
+        assertTrue(menuHasItem(newMenu, "Data Source"));
+        assertTrue(menuHasItem(newMenu, "Driver"));
+
+        MenuItem rename = findItem(menu, "Rename");
+        assertNotNull(rename);
+        assertFalse(rename.isDisable(), "Rename must be ENABLED for PostgreSQL database");
+
+        MenuItem drop = findItem(menu, "Drop");
+        assertNotNull(drop);
+        assertFalse(drop.isDisable(), "Drop must be ENABLED for PostgreSQL database");
+
+        Menu impExp = findMenu(menu, "Import/Export");
+        assertNotNull(impExp);
+        assertTrue(menuHasItem(impExp, "Dump with pg_dump"));
+    }
+
+    @Test
+    public void testPostgreSqlSchemaContextMenu() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = createPostgreSqlProfile();
+        DbObject schemaObj = new DbObject("public", Kind.SCHEMA, "nexacom_db", "public");
+        ContextMenu menu = pane.buildMenuForTest(schemaObj, profile);
+        assertNotNull(menu, "PostgreSQL Schema context menu must not be null");
+
+        MenuItem modify = findItem(menu, "Modify Schema");
+        assertNotNull(modify, "PostgreSQL Schema must have 'Modify Schema…'");
+
+        Menu newMenu = findMenu(menu, "New");
+        assertNotNull(newMenu);
+        assertTrue(menuHasItem(newMenu, "Query Console"));
+        assertTrue(menuHasItem(newMenu, "Query File"));
+        assertTrue(menuHasItem(newMenu, "Table"));
+        assertTrue(menuHasItem(newMenu, "View"));
+        assertTrue(menuHasItem(newMenu, "Materialized View"));
+        assertTrue(menuHasItem(newMenu, "Sequence"));
+        assertTrue(menuHasItem(newMenu, "Routine"));
+        assertTrue(menuHasItem(newMenu, "Virtual View"));
+
+        MenuItem rename = findItem(menu, "Rename");
+        assertNotNull(rename);
+        assertFalse(rename.isDisable(), "Rename must be ENABLED for PostgreSQL schema");
+
+        MenuItem drop = findItem(menu, "Drop");
+        assertNotNull(drop);
+        assertFalse(drop.isDisable(), "Drop must be ENABLED for PostgreSQL schema");
+    }
+
+    @Test
+    public void testMySqlDatabaseContextMenuMatchingDataGripImage2() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = new ConnectionProfile();
+        profile.setId("mysql-1");
+        profile.setName("mysql@localhost");
+        profile.setType(ConnectionProfile.DatabaseType.MYSQL);
+        DbObject dbObj = new DbObject("bagisto", Kind.DATABASE, "bagisto", null);
+        ContextMenu menu = pane.buildMenuForTest(dbObj, profile);
+        assertNotNull(menu, "MySQL context menu must not be null");
+
+        MenuItem modify = findItem(menu, "Modify Schema");
+        assertNotNull(modify, "MySQL must have 'Modify Schema…' (DataGrip Image 2)");
+        assertNull(findItem(menu, "Modify Database"), "MySQL must NOT have 'Modify Database…'");
+
+        Menu newMenu = findMenu(menu, "New");
+        assertNotNull(newMenu);
+        assertTrue(menuHasItem(newMenu, "Query Console"));
+        assertTrue(menuHasItem(newMenu, "Query File"));
+        assertTrue(menuHasItem(newMenu, "Table"));
+        assertTrue(menuHasItem(newMenu, "View"));
+        assertTrue(menuHasItem(newMenu, "Schema"));
+        assertTrue(menuHasItem(newMenu, "User"));
+        assertTrue(menuHasItem(newMenu, "Role"));
+        assertTrue(menuHasItem(newMenu, "Virtual View"));
+        assertTrue(menuHasItem(newMenu, "Data Source"));
+        assertTrue(menuHasItem(newMenu, "Driver"));
+
+        MenuItem rename = findItem(menu, "Rename");
+        assertNotNull(rename);
+        assertTrue(rename.isDisable(), "Rename must be DISABLED for MySQL");
+
+        MenuItem drop = findItem(menu, "Drop");
+        assertNotNull(drop);
+        assertFalse(drop.isDisable(), "Drop must be ENABLED for MySQL");
+
+        Menu impExp = findMenu(menu, "Import/Export");
+        assertNotNull(impExp);
+        assertTrue(menuHasItem(impExp, "Dump with mysqldump"));
+    }
+
+    @Test
+    public void testMariaDbDatabaseContextMenuMatchingDataGripImage4() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = new ConnectionProfile();
+        profile.setId("maria-1");
+        profile.setName("mariadb@localhost");
+        profile.setType(ConnectionProfile.DatabaseType.MARIADB);
+        DbObject dbObj = new DbObject("nation", Kind.DATABASE, "nation", null);
+        ContextMenu menu = pane.buildMenuForTest(dbObj, profile);
+        assertNotNull(menu, "MariaDB context menu must not be null");
+
+        MenuItem modify = findItem(menu, "Modify Schema");
+        assertNotNull(modify, "MariaDB must have 'Modify Schema…' (DataGrip Image 4)");
+        assertNull(findItem(menu, "Modify Database"), "MariaDB must NOT have 'Modify Database…'");
+
+        Menu newMenu = findMenu(menu, "New");
+        assertNotNull(newMenu);
+        assertTrue(menuHasItem(newMenu, "Query Console"));
+        assertTrue(menuHasItem(newMenu, "Query File"));
+        assertTrue(menuHasItem(newMenu, "Table"));
+        assertTrue(menuHasItem(newMenu, "View"));
+        assertTrue(menuHasItem(newMenu, "Schema"));
+        assertTrue(menuHasItem(newMenu, "User"));
+        assertTrue(menuHasItem(newMenu, "Role"));
+        assertTrue(menuHasItem(newMenu, "Virtual View"));
+
+        MenuItem rename = findItem(menu, "Rename");
+        assertNotNull(rename);
+        assertTrue(rename.isDisable(), "Rename must be DISABLED for MariaDB");
+
+        MenuItem drop = findItem(menu, "Drop");
+        assertNotNull(drop);
+        assertFalse(drop.isDisable(), "Drop must be ENABLED for MariaDB");
+
+        Menu impExp = findMenu(menu, "Import/Export");
+        assertNotNull(impExp);
+        assertTrue(menuHasItem(impExp, "Dump with mariadb-dump"));
+    }
+
+    @Test
+    public void testMongoDbDatabaseContextMenuMatchingDataGripImage3() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = new ConnectionProfile();
+        profile.setId("mongo-1");
+        profile.setName("studentdb@localhost");
+        profile.setType(ConnectionProfile.DatabaseType.MONGODB);
+        DbObject dbObj = new DbObject("studentdb", Kind.DATABASE, "studentdb", null);
+        ContextMenu menu = pane.buildMenuForTest(dbObj, profile);
+        assertNotNull(menu, "MongoDB context menu must not be null");
+
+        assertNull(findItem(menu, "Modify Database"), "MongoDB must NOT have 'Modify Database…'");
+        assertNull(findItem(menu, "Modify Schema"), "MongoDB must NOT have 'Modify Schema…'");
+
+        Menu newMenu = findMenu(menu, "New");
+        assertNotNull(newMenu);
+        assertTrue(menuHasItem(newMenu, "Query Console"));
+        assertTrue(menuHasItem(newMenu, "Query File"));
+        assertTrue(menuHasItem(newMenu, "Collection"));
+        assertTrue(menuHasItem(newMenu, "Virtual View"));
+
+        MenuItem rename = findItem(menu, "Rename");
+        assertNotNull(rename);
+        assertTrue(rename.isDisable(), "Rename must be DISABLED for MongoDB");
+
+        MenuItem drop = findItem(menu, "Drop");
+        assertNotNull(drop);
+        assertFalse(drop.isDisable(), "Drop must be ENABLED for MongoDB");
+
+        Menu impExp = findMenu(menu, "Import/Export");
+        assertNotNull(impExp);
+        assertTrue(menuHasItem(impExp, "Dump with mongodump"));
+    }
+
+    @Test
+    public void testSqliteSchemaContextMenuMatchingDataGripImage5() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = new ConnectionProfile();
+        profile.setId("sqlite-1");
+        profile.setName("identifier.sqlite");
+        profile.setType(ConnectionProfile.DatabaseType.SQLITE);
+        DbObject schemaObj = new DbObject("main", Kind.SCHEMA, null, "main");
+        ContextMenu menu = pane.buildMenuForTest(schemaObj, profile);
+        assertNotNull(menu, "SQLite context menu must not be null");
+
+        assertNull(findItem(menu, "Modify Schema"), "SQLite 'main' must NOT have 'Modify Schema…'");
+        assertNull(findItem(menu, "Modify Database"), "SQLite 'main' must NOT have 'Modify Database…'");
+
+        Menu newMenu = findMenu(menu, "New");
+        assertNotNull(newMenu);
+        assertTrue(menuHasItem(newMenu, "Query Console"));
+        assertTrue(menuHasItem(newMenu, "Query File"));
+        assertTrue(menuHasItem(newMenu, "Table"));
+        assertTrue(menuHasItem(newMenu, "View"));
+        assertTrue(menuHasItem(newMenu, "Virtual View"));
+
+        MenuItem rename = findItem(menu, "Rename");
+        assertNotNull(rename);
+        assertTrue(rename.isDisable(), "Rename must be DISABLED for SQLite");
+
+        MenuItem drop = findItem(menu, "Drop");
+        assertNotNull(drop);
+        assertTrue(drop.isDisable(), "Drop must be DISABLED for SQLite 'main' schema");
+
+        Menu impExp = findMenu(menu, "Import/Export");
+        assertNotNull(impExp);
+        assertTrue(menuHasItem(impExp, "Export SQLite Database"));
+    }
+
+    @Test
+    public void testSqlServerDatabaseContextMenuMatchingDataGripImage1() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = new ConnectionProfile();
+        profile.setId("mssql-1");
+        profile.setName("mssql@localhost");
+        profile.setType(ConnectionProfile.DatabaseType.SQLSERVER);
+        DbObject dbObj = new DbObject("CompanyDB", Kind.DATABASE, "CompanyDB", null);
+        ContextMenu menu = pane.buildMenuForTest(dbObj, profile);
+        assertNotNull(menu, "SQL Server context menu must not be null");
+
+        MenuItem modify = findItem(menu, "Modify Database");
+        assertNotNull(modify, "SQL Server database must have 'Modify Database…' (DataGrip Image 1)");
+        assertNull(findItem(menu, "Modify Schema"), "SQL Server database must NOT have 'Modify Schema…'");
+
+        Menu newMenu = findMenu(menu, "New");
+        assertNotNull(newMenu);
+        assertTrue(menuHasItem(newMenu, "Query Console"));
+        assertTrue(menuHasItem(newMenu, "Query File"));
+        assertTrue(menuHasItem(newMenu, "Schema"));
+        assertTrue(menuHasItem(newMenu, "Database Principal"));
+        assertTrue(menuHasItem(newMenu, "Database"));
+        assertTrue(menuHasItem(newMenu, "Server Principal"));
+        assertTrue(menuHasItem(newMenu, "Virtual View"));
+
+        MenuItem rename = findItem(menu, "Rename");
+        assertNotNull(rename);
+        assertTrue(rename.isDisable(), "Rename must be DISABLED for SQL Server database (DataGrip Image 1)");
+
+        MenuItem drop = findItem(menu, "Drop");
+        assertNotNull(drop);
+        assertFalse(drop.isDisable(), "Drop must be ENABLED for SQL Server database (DataGrip Image 1)");
+
+        Menu objActions = findMenu(menu, "Object Actions");
+        assertNotNull(objActions, "SQL Server database must have 'Object Actions >' (DataGrip Image 1)");
+
+        Menu impExp = findMenu(menu, "Import/Export");
+        assertNotNull(impExp);
+        assertTrue(menuHasItem(impExp, "Export Database with bcp"));
+    }
+
+    @Test
+    public void testOracleSchemaContextMenuMatchingDataGripImage2() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = new ConnectionProfile();
+        profile.setId("oracle-1");
+        profile.setName("oracle@localhost");
+        profile.setType(ConnectionProfile.DatabaseType.ORACLE);
+        DbObject schemaObj = new DbObject("HELLO", Kind.SCHEMA, null, "HELLO");
+        ContextMenu menu = pane.buildMenuForTest(schemaObj, profile);
+        assertNotNull(menu, "Oracle context menu must not be null");
+
+        assertNull(findItem(menu, "Modify Schema"), "Oracle schema must NOT have 'Modify Schema…' (DataGrip Image 2)");
+        assertNull(findItem(menu, "Modify Database"), "Oracle schema must NOT have 'Modify Database…'");
+
+        Menu newMenu = findMenu(menu, "New");
+        assertNotNull(newMenu);
+        assertTrue(menuHasItem(newMenu, "Query Console"));
+        assertTrue(menuHasItem(newMenu, "Query File"));
+        assertFalse(menuHasItem(newMenu, "Table"), "Oracle schema + New must NOT have 'Table' directly (DataGrip Image 2)");
+        assertFalse(menuHasItem(newMenu, "View"), "Oracle schema + New must NOT have 'View' directly (DataGrip Image 2)");
+        assertTrue(menuHasItem(newMenu, "Virtual View"));
+
+        MenuItem rename = findItem(menu, "Rename");
+        assertNotNull(rename);
+        assertTrue(rename.isDisable(), "Rename must be DISABLED for Oracle schema (DataGrip Image 2)");
+
+        assertNull(findMenu(menu, "Object Actions"), "Oracle schema must NOT have 'Object Actions >' (DataGrip Image 2)");
+
+        MenuItem drop = findItem(menu, "Drop");
+        assertNotNull(drop);
+        assertTrue(drop.isDisable(), "Drop must be DISABLED for Oracle schema in tree (DataGrip Image 2)");
+
+        Menu impExp = findMenu(menu, "Import/Export");
+        assertNotNull(impExp);
+        assertTrue(menuHasItem(impExp, "Export with expdp"));
     }
 }
 
