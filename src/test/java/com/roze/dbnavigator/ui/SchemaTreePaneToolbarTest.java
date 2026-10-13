@@ -771,5 +771,265 @@ public class SchemaTreePaneToolbarTest {
         assertNotNull(Icons.forObject(new DbObject("pg_checkpoint", Kind.ROLE), profile, true));
         assertNotNull(Icons.forObject(new DbObject("pg_default", Kind.TABLESPACE), profile, true));
     }
+
+    @Test
+    public void testDatabaseObjectsAndVirtualViewsHierarchyAndToolbarStates() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = createPostgreSqlProfile();
+        pane.addConnectionNode(profile);
+
+        TreeItem<DbObject> connItem = pane.getTree().getRoot().getChildren().get(0);
+        DbObject dbObj = new DbObject("thunder_db", Kind.DATABASE, "thunder_db", null);
+        TreeItem<DbObject> dbItem = new TreeItem<>(dbObj);
+        connItem.getChildren().add(dbItem);
+
+        // 1. Database Objects folder
+        DbObject dbObjectsObj = new DbObject("Database Objects", Kind.DATABASE_OBJECTS, "thunder_db", null);
+        TreeItem<DbObject> dbObjectsItem = new TreeItem<>(dbObjectsObj);
+        dbItem.getChildren().add(dbObjectsItem);
+
+        pane.updateToolbarState(dbObjectsItem);
+        assertFalse(pane.getJumpToConsoleButton().isDisabled(), "Jump to Console ACTIVE for Database Objects");
+        assertTrue(pane.getGoToDdlButton().isDisabled(), "Go to DDL INACTIVE for Database Objects folder");
+        assertTrue(pane.getEditDataButton().isDisabled(), "Edit Data INACTIVE for Database Objects folder");
+
+        // 2. access methods folder and item
+        DbObject amFolderObj = new DbObject("access methods", Kind.ACCESS_METHODS_FOLDER, "thunder_db", null);
+        amFolderObj.setDetail("7");
+        TreeItem<DbObject> amFolderItem = new TreeItem<>(amFolderObj);
+        dbObjectsItem.getChildren().add(amFolderItem);
+
+        pane.updateToolbarState(amFolderItem);
+        assertFalse(pane.getJumpToConsoleButton().isDisabled(), "Jump to Console ACTIVE for access methods folder");
+        assertTrue(pane.getGoToDdlButton().isDisabled(), "Go to DDL INACTIVE for access methods folder");
+        assertTrue(pane.getEditDataButton().isDisabled(), "Edit Data INACTIVE for access methods folder");
+
+        DbObject brinObj = new DbObject("brin", Kind.ACCESS_METHOD, "thunder_db", null);
+        TreeItem<DbObject> brinItem = new TreeItem<>(brinObj);
+        amFolderItem.getChildren().add(brinItem);
+
+        pane.updateToolbarState(brinItem);
+        assertFalse(pane.getJumpToConsoleButton().isDisabled(), "Jump to Console ACTIVE for brin");
+        assertFalse(pane.getGoToDdlButton().isDisabled(), "Go to DDL ACTIVE for brin matching Image 2");
+        assertTrue(pane.getEditDataButton().isDisabled(), "Edit Data INACTIVE for brin");
+
+        // 3. casts folder and item
+        DbObject castsFolderObj = new DbObject("casts", Kind.CASTS_FOLDER, "thunder_db", null);
+        castsFolderObj.setDetail("229");
+        TreeItem<DbObject> castsFolderItem = new TreeItem<>(castsFolderObj);
+        dbObjectsItem.getChildren().add(castsFolderItem);
+
+        pane.updateToolbarState(castsFolderItem);
+        assertFalse(pane.getJumpToConsoleButton().isDisabled(), "Jump to Console ACTIVE for casts folder");
+        assertTrue(pane.getGoToDdlButton().isDisabled(), "Go to DDL INACTIVE for casts folder");
+        assertTrue(pane.getEditDataButton().isDisabled(), "Edit Data INACTIVE for casts folder");
+
+        DbObject castObj = new DbObject("bit as int8", Kind.CAST, "thunder_db", null);
+        TreeItem<DbObject> castItem = new TreeItem<>(castObj);
+        castsFolderItem.getChildren().add(castItem);
+
+        pane.updateToolbarState(castItem);
+        assertFalse(pane.getJumpToConsoleButton().isDisabled(), "Jump to Console ACTIVE for bit as int8");
+        assertFalse(pane.getGoToDdlButton().isDisabled(), "Go to DDL ACTIVE for bit as int8 matching Image 3");
+        assertTrue(pane.getEditDataButton().isDisabled(), "Edit Data INACTIVE for bit as int8");
+
+        // 4. extensions folder and item
+        DbObject extFolderObj = new DbObject("extensions", Kind.EXTENSIONS_FOLDER, "thunder_db", null);
+        extFolderObj.setDetail("1");
+        TreeItem<DbObject> extFolderItem = new TreeItem<>(extFolderObj);
+        dbObjectsItem.getChildren().add(extFolderItem);
+
+        pane.updateToolbarState(extFolderItem);
+        assertFalse(pane.getJumpToConsoleButton().isDisabled(), "Jump to Console ACTIVE for extensions folder");
+        assertTrue(pane.getGoToDdlButton().isDisabled(), "Go to DDL INACTIVE for extensions folder");
+        assertTrue(pane.getEditDataButton().isDisabled(), "Edit Data INACTIVE for extensions folder");
+
+        DbObject extObj = new DbObject("plpgsql", Kind.EXTENSION, "thunder_db", null);
+        TreeItem<DbObject> extItem = new TreeItem<>(extObj);
+        extFolderItem.getChildren().add(extItem);
+
+        pane.updateToolbarState(extItem);
+        assertFalse(pane.getJumpToConsoleButton().isDisabled(), "Jump to Console ACTIVE for plpgsql");
+        assertFalse(pane.getGoToDdlButton().isDisabled(), "Go to DDL ACTIVE for plpgsql matching Image 4");
+        assertTrue(pane.getEditDataButton().isDisabled(), "Edit Data INACTIVE for plpgsql");
+
+        // 5. languages folder and item
+        DbObject langFolderObj = new DbObject("languages", Kind.LANGUAGES_FOLDER, "thunder_db", null);
+        langFolderObj.setDetail("4");
+        TreeItem<DbObject> langFolderItem = new TreeItem<>(langFolderObj);
+        dbObjectsItem.getChildren().add(langFolderItem);
+
+        pane.updateToolbarState(langFolderItem);
+        assertFalse(pane.getJumpToConsoleButton().isDisabled(), "Jump to Console ACTIVE for languages folder");
+        assertTrue(pane.getGoToDdlButton().isDisabled(), "Go to DDL INACTIVE for languages folder");
+        assertTrue(pane.getEditDataButton().isDisabled(), "Edit Data INACTIVE for languages folder");
+
+        DbObject langObj = new DbObject("c", Kind.LANGUAGE, "thunder_db", null);
+        TreeItem<DbObject> langItem = new TreeItem<>(langObj);
+        langFolderItem.getChildren().add(langItem);
+
+        pane.updateToolbarState(langItem);
+        assertFalse(pane.getJumpToConsoleButton().isDisabled(), "Jump to Console ACTIVE for c");
+        assertFalse(pane.getGoToDdlButton().isDisabled(), "Go to DDL ACTIVE for c matching Image 5");
+        assertTrue(pane.getEditDataButton().isDisabled(), "Edit Data INACTIVE for c");
+
+        // 6. virtual views folder and sessions item
+        DbObject vvFolderObj = new DbObject("virtual views", Kind.VIRTUAL_VIEWS_FOLDER, "thunder_db", null);
+        vvFolderObj.setDetail("1");
+        TreeItem<DbObject> vvFolderItem = new TreeItem<>(vvFolderObj);
+        dbItem.getChildren().add(vvFolderItem);
+
+        pane.updateToolbarState(vvFolderItem);
+        assertFalse(pane.getJumpToConsoleButton().isDisabled(), "Jump to Console ACTIVE for virtual views folder");
+        assertTrue(pane.getGoToDdlButton().isDisabled(), "Go to DDL INACTIVE for virtual views folder");
+        assertTrue(pane.getEditDataButton().isDisabled(), "Edit Data INACTIVE for virtual views folder");
+
+        DbObject sessionsObj = new DbObject("sessions", Kind.VIRTUAL_VIEW, "thunder_db", null);
+        TreeItem<DbObject> sessionsItem = new TreeItem<>(sessionsObj);
+        vvFolderItem.getChildren().add(sessionsItem);
+
+        pane.updateToolbarState(sessionsItem);
+        // sessions virtual view: ALL THREE ACTIVE! Jump to Console, Go to DDL, and Edit Data!
+        assertFalse(pane.getJumpToConsoleButton().isDisabled(), "Jump to Console ACTIVE for sessions virtual view");
+        assertFalse(pane.getGoToDdlButton().isDisabled(), "Go to DDL ACTIVE for sessions virtual view");
+        assertFalse(pane.getEditDataButton().isDisabled(), "Edit Data ACTIVE for sessions virtual view");
+    }
+
+    @Test
+    public void testDatabaseObjectsAndVirtualViewsDdlGeneration() throws Exception {
+        ConnectionProfile profile = createPostgreSqlProfile();
+
+        // 1. Access Method DDL matching Image 2
+        DbObject am = new DbObject("brin", Kind.ACCESS_METHOD, "thunder_db", null);
+        String amDdl = com.roze.dbnavigator.db.DdlGeneratorService.generateDdl(profile, am);
+        assertNotNull(amDdl);
+        assertTrue(amDdl.contains("-- access method brin"), "Must contain access method header");
+        assertTrue(amDdl.contains("create access method brin type index handler brinhandler;"),
+                "Must match create access method statement in Image 2");
+
+        // 2. Cast DDL matching Image 3
+        DbObject cast = new DbObject("bit as int8", Kind.CAST, "thunder_db", null);
+        String castDdl = com.roze.dbnavigator.db.DdlGeneratorService.generateDdl(profile, cast);
+        assertNotNull(castDdl);
+        assertTrue(castDdl.contains("-- cast bit as int8"), "Must contain cast header");
+        assertTrue(castDdl.contains("create cast (bit as int8) with function int8(bit);"),
+                "Must match create cast statement in Image 3");
+
+        // 3. Extension DDL matching Image 4
+        DbObject ext = new DbObject("plpgsql", Kind.EXTENSION, "thunder_db", null);
+        String extDdl = com.roze.dbnavigator.db.DdlGeneratorService.generateDdl(profile, ext);
+        assertNotNull(extDdl);
+        assertTrue(extDdl.contains("-- extension plpgsql"), "Must contain extension header");
+        assertTrue(extDdl.contains("create extension plpgsql schema pg_catalog version '1.0';"),
+                "Must match create extension statement in Image 4");
+
+        // 4. Language DDL matching Image 5
+        DbObject lang = new DbObject("c", Kind.LANGUAGE, "thunder_db", null);
+        String langDdl = com.roze.dbnavigator.db.DdlGeneratorService.generateDdl(profile, lang);
+        assertNotNull(langDdl);
+        assertTrue(langDdl.contains("-- language c"), "Must contain language header");
+        assertTrue(langDdl.contains("create language c validator pg_catalog.fmgr_c_validator;"),
+                "Must match create language statement in Image 5");
+
+        // 5. Virtual View DDL matching Image 1
+        DbObject sessions = new DbObject("sessions", Kind.VIRTUAL_VIEW, "thunder_db", null);
+        String sessionsDdl = com.roze.dbnavigator.db.DdlGeneratorService.generateDdl(profile, sessions);
+        assertNotNull(sessionsDdl);
+        assertTrue(sessionsDdl.contains("-- virtual view thunder_db.sessions"), "Must contain virtual view header");
+        assertTrue(sessionsDdl.contains("create virtual view sessions as"), "Must contain create virtual view");
+        assertTrue(sessionsDdl.contains("from pg_stat_activity;"), "Must select from pg_stat_activity matching Image 1");
+    }
+
+    @Test
+    public void testDatabaseObjectsAndVirtualViewsIcons() {
+        ConnectionProfile profile = createPostgreSqlProfile();
+
+        assertNotNull(Icons.forObject(new DbObject("Database Objects", Kind.DATABASE_OBJECTS), profile, true));
+        assertNotNull(Icons.forObject(new DbObject("access methods", Kind.ACCESS_METHODS_FOLDER), profile, true));
+        assertNotNull(Icons.forObject(new DbObject("brin", Kind.ACCESS_METHOD), profile, true));
+        assertNotNull(Icons.forObject(new DbObject("casts", Kind.CASTS_FOLDER), profile, true));
+        assertNotNull(Icons.forObject(new DbObject("bit as int8", Kind.CAST), profile, true));
+        assertNotNull(Icons.forObject(new DbObject("extensions", Kind.EXTENSIONS_FOLDER), profile, true));
+        assertNotNull(Icons.forObject(new DbObject("plpgsql", Kind.EXTENSION), profile, true));
+        assertNotNull(Icons.forObject(new DbObject("languages", Kind.LANGUAGES_FOLDER), profile, true));
+        assertNotNull(Icons.forObject(new DbObject("c", Kind.LANGUAGE), profile, true));
+        assertNotNull(Icons.forObject(new DbObject("virtual views", Kind.VIRTUAL_VIEWS_FOLDER), profile, true));
+        assertNotNull(Icons.forObject(new DbObject("sessions", Kind.VIRTUAL_VIEW), profile, true));
+    }
+
+    @Test
+    public void testDatabaseObjectsAndVirtualViewsScrollFromEditor() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = createPostgreSqlProfile();
+        pane.addConnectionNode(profile);
+
+        TreeItem<DbObject> connItem = pane.findConnectionItem(profile);
+        assertNotNull(connItem);
+        connItem.getChildren().clear();
+        connItem.getValue().setLoaded(true);
+
+        DbObject dbObj = new DbObject("thunder_db", Kind.DATABASE, "thunder_db", null);
+        dbObj.setLoaded(true);
+        TreeItem<DbObject> dbItem = new TreeItem<>(dbObj);
+        connItem.getChildren().add(dbItem);
+
+        DbObject dbObjectsObj = new DbObject("Database Objects", Kind.DATABASE_OBJECTS, "thunder_db", null);
+        dbObjectsObj.setLoaded(true);
+        TreeItem<DbObject> dbObjectsItem = new TreeItem<>(dbObjectsObj);
+        dbItem.getChildren().add(dbObjectsItem);
+
+        DbObject amFolderObj = new DbObject("access methods", Kind.ACCESS_METHODS_FOLDER, "thunder_db", null);
+        amFolderObj.setLoaded(true);
+        TreeItem<DbObject> amFolderItem = new TreeItem<>(amFolderObj);
+        dbObjectsItem.getChildren().add(amFolderItem);
+
+        DbObject brinObj = new DbObject("brin", Kind.ACCESS_METHOD, "thunder_db", null);
+        TreeItem<DbObject> brinItem = new TreeItem<>(brinObj);
+        amFolderItem.getChildren().add(brinItem);
+
+        DbObject vvFolderObj = new DbObject("virtual views", Kind.VIRTUAL_VIEWS_FOLDER, "thunder_db", null);
+        vvFolderObj.setLoaded(true);
+        TreeItem<DbObject> vvFolderItem = new TreeItem<>(vvFolderObj);
+        dbItem.getChildren().add(vvFolderItem);
+
+        DbObject sessionsObj = new DbObject("sessions", Kind.VIRTUAL_VIEW, "thunder_db", null);
+        TreeItem<DbObject> sessionsItem = new TreeItem<>(sessionsObj);
+        vvFolderItem.getChildren().add(sessionsItem);
+
+        // Scroll to brin
+        pane.selectObjectInTree(profile, brinObj);
+        assertTrue(connItem.isExpanded());
+        assertTrue(dbItem.isExpanded());
+        assertTrue(dbObjectsItem.isExpanded());
+        assertTrue(amFolderItem.isExpanded());
+        assertEquals(brinItem, pane.getSelectedItem());
+
+        // Scroll to sessions
+        pane.selectObjectInTree(profile, sessionsObj);
+        assertTrue(vvFolderItem.isExpanded());
+        assertEquals(sessionsItem, pane.getSelectedItem());
+    }
+
+    @Test
+    public void testVirtualViewSessionsQualifiedName() {
+        DbObject sessions = new DbObject("sessions", Kind.VIRTUAL_VIEW, "thunder_db", null);
+        assertEquals("pg_stat_activity", sessions.qualifiedName(),
+                "Virtual view sessions qualifiedName must resolve directly to pg_stat_activity for querying");
+    }
+
+    @Test
+    public void testVirtualViewSessionsDataTabNoTableoid() {
+        ConnectionProfile profile = createPostgreSqlProfile();
+        DbObject sessions = new DbObject("sessions", Kind.VIRTUAL_VIEW, "thunder_db", null);
+        DataTab dataTab = new DataTab(profile, sessions);
+
+        assertEquals("sessions", dataTab.getText());
+        assertNotNull(dataTab.getTooltip());
+        assertTrue(dataTab.getTooltip().getText().contains("virtual views"),
+                "Breadcrumb must contain virtual views folder");
+        assertTrue(dataTab.getTooltip().getText().contains("sessions"));
+        assertEquals("postgres@localhost/pg_stat_activity", dataTab.getQualifiedTableReference(),
+                "Qualified reference must use pg_stat_activity");
+    }
 }
 

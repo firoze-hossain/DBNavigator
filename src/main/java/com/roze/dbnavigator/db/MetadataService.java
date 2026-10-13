@@ -279,6 +279,130 @@ public final class MetadataService {
     }
 
     /**
+     * Loads PostgreSQL database objects folder: access methods, casts, extensions, languages,
+     * matching DataGrip's Explorer tree hierarchy and live counts.
+     */
+    public static List<DbObject> loadDatabaseObjects(ConnectionProfile profile, DbObject dbObj) throws Exception {
+        String catalog = dbObj.getCatalog();
+        int amCount = 0;
+        int castCount = 0;
+        int extCount = 0;
+        int langCount = 0;
+
+        try (Connection conn = client(profile, catalog).getConnection();
+             Statement stmt = conn.createStatement()) {
+            try (ResultSet rs = stmt.executeQuery("SELECT count(*) FROM pg_am")) {
+                if (rs.next()) amCount = rs.getInt(1);
+            } catch (Exception ignored) {}
+            try (ResultSet rs = stmt.executeQuery("SELECT count(*) FROM pg_cast")) {
+                if (rs.next()) castCount = rs.getInt(1);
+            } catch (Exception ignored) {}
+            try (ResultSet rs = stmt.executeQuery("SELECT count(*) FROM pg_extension")) {
+                if (rs.next()) extCount = rs.getInt(1);
+            } catch (Exception ignored) {}
+            try (ResultSet rs = stmt.executeQuery("SELECT count(*) FROM pg_language")) {
+                if (rs.next()) langCount = rs.getInt(1);
+            } catch (Exception ignored) {}
+        } catch (Exception ignored) {}
+
+        DbObject amFolder = new DbObject("access methods", Kind.ACCESS_METHODS_FOLDER, catalog, null);
+        amFolder.setDetail(String.valueOf(amCount));
+
+        DbObject castsFolder = new DbObject("casts", Kind.CASTS_FOLDER, catalog, null);
+        castsFolder.setDetail(String.valueOf(castCount));
+
+        DbObject extFolder = new DbObject("extensions", Kind.EXTENSIONS_FOLDER, catalog, null);
+        extFolder.setDetail(String.valueOf(extCount));
+
+        DbObject langFolder = new DbObject("languages", Kind.LANGUAGES_FOLDER, catalog, null);
+        langFolder.setDetail(String.valueOf(langCount));
+
+        return List.of(amFolder, castsFolder, extFolder, langFolder);
+    }
+
+    /**
+     * Loads PostgreSQL access methods (e.g. btree, hash, gist, gin, spgist, brin).
+     */
+    public static List<DbObject> loadAccessMethods(ConnectionProfile profile, DbObject folder) throws Exception {
+        String catalog = folder.getCatalog();
+        List<DbObject> list = new ArrayList<>();
+        try (Connection conn = client(profile, catalog).getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SELECT amname FROM pg_am ORDER BY amname")) {
+            while (rs.next()) {
+                list.add(new DbObject(rs.getString("amname"), Kind.ACCESS_METHOD, catalog, null));
+            }
+        }
+        return list;
+    }
+
+    /**
+     * Loads PostgreSQL type casts (e.g. bit as int8).
+     */
+    public static List<DbObject> loadCasts(ConnectionProfile profile, DbObject folder) throws Exception {
+        String catalog = folder.getCatalog();
+        List<DbObject> list = new ArrayList<>();
+        String sql = """
+            SELECT t1.typname AS src, t2.typname AS tgt
+            FROM pg_cast c
+            JOIN pg_type t1 ON c.castsource = t1.oid
+            JOIN pg_type t2 ON c.casttarget = t2.oid
+            ORDER BY t1.typname, t2.typname
+        """;
+        try (Connection conn = client(profile, catalog).getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                String castName = rs.getString("src") + " as " + rs.getString("tgt");
+                list.add(new DbObject(castName, Kind.CAST, catalog, null));
+            }
+        }
+        return list;
+    }
+
+    /**
+     * Loads PostgreSQL extensions installed in this database (e.g. plpgsql).
+     */
+    public static List<DbObject> loadExtensions(ConnectionProfile profile, DbObject folder) throws Exception {
+        String catalog = folder.getCatalog();
+        List<DbObject> list = new ArrayList<>();
+        try (Connection conn = client(profile, catalog).getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SELECT extname FROM pg_extension ORDER BY extname")) {
+            while (rs.next()) {
+                list.add(new DbObject(rs.getString("extname"), Kind.EXTENSION, catalog, null));
+            }
+        }
+        return list;
+    }
+
+    /**
+     * Loads PostgreSQL languages installed in this database (e.g. c, internal, plpgsql, sql).
+     */
+    public static List<DbObject> loadLanguages(ConnectionProfile profile, DbObject folder) throws Exception {
+        String catalog = folder.getCatalog();
+        List<DbObject> list = new ArrayList<>();
+        try (Connection conn = client(profile, catalog).getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SELECT lanname FROM pg_language ORDER BY lanname")) {
+            while (rs.next()) {
+                list.add(new DbObject(rs.getString("lanname"), Kind.LANGUAGE, catalog, null));
+            }
+        }
+        return list;
+    }
+
+    /**
+     * Loads PostgreSQL virtual views for the database (e.g. sessions backed by pg_stat_activity).
+     */
+    public static List<DbObject> loadVirtualViews(ConnectionProfile profile, DbObject folder) {
+        String catalog = folder.getCatalog();
+        return List.of(new DbObject("sessions", Kind.VIRTUAL_VIEW, catalog, null));
+    }
+
+
+
+    /**
      * Real DATABASE nodes for a real, multi-database StratosCluster - the
      * same real shape PostgreSQL's own connection tree already has, since
      * StratosDB's own real cluster support genuinely is that same shape
@@ -356,7 +480,20 @@ public final class MetadataService {
         return switch (profile.getType()) {
             case MONGODB -> List.of(
                     folder("Collections", Kind.COLLECTIONS_FOLDER, database.getCatalog(), null));
-            case POSTGRESQL, SQLSERVER -> {
+            case POSTGRESQL -> {
+                List<DbObject> items = new ArrayList<>();
+                try (Connection conn = client(profile, database.getCatalog()).getConnection()) {
+                    items.addAll(loadSchemas(conn, profile, database.getCatalog()));
+                }
+                // Under database (e.g. thunder_db), alongside public / schemas:
+                // DataGrip adds Database Objects and virtual views
+                items.add(new DbObject("Database Objects", Kind.DATABASE_OBJECTS, database.getCatalog(), null));
+                DbObject vv = new DbObject("virtual views", Kind.VIRTUAL_VIEWS_FOLDER, database.getCatalog(), null);
+                vv.setDetail("1");
+                items.add(vv);
+                yield items;
+            }
+            case SQLSERVER -> {
                 // schemas of that particular database (separate physical connection,
                 // via databaseName=/dbname in the JDBC URL — see ConnectionProfile.getJdbcUrl)
                 try (Connection conn = client(profile, database.getCatalog()).getConnection()) {

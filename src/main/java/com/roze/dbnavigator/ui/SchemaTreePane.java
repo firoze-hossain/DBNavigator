@@ -395,11 +395,13 @@ public class SchemaTreePane extends VBox {
         if (profile == null) return;
 
         switch (obj.getKind()) {
-            case TABLE, VIEW, PARTITION -> mainWindow.openDataTab(profile, obj);
+            case TABLE, VIEW, PARTITION, VIRTUAL_VIEW -> mainWindow.openDataTab(profile, obj);
             case COLLECTION  -> mainWindow.openMongoTab(profile, obj);
             case PROCEDURE, FUNCTION -> mainWindow.openRoutineSourceTab(profile, obj);
-            case ROLE, TABLESPACE -> mainWindow.openDdlTab(profile, obj);
-            case CONNECTION, SERVER_OBJECTS, ROLES_FOLDER, TABLESPACES_FOLDER -> item.setExpanded(!item.isExpanded());
+            case ROLE, TABLESPACE, ACCESS_METHOD, CAST, EXTENSION, LANGUAGE -> mainWindow.openDdlTab(profile, obj);
+            case CONNECTION, SERVER_OBJECTS, ROLES_FOLDER, TABLESPACES_FOLDER,
+                 DATABASE_OBJECTS, ACCESS_METHODS_FOLDER, CASTS_FOLDER, EXTENSIONS_FOLDER, LANGUAGES_FOLDER,
+                 VIRTUAL_VIEWS_FOLDER -> item.setExpanded(!item.isExpanded());
             default -> {}
         }
     }
@@ -481,6 +483,12 @@ public class SchemaTreePane extends VBox {
             case SERVER_OBJECTS -> MetadataService.loadServerObjects(profile);
             case ROLES_FOLDER -> MetadataService.loadRoles(profile);
             case TABLESPACES_FOLDER -> MetadataService.loadTablespaces(profile);
+            case DATABASE_OBJECTS -> MetadataService.loadDatabaseObjects(profile, obj);
+            case ACCESS_METHODS_FOLDER -> MetadataService.loadAccessMethods(profile, obj);
+            case CASTS_FOLDER -> MetadataService.loadCasts(profile, obj);
+            case EXTENSIONS_FOLDER -> MetadataService.loadExtensions(profile, obj);
+            case LANGUAGES_FOLDER -> MetadataService.loadLanguages(profile, obj);
+            case VIRTUAL_VIEWS_FOLDER -> MetadataService.loadVirtualViews(profile, obj);
             case TABLES_FOLDER, VIEWS_FOLDER, PROCEDURES_FOLDER, FUNCTIONS_FOLDER,
                  SEQUENCES_FOLDER, COLLECTIONS_FOLDER,
                  COLUMNS_FOLDER, INDEXES_FOLDER, PARTITIONS_FOLDER, KEYS_FOLDER, FOREIGN_KEYS_FOLDER, FIELDS_FOLDER
@@ -495,7 +503,9 @@ public class SchemaTreePane extends VBox {
                  FUNCTIONS_FOLDER, SEQUENCES_FOLDER, COLLECTIONS_FOLDER,
                  TABLE, PARTITION, COLUMNS_FOLDER, INDEXES_FOLDER, PARTITIONS_FOLDER,
                  KEYS_FOLDER, FOREIGN_KEYS_FOLDER, COLLECTION, FIELDS_FOLDER,
-                 SERVER_OBJECTS, ROLES_FOLDER, TABLESPACES_FOLDER -> true;
+                 SERVER_OBJECTS, ROLES_FOLDER, TABLESPACES_FOLDER,
+                 DATABASE_OBJECTS, ACCESS_METHODS_FOLDER, CASTS_FOLDER, EXTENSIONS_FOLDER, LANGUAGES_FOLDER,
+                 VIRTUAL_VIEWS_FOLDER -> true;
             default -> false;
         };
     }
@@ -1562,6 +1572,44 @@ public class SchemaTreePane extends VBox {
                     drop.setOnAction(e -> confirmAndDropTablespace(profile, obj.getName()));
                     menu.getItems().addAll(goToDdl, jumpConsole, new SeparatorMenuItem(), refresh, new SeparatorMenuItem(), drop);
                 }
+                case DATABASE_OBJECTS, ACCESS_METHODS_FOLDER, CASTS_FOLDER, EXTENSIONS_FOLDER,
+                     LANGUAGES_FOLDER, VIRTUAL_VIEWS_FOLDER -> {
+                    MenuItem refresh = new MenuItem("Refresh");
+                    refresh.setOnAction(e -> refreshNode(getTreeItem(), obj, obj.getName()));
+                    MenuItem jumpConsole = new MenuItem("Jump to Query Console");
+                    jumpConsole.setOnAction(e -> jumpToQueryConsole());
+                    menu.getItems().addAll(jumpConsole, new SeparatorMenuItem(), refresh);
+                }
+                case ACCESS_METHOD, CAST, EXTENSION, LANGUAGE -> {
+                    MenuItem goToDdl = new MenuItem("Go to DDL");
+                    goToDdl.setOnAction(e -> goToDdl());
+                    MenuItem jumpConsole = new MenuItem("Jump to Query Console");
+                    jumpConsole.setOnAction(e -> jumpToQueryConsole());
+                    MenuItem refresh = new MenuItem("Refresh");
+                    refresh.setOnAction(e -> {
+                        obj.setLoaded(false);
+                        mainWindow.setStatus("Refreshed " + obj.getName());
+                        reload();
+                    });
+                    menu.getItems().addAll(goToDdl, jumpConsole, new SeparatorMenuItem(), refresh);
+                }
+                case VIRTUAL_VIEW -> {
+                    MenuItem openData = new MenuItem("Open Data");
+                    openData.setOnAction(e -> mainWindow.openDataTab(profile, obj));
+                    MenuItem editData = new MenuItem("Edit Data");
+                    editData.setOnAction(e -> editData());
+                    MenuItem goToDdl = new MenuItem("Go to DDL");
+                    goToDdl.setOnAction(e -> goToDdl());
+                    MenuItem jumpConsole = new MenuItem("Jump to Query Console");
+                    jumpConsole.setOnAction(e -> jumpToQueryConsole());
+                    MenuItem refresh = new MenuItem("Refresh");
+                    refresh.setOnAction(e -> {
+                        obj.setLoaded(false);
+                        mainWindow.setStatus("Refreshed " + obj.getName());
+                        reload();
+                    });
+                    menu.getItems().addAll(openData, editData, goToDdl, jumpConsole, new SeparatorMenuItem(), refresh);
+                }
                 default -> {
                     return null;
                 }
@@ -1783,20 +1831,22 @@ public class SchemaTreePane extends VBox {
         jumpToConsoleButton.setDisable(false);
 
         // 2. Go to DDL:
-        // Active for DDL-bearing schema objects: Database, Schema, Table, View, Partition, Procedure, Function, Sequence, Index, Role, Tablespace
+        // Active for DDL-bearing schema objects: Database, Schema, Table, View, Partition, Procedure, Function, Sequence, Index, Role, Tablespace,
+        // and database objects: Access Method, Cast, Extension, Language, Virtual View
         // Inactive for: Connection root, category folders (tables, views, routines, sequences, etc.)
         boolean hasDdl = switch (obj.getKind()) {
             case DATABASE, SCHEMA, TABLE, VIEW, PARTITION, PROCEDURE, FUNCTION, SEQUENCE, INDEX,
-                 ROLE, TABLESPACE -> true;
+                 ROLE, TABLESPACE,
+                 ACCESS_METHOD, CAST, EXTENSION, LANGUAGE, VIRTUAL_VIEW -> true;
             default -> false;
         };
         goToDdlButton.setDisable(!hasDdl);
 
         // 3. Edit Data (F4):
-        // Active ONLY for data-bearing objects (Table, View, Partition, Mongo Collection)
+        // Active ONLY for data-bearing objects (Table, View, Partition, Mongo Collection, Virtual View)
         // Inactive for: Database, Schema, Folders, Routines, Sequences, Connections, etc.
         boolean hasData = switch (obj.getKind()) {
-            case TABLE, VIEW, PARTITION, COLLECTION -> true;
+            case TABLE, VIEW, PARTITION, COLLECTION, VIRTUAL_VIEW -> true;
             default -> false;
         };
         editDataButton.setDisable(!hasData);
@@ -2147,7 +2197,95 @@ public class SchemaTreePane extends VBox {
         }
     }
 
+    private static boolean isDatabaseObjectsKind(Kind kind) {
+        return kind == Kind.DATABASE_OBJECTS
+                || kind == Kind.ACCESS_METHODS_FOLDER || kind == Kind.ACCESS_METHOD
+                || kind == Kind.CASTS_FOLDER || kind == Kind.CAST
+                || kind == Kind.EXTENSIONS_FOLDER || kind == Kind.EXTENSION
+                || kind == Kind.LANGUAGES_FOLDER || kind == Kind.LANGUAGE;
+    }
+
+    private void navigateFromDatabaseObjects(TreeItem<DbObject> dbItem, DbObject target) {
+        TreeItem<DbObject> dbObjFolder = dbItem.getChildren().stream()
+                .filter(c -> c.getValue() != null && c.getValue().getKind() == Kind.DATABASE_OBJECTS)
+                .findFirst().orElse(null);
+        if (dbObjFolder == null) {
+            highlightAndSelect(dbItem);
+            return;
+        }
+        if (target.getKind() == Kind.DATABASE_OBJECTS) {
+            highlightAndSelect(dbObjFolder);
+            return;
+        }
+        Kind subfolderKind = switch (target.getKind()) {
+            case ACCESS_METHODS_FOLDER, ACCESS_METHOD -> Kind.ACCESS_METHODS_FOLDER;
+            case CASTS_FOLDER, CAST -> Kind.CASTS_FOLDER;
+            case EXTENSIONS_FOLDER, EXTENSION -> Kind.EXTENSIONS_FOLDER;
+            case LANGUAGES_FOLDER, LANGUAGE -> Kind.LANGUAGES_FOLDER;
+            default -> null;
+        };
+        if (subfolderKind == null) {
+            highlightAndSelect(dbObjFolder);
+            return;
+        }
+
+        expandNodeAndThen(dbObjFolder, () -> {
+            TreeItem<DbObject> subfolder = dbObjFolder.getChildren().stream()
+                    .filter(c -> c.getValue() != null && c.getValue().getKind() == subfolderKind)
+                    .findFirst().orElse(null);
+            if (subfolder == null) {
+                highlightAndSelect(dbObjFolder);
+                return;
+            }
+            if (target.getKind() == subfolderKind) {
+                highlightAndSelect(subfolder);
+                return;
+            }
+            expandNodeAndThen(subfolder, () -> {
+                for (TreeItem<DbObject> child : subfolder.getChildren()) {
+                    if (child.getValue() != null && child.getValue().getName().equalsIgnoreCase(target.getName())) {
+                        highlightAndSelect(child);
+                        return;
+                    }
+                }
+                highlightAndSelect(subfolder);
+            });
+        });
+    }
+
+    private void navigateFromVirtualViews(TreeItem<DbObject> dbItem, DbObject target) {
+        TreeItem<DbObject> vvFolder = dbItem.getChildren().stream()
+                .filter(c -> c.getValue() != null && c.getValue().getKind() == Kind.VIRTUAL_VIEWS_FOLDER)
+                .findFirst().orElse(null);
+        if (vvFolder == null) {
+            highlightAndSelect(dbItem);
+            return;
+        }
+        if (target.getKind() == Kind.VIRTUAL_VIEWS_FOLDER) {
+            highlightAndSelect(vvFolder);
+            return;
+        }
+        expandNodeAndThen(vvFolder, () -> {
+            for (TreeItem<DbObject> child : vvFolder.getChildren()) {
+                if (child.getValue() != null && child.getValue().getName().equalsIgnoreCase(target.getName())) {
+                    highlightAndSelect(child);
+                    return;
+                }
+            }
+            highlightAndSelect(vvFolder);
+        });
+    }
+
     private void navigateFromDatabase(TreeItem<DbObject> dbItem, ConnectionProfile profile, DbObject target) {
+        if (isDatabaseObjectsKind(target.getKind())) {
+            navigateFromDatabaseObjects(dbItem, target);
+            return;
+        }
+        if (target.getKind() == Kind.VIRTUAL_VIEWS_FOLDER || target.getKind() == Kind.VIRTUAL_VIEW) {
+            navigateFromVirtualViews(dbItem, target);
+            return;
+        }
+
         // Under database: check if there are SCHEMA nodes (PostgreSQL, SQL Server)
         List<TreeItem<DbObject>> schemaItems = dbItem.getChildren().stream()
                 .filter(c -> c.getValue() != null && c.getValue().getKind() == Kind.SCHEMA)
