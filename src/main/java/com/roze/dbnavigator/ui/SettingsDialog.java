@@ -1335,7 +1335,11 @@ public final class SettingsDialog {
         keepPopupsCheck.setSelected(settings.isKeepPopupsOpenForToggleItems());
         inputs.put("appearance_keepPopupsOpenForToggleItems", keepPopupsCheck);
 
-        VBox leftUiCol = new VBox(10, compactBox, fullPathCheck, projectColorsBox, keepPopupsCheck);
+        CheckBox confirmExitCheck = new CheckBox("Confirm before exiting the IDE");
+        confirmExitCheck.setSelected(settings.isConfirmExit());
+        inputs.put("appearance_confirmExit", confirmExitCheck);
+
+        VBox leftUiCol = new VBox(10, compactBox, fullPathCheck, projectColorsBox, keepPopupsCheck, confirmExitCheck);
         leftUiCol.setPrefWidth(340);
 
         // Right Column
@@ -10784,6 +10788,10 @@ public final class SettingsDialog {
         if (inputs.containsKey("appearance_keepPopupsOpenForToggleItems")) {
             CheckBox cb = (CheckBox) inputs.get("appearance_keepPopupsOpenForToggleItems");
             settings.setKeepPopupsOpenForToggleItems(cb.isSelected());
+        }
+        if (inputs.containsKey("appearance_confirmExit")) {
+            CheckBox cb = (CheckBox) inputs.get("appearance_confirmExit");
+            settings.setConfirmExit(cb.isSelected());
         }
         if (inputs.containsKey("appearance_dragAndDropWithAltPressedOnly")) {
             CheckBox cb = (CheckBox) inputs.get("appearance_dragAndDropWithAltPressedOnly");

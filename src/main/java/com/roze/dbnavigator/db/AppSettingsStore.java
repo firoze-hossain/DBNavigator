@@ -141,6 +141,7 @@ public final class AppSettingsStore {
         public String scriptSplitting = "Into valid ANSI SQL statements or by separator";
         public boolean reviewParametersBeforeExecution = true;
         public boolean warnUnsafeQueries = true;
+        public boolean confirmExit = true;
 
         // Window geometry and placement
         public double windowWidth = -1;
@@ -3988,6 +3989,9 @@ public final class AppSettingsStore {
         }
         public boolean isWarnUnsafeQueries() { return warnUnsafeQueries; }
         public void setWarnUnsafeQueries(boolean warnUnsafeQueries) { this.warnUnsafeQueries = warnUnsafeQueries; }
+
+        public boolean isConfirmExit() { return confirmExit; }
+        public void setConfirmExit(boolean confirmExit) { this.confirmExit = confirmExit; }
 
         public boolean isShowTimestampForQueryOutput() { return showTimestampForQueryOutput; }
         public void setShowTimestampForQueryOutput(boolean showTimestampForQueryOutput) { this.showTimestampForQueryOutput = showTimestampForQueryOutput; }
@@ -9281,7 +9285,9 @@ public final class AppSettingsStore {
 
     private static Settings cached;
 
-    private AppSettingsStore() {}
+    public static synchronized Settings get() {
+        return load();
+    }
 
     public static synchronized Settings load() {
         if (cached != null) return cached;

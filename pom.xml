@@ -10,10 +10,11 @@
     <name>DBNavigator Pro</name>
 
     <properties>
+        <maven.compiler.release>25</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.source>21</maven.compiler.source>
-        <maven.compiler.target>21</maven.compiler.target>
-        <javafx.version>21.0.2</javafx.version>
+        <!-- JavaFX 24+ made TextFlow methods final, which breaks RichTextFX
+             (IncompatibleClassChangeError). JavaFX 23 runs fine on JDK 25. -->
+        <javafx.version>23.0.2</javafx.version>
     </properties>
 
     <!--
