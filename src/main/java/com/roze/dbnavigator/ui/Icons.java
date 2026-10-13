@@ -43,10 +43,14 @@ public final class Icons {
             case CONNECTION -> of(FontAwesomeSolid.DATABASE, connected ? "#57965c" : "#868a91", 13);
             case DATABASE   -> of(FontAwesomeSolid.DATABASE, "#3592c4", 12);
             case SCHEMA     -> of(FontAwesomeSolid.FOLDER_OPEN, "#c77dbb", 12);
+            case SERVER_OBJECTS -> of(FontAwesomeSolid.SERVER, "#3592c4", 12);
+            case ROLES_FOLDER, TABLESPACES_FOLDER -> of(FontAwesomeSolid.FOLDER, "#3592c4", 12);
             case TABLES_FOLDER, VIEWS_FOLDER, PROCEDURES_FOLDER,
                  FUNCTIONS_FOLDER, SEQUENCES_FOLDER, COLLECTIONS_FOLDER,
                  COLUMNS_FOLDER, INDEXES_FOLDER, PARTITIONS_FOLDER, KEYS_FOLDER, FOREIGN_KEYS_FOLDER, FIELDS_FOLDER
                             -> of(FontAwesomeSolid.FOLDER, "#e0a44c", 12);
+            case ROLE       -> of(FontAwesomeSolid.USER, "#868a91", 11);
+            case TABLESPACE -> of(FontAwesomeSolid.HDD, "#3592c4", 11);
             case TABLE      -> of(FontAwesomeSolid.TABLE, "#4a88c7", 12);
             case VIEW       -> of(FontAwesomeSolid.EYE, "#57965c", 12);
             case PROCEDURE  -> of(FontAwesomeSolid.COG, "#c77dbb", 12);

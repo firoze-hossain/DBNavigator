@@ -26,6 +26,7 @@ import org.kordamp.ikonli.fontawesome5.FontAwesomeSolid;
 import javafx.stage.FileChooser;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -340,7 +341,13 @@ public class SchemaTreePane extends VBox {
 
         connectionObj.setDetail(visible.size() + " of " + all.size());
         Platform.runLater(tree::refresh);
-        return visible;
+
+        List<DbObject> result = new ArrayList<>(visible);
+        if (profile.getType() == ConnectionProfile.DatabaseType.POSTGRESQL) {
+            DbObject serverObjects = new DbObject("Server Objects", Kind.SERVER_OBJECTS);
+            result.add(serverObjects);
+        }
+        return result;
     }
 
     /** Re-loads one connection's children (used after the filter dialog). */
@@ -391,7 +398,8 @@ public class SchemaTreePane extends VBox {
             case TABLE, VIEW, PARTITION -> mainWindow.openDataTab(profile, obj);
             case COLLECTION  -> mainWindow.openMongoTab(profile, obj);
             case PROCEDURE, FUNCTION -> mainWindow.openRoutineSourceTab(profile, obj);
-            case CONNECTION  -> item.setExpanded(!item.isExpanded());
+            case ROLE, TABLESPACE -> mainWindow.openDdlTab(profile, obj);
+            case CONNECTION, SERVER_OBJECTS, ROLES_FOLDER, TABLESPACES_FOLDER -> item.setExpanded(!item.isExpanded());
             default -> {}
         }
     }
@@ -470,6 +478,9 @@ public class SchemaTreePane extends VBox {
             case SCHEMA   -> MetadataService.loadSchemaChildren(obj);
             case TABLE, PARTITION -> MetadataService.loadTableChildren(profile, obj);
             case COLLECTION -> MetadataService.loadCollectionChildren(profile, obj);
+            case SERVER_OBJECTS -> MetadataService.loadServerObjects(profile);
+            case ROLES_FOLDER -> MetadataService.loadRoles(profile);
+            case TABLESPACES_FOLDER -> MetadataService.loadTablespaces(profile);
             case TABLES_FOLDER, VIEWS_FOLDER, PROCEDURES_FOLDER, FUNCTIONS_FOLDER,
                  SEQUENCES_FOLDER, COLLECTIONS_FOLDER,
                  COLUMNS_FOLDER, INDEXES_FOLDER, PARTITIONS_FOLDER, KEYS_FOLDER, FOREIGN_KEYS_FOLDER, FIELDS_FOLDER
@@ -483,7 +494,8 @@ public class SchemaTreePane extends VBox {
             case DATABASE, SCHEMA, TABLES_FOLDER, VIEWS_FOLDER, PROCEDURES_FOLDER,
                  FUNCTIONS_FOLDER, SEQUENCES_FOLDER, COLLECTIONS_FOLDER,
                  TABLE, PARTITION, COLUMNS_FOLDER, INDEXES_FOLDER, PARTITIONS_FOLDER,
-                 KEYS_FOLDER, FOREIGN_KEYS_FOLDER, COLLECTION, FIELDS_FOLDER -> true;
+                 KEYS_FOLDER, FOREIGN_KEYS_FOLDER, COLLECTION, FIELDS_FOLDER,
+                 SERVER_OBJECTS, ROLES_FOLDER, TABLESPACES_FOLDER -> true;
             default -> false;
         };
     }
@@ -1495,6 +1507,61 @@ public class SchemaTreePane extends VBox {
                     menu.getItems().addAll(run, editSource, goToDdl, new SeparatorMenuItem(),
                             rename, refresh, new SeparatorMenuItem(), drop);
                 }
+                case SERVER_OBJECTS -> {
+                    MenuItem refresh = new MenuItem("Refresh");
+                    refresh.setOnAction(e -> refreshNode(getTreeItem(), obj, obj.getName()));
+                    MenuItem jumpConsole = new MenuItem("Jump to Query Console");
+                    jumpConsole.setOnAction(e -> jumpToQueryConsole());
+                    menu.getItems().addAll(jumpConsole, new SeparatorMenuItem(), refresh);
+                }
+                case ROLES_FOLDER -> {
+                    MenuItem newRole = new MenuItem("New Role…");
+                    newRole.setOnAction(e -> CreateRoleDialog.show(mainWindow, profile));
+                    MenuItem refresh = new MenuItem("Refresh");
+                    refresh.setOnAction(e -> refreshNode(getTreeItem(), obj, obj.getName()));
+                    MenuItem jumpConsole = new MenuItem("Jump to Query Console");
+                    jumpConsole.setOnAction(e -> jumpToQueryConsole());
+                    menu.getItems().addAll(newRole, new SeparatorMenuItem(), jumpConsole, refresh);
+                }
+                case ROLE -> {
+                    MenuItem goToDdl = new MenuItem("Go to DDL");
+                    goToDdl.setOnAction(e -> goToDdl());
+                    MenuItem jumpConsole = new MenuItem("Jump to Query Console");
+                    jumpConsole.setOnAction(e -> jumpToQueryConsole());
+                    MenuItem refresh = new MenuItem("Refresh");
+                    refresh.setOnAction(e -> {
+                        obj.setLoaded(false);
+                        mainWindow.setStatus("Refreshed " + obj.getName());
+                        reload();
+                    });
+                    MenuItem drop = new MenuItem("Drop Role…");
+                    drop.setOnAction(e -> confirmAndDropRole(profile, obj.getName()));
+                    menu.getItems().addAll(goToDdl, jumpConsole, new SeparatorMenuItem(), refresh, new SeparatorMenuItem(), drop);
+                }
+                case TABLESPACES_FOLDER -> {
+                    MenuItem newTs = new MenuItem("New Tablespace…");
+                    newTs.setOnAction(e -> promptCreateTablespace(profile));
+                    MenuItem refresh = new MenuItem("Refresh");
+                    refresh.setOnAction(e -> refreshNode(getTreeItem(), obj, obj.getName()));
+                    MenuItem jumpConsole = new MenuItem("Jump to Query Console");
+                    jumpConsole.setOnAction(e -> jumpToQueryConsole());
+                    menu.getItems().addAll(newTs, new SeparatorMenuItem(), jumpConsole, refresh);
+                }
+                case TABLESPACE -> {
+                    MenuItem goToDdl = new MenuItem("Go to DDL");
+                    goToDdl.setOnAction(e -> goToDdl());
+                    MenuItem jumpConsole = new MenuItem("Jump to Query Console");
+                    jumpConsole.setOnAction(e -> jumpToQueryConsole());
+                    MenuItem refresh = new MenuItem("Refresh");
+                    refresh.setOnAction(e -> {
+                        obj.setLoaded(false);
+                        mainWindow.setStatus("Refreshed " + obj.getName());
+                        reload();
+                    });
+                    MenuItem drop = new MenuItem("Drop Tablespace…");
+                    drop.setOnAction(e -> confirmAndDropTablespace(profile, obj.getName()));
+                    menu.getItems().addAll(goToDdl, jumpConsole, new SeparatorMenuItem(), refresh, new SeparatorMenuItem(), drop);
+                }
                 default -> {
                     return null;
                 }
@@ -1610,6 +1677,73 @@ public class SchemaTreePane extends VBox {
         });
     }
 
+    private void confirmAndDropRole(ConnectionProfile profile, String roleName) {
+        Alert warn = (Alert) DialogTheme.apply(new Alert(Alert.AlertType.WARNING,
+                "This permanently deletes role \"" + roleName + "\". This cannot be undone.",
+                ButtonType.YES, ButtonType.NO));
+        warn.setTitle("Drop Role");
+        warn.setHeaderText("Drop role \"" + roleName + "\"?");
+        warn.initOwner(getScene() == null ? null : getScene().getWindow());
+        if (warn.showAndWait().orElse(ButtonType.NO) != ButtonType.YES) return;
+
+        AppExecutor.run(() -> {
+            try {
+                try (java.sql.Connection conn = ClientRegistry.jdbc(profile, null).getConnection();
+                     java.sql.Statement stmt = conn.createStatement()) {
+                    stmt.execute("DROP ROLE " + roleName);
+                }
+                Platform.runLater(() -> {
+                    mainWindow.setStatus("Dropped role " + roleName);
+                    reload();
+                });
+            } catch (Exception ex) {
+                String msg = ex.getMessage() == null ? ex.toString() : ex.getMessage();
+                Platform.runLater(() -> DialogTheme.apply(new Alert(Alert.AlertType.ERROR,
+                        "Could not drop role " + roleName + ": " + msg)).showAndWait());
+            }
+        });
+    }
+
+    private void confirmAndDropTablespace(ConnectionProfile profile, String tsName) {
+        Alert warn = (Alert) DialogTheme.apply(new Alert(Alert.AlertType.WARNING,
+                "This permanently deletes tablespace \"" + tsName + "\". This cannot be undone.",
+                ButtonType.YES, ButtonType.NO));
+        warn.setTitle("Drop Tablespace");
+        warn.setHeaderText("Drop tablespace \"" + tsName + "\"?");
+        warn.initOwner(getScene() == null ? null : getScene().getWindow());
+        if (warn.showAndWait().orElse(ButtonType.NO) != ButtonType.YES) return;
+
+        AppExecutor.run(() -> {
+            try {
+                try (java.sql.Connection conn = ClientRegistry.jdbc(profile, null).getConnection();
+                     java.sql.Statement stmt = conn.createStatement()) {
+                    stmt.execute("DROP TABLESPACE " + tsName);
+                }
+                Platform.runLater(() -> {
+                    mainWindow.setStatus("Dropped tablespace " + tsName);
+                    reload();
+                });
+            } catch (Exception ex) {
+                String msg = ex.getMessage() == null ? ex.toString() : ex.getMessage();
+                Platform.runLater(() -> DialogTheme.apply(new Alert(Alert.AlertType.ERROR,
+                        "Could not drop tablespace " + tsName + ": " + msg)).showAndWait());
+            }
+        });
+    }
+
+    private void promptCreateTablespace(ConnectionProfile profile) {
+        TextInputDialog dialog = DialogTheme.apply(new TextInputDialog("new_tablespace"));
+        dialog.setTitle("Create Tablespace");
+        dialog.setHeaderText("Create Tablespace on " + profile.getName());
+        dialog.setContentText("Tablespace name:");
+        dialog.initOwner(getScene() == null ? null : getScene().getWindow());
+        dialog.showAndWait().ifPresent(name -> {
+            String trimmed = name.trim();
+            if (trimmed.isEmpty()) return;
+            mainWindow.openQueryTab(profile, null, "CREATE TABLESPACE " + trimmed + " LOCATION '/var/lib/postgresql/data/" + trimmed + "';");
+        });
+    }
+
     // ------------------------------------------------------------------ toolbar & actions
 
     private Button createToolButton(javafx.scene.Node graphic, String tooltip,
@@ -1649,10 +1783,11 @@ public class SchemaTreePane extends VBox {
         jumpToConsoleButton.setDisable(false);
 
         // 2. Go to DDL:
-        // Active for DDL-bearing schema objects: Database, Schema, Table, View, Partition, Procedure, Function, Sequence, Index
+        // Active for DDL-bearing schema objects: Database, Schema, Table, View, Partition, Procedure, Function, Sequence, Index, Role, Tablespace
         // Inactive for: Connection root, category folders (tables, views, routines, sequences, etc.)
         boolean hasDdl = switch (obj.getKind()) {
-            case DATABASE, SCHEMA, TABLE, VIEW, PARTITION, PROCEDURE, FUNCTION, SEQUENCE, INDEX -> true;
+            case DATABASE, SCHEMA, TABLE, VIEW, PARTITION, PROCEDURE, FUNCTION, SEQUENCE, INDEX,
+                 ROLE, TABLESPACE -> true;
             default -> false;
         };
         goToDdlButton.setDisable(!hasDdl);
@@ -1893,6 +2028,25 @@ public class SchemaTreePane extends VBox {
     }
 
     private void navigateFromConnection(TreeItem<DbObject> connItem, ConnectionProfile profile, DbObject target) {
+        // 0. Check for Server Objects navigation (PostgreSQL roles and tablespaces)
+        if (target.getKind() == Kind.SERVER_OBJECTS
+                || target.getKind() == Kind.ROLES_FOLDER
+                || target.getKind() == Kind.ROLE
+                || target.getKind() == Kind.TABLESPACES_FOLDER
+                || target.getKind() == Kind.TABLESPACE) {
+            TreeItem<DbObject> serverObjItem = connItem.getChildren().stream()
+                    .filter(c -> c.getValue() != null && c.getValue().getKind() == Kind.SERVER_OBJECTS)
+                    .findFirst().orElse(null);
+            if (serverObjItem != null) {
+                if (target.getKind() == Kind.SERVER_OBJECTS) {
+                    highlightAndSelect(serverObjItem);
+                    return;
+                }
+                expandNodeAndThen(serverObjItem, () -> navigateFromServerObjects(serverObjItem, target));
+                return;
+            }
+        }
+
         // 1. Look for matching DATABASE nodes
         List<TreeItem<DbObject>> dbItems = connItem.getChildren().stream()
                 .filter(c -> c.getValue() != null && c.getValue().getKind() == Kind.DATABASE)
@@ -1951,6 +2105,46 @@ public class SchemaTreePane extends VBox {
 
         // 3. Directly folder nodes under connection (e.g. SQLite)
         navigateFromFolders(connItem, profile, target);
+    }
+
+    private void navigateFromServerObjects(TreeItem<DbObject> serverObjItem, DbObject target) {
+        if (target.getKind() == Kind.ROLES_FOLDER || target.getKind() == Kind.ROLE) {
+            TreeItem<DbObject> rolesFolder = serverObjItem.getChildren().stream()
+                    .filter(c -> c.getValue() != null && c.getValue().getKind() == Kind.ROLES_FOLDER)
+                    .findFirst().orElse(null);
+            if (rolesFolder != null) {
+                if (target.getKind() == Kind.ROLES_FOLDER) {
+                    highlightAndSelect(rolesFolder);
+                    return;
+                }
+                expandNodeAndThen(rolesFolder, () -> {
+                    for (TreeItem<DbObject> child : rolesFolder.getChildren()) {
+                        if (child.getValue() != null && child.getValue().getName().equalsIgnoreCase(target.getName())) {
+                            highlightAndSelect(child);
+                            return;
+                        }
+                    }
+                });
+            }
+        } else if (target.getKind() == Kind.TABLESPACES_FOLDER || target.getKind() == Kind.TABLESPACE) {
+            TreeItem<DbObject> tsFolder = serverObjItem.getChildren().stream()
+                    .filter(c -> c.getValue() != null && c.getValue().getKind() == Kind.TABLESPACES_FOLDER)
+                    .findFirst().orElse(null);
+            if (tsFolder != null) {
+                if (target.getKind() == Kind.TABLESPACES_FOLDER) {
+                    highlightAndSelect(tsFolder);
+                    return;
+                }
+                expandNodeAndThen(tsFolder, () -> {
+                    for (TreeItem<DbObject> child : tsFolder.getChildren()) {
+                        if (child.getValue() != null && child.getValue().getName().equalsIgnoreCase(target.getName())) {
+                            highlightAndSelect(child);
+                            return;
+                        }
+                    }
+                });
+            }
+        }
     }
 
     private void navigateFromDatabase(TreeItem<DbObject> dbItem, ConnectionProfile profile, DbObject target) {

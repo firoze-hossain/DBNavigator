@@ -34,6 +34,8 @@ public final class DdlGeneratorService {
             case PROCEDURE, FUNCTION -> generateRoutineDdl(profile, obj);
             case SEQUENCE -> generateSequenceDdl(profile, obj);
             case INDEX -> generateIndexDdl(profile, obj);
+            case ROLE -> generateRoleDdl(profile, obj);
+            case TABLESPACE -> generateTablespaceDdl(profile, obj);
             default -> "-- DDL not available for " + obj.getKind() + ": " + obj.getName();
         };
     }
@@ -419,6 +421,86 @@ public final class DdlGeneratorService {
             } catch (Exception ignored) {}
         }
         return "-- auto-generated definition\ncreate index " + index.getName() + ";\n";
+    }
+
+    // ------------------------------------------------------------ Role DDL
+
+    private static String generateRoleDdl(ConnectionProfile profile, DbObject obj) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("-- auto-generated definition\n");
+        String roleName = obj.getName();
+        if (profile.getType() == DatabaseType.POSTGRESQL) {
+            String sql = "SELECT rolname, rolsuper, rolinherit, rolcreaterole, rolcreatedb, " +
+                         "rolcanlogin, rolreplication, rolconnlimit FROM pg_roles WHERE rolname = ?";
+            try (Connection conn = ClientRegistry.jdbc(profile, null).getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, roleName);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        boolean superuser = rs.getBoolean("rolsuper");
+                        boolean inherit = rs.getBoolean("rolinherit");
+                        boolean createRole = rs.getBoolean("rolcreaterole");
+                        boolean createDb = rs.getBoolean("rolcreatedb");
+                        boolean canLogin = rs.getBoolean("rolcanlogin");
+                        boolean replication = rs.getBoolean("rolreplication");
+                        int connLimit = rs.getInt("rolconnlimit");
+
+                        sb.append("create role ").append(roleName);
+                        List<String> options = new ArrayList<>();
+                        if (superuser) options.add("superuser");
+                        if (createDb) options.add("createdb");
+                        if (createRole) options.add("createrole");
+                        if (!inherit) options.add("noinherit");
+                        if (canLogin) options.add("login");
+                        if (replication) options.add("replication");
+                        if (connLimit >= 0) options.add("connection limit " + connLimit);
+
+                        if (!options.isEmpty()) {
+                            sb.append(" with ").append(String.join(" ", options));
+                        }
+                        sb.append(";\n");
+                        return sb.toString();
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+        sb.append("create role ").append(roleName).append(";\n");
+        return sb.toString();
+    }
+
+    // ------------------------------------------------------------ Tablespace DDL
+
+    private static String generateTablespaceDdl(ConnectionProfile profile, DbObject obj) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("-- auto-generated definition\n");
+        String spcName = obj.getName();
+        String owner = "postgres";
+        String location = null;
+        if (profile.getType() == DatabaseType.POSTGRESQL) {
+            String sql = "SELECT spcname, pg_get_userbyid(spcowner) AS spcowner, " +
+                         "pg_tablespace_location(oid) AS spclocation FROM pg_tablespace WHERE spcname = ?";
+            try (Connection conn = ClientRegistry.jdbc(profile, null).getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, spcName);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        String o = rs.getString("spcowner");
+                        if (o != null && !o.isBlank()) owner = o;
+                        location = rs.getString("spclocation");
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+        sb.append("create tablespace ").append(spcName);
+        if (owner != null && !owner.isBlank()) {
+            sb.append(" owner ").append(owner);
+        }
+        if (location != null && !location.isBlank()) {
+            sb.append(" location '").append(location).append("';\n");
+        } else {
+            sb.append(" location ???;\n");
+        }
+        return sb.toString();
     }
 
     // ------------------------------------------------------------ Records
