@@ -61,6 +61,7 @@ public class SchemaTreePane extends VBox {
     private final Button goToDdlButton;
     private final Button editDataButton;
     private final Button scrollFromEditorButton;
+    private final Button collapseAllButton;
 
     public SchemaTreePane(MainWindow mainWindow) {
         this.mainWindow = mainWindow;
@@ -76,9 +77,14 @@ public class SchemaTreePane extends VBox {
         this.scrollFromEditorButton = createToolButton(Icons.of(FontAwesomeSolid.CROSSHAIRS, "#a9b7c6", 11),
                 "Scroll from Editor", e -> scrollFromEditor());
 
+        boolean isMac = System.getProperty("os.name", "").toLowerCase().contains("mac");
+        String collapseShortcut = isMac ? "⌘NumPad -" : "Ctrl+NumPad -";
+        this.collapseAllButton = createToolButton(Icons.collapseAll(),
+                "Collapse All  " + collapseShortcut, e -> collapseAll());
+
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-        HBox headerBox = new HBox(6, header, spacer, scrollFromEditorButton, projectWidget);
+        HBox headerBox = new HBox(6, header, spacer, scrollFromEditorButton, collapseAllButton, projectWidget);
         headerBox.setAlignment(Pos.CENTER_LEFT);
         headerBox.setPadding(new Insets(6, 8, 4, 10));
         headerBox.getStyleClass().add("panel-header-box");
@@ -135,7 +141,11 @@ public class SchemaTreePane extends VBox {
         });
 
         tree.setOnKeyPressed(e -> {
-            if (e.getCode() == KeyCode.F4 && !e.isControlDown() && !e.isAltDown() && !e.isShiftDown() && !e.isMetaDown()) {
+            boolean isModifier = isMac ? e.isMetaDown() : e.isControlDown();
+            if (isModifier && (e.getCode() == KeyCode.SUBTRACT || e.getCode() == KeyCode.MINUS)) {
+                collapseAll();
+                e.consume();
+            } else if (e.getCode() == KeyCode.F4 && !e.isControlDown() && !e.isAltDown() && !e.isShiftDown() && !e.isMetaDown()) {
                 if (!editDataButton.isDisabled()) {
                     editData();
                     e.consume();
@@ -2574,6 +2584,10 @@ public class SchemaTreePane extends VBox {
         return scrollFromEditorButton;
     }
 
+    public Button getCollapseAllButton() {
+        return collapseAllButton;
+    }
+
     /**
      * DataGrip-style "Scroll from Editor": locates the active editor tab's
      * table/schema/database object in the Database Explorer tree, asynchronously
@@ -3027,5 +3041,51 @@ public class SchemaTreePane extends VBox {
                 tree.scrollTo(row);
             }
         });
+    }
+
+    /**
+     * DataGrip-style "Collapse All": collapses all expanded nodes in the tree.
+     * Recursively collapses all connection nodes and their descendants.
+     * If an item inside a connection was selected, gracefully adjusts selection
+     * to the connection node or top-level visible ancestor so selection is preserved.
+     */
+    public void collapseAll() {
+        pendingLoadCallbacks.clear();
+
+        TreeItem<DbObject> selected = tree.getSelectionModel().getSelectedItem();
+        TreeItem<DbObject> targetSelection = null;
+        if (selected != null && selected != root) {
+            // Find top-level connection node under root
+            TreeItem<DbObject> curr = selected;
+            while (curr.getParent() != null && curr.getParent() != root) {
+                curr = curr.getParent();
+            }
+            targetSelection = curr;
+        }
+
+        for (TreeItem<DbObject> child : root.getChildren()) {
+            collapseNodeRecursively(child);
+        }
+
+        if (targetSelection != null) {
+            tree.getSelectionModel().select(targetSelection);
+            updateToolbarState(targetSelection);
+        } else if (!root.getChildren().isEmpty()) {
+            TreeItem<DbObject> first = root.getChildren().get(0);
+            tree.getSelectionModel().select(first);
+            updateToolbarState(first);
+        } else {
+            updateToolbarState(null);
+        }
+
+        saveTreeState();
+    }
+
+    private void collapseNodeRecursively(TreeItem<DbObject> node) {
+        if (node == null) return;
+        for (TreeItem<DbObject> child : node.getChildren()) {
+            collapseNodeRecursively(child);
+        }
+        node.setExpanded(false);
     }
 }

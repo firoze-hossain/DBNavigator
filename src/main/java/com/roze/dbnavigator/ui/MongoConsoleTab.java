@@ -18,6 +18,7 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Popup;
 import org.bson.Document;
@@ -76,6 +77,9 @@ public class MongoConsoleTab extends Tab {
     private final Button revertButton = new Button("Revert");
     private final TabPane bottomTabs;
     private final Tab resultTab;
+    private final StackPane dataPanelContainer = new StackPane();
+    private final SplitPane split;
+    private double lastDividerPosition = 0.55;
 
     private String currentDatabase;
     private String lastFindDatabase;
@@ -176,7 +180,30 @@ public class MongoConsoleTab extends Tab {
         resultTab.setClosable(false);
         bottomTabs = new TabPane(outputTab, resultTab);
 
-        SplitPane split = new SplitPane(editorScroll, bottomTabs);
+        boolean isMac = System.getProperty("os.name", "").toLowerCase().contains("mac");
+        String hideShortcut = isMac ? "⇧⎋" : "Shift+Escape";
+
+        Button hideDataPanelButton = new Button();
+        hideDataPanelButton.setGraphic(Icons.of(FontAwesomeSolid.MINUS, "#a9b7c6", 11));
+        hideDataPanelButton.setTooltip(new Tooltip("Hide  " + hideShortcut));
+        hideDataPanelButton.getStyleClass().add("run-panel-chrome-button");
+        hideDataPanelButton.setOnAction(e -> hideDataPanel());
+
+        Button moreOptionsButton = new Button();
+        moreOptionsButton.setGraphic(Icons.of(FontAwesomeSolid.ELLIPSIS_V, "#a9b7c6", 11));
+        moreOptionsButton.setTooltip(new Tooltip("More Options"));
+        moreOptionsButton.getStyleClass().add("run-panel-chrome-button");
+
+        HBox chromeButtons = new HBox(2, moreOptionsButton, hideDataPanelButton);
+        chromeButtons.setAlignment(Pos.CENTER_RIGHT);
+        chromeButtons.setPickOnBounds(false);
+        chromeButtons.setMaxHeight(Region.USE_PREF_SIZE);
+        StackPane.setAlignment(chromeButtons, Pos.TOP_RIGHT);
+        StackPane.setMargin(chromeButtons, new Insets(3, 6, 0, 0));
+
+        dataPanelContainer.getChildren().addAll(bottomTabs, chromeButtons);
+
+        this.split = new SplitPane(editorScroll, dataPanelContainer);
         split.setOrientation(javafx.geometry.Orientation.VERTICAL);
         split.setDividerPositions(0.55);
 
@@ -184,8 +211,13 @@ public class MongoConsoleTab extends Tab {
         VBox.setVgrow(split, Priority.ALWAYS);
         setContent(root);
 
-        editor.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
-            if (e.isControlDown() && e.getCode() == KeyCode.ENTER) {
+        root.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
+            if (new KeyCodeCombination(KeyCode.ESCAPE, KeyCombination.SHIFT_DOWN).match(e)) {
+                if (isDataPanelVisible()) {
+                    hideDataPanel();
+                    e.consume();
+                }
+            } else if (e.isControlDown() && e.getCode() == KeyCode.ENTER) {
                 runCurrentStatement();
                 e.consume();
             }
@@ -208,6 +240,31 @@ public class MongoConsoleTab extends Tab {
     public CodeArea getEditor() { return editor; }
     public void focusEditor() { if (editor != null) editor.requestFocus(); }
     public void execute() { runCurrentStatement(); }
+
+    public void hideDataPanel() {
+        if (split.getItems().contains(dataPanelContainer)) {
+            if (split.getDividerPositions().length > 0) {
+                lastDividerPosition = split.getDividerPositions()[0];
+            }
+            split.getItems().remove(dataPanelContainer);
+            if (editor != null) editor.requestFocus();
+        }
+    }
+
+    public void showDataPanel() {
+        if (!split.getItems().contains(dataPanelContainer)) {
+            split.getItems().add(dataPanelContainer);
+            split.setDividerPositions(lastDividerPosition);
+        }
+    }
+
+    public void toggleDataPanel() {
+        if (isDataPanelVisible()) hideDataPanel(); else showDataPanel();
+    }
+
+    public boolean isDataPanelVisible() {
+        return split.getItems().contains(dataPanelContainer);
+    }
 
     private void log(String line) {
         outputArea.appendText("[" + LocalTime.now().format(timeFormat) + "] " + line + "\n");
@@ -435,6 +492,7 @@ public class MongoConsoleTab extends Tab {
         if (target == null) return;
 
         MongoShellParser.Statement stmt = MongoShellParser.parse(target.text());
+        Platform.runLater(this::showDataPanel);
         AppExecutor.run(() -> {
             try {
                 runOne(stmt);

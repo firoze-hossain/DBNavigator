@@ -106,6 +106,11 @@ public final class SqlParameters {
             }
         }
         if (commentText == null || commentText.isBlank()) return null;
+        String lower = commentText.toLowerCase(Locale.ROOT);
+        if (lower.contains("ctrl+enter runs") || lower.contains("ctrl+space completes")
+                || lower.matches(".*[a-z0-9_]+\\s+console\\.?$")) {
+            return null;
+        }
 
         if (treatAfterText != null && !treatAfterText.isBlank() && !treatAfterText.equalsIgnoreCase("comment beginning")) {
             int idx = commentText.indexOf(treatAfterText);

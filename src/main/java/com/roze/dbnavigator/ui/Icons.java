@@ -19,6 +19,13 @@ public final class Icons {
         return fi;
     }
 
+    public static Node collapseAll() {
+        javafx.scene.shape.SVGPath svg = new javafx.scene.shape.SVGPath();
+        svg.setContent("M3.707 3.293a1 1 0 0 0-1.414 1.414L5.586 8l-3.293 3.293a1 1 0 1 0 1.414 1.414l4-4a1 1 0 0 0 0-1.414l-4-4zm8.586 0a1 1 0 0 1 1.414 1.414L10.414 8l3.293 3.293a1 1 0 0 1-1.414 1.414l-4-4a1 1 0 0 1 0-1.414l4-4z");
+        svg.setFill(Color.web("#a9b7c6"));
+        return svg;
+    }
+
     public static Node forDatabase(ConnectionProfile.DatabaseType type) {
         return DatabaseIcon.create(type, 14, true);
     }

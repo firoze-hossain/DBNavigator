@@ -1388,5 +1388,81 @@ public class SchemaTreePaneToolbarTest {
         assertNotNull(impExp);
         assertTrue(menuHasItem(impExp, "Export with expdp"));
     }
+
+    @Test
+    public void testCollapseAllButtonPropertiesMatchingDataGrip() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        javafx.scene.control.Button collapseBtn = pane.getCollapseAllButton();
+        assertNotNull(collapseBtn, "Collapse All button must be present in SchemaTreePane header");
+        assertNotNull(collapseBtn.getTooltip(), "Collapse All button must have tooltip");
+        assertTrue(collapseBtn.getTooltip().getText().startsWith("Collapse All"), "Tooltip must start with 'Collapse All'");
+        assertTrue(collapseBtn.getTooltip().getText().contains("NumPad -"), "Tooltip must mention NumPad - shortcut");
+        assertNotNull(collapseBtn.getGraphic(), "Collapse All button must have an icon");
+    }
+
+    @Test
+    public void testCollapseAllRecursivelyCollapsesAllNodes() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile pgProfile = createPostgreSqlProfile();
+        pane.addConnectionNode(pgProfile);
+
+        ConnectionProfile mysqlProfile = new ConnectionProfile();
+        mysqlProfile.setId("mysql-1");
+        mysqlProfile.setName("mysql@localhost");
+        mysqlProfile.setType(ConnectionProfile.DatabaseType.MYSQL);
+        pane.addConnectionNode(mysqlProfile);
+
+        TreeItem<DbObject> conn1 = pane.getTree().getRoot().getChildren().get(0);
+        TreeItem<DbObject> conn2 = pane.getTree().getRoot().getChildren().get(1);
+
+        TreeItem<DbObject> dbItem1 = new TreeItem<>(new DbObject("thunder_db", Kind.DATABASE, "thunder_db", null));
+        TreeItem<DbObject> schemaItem1 = new TreeItem<>(new DbObject("public", Kind.SCHEMA, "thunder_db", "public"));
+        TreeItem<DbObject> tablesFolder = new TreeItem<>(new DbObject("tables", Kind.TABLES_FOLDER, "thunder_db", "public"));
+        TreeItem<DbObject> tableItem = new TreeItem<>(new DbObject("users", Kind.TABLE, "thunder_db", "public"));
+
+        conn1.getChildren().add(dbItem1);
+        dbItem1.getChildren().add(schemaItem1);
+        schemaItem1.getChildren().add(tablesFolder);
+        tablesFolder.getChildren().add(tableItem);
+
+        TreeItem<DbObject> dbItem2 = new TreeItem<>(new DbObject("test_db", Kind.DATABASE, "test_db", null));
+        conn2.getChildren().add(dbItem2);
+
+        // Expand all of them
+        conn1.setExpanded(true);
+        dbItem1.setExpanded(true);
+        schemaItem1.setExpanded(true);
+        tablesFolder.setExpanded(true);
+        tableItem.setExpanded(true);
+        conn2.setExpanded(true);
+        dbItem2.setExpanded(true);
+
+        assertTrue(conn1.isExpanded());
+        assertTrue(dbItem1.isExpanded());
+        assertTrue(schemaItem1.isExpanded());
+        assertTrue(tablesFolder.isExpanded());
+        assertTrue(conn2.isExpanded());
+        assertTrue(dbItem2.isExpanded());
+
+        // Select nested table item
+        pane.getTree().getSelectionModel().select(tableItem);
+        assertEquals(tableItem, pane.getTree().getSelectionModel().getSelectedItem());
+
+        // Trigger collapse all
+        pane.collapseAll();
+
+        // Verify all nodes recursively collapsed
+        assertFalse(conn1.isExpanded(), "conn1 must be collapsed");
+        assertFalse(dbItem1.isExpanded(), "dbItem1 must be collapsed");
+        assertFalse(schemaItem1.isExpanded(), "schemaItem1 must be collapsed");
+        assertFalse(tablesFolder.isExpanded(), "tablesFolder must be collapsed");
+        assertFalse(tableItem.isExpanded(), "tableItem must be collapsed");
+        assertFalse(conn2.isExpanded(), "conn2 must be collapsed");
+        assertFalse(dbItem2.isExpanded(), "dbItem2 must be collapsed");
+
+        // Verify selection was gracefully moved to top-level connection ancestor
+        assertEquals(conn1, pane.getTree().getSelectionModel().getSelectedItem(),
+                "Selection should gracefully fall back to the top-level connection ancestor");
+    }
 }
 

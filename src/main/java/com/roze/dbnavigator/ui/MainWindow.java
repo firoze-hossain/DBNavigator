@@ -2572,6 +2572,12 @@ public class MainWindow {
         return centerSplit.getItems().contains(schemaPane);
     }
 
+    public void collapseDatabaseExplorer() {
+        if (schemaPane != null) {
+            schemaPane.collapseAll();
+        }
+    }
+
     public void toggleCommitToolWindow() {
         setStatus("Commit Tool Window (Alt+0) activated");
     }
@@ -2597,7 +2603,13 @@ public class MainWindow {
     }
 
     public void toggleServicesToolWindow() {
-        setStatus("Services Tool Window (Alt+8) activated");
+        Tab current = currentSelectedTab();
+        if (current instanceof QueryTab qt) {
+            qt.toggleDataPanel();
+            setStatus((qt.isDataPanelVisible() ? "Shown" : "Hidden") + " Services / console data panel");
+            return;
+        }
+        toggleRunPanel();
     }
 
     public void toggleVersionControlToolWindow() {
@@ -3241,6 +3253,12 @@ public class MainWindow {
     }
 
     public void hideActiveToolWindow() {
+        Tab current = currentSelectedTab();
+        if (current instanceof QueryTab qt && qt.isDataPanelVisible()) {
+            qt.hideDataPanel();
+            setStatus("Hid console data panel");
+            return;
+        }
         if (runPanelVisible) {
             hideRunPanel();
         } else if (isDatabaseExplorerVisible()) {
@@ -3257,6 +3275,10 @@ public class MainWindow {
     }
 
     public void hideBottomToolWindows() {
+        Tab current = currentSelectedTab();
+        if (current instanceof QueryTab qt && qt.isDataPanelVisible()) {
+            qt.hideDataPanel();
+        }
         if (runPanelVisible) {
             hideRunPanel();
         }
@@ -3264,6 +3286,10 @@ public class MainWindow {
     }
 
     public void hideAllToolWindows() {
+        Tab current = currentSelectedTab();
+        if (current instanceof QueryTab qt && qt.isDataPanelVisible()) {
+            qt.hideDataPanel();
+        }
         if (isDatabaseExplorerVisible()) {
             toggleDatabaseExplorer();
         }

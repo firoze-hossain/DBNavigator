@@ -58,9 +58,12 @@ public class RunPanel extends BorderPane {
         tabs.setTabClosingPolicy(TabPane.TabClosingPolicy.ALL_TABS);
         HBox.setHgrow(tabs, Priority.ALWAYS);
 
+        boolean isMac = System.getProperty("os.name", "").toLowerCase().contains("mac");
+        String hideShortcut = isMac ? "⇧⎋" : "Shift+Escape";
+
         Button minimizeButton = new Button();
         minimizeButton.setGraphic(Icons.of(FontAwesomeSolid.MINUS, "#a9b7c6", 11));
-        minimizeButton.setTooltip(new Tooltip("Hide Run panel"));
+        minimizeButton.setTooltip(new Tooltip("Hide  " + hideShortcut));
         minimizeButton.getStyleClass().add("run-panel-chrome-button");
         minimizeButton.setOnAction(e -> { if (onMinimize != null) onMinimize.run(); });
 
