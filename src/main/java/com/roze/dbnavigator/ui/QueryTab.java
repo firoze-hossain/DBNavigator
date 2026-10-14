@@ -30,12 +30,14 @@ import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Popup;
+import javafx.stage.Window;
 import org.fxmisc.flowless.VirtualizedScrollPane;
 import org.fxmisc.richtext.CodeArea;
 import org.fxmisc.richtext.LineNumberFactory;
@@ -59,7 +61,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * DataGrip-style SQL console. Autocomplete (tables → columns → keywords,
+ * SQL console. Autocomplete (tables → columns → keywords,
  * Enter/Tab inserts), and simple single-table SELECT results are editable:
  * change cells / delete rows, then Submit commits everything in one transaction.
  */
@@ -87,6 +89,7 @@ public class QueryTab extends Tab {
     private final Spinner<Integer> limitSpinner = new Spinner<>(10, 100_000, 500, 100);
     private final Button runButton = new Button("Run");
     private final Button cancelButton = new Button("Cancel");
+    private final Button reloadButton = new Button();
     private final Button historyButton = new Button();
     private final Button statementsButton = new Button();
     private final Button submitButton = new Button("Submit");
@@ -172,6 +175,10 @@ public class QueryTab extends Tab {
         statementsButton.setTooltip(new Tooltip("Choose Statement to Run"));
         statementsButton.setOnAction(e -> showStatementsPopup());
 
+        reloadButton.setGraphic(Icons.of(FontAwesomeSolid.SYNC_ALT, "#6897bb", 11));
+        reloadButton.setTooltip(new Tooltip("Reload Page  Ctrl+F5"));
+        reloadButton.setOnAction(e -> handleReloadQuery());
+
         submitButton.setGraphic(Icons.of(FontAwesomeSolid.CHECK, "#57965c", 11));
         submitButton.setTooltip(new Tooltip("Commit pending result edits/deletes"));
         revertButton.setGraphic(Icons.of(FontAwesomeSolid.UNDO, "#e05555", 11));
@@ -194,7 +201,7 @@ public class QueryTab extends Tab {
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-        HBox toolbar = new HBox(8, runButton, cancelButton, historyButton, statementsButton,
+        HBox toolbar = new HBox(8, runButton, cancelButton, reloadButton, historyButton, statementsButton,
                 submitButton, revertButton, exportButton,
                 new Label("Limit:"), limitSpinner, spacer, connLabel);
         toolbar.setAlignment(Pos.CENTER_LEFT);
@@ -224,24 +231,45 @@ public class QueryTab extends Tab {
             closeActiveCursor();
         });
 
-        pager.setOnFirst(() -> { currentPageStart = 0; displayCurrentPage(); });
+        pager.setOnFirst(() -> {
+            if (editManager != null && !editManager.confirmAndClearPendingIfDiscarded(getOwnerWindow())) return;
+            currentPageStart = 0; displayCurrentPage();
+        });
         pager.setOnPrev(() -> {
+            if (editManager != null && !editManager.confirmAndClearPendingIfDiscarded(getOwnerWindow())) return;
             currentPageStart = Math.max(0, currentPageStart - currentPageSize());
             displayCurrentPage();
         });
-        pager.setOnNext(this::pageForward);
-        pager.setOnLast(this::pageToLast);
-        pager.addOverflowItem("Refresh (re-run query)", this::rerunLastSql);
+        pager.setOnNext(() -> {
+            if (editManager != null && !editManager.confirmAndClearPendingIfDiscarded(getOwnerWindow())) return;
+            pageForward();
+        });
+        pager.setOnLast(() -> {
+            if (editManager != null && !editManager.confirmAndClearPendingIfDiscarded(getOwnerWindow())) return;
+            pageToLast();
+        });
+        pager.addOverflowItem("Refresh (re-run query)", this::handleReloadQuery);
 
         // ---- Layout ----
-        Tab initialResultTab = new Tab("Result 1", resultGrid);
+        Pane initialResultContent = wrapResultGridWithToolbar(resultGrid);
+        Tab initialResultTab = new Tab("Result 1", initialResultContent);
         initialResultTab.setClosable(false);
+        initialResultTab.setUserData(editManager);
         resultsTabPane.getTabs().add(initialResultTab);
         resultsTabPane.setStyle("-fx-tab-min-width: 80px;");
         resultsTabPane.getSelectionModel().selectedItemProperty().addListener((obs, oldTab, newTab) -> {
-            if (newTab != null && newTab.getContent() instanceof ResultGrid grid) {
-                editManager = new GridEditManager(profile, catalog, grid,
-                        submitButton, revertButton, this::rerunLastSql, statusLabel::setText);
+            if (newTab != null) {
+                if (newTab.getUserData() instanceof GridEditManager mgr) {
+                    editManager = mgr;
+                    editManager.updateButtons();
+                } else {
+                    ResultGrid grid = extractResultGrid(newTab);
+                    if (grid != null) {
+                        editManager = new GridEditManager(profile, catalog, grid,
+                                submitButton, revertButton, this::rerunLastSql, statusLabel::setText);
+                        newTab.setUserData(editManager);
+                    }
+                }
             }
         });
 
@@ -312,7 +340,10 @@ public class QueryTab extends Tab {
         CompletionService.preload(profile, catalog);
 
         root.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
-            if (new KeyCodeCombination(KeyCode.ESCAPE, KeyCombination.SHIFT_DOWN).match(e)) {
+            if ((e.isControlDown() && e.getCode() == KeyCode.F5) || e.getCode() == KeyCode.F5) {
+                handleReloadQuery();
+                e.consume();
+            } else if (new KeyCodeCombination(KeyCode.ESCAPE, KeyCombination.SHIFT_DOWN).match(e)) {
                 if (isDataPanelVisible()) {
                     hideDataPanel();
                     e.consume();
@@ -596,7 +627,7 @@ public class QueryTab extends Tab {
                 showCompletions();
             } else if (inserted.equals(" ")
                     && contextAt(editor.getCaretPosition()) != CompletionService.Context.ANY) {
-                showCompletions();   // DataGrip behavior: popup right after FROM/SELECT/…
+                showCompletions();   // popup right after FROM/SELECT/…
             } else if (completionPopup.isShowing()) {
                 showCompletions();   // refresh after backspace etc.
             }
@@ -856,7 +887,7 @@ public class QueryTab extends Tab {
     // ------------------------------------------------------- editor context menu
 
     /**
-     * DataGrip-style right-click menu on the editor, with a different item
+     * Context menu on the editor, with a different item
      * set depending on whether there's a selection — matching the reference
      * IDE's own behavior. Items that are genuinely implemented here run real
      * actions; items that would need a full SQL parser, an AI backend, or
@@ -1943,20 +1974,88 @@ public class QueryTab extends Tab {
                 ? customTitle : ("Result " + resultTabCounter);
         ResultGrid newGrid = new ResultGrid();
         newGrid.setSortRequestListener(this::sortByColumn);
-        Tab tab = new Tab(title, newGrid);
+        Pane content = wrapResultGridWithToolbar(newGrid);
+        Tab tab = new Tab(title, content);
         tab.setClosable(true);
         resultsTabPane.getTabs().add(tab);
         resultsTabPane.getSelectionModel().select(tab);
         editManager = new GridEditManager(profile, catalog, newGrid,
                 submitButton, revertButton, this::rerunLastSql, statusLabel::setText);
+        tab.setUserData(editManager);
     }
 
     private ResultGrid activeResultGrid() {
         Tab selected = resultsTabPane.getSelectionModel().getSelectedItem();
-        if (selected != null && selected.getContent() instanceof ResultGrid grid) {
-            return grid;
+        ResultGrid grid = extractResultGrid(selected);
+        return grid != null ? grid : resultGrid;
+    }
+
+    private ResultGrid extractResultGrid(Tab tab) {
+        if (tab == null) return null;
+        if (tab.getContent() instanceof ResultGrid grid) return grid;
+        if (tab.getContent() instanceof Pane pane) {
+            for (javafx.scene.Node node : pane.getChildren()) {
+                if (node instanceof ResultGrid grid) return grid;
+            }
         }
-        return resultGrid;
+        return null;
+    }
+
+    private Pane wrapResultGridWithToolbar(ResultGrid grid) {
+        grid.setReloadAction(this::handleReloadQuery);
+
+        Button addRowBtn = new Button();
+        addRowBtn.setGraphic(Icons.of(FontAwesomeSolid.PLUS, "#57965c", 11));
+        addRowBtn.setTooltip(new Tooltip("Add Row"));
+        addRowBtn.disableProperty().bind(grid.editableProperty().not());
+        addRowBtn.setOnAction(e -> {
+            if (grid.getAddRowAction() != null) {
+                grid.getAddRowAction().run();
+            }
+        });
+
+        Button deleteRowsBtn = new Button();
+        deleteRowsBtn.setGraphic(Icons.of(FontAwesomeSolid.MINUS, "#e05555", 11));
+        deleteRowsBtn.setTooltip(new Tooltip("Delete Selected Row(s)"));
+        deleteRowsBtn.disableProperty().bind(grid.editableProperty().not()
+                .or(javafx.beans.binding.Bindings.isEmpty(grid.getSelectionModel().getSelectedItems())));
+        deleteRowsBtn.setOnAction(e -> {
+            if (grid.getDeleteRowsAction() != null) {
+                grid.getDeleteRowsAction().run();
+            }
+        });
+
+        Button tabSubmitBtn = new Button("Submit");
+        tabSubmitBtn.setGraphic(Icons.of(FontAwesomeSolid.CHECK, "#57965c", 11));
+        tabSubmitBtn.setTooltip(new Tooltip("Commit pending result edits/deletes"));
+        tabSubmitBtn.disableProperty().bind(submitButton.disableProperty());
+        tabSubmitBtn.textProperty().bind(submitButton.textProperty());
+        tabSubmitBtn.setOnAction(e -> submitButton.fire());
+
+        Button tabRevertBtn = new Button("Revert");
+        tabRevertBtn.setGraphic(Icons.of(FontAwesomeSolid.UNDO, "#e05555", 11));
+        tabRevertBtn.setTooltip(new Tooltip("Discard pending edits and re-run the query"));
+        tabRevertBtn.disableProperty().bind(revertButton.disableProperty());
+        tabRevertBtn.setOnAction(e -> revertButton.fire());
+
+        Button tabReloadBtn = new Button();
+        tabReloadBtn.setGraphic(Icons.of(FontAwesomeSolid.SYNC_ALT, "#6897bb", 11));
+        tabReloadBtn.setTooltip(new Tooltip("Reload Page  Ctrl+F5"));
+        tabReloadBtn.setOnAction(e -> handleReloadQuery());
+
+        Button tabExportCsv = new Button();
+        tabExportCsv.setGraphic(Icons.of(FontAwesomeSolid.FILE_CSV, "#e0a44c", 11));
+        tabExportCsv.setTooltip(new Tooltip("Export current page to CSV"));
+        tabExportCsv.setOnAction(e -> grid.exportCsv());
+
+        HBox dataToolbar = new HBox(6, addRowBtn, deleteRowsBtn, tabSubmitBtn, tabRevertBtn, tabReloadBtn, tabExportCsv);
+        dataToolbar.setAlignment(Pos.CENTER_LEFT);
+        dataToolbar.setPadding(new Insets(4, 8, 4, 8));
+        dataToolbar.getStyleClass().add("result-data-toolbar");
+
+        VBox box = new VBox(dataToolbar, grid);
+        VBox.setVgrow(grid, Priority.ALWAYS);
+        return box;
     }
 
     private void executeStatementsSequentially(List<String> statements) {
@@ -2045,6 +2144,27 @@ public class QueryTab extends Tab {
         });
     }
 
+    public void handleReloadQuery() {
+        if (editManager != null && !editManager.confirmAndClearPendingIfDiscarded(getOwnerWindow())) {
+            return;
+        }
+        if (lastExecutedSql != null && !lastExecutedSql.isBlank()) {
+            rerunLastSql();
+        } else {
+            executeAction(0);
+        }
+    }
+
+    private Window getOwnerWindow() {
+        if (mainWindow != null && mainWindow.getOwnerWindow() != null) {
+            return mainWindow.getOwnerWindow();
+        }
+        if (getTabPane() != null && getTabPane().getScene() != null) {
+            return getTabPane().getScene().getWindow();
+        }
+        return null;
+    }
+
     private void rerunLastSql() {
         if (lastExecutedSql != null) executeSql(lastExecutedSql);
     }
@@ -2060,6 +2180,9 @@ public class QueryTab extends Tab {
      *                        statement the user ran should reset that.
      */
     private void executeSql(String sql, boolean isNewBaseQuery) {
+        if (editManager != null && !editManager.confirmAndClearPendingIfDiscarded(getOwnerWindow())) {
+            return;
+        }
         lastExecutedSql = sql;
         if (isNewBaseQuery) {
             baseSqlForSort = sql;
@@ -2347,7 +2470,7 @@ public class QueryTab extends Tab {
 
     /** Slices the cursor's in-memory cache to the current page and renders it — no fetch needed. */
     /**
-     * DataGrip-style column-header sort: wraps the *original* base query
+     * Column-header sort: wraps the *original* base query
      * (not whatever's currently displayed, which might already be a
      * previous sort's wrapped version) in a subquery with an ORDER BY, and
      * re-executes it through the normal paged-cursor path — this sorts the
@@ -2358,6 +2481,9 @@ public class QueryTab extends Tab {
      */
     private void sortByColumn(String columnName, String direction) {
         if (baseSqlForSort == null || baseSqlForSort.isBlank()) return;
+        if (editManager != null && !editManager.confirmAndClearPendingIfDiscarded(getOwnerWindow())) {
+            return;
+        }
         currentSortColumn = columnName;
         currentSortDirection = direction;
 
@@ -2393,6 +2519,16 @@ public class QueryTab extends Tab {
         activeResultGrid().setRowNumberOffset(currentPageStart);
         activeResultGrid().setCurrentSort(currentSortColumn, currentSortDirection);
         activeResultGrid().showResult(pageResult);
+
+        Tab activeTab = resultsTabPane.getSelectionModel().getSelectedItem();
+        if (activeTab != null && currentEditableTable != null && !currentEditableTable.isBlank()) {
+            String tabTitle = currentEditableTable;
+            if (catalog != null && !catalog.isBlank() && !tabTitle.startsWith(catalog + ".")) {
+                tabTitle = catalog + "." + tabTitle;
+            }
+            activeTab.setText(tabTitle);
+            activeTab.setGraphic(Icons.of(FontAwesomeSolid.TABLE, "#4a88c7", 11));
+        }
 
         long fromDisplay = pageRows.isEmpty() ? 0 : currentPageStart + 1L;
         long toDisplay = currentPageStart + pageRows.size();

@@ -12,11 +12,13 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.stage.Popup;
+import javafx.stage.Window;
 import org.kordamp.ikonli.fontawesome5.FontAwesomeSolid;
 
 import java.util.ArrayList;
@@ -89,31 +91,43 @@ public class DataTab extends Tab {
 
         filterField.setPromptText("condition…  (e.g. status = 'active')");
         filterField.setPrefWidth(210);
-        filterField.setOnAction(e -> reloadFromStart());
+        filterField.setOnAction(e -> handleReloadFromStart());
 
         orderField.setPromptText("column…  (e.g. id DESC)");
         orderField.setPrefWidth(160);
-        orderField.setOnAction(e -> reloadFromStart());
+        orderField.setOnAction(e -> handleReloadFromStart());
 
         setupClauseControls();
 
         Button applyButton = new Button("Apply");
-        applyButton.setOnAction(e -> reloadFromStart());
+        applyButton.setOnAction(e -> handleReloadFromStart());
 
         Button refreshButton = new Button();
         refreshButton.setGraphic(Icons.of(FontAwesomeSolid.SYNC_ALT, "#6897bb", 11));
-        refreshButton.setTooltip(new Tooltip("Refresh"));
-        refreshButton.setOnAction(e -> loadPage());
+        refreshButton.setTooltip(new Tooltip("Reload Page  Ctrl+F5"));
+        refreshButton.setOnAction(e -> handleReload());
 
         Button exportButton = new Button();
         exportButton.setGraphic(Icons.of(FontAwesomeSolid.FILE_CSV, "#e0a44c", 11));
         exportButton.setTooltip(new Tooltip("Export current page to CSV"));
         exportButton.setOnAction(e -> grid.exportCsv());
 
-        pager.setOnFirst(() -> { if (page != 0) { page = 0; loadPage(); } });
-        pager.setOnPrev(() -> { if (page > 0) { page--; loadPage(); } });
-        pager.setOnNext(() -> { page++; loadPage(); });
-        pager.setOnLast(this::jumpToLastPage);
+        pager.setOnFirst(() -> {
+            if (editManager != null && !editManager.confirmAndClearPendingIfDiscarded(getOwnerWindow())) return;
+            if (page != 0) { page = 0; loadPage(); }
+        });
+        pager.setOnPrev(() -> {
+            if (editManager != null && !editManager.confirmAndClearPendingIfDiscarded(getOwnerWindow())) return;
+            if (page > 0) { page--; loadPage(); }
+        });
+        pager.setOnNext(() -> {
+            if (editManager != null && !editManager.confirmAndClearPendingIfDiscarded(getOwnerWindow())) return;
+            page++; loadPage();
+        });
+        pager.setOnLast(() -> {
+            if (editManager != null && !editManager.confirmAndClearPendingIfDiscarded(getOwnerWindow())) return;
+            jumpToLastPage();
+        });
         pager.addOverflowItem("Get exact row count", this::fetchExactCount);
 
         Region spacer = new Region();
@@ -131,7 +145,7 @@ public class DataTab extends Tab {
         toolbar.setPadding(new Insets(6, 10, 6, 10));
         toolbar.getStyleClass().add("console-toolbar");
 
-        // Breadcrumb bar: connection ▸ database ▸ schema ▸ table (DataGrip style)
+        // Breadcrumb bar: connection ▸ database ▸ schema ▸ table
         Label crumb = new Label(breadcrumbText());
         crumb.getStyleClass().add("breadcrumb");
         crumb.setGraphic(Icons.of(FontAwesomeSolid.MAP_MARKER_ALT, "#868a91", 10));
@@ -148,10 +162,19 @@ public class DataTab extends Tab {
         VBox.setVgrow(grid, Priority.ALWAYS);
         setContent(root);
 
+        grid.setReloadAction(this::handleReload);
         grid.setSortRequestListener((columnName, direction) -> {
+            if (editManager != null && !editManager.confirmAndClearPendingIfDiscarded(getOwnerWindow())) return;
             orderField.setText(direction == null ? "" : DbObject.quote(columnName) + " " + direction);
             grid.setCurrentSort(columnName, direction);
             reloadFromStart();
+        });
+
+        root.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
+            if ((e.isControlDown() && e.getCode() == KeyCode.F5) || e.getCode() == KeyCode.F5) {
+                handleReload();
+                e.consume();
+            }
         });
 
         if (AppSettingsStore.load().isEnableLocalFilterByDefault()) {
@@ -451,5 +474,26 @@ public class DataTab extends Tab {
                 Platform.runLater(() -> statusLabel.setText("Error: " + msg));
             }
         });
+    }
+
+    public void handleReload() {
+        if (editManager != null && !editManager.confirmAndClearPendingIfDiscarded(getOwnerWindow())) {
+            return;
+        }
+        loadPage();
+    }
+
+    public void handleReloadFromStart() {
+        if (editManager != null && !editManager.confirmAndClearPendingIfDiscarded(getOwnerWindow())) {
+            return;
+        }
+        reloadFromStart();
+    }
+
+    private Window getOwnerWindow() {
+        if (getTabPane() != null && getTabPane().getScene() != null) {
+            return getTabPane().getScene().getWindow();
+        }
+        return null;
     }
 }

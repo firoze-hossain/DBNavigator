@@ -167,14 +167,29 @@ public class GridEditManager {
         return -1;
     }
 
-    private void clearPending() {
+    public void clearPending() {
         updates.clear();
         deletes.clear();
         grid.clearModifiedCells();
         updateButtons();
     }
 
-    private void updateButtons() {
+    /**
+     * If there are pending unsubmitted changes, prompts the user to confirm
+     * discarding them. If confirmed, pending changes are cleared and true is returned.
+     * If no changes are pending, returns true immediately. If user cancels, returns false.
+     */
+    public boolean confirmAndClearPendingIfDiscarded(javafx.stage.Window owner) {
+        if (!hasPending()) return true;
+        boolean discard = UnsubmittedChangesDialog.confirm(owner);
+        if (discard) {
+            clearPending();
+            return true;
+        }
+        return false;
+    }
+
+    public void updateButtons() {
         boolean has = hasPending();
         submitButton.setDisable(!has);
         revertButton.setDisable(!has);
