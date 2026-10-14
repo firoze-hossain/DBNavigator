@@ -172,6 +172,48 @@
 .console-status { -fx-text-fill: -text-dim; -fx-font-size: 12px; }
 .console-connection-label { -fx-text-fill: -text-dim; -fx-graphic-text-gap: 6; }
 
+.console-introspection-banner {
+    -fx-background-color: #fff8e1;
+    -fx-border-color: #ffe082;
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 4 12 4 12;
+    -fx-alignment: center-left;
+}
+.console-introspection-banner .label {
+    -fx-text-fill: #5d4037;
+    -fx-font-size: 12px;
+}
+.console-introspection-banner .hyperlink {
+    -fx-text-fill: #1976d2;
+    -fx-font-size: 12px;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
+}
+.console-introspection-banner .hyperlink:hover {
+    -fx-underline: true;
+}
+
+.console-db-selector {
+    -fx-background-color: transparent;
+    -fx-text-fill: -text;
+    -fx-font-size: 12px;
+    -fx-padding: 3 6 3 6;
+    -fx-graphic-text-gap: 6;
+    -fx-cursor: hand;
+    -fx-border-color: transparent;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+}
+.console-db-selector:hover {
+    -fx-background-color: -bg-highlight;
+}
+.console-db-selector .arrow-button {
+    -fx-padding: 0 0 0 4;
+}
+.console-db-selector .arrow {
+    -fx-background-color: -text-dim;
+}
+
 /* ---------- SQL editor (RichTextFX) ---------- */
 .sql-editor {
     -fx-background-color: -bg-darkest;

@@ -354,9 +354,18 @@ public class SchemaTreePane extends VBox {
         Platform.runLater(tree::refresh);
 
         List<DbObject> result = new ArrayList<>(visible);
-        if (profile.getType() == ConnectionProfile.DatabaseType.POSTGRESQL) {
+        if (profile.getType() == ConnectionProfile.DatabaseType.POSTGRESQL
+                || profile.getType() == ConnectionProfile.DatabaseType.MYSQL
+                || profile.getType() == ConnectionProfile.DatabaseType.MARIADB
+                || profile.getType() == ConnectionProfile.DatabaseType.SQLSERVER
+                || profile.getType() == ConnectionProfile.DatabaseType.ORACLE) {
             DbObject serverObjects = new DbObject("Server Objects", Kind.SERVER_OBJECTS);
             result.add(serverObjects);
+            if (profile.getType() != ConnectionProfile.DatabaseType.POSTGRESQL) {
+                DbObject vv = new DbObject("virtual views", Kind.VIRTUAL_VIEWS_FOLDER, null, null);
+                vv.setDetail("1");
+                result.add(vv);
+            }
         }
         return result;
     }
