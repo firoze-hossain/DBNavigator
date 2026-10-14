@@ -21,6 +21,7 @@ import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
@@ -47,7 +48,11 @@ import java.io.File;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import com.roze.dbnavigator.db.ConnectionStore;
+import java.sql.Connection;
 import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
@@ -69,7 +74,12 @@ public class QueryTab extends Tab {
 
     private final MainWindow mainWindow;
     private final ConnectionProfile profile;
-    private final String catalog;   // nullable: default database of the profile
+    private String catalog;   // nullable: active database of the console
+    private MenuButton dbSelectorButton;
+    private HBox introspectionBanner;
+    private Label bannerLabel;
+    private Hyperlink bannerLink;
+    private List<String> cachedDatabases;
     private final CodeArea editor = SqlHighlighter.createEditor();
     private final VirtualizedScrollPane<CodeArea> editorScroll;
     private final VBox editorContainer = new VBox();
@@ -203,16 +213,13 @@ public class QueryTab extends Tab {
         limitSpinner.setEditable(true);
         limitSpinner.setPrefWidth(95);
 
-        Label connLabel = new Label(profile.getName()
-                + (catalog != null ? " ▸ " + catalog : ""));
-        connLabel.getStyleClass().add("console-connection-label");
-        connLabel.setGraphic(Icons.of(FontAwesomeSolid.DATABASE, "#57965c", 10));
+        Node dbSelectorNode = setupDbSelector();
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
         HBox toolbar = new HBox(8, runButton, cancelButton, reloadButton, historyButton, statementsButton,
                 deleteButton, submitButton, revertButton, exportButton,
-                new Label("Limit:"), limitSpinner, spacer, connLabel);
+                new Label("Limit:"), limitSpinner, spacer, dbSelectorNode);
         toolbar.setAlignment(Pos.CENTER_LEFT);
         toolbar.setPadding(new Insets(6, 10, 6, 10));
         toolbar.getStyleClass().add("console-toolbar");
@@ -337,7 +344,8 @@ public class QueryTab extends Tab {
         editorResultSplit.setOrientation(Orientation.VERTICAL);
         editorResultSplit.setDividerPositions(0.45);
 
-        VBox root = new VBox(toolbar, editorResultSplit);
+        setupIntrospectionBanner();
+        VBox root = new VBox(introspectionBanner, toolbar, editorResultSplit);
         VBox.setVgrow(editorResultSplit, Priority.ALWAYS);
         setContent(root);
 
@@ -2896,5 +2904,228 @@ public class QueryTab extends Tab {
         return sql.substring(0, idx) + " tableoid::text AS tableoid, ctid," + sql.substring(idx);
     }
 
+    private void setupIntrospectionBanner() {
+        introspectionBanner = new HBox(8);
+        introspectionBanner.getStyleClass().add("console-introspection-banner");
+        introspectionBanner.setAlignment(Pos.CENTER_LEFT);
+
+        Label iconLabel = new Label();
+        iconLabel.setGraphic(Icons.of(FontAwesomeSolid.EXCLAMATION_TRIANGLE, "#d9a74a", 12));
+
+        bannerLabel = new Label("Current database is not introspected.");
+        Region bannerSpacer = new Region();
+        HBox.setHgrow(bannerSpacer, Priority.ALWAYS);
+
+        bannerLink = new Hyperlink("Introspect database");
+        bannerLink.setOnAction(e -> {
+            if (catalog != null && !catalog.isBlank()) {
+                List<String> visible = profile.getVisibleDatabases();
+                List<String> updated = visible != null ? new ArrayList<>(visible) : new ArrayList<>();
+                if (!updated.contains(catalog)) {
+                    updated.add(catalog);
+                }
+                profile.setVisibleDatabases(updated);
+                ConnectionStore.saveOrUpdate(profile);
+                if (mainWindow != null && mainWindow.getSchemaPane() != null) {
+                    mainWindow.getSchemaPane().refreshConnection(profile);
+                }
+                updateIntrospectionBanner();
+            }
+        });
+
+        introspectionBanner.getChildren().addAll(iconLabel, bannerLabel, bannerSpacer, bannerLink);
+        updateIntrospectionBanner();
+    }
+
+    public void updateIntrospectionBanner() {
+        if (introspectionBanner == null) return;
+        if (profile.getType() == DatabaseType.SQLITE) {
+            introspectionBanner.setVisible(false);
+            introspectionBanner.setManaged(false);
+            return;
+        }
+        List<String> visible = profile.getVisibleDatabases();
+        boolean hasFilter = visible != null && !visible.isEmpty();
+        boolean notIntrospected = hasFilter && catalog != null && !visible.contains(catalog);
+
+        if (notIntrospected) {
+            boolean isOracle = profile.getType() == DatabaseType.ORACLE;
+            bannerLabel.setText(isOracle ? "Current schema is not introspected." : "Current database is not introspected.");
+            bannerLink.setText(isOracle ? "Introspect schema" : "Introspect database");
+            introspectionBanner.setVisible(true);
+            introspectionBanner.setManaged(true);
+        } else {
+            introspectionBanner.setVisible(false);
+            introspectionBanner.setManaged(false);
+        }
+    }
+
+    private javafx.scene.Node setupDbSelector() {
+        if (profile.getType() == DatabaseType.SQLITE) {
+            Label label = new Label("main");
+            label.getStyleClass().add("console-connection-label");
+            label.setGraphic(Icons.of(FontAwesomeSolid.DATABASE, "#57965c", 10));
+            return label;
+        }
+
+        this.dbSelectorButton = new MenuButton(formatSelectorText(catalog));
+        this.dbSelectorButton.getStyleClass().add("console-db-selector");
+        this.dbSelectorButton.setGraphic(Icons.of(FontAwesomeSolid.DATABASE, "#57965c", 10));
+        this.dbSelectorButton.setTooltip(new Tooltip("Select Database / Schema"));
+
+        this.dbSelectorButton.setOnShowing(e -> populateDbSelectorMenu());
+
+        AppExecutor.run(() -> {
+            try {
+                cachedDatabases = MetadataService.listDatabaseNames(profile);
+            } catch (Exception ignored) {}
+        });
+
+        return this.dbSelectorButton;
+    }
+
+    public String formatSelectorText(String cat) {
+        if (profile.getType() == DatabaseType.SQLITE) {
+            return "main";
+        }
+        if (cat == null || cat.isBlank()) {
+            cat = profile.getDatabase() != null && !profile.getDatabase().isBlank()
+                    ? profile.getDatabase() : "default";
+        }
+        if (profile.getType() == DatabaseType.POSTGRESQL || profile.getType() == DatabaseType.SQLSERVER) {
+            return cat + ".<schema>";
+        }
+        if (profile.getType() == DatabaseType.ORACLE) {
+            return cat.toUpperCase();
+        }
+        return cat;
+    }
+
+    private void populateDbSelectorMenu() {
+        if (dbSelectorButton == null) return;
+        dbSelectorButton.getItems().clear();
+
+        List<String> allDbs = cachedDatabases;
+        if (allDbs == null || allDbs.isEmpty()) {
+            try {
+                allDbs = MetadataService.listDatabaseNames(profile);
+                cachedDatabases = allDbs;
+            } catch (Exception ignored) {
+                allDbs = List.of();
+            }
+        }
+
+        if (allDbs.isEmpty() && catalog != null) {
+            allDbs = List.of(catalog);
+        }
+
+        List<String> visible = profile.getVisibleDatabases();
+        boolean hasFilter = visible != null && !visible.isEmpty();
+
+        List<String> introspected = hasFilter
+                ? allDbs.stream().filter(visible::contains).toList()
+                : allDbs;
+        List<String> nonIntrospected = hasFilter
+                ? allDbs.stream().filter(d -> !visible.contains(d)).toList()
+                : List.of();
+
+        // 1. Introspected databases section
+        for (String db : introspected) {
+            Menu dbMenu = new Menu(db);
+            dbMenu.setGraphic(Icons.of(FontAwesomeSolid.DATABASE, "#3592c4", 10));
+
+            MenuItem defaultItem = new MenuItem(db + (profile.getType() == DatabaseType.POSTGRESQL || profile.getType() == DatabaseType.SQLSERVER ? ".<schema>" : ""));
+            defaultItem.setOnAction(e -> switchDatabase(db));
+            dbMenu.getItems().add(defaultItem);
+
+            if (profile.getType() == DatabaseType.POSTGRESQL || profile.getType() == DatabaseType.SQLSERVER) {
+                MenuItem publicItem = new MenuItem("public");
+                publicItem.setOnAction(e -> switchDatabase(db));
+                dbMenu.getItems().add(publicItem);
+            }
+
+            dbSelectorButton.getItems().add(dbMenu);
+        }
+
+        // 2. Non-Introspected section
+        if (!nonIntrospected.isEmpty()) {
+            dbSelectorButton.getItems().add(new SeparatorMenuItem());
+
+            Label headerLabel = new Label("Non-Introspected");
+            headerLabel.setStyle("-fx-text-fill: #787878; -fx-font-size: 11px; -fx-font-weight: bold; -fx-padding: 3 8 3 8;");
+            CustomMenuItem headerItem = new CustomMenuItem(headerLabel);
+            headerItem.setHideOnClick(false);
+            dbSelectorButton.getItems().add(headerItem);
+
+            for (String db : nonIntrospected) {
+                MenuItem item = new MenuItem(db);
+                item.setGraphic(Icons.of(FontAwesomeSolid.DATABASE, "#787878", 10));
+                item.setOnAction(e -> switchDatabase(db));
+                dbSelectorButton.getItems().add(item);
+            }
+        }
+
+        // 3. Footer hint
+        dbSelectorButton.getItems().add(new SeparatorMenuItem());
+        Label footerLabel = new Label("Connect to database (Enter)");
+        footerLabel.setStyle("-fx-text-fill: #606060; -fx-font-size: 10px; -fx-padding: 2 8 2 8;");
+        CustomMenuItem footerItem = new CustomMenuItem(footerLabel);
+        footerItem.setHideOnClick(false);
+        dbSelectorButton.getItems().add(footerItem);
+    }
+
+    public void switchDatabase(String newCatalog) {
+        if (newCatalog == null || newCatalog.equals(this.catalog)) {
+            return;
+        }
+        this.catalog = newCatalog;
+        if (dbSelectorButton != null) {
+            dbSelectorButton.setText(formatSelectorText(newCatalog));
+        }
+        setText(fileId + (newCatalog != null ? " [" + newCatalog + "]" : ""));
+        if (breadcrumbsFileLabel != null) {
+            breadcrumbsFileLabel.setText((newCatalog != null ? newCatalog : "console") + ".sql");
+        }
+        ResultGrid grid = activeResultGrid();
+        if (grid != null) {
+            this.editManager = new GridEditManager(profile, newCatalog, grid,
+                    submitButton, revertButton, this::rerunLastSql, statusLabel::setText);
+        }
+        updateIntrospectionBanner();
+        statusLabel.setText("Connected to " + newCatalog);
+
+        AppExecutor.run(() -> CompletionService.preload(profile, newCatalog));
+
+        long start = System.currentTimeMillis();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        String timeStr = LocalDateTime.now().format(formatter);
+        if (mainWindow != null && mainWindow.getRunPanel() != null) {
+            RunPanel.RunHandle output = mainWindow.getRunPanel().openConsoleOutput(fileId, getText());
+            AppSettingsStore.Settings settings = AppSettingsStore.load();
+            if (settings != null && !"Never".equals(settings.getShowServicesOutput())) {
+                mainWindow.showRunPanel();
+            }
+            output.appendLine("[" + timeStr + "] Connected to " + newCatalog);
+
+            AppExecutor.run(() -> {
+                try (Connection conn = ClientRegistry.jdbc(profile, newCatalog).getConnection()) {
+                    long elapsed = System.currentTimeMillis() - start;
+                    String doneTime = LocalDateTime.now().format(formatter);
+                    Platform.runLater(() -> output.appendLine("[" + doneTime + "] completed in " + elapsed + " ms"));
+                } catch (Exception ex) {
+                    String errMsg = ex.getMessage() != null ? ex.getMessage() : ex.toString();
+                    Platform.runLater(() -> output.appendLine("[Error connecting to " + newCatalog + "] " + errMsg));
+                }
+            });
+        }
+    }
+
+    public MenuButton getDbSelectorButton() {
+        return dbSelectorButton;
+    }
+
+    public HBox getIntrospectionBanner() {
+        return introspectionBanner;
+    }
 
 }

@@ -485,8 +485,6 @@ public final class MetadataService {
                 try (Connection conn = client(profile, database.getCatalog()).getConnection()) {
                     items.addAll(loadSchemas(conn, profile, database.getCatalog()));
                 }
-                // Under database (e.g. thunder_db), alongside public / schemas:
-                // DataGrip adds Database Objects and virtual views
                 items.add(new DbObject("Database Objects", Kind.DATABASE_OBJECTS, database.getCatalog(), null));
                 DbObject vv = new DbObject("virtual views", Kind.VIRTUAL_VIEWS_FOLDER, database.getCatalog(), null);
                 vv.setDetail("1");
@@ -496,12 +494,15 @@ public final class MetadataService {
             case SQLSERVER -> {
                 // schemas of that particular database (separate physical connection,
                 // via databaseName=/dbname in the JDBC URL — see ConnectionProfile.getJdbcUrl)
+                List<DbObject> items = new ArrayList<>();
                 try (Connection conn = client(profile, database.getCatalog()).getConnection()) {
-                    yield loadSchemas(conn, profile, database.getCatalog());
+                    items.addAll(loadSchemas(conn, profile, database.getCatalog()));
                 }
+                items.add(new DbObject("Database Objects", Kind.DATABASE_OBJECTS, database.getCatalog(), null));
+                yield items;
             }
-            // MySQL/MariaDB: catalog acts as schema
-            default -> objectFolders(database.getCatalog(), null);
+            case MYSQL, MARIADB -> loadMysqlSchemaChildren(profile, database.getCatalog());
+            default -> loadJdbcDynamicFolders(profile, database.getCatalog(), null);
         };
     }
 
@@ -510,7 +511,7 @@ public final class MetadataService {
         return loadSchemaChildren(null, schema);
     }
 
-    /** Children of a SCHEMA node with engine-specific filtering (e.g. PostgreSQL dynamic folders). */
+    /** Children of a SCHEMA node with engine-specific filtering (dynamic folders, hides empty folders). */
     public static List<DbObject> loadSchemaChildren(ConnectionProfile profile, DbObject schema) {
         if (profile != null && profile.getType() == DatabaseType.POSTGRESQL) {
             return loadPostgresSchemaChildren(profile, schema);
@@ -521,7 +522,204 @@ public final class MetadataService {
         if (profile != null && profile.getType() == DatabaseType.ORACLE) {
             return loadOracleSchemaChildren(profile, schema);
         }
-        return objectFolders(schema.getCatalog(), schema.getSchema());
+        if (profile != null && profile.getType() == DatabaseType.SQLSERVER) {
+            return loadSqlServerSchemaChildren(profile, schema);
+        }
+        if (profile != null && (profile.getType() == DatabaseType.MYSQL || profile.getType() == DatabaseType.MARIADB)) {
+            return loadMysqlSchemaChildren(profile, schema.getCatalog() != null ? schema.getCatalog() : schema.getSchema());
+        }
+        return loadJdbcDynamicFolders(profile, schema.getCatalog(), schema.getSchema());
+    }
+
+    private static List<DbObject> loadMysqlSchemaChildren(ConnectionProfile profile, String catalog) {
+        int tablesCount = 0;
+        int viewsCount = 0;
+        int procsCount = 0;
+        int funcsCount = 0;
+        int seqsCount = 0;
+
+        try (Connection conn = client(profile, catalog).getConnection()) {
+            try (PreparedStatement ps = conn.prepareStatement(
+                    "SELECT TABLE_TYPE, COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = ? GROUP BY TABLE_TYPE")) {
+                ps.setString(1, catalog);
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        String type = rs.getString(1);
+                        int cnt = rs.getInt(2);
+                        if ("VIEW".equalsIgnoreCase(type)) {
+                            viewsCount += cnt;
+                        } else if ("SEQUENCE".equalsIgnoreCase(type)) {
+                            seqsCount += cnt;
+                        } else {
+                            tablesCount += cnt;
+                        }
+                    }
+                }
+            } catch (Exception ignored) {}
+
+            try (PreparedStatement ps = conn.prepareStatement(
+                    "SELECT ROUTINE_TYPE, COUNT(*) FROM information_schema.ROUTINES WHERE ROUTINE_SCHEMA = ? GROUP BY ROUTINE_TYPE")) {
+                ps.setString(1, catalog);
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        String type = rs.getString(1);
+                        int cnt = rs.getInt(2);
+                        if ("FUNCTION".equalsIgnoreCase(type)) {
+                            funcsCount += cnt;
+                        } else {
+                            procsCount += cnt;
+                        }
+                    }
+                }
+            } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+            return loadJdbcDynamicFolders(profile, catalog, null);
+        }
+
+        List<DbObject> folders = new ArrayList<>();
+        DbObject tablesFolder = folder("tables", Kind.TABLES_FOLDER, catalog, null);
+        if (tablesCount > 0) {
+            tablesFolder.setDetail(String.valueOf(tablesCount));
+        }
+        folders.add(tablesFolder);
+
+        if (viewsCount > 0) {
+            DbObject viewsFolder = folder("views", Kind.VIEWS_FOLDER, catalog, null);
+            viewsFolder.setDetail(String.valueOf(viewsCount));
+            folders.add(viewsFolder);
+        }
+
+        if (procsCount > 0) {
+            DbObject procsFolder = folder("procedures", Kind.PROCEDURES_FOLDER, catalog, null);
+            procsFolder.setDetail(String.valueOf(procsCount));
+            folders.add(procsFolder);
+        }
+
+        if (funcsCount > 0) {
+            DbObject funcsFolder = folder("functions", Kind.FUNCTIONS_FOLDER, catalog, null);
+            funcsFolder.setDetail(String.valueOf(funcsCount));
+            folders.add(funcsFolder);
+        }
+
+        if (seqsCount > 0) {
+            DbObject seqsFolder = folder("sequences", Kind.SEQUENCES_FOLDER, catalog, null);
+            seqsFolder.setDetail(String.valueOf(seqsCount));
+            folders.add(seqsFolder);
+        }
+
+        return folders;
+    }
+
+    private static List<DbObject> loadSqlServerSchemaChildren(ConnectionProfile profile, DbObject schemaObj) {
+        String catalog = schemaObj.getCatalog();
+        String schemaName = schemaObj.getSchema() != null && !schemaObj.getSchema().isBlank()
+                ? schemaObj.getSchema() : schemaObj.getName();
+
+        int tablesCount = 0;
+        int viewsCount = 0;
+        int procsCount = 0;
+        int funcsCount = 0;
+        int seqsCount = 0;
+
+        try (Connection conn = client(profile, catalog).getConnection()) {
+            String sql = "SELECT o.type, COUNT(*) FROM sys.objects o "
+                    + "JOIN sys.schemas s ON o.schema_id = s.schema_id "
+                    + "WHERE s.name = ? GROUP BY o.type";
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setString(1, schemaName);
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        String type = rs.getString(1) != null ? rs.getString(1).trim() : "";
+                        int cnt = rs.getInt(2);
+                        if ("U".equalsIgnoreCase(type)) {
+                            tablesCount += cnt;
+                        } else if ("V".equalsIgnoreCase(type)) {
+                            viewsCount += cnt;
+                        } else if ("P".equalsIgnoreCase(type) || "PC".equalsIgnoreCase(type)) {
+                            procsCount += cnt;
+                        } else if ("FN".equalsIgnoreCase(type) || "IF".equalsIgnoreCase(type) || "TF".equalsIgnoreCase(type)) {
+                            funcsCount += cnt;
+                        } else if ("SO".equalsIgnoreCase(type)) {
+                            seqsCount += cnt;
+                        }
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+            return loadJdbcDynamicFolders(profile, catalog, schemaName);
+        }
+
+        List<DbObject> folders = new ArrayList<>();
+        DbObject tablesFolder = folder("tables", Kind.TABLES_FOLDER, catalog, schemaName);
+        if (tablesCount > 0) {
+            tablesFolder.setDetail(String.valueOf(tablesCount));
+        }
+        folders.add(tablesFolder);
+
+        if (viewsCount > 0) {
+            DbObject viewsFolder = folder("views", Kind.VIEWS_FOLDER, catalog, schemaName);
+            viewsFolder.setDetail(String.valueOf(viewsCount));
+            folders.add(viewsFolder);
+        }
+
+        if (procsCount > 0) {
+            DbObject procsFolder = folder("procedures", Kind.PROCEDURES_FOLDER, catalog, schemaName);
+            procsFolder.setDetail(String.valueOf(procsCount));
+            folders.add(procsFolder);
+        }
+
+        if (funcsCount > 0) {
+            DbObject funcsFolder = folder("functions", Kind.FUNCTIONS_FOLDER, catalog, schemaName);
+            funcsFolder.setDetail(String.valueOf(funcsCount));
+            folders.add(funcsFolder);
+        }
+
+        if (seqsCount > 0) {
+            DbObject seqsFolder = folder("sequences", Kind.SEQUENCES_FOLDER, catalog, schemaName);
+            seqsFolder.setDetail(String.valueOf(seqsCount));
+            folders.add(seqsFolder);
+        }
+
+        return folders;
+    }
+
+    private static List<DbObject> loadJdbcDynamicFolders(ConnectionProfile profile, String catalog, String schema) {
+        int tablesCount = 0;
+        int viewsCount = 0;
+        int procsCount = 0;
+        try (Connection conn = client(profile, catalog).getConnection()) {
+            DatabaseMetaData meta = conn.getMetaData();
+            String cat = metaCatalog(profile, catalog);
+            String sch = metaSchema(profile, schema);
+            try (ResultSet rs = meta.getTables(cat, sch, "%", new String[]{"TABLE"})) {
+                while (rs.next()) tablesCount++;
+            } catch (Exception ignored) {}
+            try (ResultSet rs = meta.getTables(cat, sch, "%", new String[]{"VIEW"})) {
+                while (rs.next()) viewsCount++;
+            } catch (Exception ignored) {}
+            try (ResultSet rs = meta.getProcedures(cat, sch, "%")) {
+                while (rs.next()) procsCount++;
+            } catch (Exception ignored) {}
+        } catch (Exception ignored) {}
+
+        List<DbObject> folders = new ArrayList<>();
+        DbObject tablesFolder = folder("tables", Kind.TABLES_FOLDER, catalog, schema);
+        if (tablesCount > 0) {
+            tablesFolder.setDetail(String.valueOf(tablesCount));
+        }
+        folders.add(tablesFolder);
+
+        if (viewsCount > 0) {
+            DbObject viewsFolder = folder("views", Kind.VIEWS_FOLDER, catalog, schema);
+            viewsFolder.setDetail(String.valueOf(viewsCount));
+            folders.add(viewsFolder);
+        }
+        if (procsCount > 0) {
+            DbObject procsFolder = folder("procedures", Kind.PROCEDURES_FOLDER, catalog, schema);
+            procsFolder.setDetail(String.valueOf(procsCount));
+            folders.add(procsFolder);
+        }
+        return folders;
     }
 
     private static List<DbObject> loadOracleSchemaChildren(ConnectionProfile profile, DbObject schema) {
@@ -555,11 +753,12 @@ public final class MetadataService {
         }
 
         List<DbObject> folders = new ArrayList<>();
+        DbObject tablesFolder = folder("tables", Kind.TABLES_FOLDER, schema.getCatalog(), schema.getSchema());
         if (tablesCount > 0) {
-            DbObject tablesFolder = folder("tables", Kind.TABLES_FOLDER, schema.getCatalog(), schema.getSchema());
             tablesFolder.setDetail(String.valueOf(tablesCount));
-            folders.add(tablesFolder);
         }
+        folders.add(tablesFolder);
+
         if (viewsCount > 0) {
             DbObject viewsFolder = folder("views", Kind.VIEWS_FOLDER, schema.getCatalog(), schema.getSchema());
             viewsFolder.setDetail(String.valueOf(viewsCount));
@@ -576,7 +775,7 @@ public final class MetadataService {
             folders.add(seqsFolder);
         }
 
-        return folders.isEmpty() ? objectFolders(schema.getCatalog(), schema.getSchema()) : folders;
+        return folders;
     }
 
     private static List<DbObject> loadSqliteSchemaChildren(ConnectionProfile profile, DbObject schema) {
@@ -722,11 +921,7 @@ public final class MetadataService {
 
     private static List<DbObject> objectFolders(String catalog, String schema) {
         List<DbObject> folders = new ArrayList<>();
-        folders.add(folder("Tables", Kind.TABLES_FOLDER, catalog, schema));
-        folders.add(folder("Views", Kind.VIEWS_FOLDER, catalog, schema));
-        folders.add(folder("Procedures", Kind.PROCEDURES_FOLDER, catalog, schema));
-        folders.add(folder("Functions", Kind.FUNCTIONS_FOLDER, catalog, schema));
-        folders.add(folder("Sequences", Kind.SEQUENCES_FOLDER, catalog, schema));
+        folders.add(folder("tables", Kind.TABLES_FOLDER, catalog, schema));
         return folders;
     }
 
