@@ -179,6 +179,15 @@ public class QueryTab extends Tab {
         reloadButton.setTooltip(new Tooltip("Reload Page  Ctrl+F5"));
         reloadButton.setOnAction(e -> handleReloadQuery());
 
+        Button deleteButton = new Button();
+        deleteButton.setGraphic(Icons.of(FontAwesomeSolid.MINUS, "#e05555", 11));
+        deleteButton.setTooltip(new Tooltip("Delete Selected Row(s)"));
+        deleteButton.setOnAction(e -> {
+            if (activeResultGrid().getDeleteRowsAction() != null) {
+                activeResultGrid().getDeleteRowsAction().run();
+            }
+        });
+
         submitButton.setGraphic(Icons.of(FontAwesomeSolid.CHECK, "#57965c", 11));
         submitButton.setTooltip(new Tooltip("Commit pending result edits/deletes"));
         revertButton.setGraphic(Icons.of(FontAwesomeSolid.UNDO, "#e05555", 11));
@@ -202,7 +211,7 @@ public class QueryTab extends Tab {
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
         HBox toolbar = new HBox(8, runButton, cancelButton, reloadButton, historyButton, statementsButton,
-                submitButton, revertButton, exportButton,
+                deleteButton, submitButton, revertButton, exportButton,
                 new Label("Limit:"), limitSpinner, spacer, connLabel);
         toolbar.setAlignment(Pos.CENTER_LEFT);
         toolbar.setPadding(new Insets(6, 10, 6, 10));

@@ -18,6 +18,7 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.scene.text.Text;
 import javafx.stage.FileChooser;
 import javafx.stage.Popup;
 import org.kordamp.ikonli.fontawesome5.FontAwesomeSolid;
@@ -60,9 +61,18 @@ public class ResultGrid extends TableView<List<String>> {
 
     private static final PseudoClass MODIFIED_PSEUDO_CLASS =
             PseudoClass.getPseudoClass("cell-modified");
+    private static final PseudoClass DELETED_PSEUDO_CLASS =
+            PseudoClass.getPseudoClass("row-deleted");
 
     public record CellKey(int rowIndex, int columnIndex) {}
     private final Set<CellKey> modifiedCells = new HashSet<>();
+    private final Set<Integer> deletedRowIndices = new HashSet<>();
+    private java.util.function.Consumer<Integer> revertRowAction;
+    private int lastRowHeaderIndex = -1;
+    private int anchorRowIndex = -1;
+    private TableColumn<List<String>, ?> anchorColumn = null;
+    private boolean isHandlingShiftClick = false;
+    private boolean consumedPress = false;
 
     public void markCellModified(int rowIndex, int columnIndex) {
         modifiedCells.add(new CellKey(rowIndex, columnIndex));
@@ -75,7 +85,34 @@ public class ResultGrid extends TableView<List<String>> {
     }
 
     public boolean isCellModified(int rowIndex, int columnIndex) {
-        return modifiedCells.contains(new CellKey(rowIndex, columnIndex));
+        return !isRowDeleted(rowIndex) && modifiedCells.contains(new CellKey(rowIndex, columnIndex));
+    }
+
+    public void markRowDeleted(int rowIndex) {
+        deletedRowIndices.add(rowIndex);
+        refresh();
+    }
+
+    public void unmarkRowDeleted(int rowIndex) {
+        deletedRowIndices.remove(rowIndex);
+        refresh();
+    }
+
+    public boolean isRowDeleted(int rowIndex) {
+        return deletedRowIndices.contains(rowIndex);
+    }
+
+    public void clearDeletedRows() {
+        deletedRowIndices.clear();
+        refresh();
+    }
+
+    public Set<Integer> getDeletedRowIndices() {
+        return java.util.Collections.unmodifiableSet(deletedRowIndices);
+    }
+
+    public void setRevertRowAction(java.util.function.Consumer<Integer> action) {
+        this.revertRowAction = action;
     }
 
     private CellEditListener editListener;
@@ -95,6 +132,20 @@ public class ResultGrid extends TableView<List<String>> {
         getSelectionModel().setCellSelectionEnabled(true);
         getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 
+        getFocusModel().focusedCellProperty().addListener((obs, oldVal, newVal) -> {
+            if (!isHandlingShiftClick && newVal != null && newVal.getRow() >= 0) {
+                lastRowHeaderIndex = newVal.getRow();
+            }
+        });
+
+        setRowFactory(tv -> new TableRow<>() {
+            @Override
+            protected void updateItem(List<String> item, boolean empty) {
+                super.updateItem(item, empty);
+                pseudoClassStateChanged(DELETED_PSEUDO_CLASS, !empty && isRowDeleted(getIndex()));
+            }
+        });
+
         // Clicking outside an active editor cell automatically commits the edit
         // and enables the submit button.
         this.addEventFilter(MouseEvent.MOUSE_PRESSED, event -> {
@@ -106,6 +157,70 @@ public class ResultGrid extends TableView<List<String>> {
                     }
                 }
                 edit(-1, null);
+            }
+
+            if (event.getButton() == MouseButton.PRIMARY) {
+                consumedPress = false;
+                Node node = event.getPickResult().getIntersectedNode();
+                while (node != null && !(node instanceof TableCell<?, ?>)) node = node.getParent();
+                if (node instanceof TableCell<?, ?> cell && !cell.isEmpty()
+                        && cell.getIndex() >= 0 && cell.getIndex() < getItems().size()) {
+                    int r = cell.getIndex();
+                    boolean isSerial = cell.getTableColumn() == null
+                            || (getColumns().size() > 0 && cell.getTableColumn() == getColumns().get(0));
+                    boolean shift = event.isShiftDown();
+                    boolean ctrl = event.isControlDown() || event.isShortcutDown();
+
+                    if (isSerial) {
+                        handleSerialClick(r, shift, ctrl);
+                        requestFocus();
+                        event.consume();
+                        consumedPress = true;
+                        return;
+                    } else if (shift) {
+                        int anchor = anchorRowIndex >= 0 ? anchorRowIndex : (lastRowHeaderIndex >= 0 ? lastRowHeaderIndex : 0);
+                        @SuppressWarnings("unchecked")
+                        TableColumn<List<String>, ?> col = (TableColumn<List<String>, ?>) cell.getTableColumn();
+                        TableColumn<List<String>, ?> anchorCol = anchorColumn != null ? anchorColumn : col;
+                        isHandlingShiftClick = true;
+                        try {
+                            if (anchorColumn == null && hasFullRowSelected()) {
+                                selectRowRange(anchor, r, ctrl);
+                            } else {
+                                selectCellRange(anchor, anchorCol, r, col, ctrl);
+                            }
+                            if (col != null) {
+                                getFocusModel().focus(r, col);
+                            }
+                        } finally {
+                            isHandlingShiftClick = false;
+                        }
+                        requestFocus();
+                        event.consume();
+                        consumedPress = true;
+                        return;
+                    } else if (ctrl && hasFullRowSelected() && anchorColumn == null) {
+                        toggleRowSelection(r);
+                        anchorRowIndex = r;
+                        anchorColumn = null;
+                        lastRowHeaderIndex = r;
+                        if (cell.getTableColumn() != null) {
+                            @SuppressWarnings("unchecked")
+                            TableColumn<List<String>, ?> col = (TableColumn<List<String>, ?>) cell.getTableColumn();
+                            getFocusModel().focus(r, col);
+                        }
+                        requestFocus();
+                        event.consume();
+                        consumedPress = true;
+                        return;
+                    } else {
+                        anchorRowIndex = r;
+                        @SuppressWarnings("unchecked")
+                        TableColumn<List<String>, ?> col = (TableColumn<List<String>, ?>) cell.getTableColumn();
+                        anchorColumn = col;
+                        lastRowHeaderIndex = r;
+                    }
+                }
             }
 
             // Right-click: if right-clicking on an already selected cell, preserve
@@ -131,11 +246,24 @@ public class ResultGrid extends TableView<List<String>> {
             }
         });
 
+        this.addEventFilter(MouseEvent.MOUSE_RELEASED, event -> {
+            if (consumedPress) {
+                event.consume();
+            }
+        });
+
+        this.addEventFilter(MouseEvent.MOUSE_CLICKED, event -> {
+            if (consumedPress) {
+                consumedPress = false;
+                event.consume();
+            }
+        });
+
         buildContextMenu();
 
         setOnKeyPressed(e -> {
             if (isEditingCell()) return;
-            if (e.getCode() == KeyCode.DELETE && deleteRowsAction != null) {
+            if (((e.isControlDown() && e.getCode() == KeyCode.Y) || e.getCode() == KeyCode.DELETE) && deleteRowsAction != null) {
                 deleteRowsAction.run();
                 e.consume();
             } else if (e.getCode() == KeyCode.ENTER || e.getCode() == KeyCode.F2 || e.getCode() == KeyCode.SPACE) {
@@ -193,7 +321,9 @@ public class ResultGrid extends TableView<List<String>> {
             if (colIdx <= 0) return; // Column zero is the generated row number
 
             if (e.getClickCount() == 2) {
-                edit(cell.getIndex(), column);
+                if (!isRowDeleted(cell.getIndex())) {
+                    edit(cell.getIndex(), column);
+                }
             }
         });
 
@@ -219,6 +349,7 @@ public class ResultGrid extends TableView<List<String>> {
             pos = getFocusModel().getFocusedCell();
         }
         if (pos != null && pos.getRow() >= 0 && pos.getTableColumn() != null) {
+            if (isRowDeleted(pos.getRow())) return;
             int colIdx = getColumns().indexOf(pos.getTableColumn());
             if (colIdx > 0) {
                 edit(pos.getRow(), (TableColumn<List<String>, ?>) pos.getTableColumn());
@@ -230,8 +361,120 @@ public class ResultGrid extends TableView<List<String>> {
         if (!keepExisting) {
             getSelectionModel().clearSelection();
         }
-        for (int c = 1; c < getColumns().size(); c++) {
+        for (int c = 0; c < getColumns().size(); c++) {
             getSelectionModel().select(rowIndex, getColumns().get(c));
+        }
+    }
+
+    public void selectRowRange(int fromRow, int toRow, boolean keepExisting) {
+        if (!keepExisting) {
+            getSelectionModel().clearSelection();
+        }
+        if (getItems().isEmpty()) return;
+        int start = Math.max(0, Math.min(fromRow, toRow));
+        int end = Math.min(getItems().size() - 1, Math.max(fromRow, toRow));
+        for (int r = start; r <= end; r++) {
+            for (int c = 0; c < getColumns().size(); c++) {
+                getSelectionModel().select(r, getColumns().get(c));
+            }
+        }
+    }
+
+    public void selectCellRange(int fromRow, TableColumn<List<String>, ?> fromCol,
+                                int toRow, TableColumn<List<String>, ?> toCol,
+                                boolean keepExisting) {
+        if (!keepExisting) {
+            getSelectionModel().clearSelection();
+        }
+        if (getItems().isEmpty() || getColumns().isEmpty()) return;
+        int startRow = Math.max(0, Math.min(fromRow, toRow));
+        int endRow = Math.min(getItems().size() - 1, Math.max(fromRow, toRow));
+
+        int startColIdx = fromCol != null ? getColumns().indexOf(fromCol) : (getColumns().size() > 1 ? 1 : 0);
+        int endColIdx = toCol != null ? getColumns().indexOf(toCol) : startColIdx;
+        if (startColIdx < 0) startColIdx = getColumns().size() > 1 ? 1 : 0;
+        if (endColIdx < 0) endColIdx = startColIdx;
+
+        int minCol = Math.min(startColIdx, endColIdx);
+        int maxCol = Math.max(startColIdx, endColIdx);
+
+        for (int r = startRow; r <= endRow; r++) {
+            for (int c = minCol; c <= maxCol; c++) {
+                getSelectionModel().select(r, getColumns().get(c));
+            }
+        }
+    }
+
+    public boolean isRowSelected(int rowIndex) {
+        for (TablePosition<?, ?> pos : getSelectionModel().getSelectedCells()) {
+            if (pos.getRow() == rowIndex) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean isRowFullySelected(int rowIndex) {
+        if (rowIndex < 0 || rowIndex >= getItems().size() || getColumns().isEmpty()) return false;
+        for (int c = 0; c < getColumns().size(); c++) {
+            if (!getSelectionModel().isSelected(rowIndex, getColumns().get(c))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public boolean hasFullRowSelected() {
+        for (int r : getSelectedRowIndexes()) {
+            if (isRowFullySelected(r)) return true;
+        }
+        return false;
+    }
+
+    public void toggleRowSelection(int rowIndex) {
+        if (rowIndex < 0 || rowIndex >= getItems().size()) return;
+        boolean fullySelected = isRowFullySelected(rowIndex);
+        if (fullySelected) {
+            for (int c = 0; c < getColumns().size(); c++) {
+                getSelectionModel().clearSelection(rowIndex, getColumns().get(c));
+            }
+        } else {
+            for (int c = 0; c < getColumns().size(); c++) {
+                getSelectionModel().select(rowIndex, getColumns().get(c));
+            }
+        }
+    }
+
+    public void handleSerialClick(int rowIndex, boolean shift, boolean ctrl) {
+        if (rowIndex < 0 || rowIndex >= getItems().size()) return;
+
+        if (shift) {
+            int anchor = anchorRowIndex >= 0 ? anchorRowIndex : (lastRowHeaderIndex >= 0 ? lastRowHeaderIndex : 0);
+            isHandlingShiftClick = true;
+            try {
+                selectRowRange(anchor, rowIndex, ctrl);
+                if (!getColumns().isEmpty()) {
+                    getFocusModel().focus(rowIndex, getColumns().get(0));
+                }
+            } finally {
+                isHandlingShiftClick = false;
+            }
+        } else if (ctrl) {
+            toggleRowSelection(rowIndex);
+            anchorRowIndex = rowIndex;
+            anchorColumn = null;
+            lastRowHeaderIndex = rowIndex;
+            if (!getColumns().isEmpty()) {
+                getFocusModel().focus(rowIndex, getColumns().get(0));
+            }
+        } else {
+            selectFullRow(rowIndex, false);
+            anchorRowIndex = rowIndex;
+            anchorColumn = null;
+            lastRowHeaderIndex = rowIndex;
+            if (!getColumns().isEmpty()) {
+                getFocusModel().focus(rowIndex, getColumns().get(0));
+            }
         }
     }
 
@@ -570,6 +813,14 @@ public class ResultGrid extends TableView<List<String>> {
             int c = getColumns().indexOf(pos.getTableColumn()) - 1;
             modifiedCells.remove(new CellKey(r, c));
         }
+        for (int r : getSelectedRowIndexes()) {
+            if (isRowDeleted(r)) {
+                unmarkRowDeleted(r);
+                if (revertRowAction != null) {
+                    revertRowAction.accept(r);
+                }
+            }
+        }
         Platform.runLater(this::refresh);
     }
 
@@ -766,6 +1017,10 @@ public class ResultGrid extends TableView<List<String>> {
         getColumns().clear();
         getItems().clear();
         modifiedCells.clear();
+        deletedRowIndices.clear();
+        anchorRowIndex = -1;
+        anchorColumn = null;
+        lastRowHeaderIndex = -1;
         if (result == null || !result.isResultSet()) return;
 
         applySettings();
@@ -777,16 +1032,44 @@ public class ResultGrid extends TableView<List<String>> {
         serialCol.setCellFactory(col -> new TableCell<>() {
             {
                 getStyleClass().add("serial-cell");
-                setOnMouseClicked(e -> {
+                setOnMousePressed(e -> {
                     if (e.getButton() == MouseButton.PRIMARY && getIndex() >= 0 && getIndex() < getItems().size()) {
-                        selectFullRow(getIndex(), e.isControlDown() || e.isShortcutDown());
+                        handleSerialClick(getIndex(), e.isShiftDown(), e.isControlDown() || e.isShortcutDown());
+                        e.consume();
+                    }
+                });
+                setOnMouseReleased(e -> {
+                    if (e.getButton() == MouseButton.PRIMARY) e.consume();
+                });
+                setOnMouseClicked(e -> {
+                    if (e.getButton() == MouseButton.PRIMARY) e.consume();
+                });
+                setOnContextMenuRequested(e -> {
+                    if (getIndex() >= 0 && getIndex() < getItems().size()) {
+                        if (!isRowSelected(getIndex())) {
+                            selectFullRow(getIndex(), false);
+                        }
                     }
                 });
             }
             @Override
             protected void updateItem(Void item, boolean empty) {
                 super.updateItem(item, empty);
-                setText(empty ? null : String.valueOf(getIndex() + 1 + rowNumberOffset));
+                boolean isDeleted = !empty && isRowDeleted(getIndex());
+                pseudoClassStateChanged(DELETED_PSEUDO_CLASS, isDeleted);
+                if (empty) {
+                    setText(null);
+                    setGraphic(null);
+                } else if (isDeleted) {
+                    Text strikeText = new Text(String.valueOf(getIndex() + 1 + rowNumberOffset));
+                    strikeText.setStrikethrough(true);
+                    strikeText.getStyleClass().add("deleted-cell-text");
+                    setGraphic(strikeText);
+                    setText(null);
+                } else {
+                    setGraphic(null);
+                    setText(String.valueOf(getIndex() + 1 + rowNumberOffset));
+                }
             }
         });
         getColumns().add(serialCol);
@@ -912,7 +1195,7 @@ public class ResultGrid extends TableView<List<String>> {
 
         @Override
         public void startEdit() {
-            if (isEmpty() || !getTableView().isEditable()) return;
+            if (isEmpty() || !getTableView().isEditable() || isRowDeleted(getIndex())) return;
             super.startEdit();
             boolean isDate = isDateColumn(columnIndex);
             boolean isBool = isBooleanColumn(columnIndex);
@@ -1123,10 +1406,18 @@ public class ResultGrid extends TableView<List<String>> {
         @Override
         protected void updateItem(String item, boolean empty) {
             super.updateItem(item, empty);
-            pseudoClassStateChanged(MODIFIED_PSEUDO_CLASS, !empty && isCellModified(getIndex(), columnIndex));
+            boolean isDeleted = !empty && isRowDeleted(getIndex());
+            pseudoClassStateChanged(DELETED_PSEUDO_CLASS, isDeleted);
+            pseudoClassStateChanged(MODIFIED_PSEUDO_CLASS, !empty && !isDeleted && isCellModified(getIndex(), columnIndex));
             if (empty) {
                 setText(null);
                 setGraphic(null);
+            } else if (isDeleted) {
+                Text strikeText = new Text(item == null ? "NULL" : item);
+                strikeText.setStrikethrough(true);
+                strikeText.getStyleClass().add("deleted-cell-text");
+                setGraphic(strikeText);
+                setText(null);
             } else if (isEditing() && field != null) {
                 field.setText(item == null ? "" : item);
                 setText(null);
@@ -1164,8 +1455,19 @@ public class ResultGrid extends TableView<List<String>> {
         @Override
         protected void updateItem(String item, boolean empty) {
             super.updateItem(item, empty);
-            pseudoClassStateChanged(MODIFIED_PSEUDO_CLASS, !empty && isCellModified(getIndex(), columnIndex));
-            if (empty || item == null) {
+            boolean isDeleted = !empty && isRowDeleted(getIndex());
+            pseudoClassStateChanged(DELETED_PSEUDO_CLASS, isDeleted);
+            pseudoClassStateChanged(MODIFIED_PSEUDO_CLASS, !empty && !isDeleted && isCellModified(getIndex(), columnIndex));
+            if (empty) {
+                setText(null);
+                setGraphic(null);
+            } else if (isDeleted) {
+                Text strikeText = new Text(item == null ? "NULL" : item);
+                strikeText.setStrikethrough(true);
+                strikeText.getStyleClass().add("deleted-cell-text");
+                setGraphic(strikeText);
+                setText(null);
+            } else if (item == null) {
                 setText(null);
                 setGraphic(null);
             } else if (isBooleanColumn(columnIndex) && "Checkboxes".equalsIgnoreCase(AppSettingsStore.load().getShowBooleanValuesAs()) && !item.equalsIgnoreCase("NULL")) {
