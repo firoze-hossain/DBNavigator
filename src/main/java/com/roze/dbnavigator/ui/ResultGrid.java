@@ -1,15 +1,19 @@
 package com.roze.dbnavigator.ui;
 
 import com.roze.dbnavigator.model.QueryResult;
+import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.css.PseudoClass;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Popup;
@@ -28,8 +32,10 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 /**
  * Spreadsheet-like grid used everywhere results are shown.
@@ -52,6 +58,26 @@ public class ResultGrid extends TableView<List<String>> {
         void onEdit(int rowIndex, int columnIndex, String oldValue, String newValue);
     }
 
+    private static final PseudoClass MODIFIED_PSEUDO_CLASS =
+            PseudoClass.getPseudoClass("cell-modified");
+
+    public record CellKey(int rowIndex, int columnIndex) {}
+    private final Set<CellKey> modifiedCells = new HashSet<>();
+
+    public void markCellModified(int rowIndex, int columnIndex) {
+        modifiedCells.add(new CellKey(rowIndex, columnIndex));
+        refresh();
+    }
+
+    public void clearModifiedCells() {
+        modifiedCells.clear();
+        refresh();
+    }
+
+    public boolean isCellModified(int rowIndex, int columnIndex) {
+        return modifiedCells.contains(new CellKey(rowIndex, columnIndex));
+    }
+
     private CellEditListener editListener;
     private Runnable deleteRowsAction;
     private List<String> columnTypes = List.of();
@@ -66,6 +92,20 @@ public class ResultGrid extends TableView<List<String>> {
         // Shift+click selects a contiguous range, Ctrl+click toggles individual
         // rows — all highlighted across the full row, exactly like DataGrip.
         getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+
+        // Clicking outside an active editor cell automatically commits the edit
+        // and enables the submit button, exactly like DataGrip.
+        this.addEventFilter(MouseEvent.MOUSE_PRESSED, event -> {
+            TablePosition<?, ?> editing = getEditingCell();
+            if (editing != null && editing.getRow() >= 0 && editing.getColumn() >= 0) {
+                if (event.getTarget() instanceof Node targetNode) {
+                    if (isInsideActiveEditor(targetNode)) {
+                        return;
+                    }
+                }
+                edit(-1, null);
+            }
+        });
 
         MenuItem copyCell = new MenuItem("Copy Cell");
         copyCell.setOnAction(e -> copyFocusedCell());
@@ -102,6 +142,22 @@ public class ResultGrid extends TableView<List<String>> {
         });
 
         applySettings();
+    }
+
+    private boolean isInsideActiveEditor(Node node) {
+        Node cur = node;
+        while (cur != null) {
+            if (cur instanceof EditCell editCell && editCell.isEditing()) {
+                return true;
+            }
+            if (cur.getStyleClass().contains("cell-editor")
+                    || cur.getStyleClass().contains("cell-more-button")
+                    || cur.getStyleClass().contains("datagrip-datetime-picker")) {
+                return true;
+            }
+            cur = cur.getParent();
+        }
+        return false;
     }
 
     public void applySettings() {
@@ -174,6 +230,7 @@ public class ResultGrid extends TableView<List<String>> {
     public void showResult(QueryResult result) {
         getColumns().clear();
         getItems().clear();
+        modifiedCells.clear();
         if (result == null || !result.isResultSet()) return;
 
         applySettings();
@@ -215,7 +272,7 @@ public class ResultGrid extends TableView<List<String>> {
             col.setGraphic(buildSortableHeader(columnName));
 
             if (editListener != null) {
-                col.setCellFactory(c -> new EditCell(index, isDateColumn(index)));
+                col.setCellFactory(c -> new EditCell(index));
                 col.setOnEditCommit(event -> {
                     List<String> row = event.getRowValue();
                     String oldValue = index < row.size() ? row.get(index) : null;
@@ -224,7 +281,7 @@ public class ResultGrid extends TableView<List<String>> {
                         row.set(index, newValue);
                         editListener.onEdit(event.getTablePosition().getRow(), index,
                                 oldValue, newValue);
-                        refresh();
+                        Platform.runLater(this::refresh);
                     }
                 });
             } else {
@@ -270,113 +327,230 @@ public class ResultGrid extends TableView<List<String>> {
     }
 
     private boolean isDateColumn(int index) {
-        if (index >= columnTypes.size()) return false;
-        String type = columnTypes.get(index).toLowerCase(Locale.ROOT);
-        return type.contains("date") || type.contains("timestamp");
+        if (index < columnTypes.size()) {
+            String type = columnTypes.get(index).toLowerCase(Locale.ROOT);
+            if (type.contains("date") || type.contains("timestamp") || type.contains("time")) {
+                return true;
+            }
+        }
+        if (getItems() != null) {
+            for (List<String> row : getItems()) {
+                if (row != null && index < row.size()) {
+                    String val = row.get(index);
+                    if (val != null && !val.isBlank() && !val.equalsIgnoreCase("NULL")) {
+                        if (val.matches("^\\d{4}-\\d{2}-\\d{2}.*") || val.matches("^\\d{1,2}:\\d{2}:\\d{2}.*")) {
+                            return true;
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     // ------------------------------------------------------------ edit cell
 
     /**
-     * Text editor cell; date/timestamp columns additionally get a calendar
-     * button that opens a DatePicker — picking a date replaces the date part
-     * and keeps any time portion. Values can also be typed or pasted directly.
-     * Commits on Enter or when focus leaves the field; Escape cancels.
+     * DataGrip-style inline cell editor:
+     * - Date/time/timestamp columns get a 2-row modification popup (image 1) with Day, Month,
+     *   Year and Hour, Minute, Second spinners with 2-way real-time binding and a "..." button.
+     * - Commits automatically when clicking outside the editor cell (image 2 -> image 3),
+     *   or when clicking outside the grid, or when pressing Enter.
+     * - Escape cancels the edit and restores the original cell content.
      */
     private class EditCell extends TableCell<List<String>, String> {
 
         private final int columnIndex;
-        private final boolean dateColumn;
         private TextField field;
         private HBox editor;
+        private Button pickerButton;
+        private DataGripDateTimePicker dateTimePicker;
+        private boolean isUpdatingFromPicker = false;
+        private boolean isCommitting = false;
+        private boolean explicitEscape = false;
 
-        EditCell(int columnIndex, boolean dateColumn) {
+        EditCell(int columnIndex) {
             this.columnIndex = columnIndex;
-            this.dateColumn = dateColumn;
         }
 
         @Override
         public void startEdit() {
             if (isEmpty() || !getTableView().isEditable()) return;
             super.startEdit();
-            if (editor == null) buildEditor();
-            field.setText(getItem() == null ? "" : getItem());
+            boolean isDate = isDateColumn(columnIndex);
+            if (editor == null) {
+                buildEditor(isDate);
+            } else {
+                updateEditorForColumnType(isDate);
+            }
+            String initialText = getItem() == null ? "" : getItem();
+            field.setText(initialText);
             setText(null);
             setGraphic(editor);
             field.requestFocus();
             field.selectAll();
+
+            if (isDate && dateTimePicker != null) {
+                dateTimePicker.parseAndUpdate(initialText);
+                Platform.runLater(() -> {
+                    if (isEditing()) {
+                        dateTimePicker.show(editor);
+                    }
+                });
+            }
         }
 
-        private void buildEditor() {
+        private void buildEditor(boolean isDate) {
             field = new TextField();
             field.getStyleClass().add("cell-editor");
-            field.setOnAction(e -> commitEdit(field.getText()));
+            field.setOnAction(e -> commitCurrentValue());
             field.setOnKeyPressed(e -> {
-                if (e.getCode() == KeyCode.ESCAPE) cancelEdit();
-            });
-            // Commit even if the user clicks elsewhere instead of pressing Enter —
-            // matches spreadsheet/DataGrip behavior where focus-out saves the cell.
-            field.focusedProperty().addListener((obs, wasFocused, isNowFocused) -> {
-                if (!isNowFocused && isEditing()) {
-                    commitEdit(field.getText());
+                if (e.getCode() == KeyCode.ESCAPE) {
+                    explicitEscape = true;
+                    try {
+                        cancelEdit();
+                    } finally {
+                        explicitEscape = false;
+                    }
+                } else if (e.getCode() == KeyCode.ENTER) {
+                    commitCurrentValue();
                 }
             });
+
+            // Commit when focus leaves the cell editor without pressing Enter —
+            // matches DataGrip behavior where mouse-clicking outside saves the cell.
+            field.focusedProperty().addListener((obs, wasFocused, isNowFocused) -> {
+                if (!isNowFocused && !explicitEscape && isEditing()) {
+                    if (isEditorFocused()) {
+                        return;
+                    }
+                    commitCurrentValue();
+                }
+            });
+
             HBox.setHgrow(field, javafx.scene.layout.Priority.ALWAYS);
             editor = new HBox(2, field);
             editor.setAlignment(Pos.CENTER_LEFT);
 
-            if (dateColumn) {
-                Button calendar = new Button();
-                calendar.setGraphic(Icons.of(FontAwesomeSolid.CALENDAR_ALT, "#6897bb", 11));
-                calendar.getStyleClass().add("calendar-button");
-                calendar.setFocusTraversable(false);
-                calendar.setOnAction(e -> openDatePicker());
-                editor.getChildren().add(calendar);
+            pickerButton = new Button("...");
+            pickerButton.getStyleClass().add("cell-more-button");
+            pickerButton.setFocusTraversable(false);
+            pickerButton.setOnAction(e -> {
+                if (dateTimePicker != null) {
+                    if (dateTimePicker.isShowing()) {
+                        dateTimePicker.hide();
+                    } else {
+                        dateTimePicker.parseAndUpdate(field.getText());
+                        dateTimePicker.show(editor);
+                    }
+                }
+            });
+
+            dateTimePicker = new DataGripDateTimePicker(formattedVal -> {
+                isUpdatingFromPicker = true;
+                try {
+                    field.setText(formattedVal);
+                } finally {
+                    isUpdatingFromPicker = false;
+                }
+            });
+
+            dateTimePicker.setOnCommitRequested(v -> commitCurrentValue());
+            dateTimePicker.setOnCancelRequested(v -> {
+                explicitEscape = true;
+                try {
+                    cancelEdit();
+                } finally {
+                    explicitEscape = false;
+                }
+            });
+
+            dateTimePicker.setOnPopupClosed(() -> {
+                if (isEditing() && !explicitEscape) {
+                    Platform.runLater(() -> {
+                        if (isEditing() && !explicitEscape && !isEditorFocused()) {
+                            commitCurrentValue();
+                        }
+                    });
+                }
+            });
+
+            field.textProperty().addListener((obs, oldV, newV) -> {
+                if (!isUpdatingFromPicker && dateTimePicker != null && dateTimePicker.isShowing()) {
+                    dateTimePicker.parseAndUpdate(newV);
+                }
+            });
+
+            if (isDate) {
+                editor.getChildren().add(pickerButton);
             }
         }
 
-        private void openDatePicker() {
-            DatePicker picker = new DatePicker();
-            try {
-                String text = field.getText();
-                if (text != null && text.length() >= 10) {
-                    picker.setValue(LocalDate.parse(text.substring(0, 10)));
+        private void updateEditorForColumnType(boolean isDate) {
+            if (isDate) {
+                if (!editor.getChildren().contains(pickerButton)) {
+                    editor.getChildren().add(pickerButton);
                 }
-            } catch (Exception ignored) {}
+            } else {
+                editor.getChildren().remove(pickerButton);
+                if (dateTimePicker != null) {
+                    dateTimePicker.hide();
+                }
+            }
+        }
 
-            Popup popup = new Popup();
-            popup.setAutoHide(true);
-            popup.getContent().add(picker);
-            picker.setOnAction(e -> {
-                LocalDate date = picker.getValue();
-                if (date != null) {
-                    String text = field.getText();
-                    // keep the time part of a timestamp, replace only the date
-                    if (text != null && text.matches("\\d{4}-\\d{2}-\\d{2}.*")) {
-                        field.setText(date + text.substring(10));
-                    } else {
-                        field.setText(date.toString());
-                    }
+        private boolean isEditorFocused() {
+            if (field != null && field.isFocused()) return true;
+            if (pickerButton != null && pickerButton.isFocused()) return true;
+            if (editor != null && editor.isFocused()) return true;
+            if (dateTimePicker != null && (dateTimePicker.isShowing() || dateTimePicker.isFocused())) return true;
+            return false;
+        }
+
+        private void commitCurrentValue() {
+            if (isCommitting || field == null || !isEditing()) return;
+            if (getIndex() < 0 || getTableView() == null || getIndex() >= getTableView().getItems().size()) return;
+            isCommitting = true;
+            try {
+                if (dateTimePicker != null) {
+                    dateTimePicker.hide();
                 }
-                popup.hide();
-                field.requestFocus();
-                field.end();
-            });
-            var bounds = localToScreen(getBoundsInLocal());
-            popup.show(this, bounds.getMinX(), bounds.getMaxY());
-            picker.show();   // open the calendar immediately
+                String val = field.getText();
+                commitEdit(val);
+            } finally {
+                isCommitting = false;
+            }
         }
 
         @Override
         public void cancelEdit() {
+            if (!explicitEscape && field != null && !isCommitting && isEditing()) {
+                commitCurrentValue();
+                return;
+            }
+            if (dateTimePicker != null) {
+                dateTimePicker.hide();
+            }
             super.cancelEdit();
             setGraphic(null);
             setText(getItem());
         }
 
         @Override
+        public void commitEdit(String newValue) {
+            if (dateTimePicker != null) {
+                dateTimePicker.hide();
+            }
+            super.commitEdit(newValue);
+            setGraphic(null);
+            setText(newValue);
+        }
+
+        @Override
         protected void updateItem(String item, boolean empty) {
             super.updateItem(item, empty);
+            pseudoClassStateChanged(MODIFIED_PSEUDO_CLASS, !empty && isCellModified(getIndex(), columnIndex));
             if (empty) {
                 setText(null);
                 setGraphic(null);
@@ -414,6 +588,7 @@ public class ResultGrid extends TableView<List<String>> {
         @Override
         protected void updateItem(String item, boolean empty) {
             super.updateItem(item, empty);
+            pseudoClassStateChanged(MODIFIED_PSEUDO_CLASS, !empty && isCellModified(getIndex(), columnIndex));
             if (empty || item == null) {
                 setText(null);
                 setGraphic(null);

@@ -117,7 +117,10 @@ public class GridEditManager {
         List<String> row = grid.getItems().get(rowIndex);
         Map<String, String> pkValues = pkSnapshot(row, columnIndex, oldValue);
         if (pkValues == null) return;
-        updates.add(new Update(pkValues, currentResult.getColumns().get(columnIndex), newValue));
+        String colName = currentResult.getColumns().get(columnIndex);
+        updates.removeIf(u -> u.column().equalsIgnoreCase(colName) && u.pkValues().equals(pkValues));
+        updates.add(new Update(pkValues, colName, newValue));
+        grid.markCellModified(rowIndex, columnIndex);
         updateButtons();
         if (AppSettingsStore.load().isSubmitChangesImmediately()) {
             submit();
@@ -167,6 +170,7 @@ public class GridEditManager {
     private void clearPending() {
         updates.clear();
         deletes.clear();
+        grid.clearModifiedCells();
         updateButtons();
     }
 

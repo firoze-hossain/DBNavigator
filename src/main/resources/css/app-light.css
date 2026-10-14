@@ -332,12 +332,27 @@
 
 /* ---------- inline cell editor + date picker button ---------- */
 .cell-editor {
-    -fx-background-color: #1a2c47;
-    -fx-text-fill: white;
+    -fx-background-color: #ffffff;
+    -fx-text-fill: #222222;
     -fx-border-color: -accent;
     -fx-background-radius: 3;
     -fx-border-radius: 3;
     -fx-padding: 1 4 1 4;
+}
+.cell-more-button {
+    -fx-padding: 0 6 0 6;
+    -fx-background-color: #f7f8fa;
+    -fx-text-fill: #5a5d6b;
+    -fx-font-weight: bold;
+    -fx-font-size: 11px;
+    -fx-cursor: hand;
+    -fx-border-color: #c9ccd6;
+    -fx-border-radius: 3;
+    -fx-background-radius: 3;
+}
+.cell-more-button:hover {
+    -fx-background-color: #3574f0;
+    -fx-text-fill: white;
 }
 .calendar-button {
     -fx-padding: 1 6 1 6;
@@ -347,6 +362,70 @@
     -fx-background-color: -bg-mid;
 }
 .date-picker .arrow-button { -fx-background-color: -bg-light; }
+
+/* ---------- DataGrip DateTime Picker Popup ---------- */
+.datagrip-datetime-picker {
+    -fx-background-color: #f7f8fa;
+    -fx-border-color: #c9ccd6;
+    -fx-border-width: 1px;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+    -fx-padding: 8px 10px;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.15), 10, 0, 0, 4);
+}
+.datagrip-datetime-picker .time-separator {
+    -fx-text-fill: #222222;
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+    -fx-padding: 0 1px;
+}
+.datagrip-datetime-picker .picker-combo {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #c9ccd6;
+    -fx-border-radius: 3px;
+    -fx-background-radius: 3px;
+    -fx-font-size: 12px;
+}
+.datagrip-datetime-picker .picker-combo .list-cell {
+    -fx-text-fill: #222222;
+    -fx-background-color: #ffffff;
+    -fx-padding: 3 6;
+}
+.datagrip-datetime-picker .picker-combo .list-cell:hover,
+.datagrip-datetime-picker .picker-combo .list-cell:selected {
+    -fx-background-color: #dbeafe;
+    -fx-text-fill: #1d4ed8;
+}
+.datagrip-datetime-picker .picker-spinner {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #c9ccd6;
+    -fx-border-radius: 3px;
+    -fx-background-radius: 3px;
+    -fx-font-size: 12px;
+}
+.datagrip-datetime-picker .picker-spinner .picker-spinner-editor {
+    -fx-background-color: transparent;
+    -fx-text-fill: #222222;
+    -fx-alignment: center;
+    -fx-padding: 0 2;
+    -fx-font-size: 12px;
+}
+.datagrip-datetime-picker .picker-spinner .increment-arrow-button,
+.datagrip-datetime-picker .picker-spinner .decrement-arrow-button {
+    -fx-background-color: transparent;
+    -fx-padding: 1 3;
+}
+.datagrip-datetime-picker .picker-spinner .increment-arrow,
+.datagrip-datetime-picker .picker-spinner .decrement-arrow {
+    -fx-background-color: #6c707e;
+}
+
+/* Modified cell styling */
+.table-cell:cell-modified {
+    -fx-background-color: #dbeafe;
+    -fx-text-fill: #1d4ed8;
+    -fx-font-weight: bold;
+}
 
 /* ---------- unified DataGrip header bar ---------- */
 .app-header-bar {

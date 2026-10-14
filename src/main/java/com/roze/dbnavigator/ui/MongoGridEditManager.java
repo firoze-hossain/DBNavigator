@@ -92,11 +92,13 @@ public class MongoGridEditManager {
         String idValue = grid.getItems().get(rowIndex).get(idIndex);
 
         pendingByDoc.computeIfAbsent(idValue, k -> new LinkedHashMap<>()).put(columnName, newValue);
+        grid.markCellModified(rowIndex, columnIndex);
         updateButtons();
     }
 
     private void clearPending() {
         pendingByDoc.clear();
+        grid.clearModifiedCells();
         updateButtons();
     }
 
