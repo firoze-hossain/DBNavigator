@@ -32,6 +32,7 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Popup;
@@ -76,6 +77,9 @@ public class QueryTab extends Tab {
     private final Label breadcrumbsStmtLabel = new Label("SELECT");
     private final ResultGrid resultGrid = new ResultGrid();
     private final TabPane resultsTabPane = new TabPane();
+    private final VBox dataPanelContainer = new VBox();
+    private Button hideDataPanelButton;
+    private double lastDataPanelDivider = 0.45;
     private int resultTabCounter = 1;
     private QueryExecutionChooserPopup activeChooserPopup;
     private final SplitPane editorResultSplit = new SplitPane();
@@ -115,6 +119,7 @@ public class QueryTab extends Tab {
     private String currentEditableTable;
     private List<String> currentPkColumns = List.of();
     private Map<String, Integer> currentColumnTypes = Map.of();
+    private boolean currentViaCtid = false;
 
     /** Stable identity for this console's Local History (independent of catalog suffix in the tab label). */
     private final String fileId;
@@ -239,9 +244,46 @@ public class QueryTab extends Tab {
                         submitButton, revertButton, this::rerunLastSql, statusLabel::setText);
             }
         });
-        editorResultSplit.getItems().addAll(editorContainer, resultsTabPane);
-        editorResultSplit.setOrientation(Orientation.VERTICAL);
-        editorResultSplit.setDividerPositions(0.45);
+
+        StackPane tabPaneStack = new StackPane();
+        VBox.setVgrow(tabPaneStack, Priority.ALWAYS);
+        tabPaneStack.getChildren().add(resultsTabPane);
+
+        boolean isMac = System.getProperty("os.name", "").toLowerCase().contains("mac");
+        String hideShortcut = isMac ? "⇧⎋" : "Shift+Escape";
+
+        this.hideDataPanelButton = new Button();
+        this.hideDataPanelButton.setGraphic(Icons.of(FontAwesomeSolid.MINUS, "#a9b7c6", 11));
+        this.hideDataPanelButton.setTooltip(new Tooltip("Hide  " + hideShortcut));
+        this.hideDataPanelButton.getStyleClass().add("run-panel-chrome-button");
+        this.hideDataPanelButton.setOnAction(e -> hideDataPanel());
+
+        Button moreOptionsButton = new Button();
+        moreOptionsButton.setGraphic(Icons.of(FontAwesomeSolid.ELLIPSIS_V, "#a9b7c6", 11));
+        moreOptionsButton.setTooltip(new Tooltip("More Options"));
+        moreOptionsButton.getStyleClass().add("run-panel-chrome-button");
+        ContextMenu moreMenu = new ContextMenu();
+        MenuItem hideItem = new MenuItem("Hide (" + hideShortcut + ")");
+        hideItem.setOnAction(e -> hideDataPanel());
+        MenuItem closeTabsItem = new MenuItem("Close Result Tabs");
+        closeTabsItem.setOnAction(e -> {
+            while (resultsTabPane.getTabs().size() > 1) {
+                resultsTabPane.getTabs().remove(resultsTabPane.getTabs().size() - 1);
+            }
+        });
+        MenuItem exportCsvItem = new MenuItem("Export CSV");
+        exportCsvItem.setOnAction(e -> activeResultGrid().exportCsv());
+        moreMenu.getItems().addAll(hideItem, new SeparatorMenuItem(), closeTabsItem, exportCsvItem);
+        moreOptionsButton.setOnAction(e -> moreMenu.show(moreOptionsButton, javafx.geometry.Side.BOTTOM, 0, 4));
+
+        HBox chromeButtons = new HBox(2, moreOptionsButton, hideDataPanelButton);
+        chromeButtons.setAlignment(Pos.CENTER_RIGHT);
+        chromeButtons.setPickOnBounds(false);
+        chromeButtons.setMaxHeight(Region.USE_PREF_SIZE);
+        StackPane.setAlignment(chromeButtons, Pos.TOP_RIGHT);
+        StackPane.setMargin(chromeButtons, new Insets(3, 6, 0, 0));
+
+        tabPaneStack.getChildren().add(chromeButtons);
 
         statusLabel.getStyleClass().add("console-status");
         Region statusSpacer = new Region();
@@ -250,7 +292,15 @@ public class QueryTab extends Tab {
         statusBar.setPadding(new Insets(4, 10, 4, 10));
         statusBar.getStyleClass().add("console-status-bar");
 
-        VBox root = new VBox(toolbar, editorResultSplit, statusBar);
+        dataPanelContainer.getChildren().addAll(tabPaneStack, statusBar);
+        VBox.setVgrow(tabPaneStack, Priority.ALWAYS);
+        dataPanelContainer.setMinHeight(100);
+
+        editorResultSplit.getItems().addAll(editorContainer, dataPanelContainer);
+        editorResultSplit.setOrientation(Orientation.VERTICAL);
+        editorResultSplit.setDividerPositions(0.45);
+
+        VBox root = new VBox(toolbar, editorResultSplit);
         VBox.setVgrow(editorResultSplit, Priority.ALWAYS);
         setContent(root);
 
@@ -262,7 +312,12 @@ public class QueryTab extends Tab {
         CompletionService.preload(profile, catalog);
 
         root.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
-            if (new KeyCodeCombination(KeyCode.ENTER, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN).match(e)) {
+            if (new KeyCodeCombination(KeyCode.ESCAPE, KeyCombination.SHIFT_DOWN).match(e)) {
+                if (isDataPanelVisible()) {
+                    hideDataPanel();
+                    e.consume();
+                }
+            } else if (new KeyCodeCombination(KeyCode.ENTER, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN).match(e)) {
                 executeAction(1);
                 e.consume();
             } else if (new KeyCodeCombination(KeyCode.ENTER, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN).match(e)) {
@@ -2079,6 +2134,7 @@ public class QueryTab extends Tab {
                 final String targetTable = editableTable;
                 final List<String> pk = pkColumns;
                 final Map<String, Integer> types = columnTypes;
+                final boolean wasViaCtid = viaCtid;
 
                 Platform.runLater(() -> {
                     closeActiveCursor();   // now that the new one opened successfully
@@ -2087,6 +2143,7 @@ public class QueryTab extends Tab {
                     currentEditableTable = targetTable;
                     currentPkColumns = pk;
                     currentColumnTypes = types;
+                    currentViaCtid = wasViaCtid;
 
                     if (finalCursor.isQueryResult()) {
                         showDataPanel(true);
@@ -2139,7 +2196,7 @@ public class QueryTab extends Tab {
 
     /** Row-producing statements use the result grid; commands use the Run console. */
     private static boolean isLikelyDataQuery(String sql) {
-        return sql.stripLeading().matches("(?is)^(select|with|values|show|describe|explain)\\b.*");
+        return stripComments(sql).matches("(?is)^(select|with|values|show|describe|explain)\\b.*");
     }
 
     private RunPanel.RunHandle openRunOutput(String sql) {
@@ -2153,15 +2210,47 @@ public class QueryTab extends Tab {
         return output;
     }
 
-    /** Adds/removes the actual grid from the split so commands never leave a blank data area. */
-    private void showDataPanel(boolean show) {
-        boolean isShown = editorResultSplit.getItems().contains(resultsTabPane);
+    /** Adds/removes the data panel from the split so commands never leave a blank data area. */
+    public void showDataPanel(boolean show) {
+        boolean isShown = editorResultSplit.getItems().contains(dataPanelContainer);
         if (show && !isShown) {
-            editorResultSplit.getItems().add(resultsTabPane);
-            editorResultSplit.setDividerPositions(0.45);
+            editorResultSplit.getItems().add(dataPanelContainer);
+            editorResultSplit.setDividerPositions(lastDataPanelDivider);
         } else if (!show && isShown) {
-            editorResultSplit.getItems().remove(resultsTabPane);
+            if (editorResultSplit.getDividerPositions().length > 0) {
+                lastDataPanelDivider = editorResultSplit.getDividerPositions()[0];
+            }
+            editorResultSplit.getItems().remove(dataPanelContainer);
         }
+    }
+
+    public void hideDataPanel() {
+        showDataPanel(false);
+        editor.requestFocus();
+    }
+
+    public void showDataPanel() {
+        showDataPanel(true);
+    }
+
+    public void toggleDataPanel() {
+        if (isDataPanelVisible()) {
+            hideDataPanel();
+        } else {
+            showDataPanel();
+        }
+    }
+
+    public boolean isDataPanelVisible() {
+        return editorResultSplit.getItems().contains(dataPanelContainer);
+    }
+
+    public Button getHideDataPanelButton() {
+        return hideDataPanelButton;
+    }
+
+    public VBox getDataPanelContainer() {
+        return dataPanelContainer;
     }
 
     private String connectionLabel() {
@@ -2186,7 +2275,7 @@ public class QueryTab extends Tab {
      * new to show.
      */
     private static boolean isSchemaChangingStatement(String sql) {
-        return SCHEMA_CHANGING_STATEMENT.matcher(sql).find();
+        return SCHEMA_CHANGING_STATEMENT.matcher(stripComments(sql)).find();
     }
 
     /** Formats database errors compactly while retaining the SQLSTATE when the driver provides it. */
@@ -2313,7 +2402,9 @@ public class QueryTab extends Tab {
 
         statusLabel.setText(pageRows.size() + " row(s) in " + activeCursor.getExecutionMillis() + " ms"
                 + (editManager.isEditable()
-                    ? "  ·  editable — double-click cells, Delete removes rows"
+                    ? (currentViaCtid
+                        ? "  ·  editable via row id (no primary key)"
+                        : "  ·  editable — double-click cells, Delete removes rows")
                     : ""));
     }
 
@@ -2366,7 +2457,7 @@ public class QueryTab extends Tab {
     // ------------------------------------------- editable-target detection
 
     private static final Pattern SIMPLE_SELECT = Pattern.compile(
-            "^\\s*select\\s+(.+?)\\s+from\\s+([A-Za-z0-9_.\"]+)(.*)$",
+            "^\\s*select\\s+(.+?)\\s+from\\s+([A-Za-z0-9_.\\\"`\\[\\]]+)(.*)$",
             Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
     /**
      * An aggregate function anywhere in the SELECT list means the result no
@@ -2392,16 +2483,165 @@ public class QueryTab extends Tab {
             "(?is)^\\s*drop\\s+(table|sequence)\\s+\\1\\s+(.+?)\\s*;?\\s*$");
 
     /**
+     * Strips single-line (--) and multi-line (/* *\/) comments from SQL,
+     * preserving string literals ('...') and quoted identifiers ("...").
+     */
+    public static String stripComments(String sql) {
+        if (sql == null || sql.isBlank()) return "";
+        StringBuilder sb = new StringBuilder(sql.length());
+        int n = sql.length();
+        boolean inSingleQuote = false;
+        boolean inDoubleQuote = false;
+        boolean inLineComment = false;
+        boolean inBlockComment = false;
+
+        for (int i = 0; i < n; i++) {
+            char c = sql.charAt(i);
+            char next = (i + 1 < n) ? sql.charAt(i + 1) : '\0';
+
+            if (inLineComment) {
+                if (c == '\n') {
+                    inLineComment = false;
+                    sb.append('\n');
+                }
+                continue;
+            }
+            if (inBlockComment) {
+                if (c == '*' && next == '/') {
+                    inBlockComment = false;
+                    i++;
+                }
+                continue;
+            }
+            if (inSingleQuote) {
+                sb.append(c);
+                if (c == '\'' && next == '\'') {
+                    sb.append(next);
+                    i++;
+                    continue;
+                }
+                if (c == '\'') inSingleQuote = false;
+                continue;
+            }
+            if (inDoubleQuote) {
+                sb.append(c);
+                if (c == '"' && next == '"') {
+                    sb.append(next);
+                    i++;
+                    continue;
+                }
+                if (c == '"') inDoubleQuote = false;
+                continue;
+            }
+
+            if (c == '-' && next == '-') {
+                inLineComment = true;
+                i++;
+                continue;
+            }
+            if (c == '/' && next == '*') {
+                inBlockComment = true;
+                i++;
+                continue;
+            }
+            if (c == '\'') {
+                inSingleQuote = true;
+                sb.append(c);
+                continue;
+            }
+            if (c == '"') {
+                inDoubleQuote = true;
+                sb.append(c);
+                continue;
+            }
+
+            sb.append(c);
+        }
+        return sb.toString().trim();
+    }
+
+    /**
+     * Finds the index immediately following the top-level SELECT keyword
+     * in the given SQL, ignoring any comments and string literals that precede it.
+     */
+    public static int findSelectKeywordEnd(String sql) {
+        if (sql == null) return -1;
+        int n = sql.length();
+        boolean inSingleQuote = false, inDoubleQuote = false, inLineComment = false, inBlockComment = false;
+
+        for (int i = 0; i < n; i++) {
+            char c = sql.charAt(i);
+            char next = (i + 1 < n) ? sql.charAt(i + 1) : '\0';
+
+            if (inLineComment) {
+                if (c == '\n') inLineComment = false;
+                continue;
+            }
+            if (inBlockComment) {
+                if (c == '*' && next == '/') {
+                    inBlockComment = false;
+                    i++;
+                }
+                continue;
+            }
+            if (inSingleQuote) {
+                if (c == '\'' && next == '\'') { i++; continue; }
+                if (c == '\'') inSingleQuote = false;
+                continue;
+            }
+            if (inDoubleQuote) {
+                if (c == '"' && next == '"') { i++; continue; }
+                if (c == '"') inDoubleQuote = false;
+                continue;
+            }
+
+            if (c == '-' && next == '-') {
+                inLineComment = true;
+                i++;
+                continue;
+            }
+            if (c == '/' && next == '*') {
+                inBlockComment = true;
+                i++;
+                continue;
+            }
+            if (c == '\'') {
+                inSingleQuote = true;
+                continue;
+            }
+            if (c == '"') {
+                inDoubleQuote = true;
+                continue;
+            }
+
+            if (Character.isWhitespace(c)) continue;
+
+            if (i + 6 <= n && sql.regionMatches(true, i, "select", 0, 6)) {
+                if (i + 6 == n || Character.isWhitespace(sql.charAt(i + 6)) || sql.charAt(i + 6) == '/' || sql.charAt(i + 6) == '-') {
+                    return i + 6;
+                }
+            }
+            return -1;
+        }
+        return -1;
+    }
+
+    /**
      * Returns the target table token when the query is a plain single-table
      * SELECT (no joins/aggregation/unions), otherwise null.
      */
-    private static String detectEditableTable(String sql) {
-        String lower = sql.toLowerCase(Locale.ROOT);
+    public static String detectEditableTable(String sql) {
+        if (sql == null || sql.isBlank()) return null;
+        String cleaned = stripComments(sql);
+        while (cleaned.endsWith(";")) {
+            cleaned = cleaned.substring(0, cleaned.length() - 1).stripTrailing();
+        }
+        String lower = cleaned.toLowerCase(Locale.ROOT);
         if (lower.contains(" join ") || lower.contains("group by") || lower.contains(" union ")
                 || lower.contains("distinct") || lower.contains(" having ")) {
             return null;
         }
-        Matcher matcher = SIMPLE_SELECT.matcher(sql.trim());
+        Matcher matcher = SIMPLE_SELECT.matcher(cleaned.trim());
         if (!matcher.matches()) return null;
         String selectList = matcher.group(1);
         if (AGGREGATE_CALL.matcher(selectList).find()) return null;
@@ -2412,9 +2652,19 @@ public class QueryTab extends Tab {
 
     /** Builds a DbObject reference from a (possibly qualified) table token. */
     private DbObject tableRef(String token) {
+        boolean quoted = token.contains("\"");
         String[] parts = token.replace("\"", "").split("\\.");
-        String tableName = parts[parts.length - 1];
+        String rawTable = parts[parts.length - 1];
         String prefix = parts.length > 1 ? parts[parts.length - 2] : null;
+
+        String tableName = rawTable;
+        if (!quoted) {
+            if (profile.getType() == DatabaseType.POSTGRESQL) {
+                tableName = rawTable.toLowerCase(Locale.ROOT);
+            } else if (profile.getType() == DatabaseType.ORACLE) {
+                tableName = rawTable.toUpperCase(Locale.ROOT);
+            }
+        }
 
         String cat = catalog;
         String schema = null;
@@ -2423,49 +2673,83 @@ public class QueryTab extends Tab {
                     || profile.getType() == DatabaseType.MARIADB) {
                 cat = prefix;      // MySQL qualifies by database
             } else {
-                schema = prefix;   // everyone else qualifies by schema
+                schema = (!quoted && profile.getType() == DatabaseType.POSTGRESQL)
+                        ? prefix.toLowerCase(Locale.ROOT)
+                        : (!quoted && profile.getType() == DatabaseType.ORACLE)
+                        ? prefix.toUpperCase(Locale.ROOT)
+                        : prefix;
             }
         }
         return new DbObject(tableName, DbObject.Kind.TABLE, cat, schema);
     }
 
-    private static String addMissingPrimaryKeyColumns(String sql, List<String> pkColumns) {
-        String lower = sql.toLowerCase(Locale.ROOT);
-        if (!lower.matches("(?is)^\\s*select\\s+.+?\\s+from\\s+.+")) return sql;
-        int fromIndex = lower.indexOf(" from ");
-        if (fromIndex < 0) return sql;
-        String selectPart = sql.substring(0, fromIndex);
-        String rest = sql.substring(fromIndex);
+    public static String addMissingPrimaryKeyColumns(String sql, List<String> pkColumns) {
+        if (sql == null || pkColumns == null || pkColumns.isEmpty()) return sql;
+        String cleaned = stripComments(sql);
+        if (!cleaned.toLowerCase(Locale.ROOT).matches("(?is)^select\\s+.+?\\s+from\\s+.+")) return sql;
 
-        // A bare "*" (optionally table-qualified, e.g. "t.*") already
-        // includes every column, the primary key included — inserting an
-        // explicit PK name in front of it produces invalid syntax on
-        // MySQL specifically (an unqualified "*" generally can't be mixed
-        // with other column names in the same select list there), so a
-        // wildcard select is left completely untouched.
-        if (selectPart.strip().matches("(?i)select\\s+([A-Za-z_][A-Za-z0-9_]*\\.)?\\*\\s*")) {
+        int fromIndex = -1;
+        int n = sql.length();
+        boolean inSingleQuote = false, inDoubleQuote = false, inLineComment = false, inBlockComment = false;
+        for (int i = 0; i < n; i++) {
+            char c = sql.charAt(i);
+            char next = (i + 1 < n) ? sql.charAt(i + 1) : '\0';
+            if (inLineComment) { if (c == '\n') inLineComment = false; continue; }
+            if (inBlockComment) { if (c == '*' && next == '/') { inBlockComment = false; i++; } continue; }
+            if (inSingleQuote) { if (c == '\'' && next == '\'') { i++; continue; } if (c == '\'') inSingleQuote = false; continue; }
+            if (inDoubleQuote) { if (c == '"' && next == '"') { i++; continue; } if (c == '"') inDoubleQuote = false; continue; }
+            if (c == '-' && next == '-') { inLineComment = true; i++; continue; }
+            if (c == '/' && next == '*') { inBlockComment = true; i++; continue; }
+            if (c == '\'') { inSingleQuote = true; continue; }
+            if (c == '"') { inDoubleQuote = true; continue; }
+
+            if (i + 4 <= n && sql.regionMatches(true, i, "from", 0, 4)
+                    && (i == 0 || Character.isWhitespace(sql.charAt(i - 1)))
+                    && (i + 4 == n || Character.isWhitespace(sql.charAt(i + 4)))) {
+                fromIndex = i;
+                break;
+            }
+        }
+        if (fromIndex < 0) return sql;
+
+        String selectPart = sql.substring(0, fromIndex);
+        String selectPartCleaned = stripComments(selectPart).strip();
+
+        // A bare "*" (optionally table-qualified, e.g. "t.*") already includes every column
+        if (selectPartCleaned.matches("(?i)^select\\s+([A-Za-z_][A-Za-z0-9_]*\\.)?\\*\\s*$")) {
             return sql;
         }
 
+        int selectEnd = findSelectKeywordEnd(sql);
+        if (selectEnd < 0 || selectEnd >= fromIndex) return sql;
+
+        StringBuilder missingPks = new StringBuilder();
+        String selectLower = selectPartCleaned.toLowerCase(Locale.ROOT);
         for (String pk : pkColumns) {
-            if (!selectPart.toLowerCase(Locale.ROOT).contains(pk.toLowerCase(Locale.ROOT))) {
-                selectPart = selectPart.replaceFirst("(?i)select\\s+", "$0" + pk + ", ");
+            if (!selectLower.contains(pk.toLowerCase(Locale.ROOT))) {
+                missingPks.append(" ").append(pk).append(",");
             }
         }
-        return selectPart + rest;
+        if (missingPks.isEmpty()) return sql;
+
+        return sql.substring(0, selectEnd) + missingPks + sql.substring(selectEnd);
     }
 
-    private static boolean isSimpleSingleTableSelect(String sql) {
-        // Console queries normally end in a semicolon. Treat it as syntax
-        // decoration rather than evidence that this is a complex query, so a
-        // plain "SELECT * FROM partition;" remains editable.
-        return sql.matches("(?is)^\\s*select\\s+.+?\\s+from\\s+[A-Za-z0-9_.\\\"]+"
-                + "\\s*(where\\b.*)?\\s*;?\\s*$");
+    public static boolean isSimpleSingleTableSelect(String sql) {
+        if (sql == null || sql.isBlank()) return false;
+        String cleaned = stripComments(sql);
+        while (cleaned.endsWith(";")) {
+            cleaned = cleaned.substring(0, cleaned.length() - 1).stripTrailing();
+        }
+        return cleaned.matches("(?is)^\\s*select\\s+.+?\\s+from\\s+[A-Za-z0-9_.\\\"`\\[\\]]+"
+                + "\\s*(where\\b.*)?\\s*$");
     }
 
-    private static String addRowIdentityToSelect(String sql) {
-        return sql.replaceFirst("(?is)^(\\s*select\\s+)",
-                "$1tableoid::text AS tableoid, ctid, ");
+    public static String addRowIdentityToSelect(String sql) {
+        int idx = findSelectKeywordEnd(sql);
+        if (idx < 0) return sql;
+        return sql.substring(0, idx) + " tableoid::text AS tableoid, ctid," + sql.substring(idx);
     }
+
 
 }
