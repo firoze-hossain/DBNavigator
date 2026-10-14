@@ -213,9 +213,9 @@
 .result-grid .table-row-cell:odd      { -fx-background-color: #f2f2f5; }
 .result-grid.no-zebra .table-row-cell:odd { -fx-background-color: #ffffff; }
 .result-grid .table-row-cell:hover    { -fx-background-color: #e9edf9; }
-.result-grid .table-row-cell:selected { -fx-background-color: #ffffff; }
-.result-grid .table-row-cell:selected:odd { -fx-background-color: #f2f2f5; }
-.result-grid.no-zebra .table-row-cell:selected:odd { -fx-background-color: #ffffff; }
+.result-grid .table-row-cell:selected { -fx-background-color: #3574f0; }
+.result-grid .table-row-cell:selected:odd { -fx-background-color: #3574f0; }
+.result-grid.no-zebra .table-row-cell:selected:odd { -fx-background-color: #3574f0; }
 .result-grid .table-cell {
     -fx-text-fill: #1a1a1e;
     -fx-font-family: "JetBrains Mono", "Consolas", monospace;
@@ -378,8 +378,7 @@
 .date-picker .arrow-button { -fx-background-color: -bg-light; }
 
 /* ---------- Grid DateTime Picker Popup ---------- */
-.grid-datetime-picker,
-.datagrip-datetime-picker {
+.grid-datetime-picker {
     -fx-background-color: #f7f8fa;
     -fx-border-color: #c9ccd6;
     -fx-border-width: 1px;
@@ -388,44 +387,37 @@
     -fx-padding: 8px 10px;
     -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.15), 10, 0, 0, 4);
 }
-.grid-datetime-picker .time-separator,
-.datagrip-datetime-picker .time-separator {
+.grid-datetime-picker .time-separator {
     -fx-text-fill: #222222;
     -fx-font-weight: bold;
     -fx-font-size: 13px;
     -fx-padding: 0 1px;
 }
-.grid-datetime-picker .picker-combo,
-.datagrip-datetime-picker .picker-combo {
+.grid-datetime-picker .picker-combo {
     -fx-background-color: #ffffff;
     -fx-border-color: #c9ccd6;
     -fx-border-radius: 3px;
     -fx-background-radius: 3px;
     -fx-font-size: 12px;
 }
-.grid-datetime-picker .picker-combo .list-cell,
-.datagrip-datetime-picker .picker-combo .list-cell {
+.grid-datetime-picker .picker-combo .list-cell {
     -fx-text-fill: #222222;
     -fx-background-color: #ffffff;
     -fx-padding: 3 6;
 }
 .grid-datetime-picker .picker-combo .list-cell:hover,
-.grid-datetime-picker .picker-combo .list-cell:selected,
-.datagrip-datetime-picker .picker-combo .list-cell:hover,
-.datagrip-datetime-picker .picker-combo .list-cell:selected {
+.grid-datetime-picker .picker-combo .list-cell:selected {
     -fx-background-color: #dbeafe;
     -fx-text-fill: #1d4ed8;
 }
-.grid-datetime-picker .picker-spinner,
-.datagrip-datetime-picker .picker-spinner {
+.grid-datetime-picker .picker-spinner {
     -fx-background-color: #ffffff;
     -fx-border-color: #c9ccd6;
     -fx-border-radius: 3px;
     -fx-background-radius: 3px;
     -fx-font-size: 12px;
 }
-.grid-datetime-picker .picker-spinner .picker-spinner-editor,
-.datagrip-datetime-picker .picker-spinner .picker-spinner-editor {
+.grid-datetime-picker .picker-spinner .picker-spinner-editor {
     -fx-background-color: transparent;
     -fx-text-fill: #222222;
     -fx-alignment: center;
@@ -433,16 +425,12 @@
     -fx-font-size: 12px;
 }
 .grid-datetime-picker .picker-spinner .increment-arrow-button,
-.grid-datetime-picker .picker-spinner .decrement-arrow-button,
-.datagrip-datetime-picker .picker-spinner .increment-arrow-button,
-.datagrip-datetime-picker .picker-spinner .decrement-arrow-button {
+.grid-datetime-picker .picker-spinner .decrement-arrow-button {
     -fx-background-color: transparent;
     -fx-padding: 1 3;
 }
 .grid-datetime-picker .picker-spinner .increment-arrow,
-.grid-datetime-picker .picker-spinner .decrement-arrow,
-.datagrip-datetime-picker .picker-spinner .increment-arrow,
-.datagrip-datetime-picker .picker-spinner .decrement-arrow {
+.grid-datetime-picker .picker-spinner .decrement-arrow {
     -fx-background-color: #6c707e;
 }
 
@@ -480,7 +468,30 @@
     -fx-text-fill: #ffffff;
 }
 
-/* ---------- unified DataGrip header bar ---------- */
+/* ---------- row deleted styling ---------- */
+.result-grid .table-row-cell:row-deleted,
+.result-grid .table-row-cell:odd:row-deleted {
+    -fx-background-color: #ffebee;
+}
+.result-grid .table-cell:row-deleted,
+.result-grid .serial-cell:row-deleted {
+    -fx-background-color: #ffebee;
+    -fx-text-fill: #a0a0a8;
+}
+.result-grid .table-cell:selected:row-deleted,
+.result-grid .serial-cell:selected:row-deleted {
+    -fx-background-color: #f8d7da;
+    -fx-text-fill: #721c24;
+}
+.result-grid .deleted-cell-text {
+    -fx-fill: #a0a0a8;
+}
+.result-grid .table-cell:selected:row-deleted .deleted-cell-text,
+.result-grid .serial-cell:selected:row-deleted .deleted-cell-text {
+    -fx-fill: #721c24;
+}
+
+/* ---------- unified header bar ---------- */
 .app-header-bar {
     -fx-background-color: -bg-mid;
     -fx-border-color: transparent transparent -border transparent;
@@ -884,13 +895,17 @@
 
 /* ---------- serial/row-number column ---------- */
 .result-grid .serial-cell {
-    -fx-text-fill: #6f7680;
+    -fx-text-fill: #6e6e76;
     -fx-alignment: CENTER-RIGHT;
-    -fx-background-color: #1e1f22;
+    -fx-background-color: #f2f2f5;
     -fx-font-size: 11px;
 }
+.result-grid .serial-cell:selected {
+    -fx-background-color: #3574f0;
+    -fx-text-fill: #ffffff;
+}
 
-/* ---------- result pager (DataGrip-style "1-500 of 501+") ---------- */
+/* ---------- result pager ("1-500 of 501+") ---------- */
 .result-pager { -fx-spacing: 2; }
 .result-pager-button {
     -fx-background-color: transparent;
@@ -927,9 +942,9 @@
 
 .result-grid .table-row-cell:odd      { -fx-background-color: #f2f2f5; }
 .result-grid .table-row-cell:hover    { -fx-background-color: #e9edf9; }
-.result-grid .table-row-cell:selected { -fx-background-color: #ffffff; }
-.result-grid .table-row-cell:selected:odd { -fx-background-color: #f2f2f5; }
-.result-grid.no-zebra .table-row-cell:selected:odd { -fx-background-color: #ffffff; }
+.result-grid .table-row-cell:selected { -fx-background-color: #3574f0; }
+.result-grid .table-row-cell:selected:odd { -fx-background-color: #3574f0; }
+.result-grid.no-zebra .table-row-cell:selected:odd { -fx-background-color: #3574f0; }
 .result-grid .table-cell { -fx-text-fill: #1a1a1e; }
 .result-grid .table-cell:selected {
     -fx-background-color: #3574f0;

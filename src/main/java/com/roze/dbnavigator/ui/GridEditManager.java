@@ -66,6 +66,7 @@ public class GridEditManager {
 
         grid.enableEditing(this::onCellEdited);
         grid.setDeleteRowsAction(this::markSelectedRowsDeleted);
+        grid.setRevertRowAction(this::unmarkRowDeleted);
         submitButton.setOnAction(e -> submit());
         revertButton.setOnAction(e -> {
             clearPending();
@@ -136,14 +137,32 @@ public class GridEditManager {
         List<Integer> rowIndexes = grid.getSelectedRowIndexes();
         if (rowIndexes.isEmpty()) return;
 
-        for (int rowIndex : rowIndexes) {                    // descending order
+        for (int rowIndex : rowIndexes) {
+            if (rowIndex < 0 || rowIndex >= grid.getItems().size()) continue;
             List<String> row = grid.getItems().get(rowIndex);
             Map<String, String> pkValues = pkSnapshot(row, -1, null);
-            if (pkValues == null) return;
-            deletes.add(pkValues);
-            grid.getItems().remove(rowIndex);
+            if (pkValues == null) continue;
+            updates.removeIf(u -> u.pkValues().equals(pkValues));
+            if (!deletes.contains(pkValues)) {
+                deletes.add(pkValues);
+            }
+            grid.markRowDeleted(rowIndex);
         }
         updateButtons();
+        if (AppSettingsStore.load().isSubmitChangesImmediately()) {
+            submit();
+        }
+    }
+
+    public void unmarkRowDeleted(int rowIndex) {
+        if (rowIndex >= 0 && rowIndex < grid.getItems().size()) {
+            List<String> row = grid.getItems().get(rowIndex);
+            Map<String, String> pkValues = pkSnapshot(row, -1, null);
+            if (pkValues != null) {
+                deletes.remove(pkValues);
+                updateButtons();
+            }
+        }
     }
 
     /** Primary-key values identifying a row; pre-edit value used for the edited column. */
@@ -171,6 +190,7 @@ public class GridEditManager {
         updates.clear();
         deletes.clear();
         grid.clearModifiedCells();
+        grid.clearDeletedRows();
         updateButtons();
     }
 

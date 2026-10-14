@@ -139,8 +139,25 @@ public class DataTab extends Tab {
         orderControl.getStyleClass().add("data-clause-control");
         orderControl.setAlignment(Pos.CENTER_LEFT);
 
-        HBox toolbar = new HBox(8, whereControl, orderControl, applyButton, refreshButton,
-                submitButton, revertButton, exportButton, spacer, pager);
+        Button addRowBtn = new Button();
+        addRowBtn.setGraphic(Icons.of(FontAwesomeSolid.PLUS, "#57965c", 11));
+        addRowBtn.setTooltip(new Tooltip("Add Row"));
+        addRowBtn.disableProperty().bind(grid.editableProperty().not());
+        addRowBtn.setOnAction(e -> {
+            if (grid.getAddRowAction() != null) grid.getAddRowAction().run();
+        });
+
+        Button deleteRowsBtn = new Button();
+        deleteRowsBtn.setGraphic(Icons.of(FontAwesomeSolid.MINUS, "#e05555", 11));
+        deleteRowsBtn.setTooltip(new Tooltip("Delete Selected Row(s)"));
+        deleteRowsBtn.disableProperty().bind(grid.editableProperty().not()
+                .or(javafx.beans.binding.Bindings.isEmpty(grid.getSelectionModel().getSelectedCells())));
+        deleteRowsBtn.setOnAction(e -> {
+            if (grid.getDeleteRowsAction() != null) grid.getDeleteRowsAction().run();
+        });
+
+        HBox toolbar = new HBox(8, addRowBtn, deleteRowsBtn, submitButton, revertButton, refreshButton,
+                whereControl, orderControl, applyButton, exportButton, spacer, pager);
         toolbar.setAlignment(Pos.CENTER_LEFT);
         toolbar.setPadding(new Insets(6, 10, 6, 10));
         toolbar.getStyleClass().add("console-toolbar");

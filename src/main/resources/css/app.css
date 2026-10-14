@@ -244,9 +244,9 @@
 .result-grid .table-row-cell:odd      { -fx-background-color: #232428; }
 .result-grid.no-zebra .table-row-cell:odd { -fx-background-color: -bg-darkest; }
 .result-grid .table-row-cell:hover    { -fx-background-color: #2e3033; }
-.result-grid .table-row-cell:selected { -fx-background-color: -bg-darkest; }
-.result-grid .table-row-cell:selected:odd { -fx-background-color: #232428; }
-.result-grid.no-zebra .table-row-cell:selected:odd { -fx-background-color: -bg-darkest; }
+.result-grid .table-row-cell:selected { -fx-background-color: #2e436e; }
+.result-grid .table-row-cell:selected:odd { -fx-background-color: #2e436e; }
+.result-grid.no-zebra .table-row-cell:selected:odd { -fx-background-color: #2e436e; }
 .result-grid .table-cell {
     -fx-text-fill: #c8ccd4;
     -fx-font-family: "JetBrains Mono", "Consolas", monospace;
@@ -419,8 +419,7 @@
 .date-picker .arrow-button { -fx-background-color: -bg-light; }
 
 /* ---------- Grid DateTime Picker Popup ---------- */
-.grid-datetime-picker,
-.datagrip-datetime-picker {
+.grid-datetime-picker {
     -fx-background-color: #2b2d30;
     -fx-border-color: #3e444a;
     -fx-border-width: 1px;
@@ -429,44 +428,37 @@
     -fx-padding: 8px 10px;
     -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.5), 10, 0, 0, 4);
 }
-.grid-datetime-picker .time-separator,
-.datagrip-datetime-picker .time-separator {
+.grid-datetime-picker .time-separator {
     -fx-text-fill: #dfe1e5;
     -fx-font-weight: bold;
     -fx-font-size: 13px;
     -fx-padding: 0 1px;
 }
-.grid-datetime-picker .picker-combo,
-.datagrip-datetime-picker .picker-combo {
+.grid-datetime-picker .picker-combo {
     -fx-background-color: #1e1f22;
     -fx-border-color: #4e5157;
     -fx-border-radius: 3px;
     -fx-background-radius: 3px;
     -fx-font-size: 12px;
 }
-.grid-datetime-picker .picker-combo .list-cell,
-.datagrip-datetime-picker .picker-combo .list-cell {
+.grid-datetime-picker .picker-combo .list-cell {
     -fx-text-fill: #dfe1e5;
     -fx-background-color: #2b2d30;
     -fx-padding: 3 6;
 }
 .grid-datetime-picker .picker-combo .list-cell:hover,
-.grid-datetime-picker .picker-combo .list-cell:selected,
-.datagrip-datetime-picker .picker-combo .list-cell:hover,
-.datagrip-datetime-picker .picker-combo .list-cell:selected {
+.grid-datetime-picker .picker-combo .list-cell:selected {
     -fx-background-color: #2e436e;
     -fx-text-fill: #ffffff;
 }
-.grid-datetime-picker .picker-spinner,
-.datagrip-datetime-picker .picker-spinner {
+.grid-datetime-picker .picker-spinner {
     -fx-background-color: #1e1f22;
     -fx-border-color: #4e5157;
     -fx-border-radius: 3px;
     -fx-background-radius: 3px;
     -fx-font-size: 12px;
 }
-.grid-datetime-picker .picker-spinner .picker-spinner-editor,
-.datagrip-datetime-picker .picker-spinner .picker-spinner-editor {
+.grid-datetime-picker .picker-spinner .picker-spinner-editor {
     -fx-background-color: transparent;
     -fx-text-fill: #dfe1e5;
     -fx-alignment: center;
@@ -474,16 +466,12 @@
     -fx-font-size: 12px;
 }
 .grid-datetime-picker .picker-spinner .increment-arrow-button,
-.grid-datetime-picker .picker-spinner .decrement-arrow-button,
-.datagrip-datetime-picker .picker-spinner .increment-arrow-button,
-.datagrip-datetime-picker .picker-spinner .decrement-arrow-button {
+.grid-datetime-picker .picker-spinner .decrement-arrow-button {
     -fx-background-color: transparent;
     -fx-padding: 1 3;
 }
 .grid-datetime-picker .picker-spinner .increment-arrow,
-.grid-datetime-picker .picker-spinner .decrement-arrow,
-.datagrip-datetime-picker .picker-spinner .increment-arrow,
-.datagrip-datetime-picker .picker-spinner .decrement-arrow {
+.grid-datetime-picker .picker-spinner .decrement-arrow {
     -fx-background-color: #8c9199;
 }
 
@@ -521,7 +509,30 @@
     -fx-text-fill: #ffffff;
 }
 
-/* ---------- unified DataGrip header bar ---------- */
+/* ---------- row deleted styling ---------- */
+.result-grid .table-row-cell:row-deleted,
+.result-grid .table-row-cell:odd:row-deleted {
+    -fx-background-color: #382c2c;
+}
+.result-grid .table-cell:row-deleted,
+.result-grid .serial-cell:row-deleted {
+    -fx-background-color: #382c2c;
+    -fx-text-fill: #7e828a;
+}
+.result-grid .table-cell:selected:row-deleted,
+.result-grid .serial-cell:selected:row-deleted {
+    -fx-background-color: #483238;
+    -fx-text-fill: #9a9ea6;
+}
+.result-grid .deleted-cell-text {
+    -fx-fill: #7e828a;
+}
+.result-grid .table-cell:selected:row-deleted .deleted-cell-text,
+.result-grid .serial-cell:selected:row-deleted .deleted-cell-text {
+    -fx-fill: #9a9ea6;
+}
+
+/* ---------- unified header bar ---------- */
 .app-header-bar {
     -fx-background-color: -bg-mid;
     -fx-border-color: transparent transparent -border transparent;
@@ -930,8 +941,12 @@
     -fx-background-color: #1e1f22;
     -fx-font-size: 11px;
 }
+.result-grid .serial-cell:selected {
+    -fx-background-color: #2e436e;
+    -fx-text-fill: #ffffff;
+}
 
-/* ---------- result pager (DataGrip-style "1-500 of 501+") ---------- */
+/* ---------- result pager ("1-500 of 501+") ---------- */
 .result-pager { -fx-spacing: 2; }
 .result-pager-button {
     -fx-background-color: transparent;
