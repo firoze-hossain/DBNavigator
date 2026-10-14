@@ -12,9 +12,12 @@ import javafx.scene.control.*;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.input.KeyCombination;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Popup;
 import org.kordamp.ikonli.fontawesome5.FontAwesomeSolid;
@@ -35,20 +38,17 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 /**
  * Spreadsheet-like grid used everywhere results are shown.
  *
- * Uses standard ROW selection (not cell selection) with MULTIPLE mode: this
- * is the well-tested JavaFX pattern where a single click highlights an
- * entire row, Shift/Ctrl+click extends the highlighted rows exactly like
- * DataGrip, and double-clicking any individual cell still starts inline
- * editing for just that cell — the two behaviors are independent in JavaFX
- * and don't require cell-selection mode. (An earlier version of this class
- * used cell-selection mode, which is fragile in combination with a custom
- * editable cell factory and was the root cause of edits and multi-row
- * selection being unreliable.)
+ * Uses cell selection mode with MULTIPLE mode: single click selects an
+ * individual cell, Ctrl+click / Shift+click extends the cell selection,
+ * double-clicking or pressing Enter starts inline editing, and editing
+ * commits across all selected cells in that column.
  */
 public class ResultGrid extends TableView<List<String>> {
 
@@ -80,6 +80,8 @@ public class ResultGrid extends TableView<List<String>> {
 
     private CellEditListener editListener;
     private Runnable deleteRowsAction;
+    private Runnable addRowAction;
+    private Runnable reloadAction;
     private List<String> columnTypes = List.of();
     private List<String> columnNames = List.of();
 
@@ -88,13 +90,13 @@ public class ResultGrid extends TableView<List<String>> {
         setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
         setPlaceholder(new Label("No data"));
 
-        // Row selection (the JavaFX default) + MULTIPLE: click selects one row,
-        // Shift+click selects a contiguous range, Ctrl+click toggles individual
-        // rows — all highlighted across the full row, exactly like DataGrip.
+        // Cell selection mode: single click selects a cell, Ctrl+click adds cells,
+        // Shift+click selects cell ranges.
+        getSelectionModel().setCellSelectionEnabled(true);
         getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 
         // Clicking outside an active editor cell automatically commits the edit
-        // and enables the submit button, exactly like DataGrip.
+        // and enables the submit button.
         this.addEventFilter(MouseEvent.MOUSE_PRESSED, event -> {
             TablePosition<?, ?> editing = getEditingCell();
             if (editing != null && editing.getRow() >= 0 && editing.getColumn() >= 0) {
@@ -105,43 +107,551 @@ public class ResultGrid extends TableView<List<String>> {
                 }
                 edit(-1, null);
             }
+
+            // Right-click: if right-clicking on an already selected cell, preserve
+            // the multi-cell selection. If clicked on an unselected cell, select it.
+            if (event.getButton() == MouseButton.SECONDARY) {
+                Node node = event.getPickResult().getIntersectedNode();
+                while (node != null && !(node instanceof TableCell<?, ?>)) node = node.getParent();
+                if (node instanceof TableCell<?, ?> cell && !cell.isEmpty() && cell.getTableColumn() != null && cell.getIndex() >= 0) {
+                    @SuppressWarnings("unchecked")
+                    TableColumn<List<String>, ?> col = (TableColumn<List<String>, ?>) cell.getTableColumn();
+                    int r = cell.getIndex();
+                    boolean alreadySelected = false;
+                    for (TablePosition<?, ?> pos : getSelectionModel().getSelectedCells()) {
+                        if (pos.getRow() == r && pos.getTableColumn() == col) {
+                            alreadySelected = true;
+                            break;
+                        }
+                    }
+                    if (!alreadySelected) {
+                        getSelectionModel().clearAndSelect(r, col);
+                    }
+                }
+            }
         });
 
-        MenuItem copyCell = new MenuItem("Copy Cell");
-        copyCell.setOnAction(e -> copyFocusedCell());
-        MenuItem copyRow = new MenuItem("Copy Row (TSV)");
-        copyRow.setOnAction(e -> copySelectedRow());
-        MenuItem deleteRows = new MenuItem("Delete Selected Row(s)");
-        deleteRows.setOnAction(e -> { if (deleteRowsAction != null) deleteRowsAction.run(); });
-        setContextMenu(new ContextMenu(copyCell, copyRow, new SeparatorMenuItem(), deleteRows));
+        buildContextMenu();
 
         setOnKeyPressed(e -> {
-            if (e.getCode() == KeyCode.DELETE && deleteRowsAction != null && !isEditingCell()) {
+            if (isEditingCell()) return;
+            if (e.getCode() == KeyCode.DELETE && deleteRowsAction != null) {
                 deleteRowsAction.run();
                 e.consume();
+            } else if (e.getCode() == KeyCode.ENTER || e.getCode() == KeyCode.F2 || e.getCode() == KeyCode.SPACE) {
+                if (isEditable()) {
+                    editFocusedCell();
+                    e.consume();
+                }
+            } else if (e.isControlDown() && e.getCode() == KeyCode.C) {
+                copySelection();
+                e.consume();
+            } else if (e.isControlDown() && e.isAltDown() && e.getCode() == KeyCode.N) {
+                if (isEditable()) {
+                    setSelectedCellsValue("NULL");
+                    e.consume();
+                }
+            } else if (e.isControlDown() && e.isAltDown() && e.getCode() == KeyCode.D) {
+                if (isEditable()) {
+                    setSelectedCellsValue("DEFAULT");
+                    e.consume();
+                }
+            } else if ((e.isControlDown() && e.getCode() == KeyCode.F5) || e.getCode() == KeyCode.F5) {
+                if (reloadAction != null) {
+                    reloadAction.run();
+                    e.consume();
+                }
+            } else if (!e.isControlDown() && !e.isAltDown() && !e.isMetaDown() && e.getText() != null && !e.getText().isEmpty()) {
+                char ch = e.getText().charAt(0);
+                if (ch >= 32 && ch != 127) {
+                    if (isEditable()) {
+                        editFocusedCell();
+                        Platform.runLater(() -> {
+                            Node focusOwner = getScene() != null ? getScene().getFocusOwner() : null;
+                            if (focusOwner instanceof TextField tf) {
+                                tf.setText(String.valueOf(ch));
+                                tf.positionCaret(1);
+                            }
+                        });
+                        e.consume();
+                    }
+                }
             }
         });
 
         setOnMouseClicked(e -> {
-            if (e.getButton() != MouseButton.PRIMARY || e.getClickCount() != 2
-                    || isEditingCell() || !isEditable()) return;
+            if (e.getButton() != MouseButton.PRIMARY || isEditingCell() || !isEditable()) return;
 
-            // Use the cell under the pointer instead of the focused cell. The
-            // focus model can still point at the previous row while JavaFX is
-            // processing a double-click, which made edits appear to do nothing
-            // (or target a different cell).
-            javafx.scene.Node node = e.getPickResult().getIntersectedNode();
+            Node node = e.getPickResult().getIntersectedNode();
             while (node != null && !(node instanceof TableCell<?, ?>)) node = node.getParent();
             if (!(node instanceof TableCell<?, ?> cell) || cell.isEmpty()
                     || cell.getTableColumn() == null || cell.getIndex() < 0) return;
 
             @SuppressWarnings({"rawtypes", "unchecked"})
             TableColumn<List<String>, ?> column = (TableColumn) cell.getTableColumn();
-            // Column zero is the generated row number, not a database value.
-            if (getColumns().indexOf(column) > 0) edit(cell.getIndex(), column);
+            int colIdx = getColumns().indexOf(column);
+            if (colIdx <= 0) return; // Column zero is the generated row number
+
+            if (e.getClickCount() == 2) {
+                edit(cell.getIndex(), column);
+            }
         });
 
         applySettings();
+    }
+
+    public void setAddRowAction(Runnable action) {
+        this.addRowAction = action;
+    }
+
+    public void editFocusedCell() {
+        if (!isEditable()) return;
+        var selected = getSelectionModel().getSelectedCells();
+        TablePosition<?, ?> pos = null;
+        if (!selected.isEmpty()) {
+            TablePosition<?, ?> focused = getFocusModel().getFocusedCell();
+            if (focused != null && selected.contains(focused)) {
+                pos = focused;
+            } else {
+                pos = selected.get(0);
+            }
+        } else {
+            pos = getFocusModel().getFocusedCell();
+        }
+        if (pos != null && pos.getRow() >= 0 && pos.getTableColumn() != null) {
+            int colIdx = getColumns().indexOf(pos.getTableColumn());
+            if (colIdx > 0) {
+                edit(pos.getRow(), (TableColumn<List<String>, ?>) pos.getTableColumn());
+            }
+        }
+    }
+
+    public void selectFullRow(int rowIndex, boolean keepExisting) {
+        if (!keepExisting) {
+            getSelectionModel().clearSelection();
+        }
+        for (int c = 1; c < getColumns().size(); c++) {
+            getSelectionModel().select(rowIndex, getColumns().get(c));
+        }
+    }
+
+    public void setSelectedCellsValue(String value) {
+        if (!isEditable() || editListener == null) return;
+        List<TablePosition> cells = new ArrayList<>(getSelectionModel().getSelectedCells());
+        if (cells.isEmpty()) return;
+
+        for (TablePosition<?, ?> pos : cells) {
+            int r = pos.getRow();
+            int c = getColumns().indexOf(pos.getTableColumn()) - 1;
+            if (r >= 0 && r < getItems().size() && c >= 0) {
+                List<String> row = getItems().get(r);
+                String oldVal = c < row.size() ? row.get(c) : null;
+                if (value != null && !value.equals(oldVal == null ? "NULL" : oldVal)) {
+                    row.set(c, value);
+                    editListener.onEdit(r, c, oldVal, value);
+                    markCellModified(r, c);
+                }
+            }
+        }
+        Platform.runLater(this::refresh);
+    }
+
+    public void commitValueAcrossSelection(int primaryRow, TableColumn<List<String>, String> column, int colIndex, String newValue) {
+        List<Integer> targetRows = new ArrayList<>();
+        targetRows.add(primaryRow);
+        for (TablePosition<?, ?> pos : getSelectionModel().getSelectedCells()) {
+            if (pos.getTableColumn() == column && pos.getRow() >= 0 && pos.getRow() != primaryRow) {
+                if (!targetRows.contains(pos.getRow())) {
+                    targetRows.add(pos.getRow());
+                }
+            }
+        }
+
+        for (int r : targetRows) {
+            if (r >= 0 && r < getItems().size()) {
+                List<String> row = getItems().get(r);
+                String oldValue = colIndex < row.size() ? row.get(colIndex) : null;
+                if (newValue != null && !newValue.equals(oldValue == null ? "NULL" : oldValue)) {
+                    row.set(colIndex, newValue);
+                    if (editListener != null) {
+                        editListener.onEdit(r, colIndex, oldValue, newValue);
+                    }
+                    markCellModified(r, colIndex);
+                }
+            }
+        }
+        Platform.runLater(this::refresh);
+    }
+
+    private void buildContextMenu() {
+        ContextMenu menu = new ContextMenu();
+
+        MenuItem editItem = new MenuItem("Edit");
+        editItem.setAccelerator(new KeyCodeCombination(KeyCode.ENTER));
+        editItem.setOnAction(e -> editFocusedCell());
+
+        MenuItem showRecordView = new MenuItem("Show Record View");
+        showRecordView.setAccelerator(new KeyCodeCombination(KeyCode.ENTER, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN));
+        showRecordView.setOnAction(e -> openRecordView());
+
+        MenuItem valueEditor = new MenuItem("Open in Value Editor");
+        valueEditor.setAccelerator(new KeyCodeCombination(KeyCode.ENTER, KeyCombination.SHIFT_DOWN));
+        valueEditor.setOnAction(e -> openValueEditor());
+
+        MenuItem showAggregateView = new MenuItem("Show Aggregate View");
+        showAggregateView.setOnAction(e -> showAggregateSummary());
+
+        MenuItem revertSelected = new MenuItem("Revert Selected");
+        revertSelected.setAccelerator(new KeyCodeCombination(KeyCode.Z, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN));
+        revertSelected.setOnAction(e -> revertSelectedCells());
+
+        Menu setHighlighting = new Menu("Set Highlighting Language...");
+        for (String lang : List.of("Text", "JSON", "SQL", "XML", "HTML")) {
+            MenuItem langItem = new MenuItem(lang);
+            langItem.setOnAction(ev -> {});
+            setHighlighting.getItems().add(langItem);
+        }
+
+        MenuItem setDefaultItem = new MenuItem("Set DEFAULT");
+        setDefaultItem.setAccelerator(new KeyCodeCombination(KeyCode.D, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN));
+        setDefaultItem.setOnAction(e -> setSelectedCellsValue("DEFAULT"));
+
+        MenuItem setNullItem = new MenuItem("Set NULL");
+        setNullItem.setAccelerator(new KeyCodeCombination(KeyCode.N, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN));
+        setNullItem.setOnAction(e -> setSelectedCellsValue("NULL"));
+
+        MenuItem copySelectionItem = new MenuItem("Copy Using Data Extractor (CSV)");
+        copySelectionItem.setAccelerator(new KeyCodeCombination(KeyCode.C, KeyCombination.CONTROL_DOWN));
+        copySelectionItem.setOnAction(e -> copySelection());
+
+        Menu changeExtractor = new Menu("Change Data Extractor (CSV)");
+        for (String ext : List.of("CSV", "TSV", "JSON", "SQL Insert Statements", "HTML Table", "Markdown")) {
+            MenuItem extItem = new MenuItem(ext);
+            extItem.setOnAction(ev -> {});
+            changeExtractor.getItems().add(extItem);
+        }
+
+        MenuItem copyRowItem = new MenuItem("Copy Selected Row (TSV)");
+        copyRowItem.setOnAction(e -> copySelectedRow());
+
+        MenuItem copyAggregationItem = new MenuItem("Copy Aggregation Result (SUM)");
+        copyAggregationItem.setAccelerator(new KeyCodeCombination(KeyCode.C, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN));
+        copyAggregationItem.setOnAction(e -> copyAggregationResult());
+
+        MenuItem addRowItem = new MenuItem("Add Row");
+        addRowItem.setAccelerator(new KeyCodeCombination(KeyCode.INSERT, KeyCombination.ALT_DOWN));
+        addRowItem.setOnAction(e -> { if (addRowAction != null) addRowAction.run(); });
+
+        MenuItem deleteRowsItem = new MenuItem("Delete Rows");
+        deleteRowsItem.setAccelerator(new KeyCodeCombination(KeyCode.Y, KeyCombination.CONTROL_DOWN));
+        deleteRowsItem.setOnAction(e -> { if (deleteRowsAction != null) deleteRowsAction.run(); });
+
+        MenuItem compareCells = new MenuItem("Compare Cells...");
+        compareCells.setAccelerator(new KeyCodeCombination(KeyCode.D, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN));
+        compareCells.setOnAction(e -> compareSelectedCells());
+
+        Menu goToMenu = new Menu("Go To");
+        MenuItem goToFirst = new MenuItem("First Row");
+        goToFirst.setOnAction(ev -> {
+            if (!getItems().isEmpty()) {
+                getSelectionModel().clearAndSelect(0, getColumns().size() > 1 ? getColumns().get(1) : getColumns().get(0));
+                scrollTo(0);
+            }
+        });
+        MenuItem goToLast = new MenuItem("Last Row");
+        goToLast.setOnAction(ev -> {
+            if (!getItems().isEmpty()) {
+                int last = getItems().size() - 1;
+                getSelectionModel().clearAndSelect(last, getColumns().size() > 1 ? getColumns().get(1) : getColumns().get(0));
+                scrollTo(last);
+            }
+        });
+        goToMenu.getItems().addAll(goToFirst, goToLast);
+
+        Menu filterByMenu = new Menu("Filter by");
+        MenuItem filterVal = new MenuItem("Filter by Cell Value");
+        filterVal.setOnAction(ev -> filterBySelectedValue(true));
+        MenuItem filterNotVal = new MenuItem("Filter by Not Equal");
+        filterNotVal.setOnAction(ev -> filterBySelectedValue(false));
+        filterByMenu.getItems().addAll(filterVal, filterNotVal);
+
+        MenuItem fullTextSearch = new MenuItem("Full-Text Search...");
+        fullTextSearch.setAccelerator(new KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN));
+
+        MenuItem exportTable = new MenuItem("Export Table to Clipboard");
+        exportTable.setOnAction(ev -> exportTableToClipboard());
+
+        MenuItem setLocalFilter = new MenuItem("Set Local Filter");
+        MenuItem localFilterByCell = new MenuItem("Local Filter By Cell Value");
+        localFilterByCell.setOnAction(ev -> filterBySelectedValue(true));
+
+        MenuItem quickDoc = new MenuItem("Quick Documentation");
+        quickDoc.setAccelerator(new KeyCodeCombination(KeyCode.Q, KeyCombination.CONTROL_DOWN));
+        quickDoc.setOnAction(e -> showQuickDocumentation());
+
+        MenuItem reloadPage = new MenuItem("Reload Page");
+        reloadPage.setAccelerator(new KeyCodeCombination(KeyCode.F5, KeyCombination.CONTROL_DOWN));
+        reloadPage.setOnAction(e -> {
+            if (reloadAction != null) reloadAction.run();
+        });
+
+        menu.getItems().addAll(
+                editItem,
+                new SeparatorMenuItem(),
+                showRecordView,
+                valueEditor,
+                showAggregateView,
+                new SeparatorMenuItem(),
+                revertSelected,
+                setHighlighting,
+                new SeparatorMenuItem(),
+                setDefaultItem,
+                setNullItem,
+                new SeparatorMenuItem(),
+                copySelectionItem,
+                changeExtractor,
+                copyRowItem,
+                copyAggregationItem,
+                new SeparatorMenuItem(),
+                addRowItem,
+                deleteRowsItem,
+                new SeparatorMenuItem(),
+                compareCells,
+                new SeparatorMenuItem(),
+                goToMenu,
+                filterByMenu,
+                fullTextSearch,
+                exportTable,
+                new SeparatorMenuItem(),
+                setLocalFilter,
+                localFilterByCell,
+                new SeparatorMenuItem(),
+                quickDoc,
+                new SeparatorMenuItem(),
+                reloadPage
+        );
+
+        menu.setOnShowing(e -> {
+            boolean canEdit = isEditable();
+            boolean hasSelection = !getSelectionModel().getSelectedCells().isEmpty();
+            editItem.setDisable(!canEdit || !hasSelection);
+            setDefaultItem.setDisable(!canEdit || !hasSelection);
+            setNullItem.setDisable(!canEdit || !hasSelection);
+            addRowItem.setDisable(!canEdit || addRowAction == null);
+            deleteRowsItem.setDisable(!canEdit || deleteRowsAction == null || getSelectedRowIndexes().isEmpty());
+            valueEditor.setDisable(!hasSelection);
+            copySelectionItem.setDisable(!hasSelection);
+            compareCells.setDisable(getSelectionModel().getSelectedCells().size() < 2);
+        });
+
+        setContextMenu(menu);
+    }
+
+    private void openValueEditor() {
+        TablePosition<?, ?> pos = getFocusModel().getFocusedCell();
+        if (pos == null || pos.getRow() < 0 || pos.getTableColumn() == null) {
+            var selected = getSelectionModel().getSelectedCells();
+            if (!selected.isEmpty()) pos = selected.get(0);
+        }
+        if (pos == null || pos.getRow() < 0 || pos.getTableColumn() == null) return;
+        int rowIdx = pos.getRow();
+        int colIdx = getColumns().indexOf(pos.getTableColumn()) - 1;
+        if (colIdx < 0 || rowIdx >= getItems().size()) return;
+
+        List<String> row = getItems().get(rowIdx);
+        String val = colIdx < row.size() ? row.get(colIdx) : "";
+        String colName = colIdx < columnNames.size() ? columnNames.get(colIdx) : "Value";
+
+        Dialog<String> dialog = new Dialog<>();
+        dialog.setTitle("Value Editor - " + colName);
+        dialog.setHeaderText("Row " + (rowIdx + 1) + " ▸ " + colName);
+        DialogTheme.apply(dialog);
+
+        TextArea textArea = new TextArea(val == null ? "" : val);
+        textArea.setWrapText(true);
+        textArea.setPrefRowCount(12);
+        textArea.setPrefColumnCount(45);
+        textArea.setEditable(isEditable());
+
+        dialog.getDialogPane().setContent(textArea);
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+        dialog.setResultConverter(btn -> btn == ButtonType.OK ? textArea.getText() : null);
+
+        @SuppressWarnings("unchecked")
+        TableColumn<List<String>, String> targetCol = (TableColumn<List<String>, String>) pos.getTableColumn();
+        dialog.showAndWait().ifPresent(newVal -> {
+            if (isEditable()) {
+                commitValueAcrossSelection(rowIdx, targetCol, colIdx, newVal);
+            }
+        });
+    }
+
+    private void openRecordView() {
+        TablePosition<?, ?> pos = getFocusModel().getFocusedCell();
+        int rowIdx = pos != null && pos.getRow() >= 0 ? pos.getRow() : 0;
+        if (rowIdx >= getItems().size() || getItems().isEmpty()) return;
+
+        List<String> row = getItems().get(rowIdx);
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.setTitle("Record View - Row " + (rowIdx + 1));
+        dialog.setHeaderText("Record Details (#" + (rowIdx + 1) + " of " + getItems().size() + ")");
+        DialogTheme.apply(dialog);
+
+        VBox content = new VBox(8);
+        content.setPrefWidth(420);
+        for (int i = 0; i < columnNames.size(); i++) {
+            String colName = columnNames.get(i);
+            String val = i < row.size() ? row.get(i) : "";
+            HBox fieldBox = new HBox(8);
+            Label colLabel = new Label(colName + ":");
+            colLabel.setStyle("-fx-font-weight: bold; -fx-min-width: 120px;");
+            Label valLabel = new Label(val == null ? "NULL" : val);
+            valLabel.setWrapText(true);
+            fieldBox.getChildren().addAll(colLabel, valLabel);
+            content.getChildren().add(fieldBox);
+        }
+
+        ScrollPane scroll = new ScrollPane(content);
+        scroll.setFitToWidth(true);
+        scroll.setPrefHeight(300);
+        dialog.getDialogPane().setContent(scroll);
+        dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+        dialog.showAndWait();
+    }
+
+    private void showAggregateSummary() {
+        var selected = getSelectionModel().getSelectedCells();
+        if (selected.isEmpty()) return;
+        int count = selected.size();
+        double sum = 0;
+        int numCount = 0;
+        for (TablePosition<?, ?> pos : selected) {
+            String val = getCellValue(pos);
+            try {
+                double d = Double.parseDouble(val.trim());
+                sum += d;
+                numCount++;
+            } catch (Exception ignored) {}
+        }
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Aggregate Summary");
+        alert.setHeaderText("Selected Cells (" + count + ")");
+        String msg = "Count: " + count + "\n";
+        if (numCount > 0) {
+            msg += "Numeric Count: " + numCount + "\nSum: " + sum + "\nAverage: " + (sum / numCount);
+        } else {
+            msg += "(No numeric values in selection)";
+        }
+        alert.setContentText(msg);
+        DialogTheme.apply(alert);
+        alert.showAndWait();
+    }
+
+    private void copyAggregationResult() {
+        var selected = getSelectionModel().getSelectedCells();
+        if (selected.isEmpty()) return;
+        double sum = 0;
+        int numCount = 0;
+        for (TablePosition<?, ?> pos : selected) {
+            String val = getCellValue(pos);
+            try {
+                double d = Double.parseDouble(val.trim());
+                sum += d;
+                numCount++;
+            } catch (Exception ignored) {}
+        }
+        put(numCount > 0 ? String.valueOf(sum) : String.valueOf(selected.size()));
+    }
+
+    private void revertSelectedCells() {
+        var selected = getSelectionModel().getSelectedCells();
+        for (TablePosition<?, ?> pos : selected) {
+            int r = pos.getRow();
+            int c = getColumns().indexOf(pos.getTableColumn()) - 1;
+            modifiedCells.remove(new CellKey(r, c));
+        }
+        Platform.runLater(this::refresh);
+    }
+
+    private void compareSelectedCells() {
+        var selected = getSelectionModel().getSelectedCells();
+        if (selected.size() < 2) return;
+        TablePosition<?, ?> p1 = selected.get(0);
+        TablePosition<?, ?> p2 = selected.get(1);
+
+        String v1 = getCellValue(p1);
+        String v2 = getCellValue(p2);
+
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Compare Cells");
+        alert.setHeaderText("Comparison of 2 selected cells");
+        String content = "Cell 1 (" + (p1.getRow() + 1) + ", " + p1.getTableColumn().getText() + "):\n" + v1 + "\n\n"
+                + "Cell 2 (" + (p2.getRow() + 1) + ", " + p2.getTableColumn().getText() + "):\n" + v2 + "\n\n"
+                + (v1.equals(v2) ? "✓ Values are IDENTICAL" : "✗ Values are DIFFERENT (length " + v1.length() + " vs " + v2.length() + ")");
+        alert.setContentText(content);
+        DialogTheme.apply(alert);
+        alert.showAndWait();
+    }
+
+    private void showQuickDocumentation() {
+        TablePosition<?, ?> pos = getFocusModel().getFocusedCell();
+        if (pos == null || pos.getTableColumn() == null) return;
+        int colIdx = getColumns().indexOf(pos.getTableColumn()) - 1;
+        if (colIdx < 0 || colIdx >= columnNames.size()) return;
+        String colName = columnNames.get(colIdx);
+        String colType = colIdx < columnTypes.size() ? columnTypes.get(colIdx) : "UNKNOWN";
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Column Info");
+        alert.setHeaderText("Column: " + colName);
+        alert.setContentText("Type: " + colType + "\nIndex: " + (colIdx + 1));
+        DialogTheme.apply(alert);
+        alert.showAndWait();
+    }
+
+    private void filterBySelectedValue(boolean equals) {
+        TablePosition<?, ?> pos = getFocusModel().getFocusedCell();
+        if (pos == null || pos.getRow() < 0 || pos.getTableColumn() == null) {
+            var selected = getSelectionModel().getSelectedCells();
+            if (!selected.isEmpty()) pos = selected.get(0);
+        }
+        if (pos == null || pos.getRow() < 0 || pos.getTableColumn() == null) return;
+        int rowIdx = pos.getRow();
+        int colIdx = getColumns().indexOf(pos.getTableColumn()) - 1;
+        if (colIdx < 0 || rowIdx >= getItems().size()) return;
+        String val = getCellValue(pos);
+        String colName = colIdx < columnNames.size() ? columnNames.get(colIdx) : null;
+        if (colName != null && sortRequestListener != null) {
+            sortRequestListener.onSortRequested(colName, equals ? "FILTER_EQ:" + val : "FILTER_NEQ:" + val);
+        }
+    }
+
+    private void exportTableToClipboard() {
+        if (columnNames == null || getItems() == null || getItems().isEmpty()) return;
+        StringBuilder sb = new StringBuilder();
+        sb.append(String.join(",", columnNames)).append("\n");
+        for (List<String> row : getItems()) {
+            List<String> escaped = new ArrayList<>();
+            for (String val : row) {
+                if (val == null) escaped.add("");
+                else if (val.contains(",") || val.contains("\"") || val.contains("\n")) {
+                    escaped.add("\"" + val.replace("\"", "\"\"") + "\"");
+                } else {
+                    escaped.add(val);
+                }
+            }
+            sb.append(String.join(",", escaped)).append("\n");
+        }
+        put(sb.toString());
+    }
+
+    private String getCellValue(TablePosition<?, ?> pos) {
+        int r = pos.getRow();
+        int c = getColumns().indexOf(pos.getTableColumn()) - 1;
+        if (r >= 0 && r < getItems().size() && c >= 0) {
+            List<String> row = getItems().get(r);
+            return c < row.size() && row.get(c) != null ? row.get(c) : "NULL";
+        }
+        return "NULL";
     }
 
     private boolean isInsideActiveEditor(Node node) {
@@ -152,7 +662,9 @@ public class ResultGrid extends TableView<List<String>> {
             }
             if (cur.getStyleClass().contains("cell-editor")
                     || cur.getStyleClass().contains("cell-more-button")
-                    || cur.getStyleClass().contains("datagrip-datetime-picker")) {
+                    || cur.getStyleClass().contains("grid-datetime-picker")
+                    || cur.getStyleClass().contains("grid-boolean-picker")
+                    || cur.getStyleClass().contains("boolean-picker-item")) {
                 return true;
             }
             cur = cur.getParent();
@@ -194,9 +706,32 @@ public class ResultGrid extends TableView<List<String>> {
         this.deleteRowsAction = action;
     }
 
+    public Runnable getDeleteRowsAction() {
+        return deleteRowsAction;
+    }
+
+
+    public Runnable getAddRowAction() {
+        return addRowAction;
+    }
+
+    public void setReloadAction(Runnable action) {
+        this.reloadAction = action;
+    }
+
+    public Runnable getReloadAction() {
+        return reloadAction;
+    }
+
     /** Selected row indexes, descending (safe order for sequential removal). */
     public List<Integer> getSelectedRowIndexes() {
-        List<Integer> rows = new ArrayList<>(getSelectionModel().getSelectedIndices());
+        Set<Integer> distinct = new HashSet<>();
+        for (TablePosition<?, ?> pos : getSelectionModel().getSelectedCells()) {
+            if (pos.getRow() >= 0 && pos.getRow() < getItems().size()) {
+                distinct.add(pos.getRow());
+            }
+        }
+        List<Integer> rows = new ArrayList<>(distinct);
         rows.sort((a, b) -> b - a);
         return rows;
     }
@@ -242,6 +777,11 @@ public class ResultGrid extends TableView<List<String>> {
         serialCol.setCellFactory(col -> new TableCell<>() {
             {
                 getStyleClass().add("serial-cell");
+                setOnMouseClicked(e -> {
+                    if (e.getButton() == MouseButton.PRIMARY && getIndex() >= 0 && getIndex() < getItems().size()) {
+                        selectFullRow(getIndex(), e.isControlDown() || e.isShortcutDown());
+                    }
+                });
             }
             @Override
             protected void updateItem(Void item, boolean empty) {
@@ -274,15 +814,9 @@ public class ResultGrid extends TableView<List<String>> {
             if (editListener != null) {
                 col.setCellFactory(c -> new EditCell(index));
                 col.setOnEditCommit(event -> {
-                    List<String> row = event.getRowValue();
-                    String oldValue = index < row.size() ? row.get(index) : null;
+                    int primaryRow = event.getTablePosition().getRow();
                     String newValue = event.getNewValue();
-                    if (newValue != null && !newValue.equals(oldValue == null ? "NULL" : oldValue)) {
-                        row.set(index, newValue);
-                        editListener.onEdit(event.getTablePosition().getRow(), index,
-                                oldValue, newValue);
-                        Platform.runLater(this::refresh);
-                    }
+                    commitValueAcrossSelection(primaryRow, col, index, newValue);
                 });
             } else {
                 col.setCellFactory(c -> new ReadOnlyCell(index));
@@ -295,7 +829,7 @@ public class ResultGrid extends TableView<List<String>> {
     }
 
     /**
-     * DataGrip-style sort control: a name label plus a small icon that always
+     * Column sort control: a name label plus a small icon that always
      * shows a stacked up/down arrow, brightening the relevant arrow when this
      * column is the active sort. Clicking cycles none → ascending →
      * descending → none, each step calling {@link #sortRequestListener} so
@@ -352,11 +886,12 @@ public class ResultGrid extends TableView<List<String>> {
     // ------------------------------------------------------------ edit cell
 
     /**
-     * DataGrip-style inline cell editor:
-     * - Date/time/timestamp columns get a 2-row modification popup (image 1) with Day, Month,
+     * Inline cell editor:
+     * - Boolean columns get a quick-choice popup (true, false, null, default) matching Image 3.
+     * - Date/time/timestamp columns get a 2-row modification popup with Day, Month,
      *   Year and Hour, Minute, Second spinners with 2-way real-time binding and a "..." button.
-     * - Commits automatically when clicking outside the editor cell (image 2 -> image 3),
-     *   or when clicking outside the grid, or when pressing Enter.
+     * - Commits across all selected rows in this column (Images 4 & 5).
+     * - Commits automatically when clicking outside the editor cell, or when pressing Enter.
      * - Escape cancels the edit and restores the original cell content.
      */
     private class EditCell extends TableCell<List<String>, String> {
@@ -365,7 +900,8 @@ public class ResultGrid extends TableView<List<String>> {
         private TextField field;
         private HBox editor;
         private Button pickerButton;
-        private DataGripDateTimePicker dateTimePicker;
+        private GridDateTimePicker dateTimePicker;
+        private GridBooleanPicker booleanPicker;
         private boolean isUpdatingFromPicker = false;
         private boolean isCommitting = false;
         private boolean explicitEscape = false;
@@ -379,6 +915,30 @@ public class ResultGrid extends TableView<List<String>> {
             if (isEmpty() || !getTableView().isEditable()) return;
             super.startEdit();
             boolean isDate = isDateColumn(columnIndex);
+            boolean isBool = isBooleanColumn(columnIndex);
+
+            if (isBool) {
+                if (booleanPicker == null) {
+                    booleanPicker = new GridBooleanPicker(chosenValue -> {
+                        @SuppressWarnings("unchecked")
+                        TableColumn<List<String>, String> col = (TableColumn<List<String>, String>) getTableColumn();
+                        commitValueAcrossSelection(getIndex(), col, columnIndex, chosenValue);
+                        commitEdit(chosenValue);
+                    });
+                    booleanPicker.setOnPopupClosed(() -> {
+                        if (isEditing()) {
+                            cancelEdit();
+                        }
+                    });
+                }
+                Platform.runLater(() -> {
+                    if (isEditing()) {
+                        booleanPicker.show(this, getItem());
+                    }
+                });
+                return;
+            }
+
             if (editor == null) {
                 buildEditor(isDate);
             } else {
@@ -419,7 +979,7 @@ public class ResultGrid extends TableView<List<String>> {
             });
 
             // Commit when focus leaves the cell editor without pressing Enter —
-            // matches DataGrip behavior where mouse-clicking outside saves the cell.
+            // saves the cell when mouse-clicking outside.
             field.focusedProperty().addListener((obs, wasFocused, isNowFocused) -> {
                 if (!isNowFocused && !explicitEscape && isEditing()) {
                     if (isEditorFocused()) {
@@ -447,7 +1007,7 @@ public class ResultGrid extends TableView<List<String>> {
                 }
             });
 
-            dateTimePicker = new DataGripDateTimePicker(formattedVal -> {
+            dateTimePicker = new GridDateTimePicker(formattedVal -> {
                 isUpdatingFromPicker = true;
                 try {
                     field.setText(formattedVal);
@@ -505,18 +1065,25 @@ public class ResultGrid extends TableView<List<String>> {
             if (pickerButton != null && pickerButton.isFocused()) return true;
             if (editor != null && editor.isFocused()) return true;
             if (dateTimePicker != null && (dateTimePicker.isShowing() || dateTimePicker.isFocused())) return true;
+            if (booleanPicker != null && booleanPicker.isShowing()) return true;
             return false;
         }
 
         private void commitCurrentValue() {
-            if (isCommitting || field == null || !isEditing()) return;
+            if (isCommitting || !isEditing()) return;
             if (getIndex() < 0 || getTableView() == null || getIndex() >= getTableView().getItems().size()) return;
             isCommitting = true;
             try {
                 if (dateTimePicker != null) {
                     dateTimePicker.hide();
                 }
-                String val = field.getText();
+                if (booleanPicker != null) {
+                    booleanPicker.hide();
+                }
+                String val = field != null ? field.getText() : getItem();
+                @SuppressWarnings("unchecked")
+                TableColumn<List<String>, String> col = (TableColumn<List<String>, String>) getTableColumn();
+                commitValueAcrossSelection(getIndex(), col, columnIndex, val);
                 commitEdit(val);
             } finally {
                 isCommitting = false;
@@ -525,12 +1092,15 @@ public class ResultGrid extends TableView<List<String>> {
 
         @Override
         public void cancelEdit() {
-            if (!explicitEscape && field != null && !isCommitting && isEditing()) {
+            if (!explicitEscape && (field != null || booleanPicker != null) && !isCommitting && isEditing()) {
                 commitCurrentValue();
                 return;
             }
             if (dateTimePicker != null) {
                 dateTimePicker.hide();
+            }
+            if (booleanPicker != null) {
+                booleanPicker.hide();
             }
             super.cancelEdit();
             setGraphic(null);
@@ -541,6 +1111,9 @@ public class ResultGrid extends TableView<List<String>> {
         public void commitEdit(String newValue) {
             if (dateTimePicker != null) {
                 dateTimePicker.hide();
+            }
+            if (booleanPicker != null) {
+                booleanPicker.hide();
             }
             super.commitEdit(newValue);
             setGraphic(null);
@@ -566,6 +1139,9 @@ public class ResultGrid extends TableView<List<String>> {
                 if (isEditable()) {
                     cb.setOnAction(e -> {
                         String newVal = cb.isSelected() ? "true" : "false";
+                        @SuppressWarnings("unchecked")
+                        TableColumn<List<String>, String> col = (TableColumn<List<String>, String>) getTableColumn();
+                        commitValueAcrossSelection(getIndex(), col, columnIndex, newVal);
                         commitEdit(newVal);
                     });
                 }
@@ -672,9 +1248,38 @@ public class ResultGrid extends TableView<List<String>> {
     }
 
     private boolean isBooleanColumn(int index) {
-        if (index >= columnTypes.size()) return false;
-        String type = columnTypes.get(index).toLowerCase(Locale.ROOT);
-        return type.contains("bool") || type.contains("bit");
+        if (columnTypes != null && index < columnTypes.size()) {
+            String type = columnTypes.get(index).toLowerCase(Locale.ROOT);
+            if (type.contains("bool") || type.contains("bit") || type.equals("tinyint(1)")) {
+                return true;
+            }
+        }
+        if (columnNames != null && index < columnNames.size()) {
+            String name = columnNames.get(index).toLowerCase(Locale.ROOT);
+            if (name.equals("deleted") || name.startsWith("is_") || name.startsWith("has_")
+                    || name.equals("active") || name.equals("enabled") || name.contains("boolean")) {
+                return true;
+            }
+        }
+        if (getItems() != null && !getItems().isEmpty()) {
+            boolean hasNonEmpty = false;
+            int count = 0;
+            for (List<String> row : getItems()) {
+                if (row != null && index < row.size()) {
+                    String val = row.get(index);
+                    if (val != null && !val.isBlank() && !val.equalsIgnoreCase("NULL")) {
+                        String lower = val.trim().toLowerCase(Locale.ROOT);
+                        if (!lower.equals("true") && !lower.equals("false") && !lower.equals("t") && !lower.equals("f")) {
+                            return false;
+                        }
+                        hasNonEmpty = true;
+                    }
+                }
+                if (++count > 25) break;
+            }
+            if (hasNonEmpty) return true;
+        }
+        return false;
     }
 
     private boolean isNumericColumn(int index) {
@@ -703,6 +1308,35 @@ public class ResultGrid extends TableView<List<String>> {
     }
 
     // ---------------------------------------------------------- clipboard
+
+    public void copySelection() {
+        var selected = getSelectionModel().getSelectedCells();
+        if (selected.isEmpty()) {
+            copyFocusedCell();
+            return;
+        }
+        if (selected.size() == 1) {
+            TablePosition<?, ?> pos = selected.get(0);
+            put(getCellValue(pos));
+            return;
+        }
+        Map<Integer, List<TablePosition<?, ?>>> byRow = new TreeMap<>();
+        for (TablePosition<?, ?> pos : selected) {
+            byRow.computeIfAbsent(pos.getRow(), k -> new ArrayList<>()).add(pos);
+        }
+        StringBuilder sb = new StringBuilder();
+        for (var entry : byRow.entrySet()) {
+            List<TablePosition<?, ?>> cells = entry.getValue();
+            cells.sort((a, b) -> Integer.compare(getColumns().indexOf(a.getTableColumn()), getColumns().indexOf(b.getTableColumn())));
+            List<String> vals = new ArrayList<>();
+            for (TablePosition<?, ?> pos : cells) {
+                vals.add(getCellValue(pos));
+            }
+            if (sb.length() > 0) sb.append("\n");
+            sb.append(String.join("\t", vals));
+        }
+        put(sb.toString());
+    }
 
     /** Copies the value of whatever cell last had focus (works in row-selection mode). */
     private void copyFocusedCell() {

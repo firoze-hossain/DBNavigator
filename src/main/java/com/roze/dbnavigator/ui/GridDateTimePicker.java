@@ -20,14 +20,14 @@ import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 
 /**
- * DataGrip-style floating datetime modification popup:
- * - Row 1 (Date): Day dropdown (1..31), Month dropdown (January..December), Year spinner (e.g. 2025)
+ * Floating datetime modification popup for grid cells:
+ * - Row 1 (Date): Day dropdown (1..31), Month dropdown (January..December), Year spinner
  * - Row 2 (Time): Hour spinner (0..23), Minute spinner (0..59), Second spinner (0..59)
  *
  * Dynamically binds with cell text in real time: changing any picker component updates
  * the editor text field, and typing in the editor text field parses and updates the picker controls.
  */
-public class DataGripDateTimePicker {
+public class GridDateTimePicker {
 
     public static final String[] MONTH_NAMES = {
             "January", "February", "March", "April", "May", "June",
@@ -62,7 +62,7 @@ public class DataGripDateTimePicker {
     private Consumer<Void> onCommitRequested;
     private Consumer<Void> onCancelRequested;
 
-    public DataGripDateTimePicker(Consumer<String> onValueChanged) {
+    public GridDateTimePicker(Consumer<String> onValueChanged) {
         this.onValueChanged = onValueChanged;
 
         popup.setAutoHide(true);
@@ -117,7 +117,7 @@ public class DataGripDateTimePicker {
         timeRow.setAlignment(Pos.CENTER_LEFT);
 
         container = new VBox(6, dateRow, timeRow);
-        container.getStyleClass().add("datagrip-datetime-picker");
+        container.getStyleClass().add("grid-datetime-picker");
         container.setAlignment(Pos.CENTER_LEFT);
 
         container.setOnKeyPressed(e -> {
@@ -179,7 +179,6 @@ public class DataGripDateTimePicker {
                     setText(null);
                 } else {
                     setText(String.valueOf(item));
-                    setStyle("-fx-text-fill: #dfe1e5; -fx-background-color: #2b2d30; -fx-padding: 3 6;");
                 }
             }
         });
@@ -191,7 +190,6 @@ public class DataGripDateTimePicker {
                     setText(null);
                 } else {
                     setText(String.valueOf(item));
-                    setStyle("-fx-text-fill: #dfe1e5;");
                 }
             }
         });
