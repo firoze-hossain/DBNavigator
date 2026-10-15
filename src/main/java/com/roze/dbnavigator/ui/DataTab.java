@@ -155,10 +155,17 @@ public class DataTab extends Tab {
         refreshButton.setTooltip(new Tooltip("Reload Page  Ctrl+F5"));
         refreshButton.setOnAction(e -> handleReload());
 
-        Button exportButton = new Button();
-        exportButton.setGraphic(Icons.of(FontAwesomeSolid.FILE_CSV, "#e0a44c", 11));
-        exportButton.setTooltip(new Tooltip("Export current page to CSV"));
-        exportButton.setOnAction(e -> grid.exportCsv());
+        DataExtractorsToolbar extractorsToolbar = new DataExtractorsToolbar(
+                profile != null ? profile.getType() : ConnectionProfile.DatabaseType.POSTGRESQL,
+                grid::toQueryResult,
+                () -> (table != null ? table.qualifiedName() : "table"),
+                () -> table,
+                () -> profile,
+                this::getOwnerWindow
+        );
+        extractorsToolbar.addFormatListener(grid::setActiveExtractorFormat);
+        grid.setActiveExtractorFormat(extractorsToolbar.getActiveFormat());
+        grid.setExportDataAction(extractorsToolbar::openExportDialog);
 
         pager.setOnFirst(() -> {
             if (editManager != null && !editManager.confirmAndClearPendingIfDiscarded(getOwnerWindow())) return;
@@ -205,7 +212,7 @@ public class DataTab extends Tab {
         });
 
         HBox toolbar = new HBox(8, addRowBtn, deleteRowsBtn, submitButton, revertButton, refreshButton,
-                whereControl, orderControl, applyButton, exportButton, spacer, pager);
+                whereControl, orderControl, applyButton, spacer, extractorsToolbar, pager);
         toolbar.setAlignment(Pos.CENTER_LEFT);
         toolbar.setPadding(new Insets(6, 10, 6, 10));
         toolbar.getStyleClass().add("console-toolbar");

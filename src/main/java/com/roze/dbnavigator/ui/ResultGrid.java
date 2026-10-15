@@ -1,6 +1,8 @@
 package com.roze.dbnavigator.ui;
 
+import com.roze.dbnavigator.model.ConnectionProfile;
 import com.roze.dbnavigator.model.QueryResult;
+import com.roze.dbnavigator.util.DataExporters;
 import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.collections.FXCollections;
@@ -119,8 +121,36 @@ public class ResultGrid extends TableView<List<String>> {
     private Runnable deleteRowsAction;
     private Runnable addRowAction;
     private Runnable reloadAction;
+    private Runnable exportDataAction;
+    private DataExporters.Format activeExtractorFormat = DataExporters.Format.CSV;
     private List<String> columnTypes = List.of();
     private List<String> columnNames = List.of();
+
+    public DataExporters.Format getActiveExtractorFormat() {
+        return activeExtractorFormat;
+    }
+
+    public void setActiveExtractorFormat(DataExporters.Format format) {
+        if (format != null) {
+            this.activeExtractorFormat = format;
+        }
+    }
+
+    public void setExportDataAction(Runnable action) {
+        this.exportDataAction = action;
+    }
+
+    public QueryResult toQueryResult() {
+        QueryResult qr = new QueryResult();
+        if (columnNames != null) qr.getColumns().addAll(columnNames);
+        if (columnTypes != null) qr.getColumnTypes().addAll(columnTypes);
+        qr.getRows().addAll(getItems());
+        return qr;
+    }
+
+    public List<String> getColumnNames() {
+        return columnNames != null ? columnNames : List.of();
+    }
 
     private final javafx.beans.property.StringProperty selectionStatusProperty =
             new javafx.beans.property.SimpleStringProperty("");
@@ -573,14 +603,15 @@ public class ResultGrid extends TableView<List<String>> {
         setNullItem.setAccelerator(new KeyCodeCombination(KeyCode.N, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN));
         setNullItem.setOnAction(e -> setSelectedCellsValue("NULL"));
 
-        MenuItem copySelectionItem = new MenuItem("Copy Using Data Extractor (CSV)");
+        MenuItem copySelectionItem = new MenuItem("Copy Using Data Extractor (" + activeExtractorFormat + ")");
         copySelectionItem.setAccelerator(new KeyCodeCombination(KeyCode.C, KeyCombination.CONTROL_DOWN));
         copySelectionItem.setOnAction(e -> copySelection());
 
-        Menu changeExtractor = new Menu("Change Data Extractor (CSV)");
-        for (String ext : List.of("CSV", "TSV", "JSON", "SQL Insert Statements", "HTML Table", "Markdown")) {
-            MenuItem extItem = new MenuItem(ext);
-            extItem.setOnAction(ev -> {});
+        Menu changeExtractor = new Menu("Change Data Extractor (" + activeExtractorFormat + ")");
+        for (DataExporters.Format fmt : DataExporters.Format.values()) {
+            if (DataExporters.isBinary(fmt)) continue;
+            MenuItem extItem = new MenuItem(fmt.toString());
+            extItem.setOnAction(ev -> setActiveExtractorFormat(fmt));
             changeExtractor.getItems().add(extItem);
         }
 
@@ -648,6 +679,17 @@ public class ResultGrid extends TableView<List<String>> {
             if (reloadAction != null) reloadAction.run();
         });
 
+        MenuItem exportDataItem = new MenuItem("Export Data...");
+        exportDataItem.setGraphic(Icons.of(FontAwesomeSolid.DOWNLOAD, "#a9b7c6", 11));
+        exportDataItem.setOnAction(e -> {
+            if (exportDataAction != null) {
+                exportDataAction.run();
+            } else {
+                ExportDataDialog.show(getScene() != null ? getScene().getWindow() : null,
+                        "data", toQueryResult(), ConnectionProfile.DatabaseType.POSTGRESQL, activeExtractorFormat);
+            }
+        });
+
         menu.getItems().addAll(
                 editItem,
                 new SeparatorMenuItem(),
@@ -675,6 +717,7 @@ public class ResultGrid extends TableView<List<String>> {
                 filterByMenu,
                 fullTextSearch,
                 exportTable,
+                exportDataItem,
                 new SeparatorMenuItem(),
                 setLocalFilter,
                 localFilterByCell,
@@ -694,6 +737,15 @@ public class ResultGrid extends TableView<List<String>> {
             deleteRowsItem.setDisable(!canEdit || deleteRowsAction == null || getSelectedRowIndexes().isEmpty());
             valueEditor.setDisable(!hasSelection);
             copySelectionItem.setDisable(!hasSelection);
+            copySelectionItem.setText("Copy Using Data Extractor (" + activeExtractorFormat + ")");
+            changeExtractor.setText("Change Data Extractor (" + activeExtractorFormat + ")");
+            for (MenuItem mi : changeExtractor.getItems()) {
+                if (mi.getText().equals(activeExtractorFormat.toString())) {
+                    mi.setGraphic(Icons.of(FontAwesomeSolid.CHECK, "#3574F0", 10));
+                } else {
+                    mi.setGraphic(null);
+                }
+            }
             compareCells.setDisable(getSelectionModel().getSelectedCells().size() < 2);
         });
 
@@ -888,21 +940,9 @@ public class ResultGrid extends TableView<List<String>> {
 
     private void exportTableToClipboard() {
         if (columnNames == null || getItems() == null || getItems().isEmpty()) return;
-        StringBuilder sb = new StringBuilder();
-        sb.append(String.join(",", columnNames)).append("\n");
-        for (List<String> row : getItems()) {
-            List<String> escaped = new ArrayList<>();
-            for (String val : row) {
-                if (val == null) escaped.add("");
-                else if (val.contains(",") || val.contains("\"") || val.contains("\n")) {
-                    escaped.add("\"" + val.replace("\"", "\"\"") + "\"");
-                } else {
-                    escaped.add(val);
-                }
-            }
-            sb.append(String.join(",", escaped)).append("\n");
-        }
-        put(sb.toString());
+        QueryResult qr = toQueryResult();
+        String text = DataExporters.render(activeExtractorFormat, qr, "table", qr.getRows().size());
+        put(text);
     }
 
     private String getCellValue(TablePosition<?, ?> pos) {
@@ -1707,18 +1747,40 @@ public class ResultGrid extends TableView<List<String>> {
         for (TablePosition<?, ?> pos : selected) {
             byRow.computeIfAbsent(pos.getRow(), k -> new ArrayList<>()).add(pos);
         }
-        StringBuilder sb = new StringBuilder();
-        for (var entry : byRow.entrySet()) {
-            List<TablePosition<?, ?>> cells = entry.getValue();
-            cells.sort((a, b) -> Integer.compare(getColumns().indexOf(a.getTableColumn()), getColumns().indexOf(b.getTableColumn())));
-            List<String> vals = new ArrayList<>();
+
+        java.util.TreeSet<Integer> colIndices = new java.util.TreeSet<>();
+        for (var cells : byRow.values()) {
             for (TablePosition<?, ?> pos : cells) {
-                vals.add(getCellValue(pos));
+                int colIdx = getColumns().indexOf(pos.getTableColumn()) - 1;
+                if (colIdx >= 0) colIndices.add(colIdx);
             }
-            if (sb.length() > 0) sb.append("\n");
-            sb.append(String.join("\t", vals));
         }
-        put(sb.toString());
+
+        if (colIndices.isEmpty()) return;
+
+        List<String> subCols = new ArrayList<>();
+        for (int c : colIndices) {
+            subCols.add(c < columnNames.size() ? columnNames.get(c) : "col" + (c + 1));
+        }
+
+        List<List<String>> subRows = new ArrayList<>();
+        for (var entry : byRow.entrySet()) {
+            int r = entry.getKey();
+            if (r < 0 || r >= getItems().size()) continue;
+            List<String> fullRow = getItems().get(r);
+            List<String> subRow = new ArrayList<>();
+            for (int c : colIndices) {
+                subRow.add(c < fullRow.size() ? fullRow.get(c) : "");
+            }
+            subRows.add(subRow);
+        }
+
+        QueryResult subResult = new QueryResult();
+        subResult.getColumns().addAll(subCols);
+        subResult.getRows().addAll(subRows);
+
+        String text = DataExporters.render(activeExtractorFormat, subResult, "table", subRows.size());
+        put(text);
     }
 
     /** Copies the value of whatever cell last had focus (works in row-selection mode). */
