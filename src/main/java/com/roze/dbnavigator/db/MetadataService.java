@@ -25,7 +25,7 @@ public final class MetadataService {
 
     // SQL Server creates these fixed database-role schemas in every database
     // by default; they're almost never where a user's own objects live, and
-    // DataGrip tucks the equivalent noise away under its own "Database
+    // Reference IDE tucks the equivalent noise away under its own "Database
     // Objects" node rather than listing it alongside real schemas like dbo.
     private static final Set<String> SQLSERVER_SYSTEM_SCHEMAS = Set.of(
             "db_owner", "db_accessadmin", "db_securityadmin", "db_ddladmin",
@@ -969,8 +969,15 @@ public final class MetadataService {
     public static List<DbObject> loadDatabaseChildren(ConnectionProfile profile, DbObject database)
             throws Exception {
         return switch (profile.getType()) {
-            case MONGODB -> List.of(
-                    folder("Collections", Kind.COLLECTIONS_FOLDER, database.getCatalog(), null));
+            case MONGODB -> {
+                int collCount = 0;
+                try {
+                    collCount = ClientRegistry.mongo(profile).listCollections(database.getCatalog()).size();
+                } catch (Exception ignored) {}
+                DbObject collFolder = folder("collections", Kind.COLLECTIONS_FOLDER, database.getCatalog(), null);
+                collFolder.setDetail(String.valueOf(collCount));
+                yield List.of(collFolder);
+            }
             case POSTGRESQL -> {
                 List<DbObject> items = new ArrayList<>();
                 try (Connection conn = client(profile, database.getCatalog()).getConnection()) {
@@ -1538,8 +1545,7 @@ public final class MetadataService {
 
     /**
      * The CREATE-ready source of a stored procedure or function, for an
-     * "Edit Source" console pre-filled with the object's own definition —
-     * the same thing double-clicking a stored routine opens in DataGrip.
+     * "Edit Source" console pre-filled with the object's own definition.
      *
      * Oracle-specific for now: ALL_SOURCE holds exactly the text needed,
      * for any schema the connected user has privilege to see (not just
@@ -1656,7 +1662,7 @@ public final class MetadataService {
         return result;
     }
 
-    // ------------------------------------------- table children (DataGrip style)
+    // ------------------------------------------- table children folder structure
 
     /**
      * Children of a TABLE node: "columns N", "indexes N" (and "partitions N"

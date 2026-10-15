@@ -140,7 +140,7 @@ public class MainWindow {
         ActionRegistry.initialize(actionManager);
 
         root.getStyleClass().add("app-root");
-        root.setTop(buildDataGripHeader(actionManager));
+        root.setTop(buildHeaderBar(actionManager));
         root.setBottom(buildStatusBar());
 
         root.addEventFilter(javafx.scene.input.KeyEvent.KEY_PRESSED, e -> {
@@ -333,8 +333,8 @@ public class MainWindow {
 
     // ------------------------------------------------------------- chrome
 
-    private Node buildDataGripHeader(ActionManager actionManager) {
-        // App logo icon on the left (DataGrip-style)
+    private Node buildHeaderBar(ActionManager actionManager) {
+        // App logo icon on the left
         Label brandIcon = new Label();
         brandIcon.setGraphic(Icons.of(FontAwesomeSolid.DATABASE, "#4a88c7", 13));
         brandIcon.getStyleClass().add("header-brand-icon");
@@ -397,7 +397,7 @@ public class MainWindow {
 
     public void refreshMenusAndToolbars() {
         ActionManager actionManager = ActionManager.getInstance();
-        root.setTop(buildDataGripHeader(actionManager));
+        root.setTop(buildHeaderBar(actionManager));
         actionManager.updateActions(this);
     }
 
@@ -1797,7 +1797,7 @@ public class MainWindow {
 
     public void showAboutDialog() {
         Alert alert = (Alert) DialogTheme.apply(new Alert(Alert.AlertType.INFORMATION,
-                "DBNavigator Pro 3.2\nA DataGrip-style database IDE built with JavaFX.\n"
+                "DBNavigator Pro 3.2\nA professional database IDE built with JavaFX.\n"
                 + "MySQL · MariaDB · PostgreSQL · SQL Server · Oracle · SQLite · MongoDB"));
         alert.setHeaderText("DBNavigator Pro");
         alert.initOwner(stage);
@@ -2016,6 +2016,10 @@ public class MainWindow {
     }
 
     public void openDataTab(ConnectionProfile profile, DbObject table) {
+        openDataTab(profile, table, null);
+    }
+
+    public void openDataTab(ConnectionProfile profile, DbObject table, String selectColumn) {
         if (profile == null || table == null) return;
         for (TabPane pane : editorTabPanes()) {
             for (Tab tab : pane.getTabs()) {
@@ -2024,13 +2028,20 @@ public class MainWindow {
                             && dt.getProfileForReopen().getId().equals(profile.getId())
                             && dt.getTableForReopen().qualifiedName().equalsIgnoreCase(table.qualifiedName())) {
                         selectTab(dt);
+                        if (selectColumn != null) {
+                            dt.selectColumn(selectColumn);
+                        }
                         setStatus("Selected data for " + table.getName());
                         return;
                     }
                 }
             }
         }
-        addAndSelect(new DataTab(profile, table));
+        DataTab dt = new DataTab(profile, table);
+        if (selectColumn != null) {
+            dt.selectColumn(selectColumn);
+        }
+        addAndSelect(dt);
     }
 
     public void openDdlTab(ConnectionProfile profile, DbObject obj) {
@@ -2064,14 +2075,39 @@ public class MainWindow {
     }
 
     public void openMongoTab(ConnectionProfile profile, DbObject collection) {
-        addAndSelect(new MongoCollectionTab(profile, collection));
+        openMongoTab(profile, collection, null);
+    }
+
+    public void openMongoTab(ConnectionProfile profile, DbObject collection, String selectField) {
+        if (profile == null || collection == null) return;
+        for (TabPane pane : editorTabPanes()) {
+            for (Tab tab : pane.getTabs()) {
+                if (tab instanceof MongoCollectionTab mt) {
+                    if (mt.getProfile() != null && mt.getCollection() != null
+                            && mt.getProfile().getId().equals(profile.getId())
+                            && mt.getCollection().getCatalog().equalsIgnoreCase(collection.getCatalog())
+                            && mt.getCollection().getName().equalsIgnoreCase(collection.getName())) {
+                        selectTab(mt);
+                        if (selectField != null) {
+                            mt.selectColumn(selectField);
+                        }
+                        setStatus("Selected collection " + collection.getName());
+                        return;
+                    }
+                }
+            }
+        }
+        MongoCollectionTab mt = new MongoCollectionTab(profile, collection);
+        if (selectField != null) {
+            mt.selectColumn(selectField);
+        }
+        addAndSelect(mt);
     }
 
     /**
      * Opens a stored procedure/function's own source in an editable console,
      * pre-filled and ready to re-run (which recompiles it, since the source
-     * is reconstructed as a full CREATE OR REPLACE) — the same thing
-     * double-clicking a stored routine opens in DataGrip. Falls back to a
+     * is reconstructed as a full CREATE OR REPLACE). Falls back to a
      * short explanatory message for engines getRoutineSource doesn't cover
      * yet, rather than opening a silently blank console.
      */
@@ -2290,7 +2326,7 @@ public class MainWindow {
 
     // ------------------------------------------------------------- split view
 
-    /** DataGrip-style editor splitting. Every editor group can be split again. */
+    /** Multi-group editor splitting. Every editor group can be split again. */
     public void splitRight(Tab tab) { split(tab, false, Orientation.HORIZONTAL); }
     public void splitAndMoveRight(Tab tab) { split(tab, true, Orientation.HORIZONTAL); }
     public void splitDown(Tab tab) { split(tab, false, Orientation.VERTICAL); }
@@ -3585,7 +3621,7 @@ public class MainWindow {
 
     public void showWhatsNewDialog() {
         Alert alert = (Alert) DialogTheme.apply(new Alert(Alert.AlertType.INFORMATION,
-                "What's New in DBNavigator Pro 2.0:\n\n• JetBrains DataGrip-aligned dynamic action system\n• Full-text database object search\n• Comprehensive schema and data comparison\n• Multi-tab split layout management and presets"));
+                "What's New in DBNavigator Pro 2.0:\n\n• Enterprise-aligned dynamic action system\n• Full-text database object search\n• Comprehensive schema and data comparison\n• Multi-tab split layout management and presets"));
         alert.setTitle("What's New");
         alert.setHeaderText("Release Notes - Version 2.0");
         alert.initOwner(stage);

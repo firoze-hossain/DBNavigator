@@ -39,7 +39,7 @@ import javafx.geometry.Pos;
 import javafx.scene.layout.StackPane;
 
 /**
- * The DataGrip-style "Database Explorer": all connections in one lazy tree.
+ * The Database Explorer: all connections in one lazy tree.
  * Double-click a table/collection to open it; right-click for actions.
  */
 public class SchemaTreePane extends VBox {
@@ -480,6 +480,22 @@ public class SchemaTreePane extends VBox {
         switch (obj.getKind()) {
             case TABLE, VIEW, PARTITION, VIRTUAL_VIEW -> mainWindow.openDataTab(profile, obj);
             case COLLECTION  -> mainWindow.openMongoTab(profile, obj);
+            case FIELD -> {
+                TreeItem<DbObject> collItem = findAncestor(item, Kind.COLLECTION);
+                DbObject collObj = collItem != null ? collItem.getValue() : null;
+                if (collObj == null) {
+                    collObj = new DbObject(obj.getTableName(), Kind.COLLECTION, obj.getCatalog(), null);
+                }
+                mainWindow.openMongoTab(profile, collObj, obj.getName());
+            }
+            case COLUMN -> {
+                TreeItem<DbObject> tableItem = findAncestor(item, Kind.TABLE, Kind.VIEW, Kind.PARTITION, Kind.VIRTUAL_VIEW);
+                DbObject tableObj = tableItem != null ? tableItem.getValue() : null;
+                if (tableObj == null) {
+                    tableObj = new DbObject(obj.getTableName(), Kind.TABLE, obj.getCatalog(), obj.getSchema());
+                }
+                mainWindow.openDataTab(profile, tableObj, obj.getName());
+            }
             case PROCEDURE, FUNCTION -> mainWindow.openRoutineSourceTab(profile, obj);
             case ROLE, ACCESS_METHOD, CAST, EXTENSION, LANGUAGE, SEQUENCE,
                  COLLATION, LINKED_SERVER, SERVER_PRINCIPAL, ASSEMBLY, FILEGROUP, DATABASE_PRINCIPAL,
@@ -495,9 +511,24 @@ public class SchemaTreePane extends VBox {
                  DATABASE_OBJECTS, ACCESS_METHODS_FOLDER, CASTS_FOLDER, EXTENSIONS_FOLDER, LANGUAGES_FOLDER,
                  COLLATIONS_FOLDER, LINKED_SERVERS_FOLDER, SERVER_PRINCIPALS_FOLDER,
                  ASSEMBLIES_FOLDER, FILEGROUPS_FOLDER, DATABASE_PRINCIPALS_FOLDER,
-                 VIRTUAL_VIEWS_FOLDER -> item.setExpanded(!item.isExpanded());
+                 VIRTUAL_VIEWS_FOLDER, COLLECTIONS_FOLDER, FIELDS_FOLDER, INDEXES_FOLDER,
+                 COLUMNS_FOLDER, TABLES_FOLDER, VIEWS_FOLDER, PROCEDURES_FOLDER, FUNCTIONS_FOLDER,
+                 KEYS_FOLDER, FOREIGN_KEYS_FOLDER, PARTITIONS_FOLDER -> item.setExpanded(!item.isExpanded());
             default -> {}
         }
+    }
+
+    private static TreeItem<DbObject> findAncestor(TreeItem<DbObject> item, Kind... kinds) {
+        if (item == null) return null;
+        Set<Kind> targetKinds = Set.of(kinds);
+        TreeItem<DbObject> curr = item.getParent();
+        while (curr != null) {
+            if (curr.getValue() != null && targetKinds.contains(curr.getValue().getKind())) {
+                return curr;
+            }
+            curr = curr.getParent();
+        }
+        return null;
     }
 
     /** Walks up the tree to find which connection a node belongs to. */
@@ -822,7 +853,7 @@ public class SchemaTreePane extends VBox {
     }
 
     /**
-     * DataGrip-style destructive confirmation: warn, then require the user to
+     * Standard destructive confirmation: warn, then require the user to
      * type the exact database name before DROP DATABASE is executed.
      */
     private void confirmAndDeleteDatabase(ConnectionProfile profile, String databaseName) {
@@ -1079,7 +1110,7 @@ public class SchemaTreePane extends VBox {
     }
 
     /**
-     * Builds the comprehensive DataGrip-style context menu for a connection root node.
+     * Builds the comprehensive context menu for a connection root node.
      * Package-private so unit tests can inspect and verify the dynamic hierarchy.
      */
     ContextMenu buildConnectionMenu(TreeItem<DbObject> item, DbObject obj, ConnectionProfile profile) {
@@ -1089,7 +1120,7 @@ public class SchemaTreePane extends VBox {
         String noun = schemaOrDatabaseNoun(profile.getType());
         String capNoun = Character.toUpperCase(noun.charAt(0)) + noun.substring(1);
 
-        // For Oracle: DataGrip shows "Download Driver Files" at the very top of connection menu
+        // For Oracle: show "Download Driver Files" at the very top of connection menu
         if (profile.getType() == ConnectionProfile.DatabaseType.ORACLE) {
             MenuItem downloadDriver = new MenuItem("Download Driver Files",
                     Icons.of(FontAwesomeSolid.EXCLAMATION_TRIANGLE, "#e05555", 12));
@@ -1114,12 +1145,12 @@ public class SchemaTreePane extends VBox {
 
         newMenu.getItems().addAll(queryConsole, queryFile);
 
-        // Dynamic engine-specific creation items matching DataGrip screenshots:
+        // Dynamic engine-specific creation items:
         // - PostgreSQL: Database..., Role..., User...
         // - MySQL: Schema..., User..., Role...
         // - MariaDB: Schema..., User..., Role...
-        // - SQL Server: Database, Server Principal (matching Image 1)
-        // - Oracle: none at root New (matching Image 2)
+        // - SQL Server: Database, Server Principal
+        // - Oracle: none at root New
         // - MongoDB, SQLite: none at root New
         switch (profile.getType()) {
             case POSTGRESQL -> {
@@ -1148,7 +1179,7 @@ public class SchemaTreePane extends VBox {
                 newMenu.getItems().addAll(new SeparatorMenuItem(), newDb, serverPrincipal);
             }
             case ORACLE -> {
-                // In DataGrip Image 2: Oracle has neither Database, Schema, User nor Role in root New menu.
+                // Oracle has neither Database, Schema, User nor Role in root New menu.
                 // It goes directly to Virtual View.
             }
             default -> {
@@ -1562,7 +1593,7 @@ public class SchemaTreePane extends VBox {
                 }
             }
             case ORACLE -> {
-                // In DataGrip Image 2, Oracle schema + New > goes directly to Virtual View & Data Source templates
+                // Oracle schema + New > goes directly to Virtual View & Data Source templates
             }
             default -> {}
         }
@@ -1805,7 +1836,7 @@ public class SchemaTreePane extends VBox {
             }
         }
 
-        // Assemble context menu items in exact order matching DataGrip
+        // Assemble context menu items in canonical order
         menu.getItems().add(newMenu);
         if (modifyItem != null) {
             menu.getItems().add(modifyItem);
@@ -2156,7 +2187,7 @@ public class SchemaTreePane extends VBox {
     }
 
     /**
-     * DataGrip-style rename: a single "new name" prompt. The actual RENAME
+     * Standard routine rename: a single "new name" prompt. The actual RENAME
      * syntax genuinely differs per engine — Oracle's generic RENAME
      * statement works for any object type including routines; SQL Server
      * uses sp_rename instead; PostgreSQL has an engine-specific ALTER
@@ -2215,7 +2246,7 @@ public class SchemaTreePane extends VBox {
         });
     }
 
-    /** DataGrip-style destructive confirmation, scaled down from the database version — a routine is easier to recreate than a whole database, so a single Yes/No is enough rather than also requiring the name to be typed out. */
+    /** Standard destructive confirmation, scaled down from the database version — a routine is easier to recreate than a whole database, so a single Yes/No is enough rather than also requiring the name to be typed out. */
     private void dropRoutine(ConnectionProfile profile, DbObject obj, String kindLabel) {
         Alert warn = (Alert) DialogTheme.apply(new Alert(Alert.AlertType.WARNING,
                 "This permanently deletes " + kindLabel.toLowerCase() + " \"" + obj.getName()
@@ -2697,7 +2728,7 @@ public class SchemaTreePane extends VBox {
     }
 
     /**
-     * DataGrip-style "Scroll from Editor": locates the active editor tab's
+     * "Scroll from Editor": locates the active editor tab's
      * table/schema/database object in the Database Explorer tree, asynchronously
      * expanding intermediate parent nodes as needed, selects it, scrolls it into
      * view, and updates the explorer toolbar state (Jump to Console, Go to DDL, Edit Data).
@@ -3186,7 +3217,7 @@ public class SchemaTreePane extends VBox {
     }
 
     /**
-     * DataGrip-style "Collapse All": collapses all expanded nodes in the tree.
+     * "Collapse All": collapses all expanded nodes in the tree.
      * Recursively collapses all connection nodes and their descendants.
      * If an item inside a connection was selected, gracefully adjusts selection
      * to the connection node or top-level visible ancestor so selection is preserved.
@@ -3248,6 +3279,8 @@ public class SchemaTreePane extends VBox {
                     segments.add("roles");
                 } else if (obj.getKind() == Kind.SERVER_PRINCIPALS_FOLDER) {
                     segments.add("logins");
+                } else if (obj.getKind() == Kind.COLLECTIONS_FOLDER) {
+                    segments.add("tables");
                 } else {
                     segments.add(obj.getName());
                 }

@@ -51,7 +51,7 @@ public class MongoCollectionTab extends Tab {
         this.profile = profile;
         this.collection = collection;
 
-        setText(collection.getCatalog() + "." + collection.getName());
+        setText(collection.getName() + (profile != null ? " [" + profile.getName() + "]" : ""));
         setGraphic(Icons.of(FontAwesomeSolid.LEAF, "#57965c", 11));
 
         grid.setSortRequestListener((columnName, direction) -> {
@@ -98,7 +98,12 @@ public class MongoCollectionTab extends Tab {
         toolbar.getStyleClass().add("console-toolbar");
 
         statusLabel.getStyleClass().add("console-status");
-        HBox statusBar = new HBox(statusLabel);
+        Region statusSpacer = new Region();
+        HBox.setHgrow(statusSpacer, Priority.ALWAYS);
+        Label positionLabel = new Label();
+        positionLabel.getStyleClass().add("console-status");
+        positionLabel.textProperty().bind(grid.selectionStatusProperty());
+        HBox statusBar = new HBox(statusLabel, statusSpacer, positionLabel);
         statusBar.setPadding(new Insets(4, 10, 4, 10));
         statusBar.getStyleClass().add("console-status-bar");
 
@@ -107,6 +112,15 @@ public class MongoCollectionTab extends Tab {
         setContent(root);
 
         loadPage();
+    }
+
+    private String pendingSelectColumn;
+
+    public void selectColumn(String columnName) {
+        this.pendingSelectColumn = columnName;
+        if (grid != null && !grid.getItems().isEmpty()) {
+            grid.selectColumn(columnName);
+        }
     }
 
     private void reloadFromStart() {
@@ -136,6 +150,10 @@ public class MongoCollectionTab extends Tab {
                 Platform.runLater(() -> {
                     editManager.configure(collection.getCatalog(), collection.getName(), result);
                     grid.showResult(result);
+                    if (pendingSelectColumn != null) {
+                        grid.selectColumn(pendingSelectColumn);
+                        pendingSelectColumn = null;
+                    }
                     long from = (long) currentPage * PAGE_SIZE + 1;
                     long to = from + result.getRows().size() - 1;
                     pageLabel.setText(result.getRows().isEmpty()
