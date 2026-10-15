@@ -131,6 +131,9 @@ public class SchemaTreePane extends VBox {
 
         tree.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
             updateToolbarState(newVal);
+            if (mainWindow != null && newVal != null && newVal.getValue() != null) {
+                mainWindow.setStatus(buildBreadcrumb(newVal));
+            }
         });
 
         tree.setOnMouseClicked(e -> {
@@ -418,9 +421,12 @@ public class SchemaTreePane extends VBox {
             case TABLE, VIEW, PARTITION, VIRTUAL_VIEW -> mainWindow.openDataTab(profile, obj);
             case COLLECTION  -> mainWindow.openMongoTab(profile, obj);
             case PROCEDURE, FUNCTION -> mainWindow.openRoutineSourceTab(profile, obj);
-            case ROLE, TABLESPACE, ACCESS_METHOD, CAST, EXTENSION, LANGUAGE, SEQUENCE -> mainWindow.openDdlTab(profile, obj);
+            case ROLE, TABLESPACE, ACCESS_METHOD, CAST, EXTENSION, LANGUAGE, SEQUENCE,
+                 COLLATION, LINKED_SERVER, SERVER_PRINCIPAL, ASSEMBLY, FILEGROUP, DATABASE_PRINCIPAL -> mainWindow.openDdlTab(profile, obj);
             case CONNECTION, SERVER_OBJECTS, ROLES_FOLDER, TABLESPACES_FOLDER,
                  DATABASE_OBJECTS, ACCESS_METHODS_FOLDER, CASTS_FOLDER, EXTENSIONS_FOLDER, LANGUAGES_FOLDER,
+                 COLLATIONS_FOLDER, LINKED_SERVERS_FOLDER, SERVER_PRINCIPALS_FOLDER,
+                 ASSEMBLIES_FOLDER, FILEGROUPS_FOLDER, DATABASE_PRINCIPALS_FOLDER,
                  VIRTUAL_VIEWS_FOLDER -> item.setExpanded(!item.isExpanded());
             default -> {}
         }
@@ -503,11 +509,17 @@ public class SchemaTreePane extends VBox {
             case SERVER_OBJECTS -> MetadataService.loadServerObjects(profile);
             case ROLES_FOLDER -> MetadataService.loadRoles(profile);
             case TABLESPACES_FOLDER -> MetadataService.loadTablespaces(profile);
+            case COLLATIONS_FOLDER -> MetadataService.loadCollations(profile);
+            case LINKED_SERVERS_FOLDER -> MetadataService.loadLinkedServers(profile);
+            case SERVER_PRINCIPALS_FOLDER -> MetadataService.loadServerPrincipals(profile);
             case DATABASE_OBJECTS -> MetadataService.loadDatabaseObjects(profile, obj);
             case ACCESS_METHODS_FOLDER -> MetadataService.loadAccessMethods(profile, obj);
             case CASTS_FOLDER -> MetadataService.loadCasts(profile, obj);
             case EXTENSIONS_FOLDER -> MetadataService.loadExtensions(profile, obj);
             case LANGUAGES_FOLDER -> MetadataService.loadLanguages(profile, obj);
+            case ASSEMBLIES_FOLDER -> MetadataService.loadAssemblies(profile, obj);
+            case FILEGROUPS_FOLDER -> MetadataService.loadFilegroups(profile, obj);
+            case DATABASE_PRINCIPALS_FOLDER -> MetadataService.loadDatabasePrincipals(profile, obj);
             case VIRTUAL_VIEWS_FOLDER -> MetadataService.loadVirtualViews(profile, obj);
             case TABLES_FOLDER, VIEWS_FOLDER, PROCEDURES_FOLDER, FUNCTIONS_FOLDER,
                  SEQUENCES_FOLDER, COLLECTIONS_FOLDER,
@@ -524,7 +536,9 @@ public class SchemaTreePane extends VBox {
                  TABLE, PARTITION, COLUMNS_FOLDER, INDEXES_FOLDER, PARTITIONS_FOLDER,
                  KEYS_FOLDER, FOREIGN_KEYS_FOLDER, COLLECTION, FIELDS_FOLDER,
                  SERVER_OBJECTS, ROLES_FOLDER, TABLESPACES_FOLDER,
+                 COLLATIONS_FOLDER, LINKED_SERVERS_FOLDER, SERVER_PRINCIPALS_FOLDER,
                  DATABASE_OBJECTS, ACCESS_METHODS_FOLDER, CASTS_FOLDER, EXTENSIONS_FOLDER, LANGUAGES_FOLDER,
+                 ASSEMBLIES_FOLDER, FILEGROUPS_FOLDER, DATABASE_PRINCIPALS_FOLDER,
                  VIRTUAL_VIEWS_FOLDER -> true;
             default -> false;
         };
@@ -1977,14 +1991,18 @@ public class SchemaTreePane extends VBox {
                     menu.getItems().addAll(goToDdl, jumpConsole, new SeparatorMenuItem(), refresh, new SeparatorMenuItem(), drop);
                 }
                 case DATABASE_OBJECTS, ACCESS_METHODS_FOLDER, CASTS_FOLDER, EXTENSIONS_FOLDER,
-                     LANGUAGES_FOLDER, VIRTUAL_VIEWS_FOLDER -> {
+                     LANGUAGES_FOLDER, COLLATIONS_FOLDER, LINKED_SERVERS_FOLDER, SERVER_PRINCIPALS_FOLDER,
+                     ASSEMBLIES_FOLDER, FILEGROUPS_FOLDER, DATABASE_PRINCIPALS_FOLDER,
+                     VIRTUAL_VIEWS_FOLDER -> {
                     MenuItem refresh = new MenuItem("Refresh");
                     refresh.setOnAction(e -> refreshNode(getTreeItem(), obj, obj.getName()));
                     MenuItem jumpConsole = new MenuItem("Jump to Query Console");
                     jumpConsole.setOnAction(e -> jumpToQueryConsole());
                     menu.getItems().addAll(jumpConsole, new SeparatorMenuItem(), refresh);
                 }
-                case ACCESS_METHOD, CAST, EXTENSION, LANGUAGE -> {
+                case ACCESS_METHOD, CAST, EXTENSION, LANGUAGE,
+                     COLLATION, LINKED_SERVER, SERVER_PRINCIPAL,
+                     ASSEMBLY, FILEGROUP, DATABASE_PRINCIPAL -> {
                     MenuItem goToDdl = new MenuItem("Go to DDL");
                     goToDdl.setOnAction(e -> goToDdl());
                     MenuItem jumpConsole = new MenuItem("Jump to Query Console");
@@ -2434,7 +2452,9 @@ public class SchemaTreePane extends VBox {
         boolean hasDdl = switch (obj.getKind()) {
             case DATABASE, SCHEMA, TABLE, VIEW, PARTITION, PROCEDURE, FUNCTION, SEQUENCE, INDEX,
                  ROLE, TABLESPACE,
-                 ACCESS_METHOD, CAST, EXTENSION, LANGUAGE, VIRTUAL_VIEW -> true;
+                 ACCESS_METHOD, CAST, EXTENSION, LANGUAGE, VIRTUAL_VIEW,
+                 COLLATION, LINKED_SERVER, SERVER_PRINCIPAL,
+                 ASSEMBLY, FILEGROUP, DATABASE_PRINCIPAL -> true;
             default -> false;
         };
         goToDdlButton.setDisable(!hasDdl);
@@ -2679,12 +2699,18 @@ public class SchemaTreePane extends VBox {
     }
 
     private void navigateFromConnection(TreeItem<DbObject> connItem, ConnectionProfile profile, DbObject target) {
-        // 0. Check for Server Objects navigation (PostgreSQL roles and tablespaces)
+        // 0. Check for Server Objects navigation (roles, tablespaces, collations, linked servers, server principals)
         if (target.getKind() == Kind.SERVER_OBJECTS
                 || target.getKind() == Kind.ROLES_FOLDER
                 || target.getKind() == Kind.ROLE
                 || target.getKind() == Kind.TABLESPACES_FOLDER
-                || target.getKind() == Kind.TABLESPACE) {
+                || target.getKind() == Kind.TABLESPACE
+                || target.getKind() == Kind.COLLATIONS_FOLDER
+                || target.getKind() == Kind.COLLATION
+                || target.getKind() == Kind.LINKED_SERVERS_FOLDER
+                || target.getKind() == Kind.LINKED_SERVER
+                || target.getKind() == Kind.SERVER_PRINCIPALS_FOLDER
+                || target.getKind() == Kind.SERVER_PRINCIPAL) {
             TreeItem<DbObject> serverObjItem = connItem.getChildren().stream()
                     .filter(c -> c.getValue() != null && c.getValue().getKind() == Kind.SERVER_OBJECTS)
                     .findFirst().orElse(null);
@@ -2759,42 +2785,34 @@ public class SchemaTreePane extends VBox {
     }
 
     private void navigateFromServerObjects(TreeItem<DbObject> serverObjItem, DbObject target) {
-        if (target.getKind() == Kind.ROLES_FOLDER || target.getKind() == Kind.ROLE) {
-            TreeItem<DbObject> rolesFolder = serverObjItem.getChildren().stream()
-                    .filter(c -> c.getValue() != null && c.getValue().getKind() == Kind.ROLES_FOLDER)
-                    .findFirst().orElse(null);
-            if (rolesFolder != null) {
-                if (target.getKind() == Kind.ROLES_FOLDER) {
-                    highlightAndSelect(rolesFolder);
-                    return;
-                }
-                expandNodeAndThen(rolesFolder, () -> {
-                    for (TreeItem<DbObject> child : rolesFolder.getChildren()) {
-                        if (child.getValue() != null && child.getValue().getName().equalsIgnoreCase(target.getName())) {
-                            highlightAndSelect(child);
-                            return;
-                        }
-                    }
-                });
+        Kind folderKind = switch (target.getKind()) {
+            case ROLES_FOLDER, ROLE -> Kind.ROLES_FOLDER;
+            case TABLESPACES_FOLDER, TABLESPACE -> Kind.TABLESPACES_FOLDER;
+            case COLLATIONS_FOLDER, COLLATION -> Kind.COLLATIONS_FOLDER;
+            case LINKED_SERVERS_FOLDER, LINKED_SERVER -> Kind.LINKED_SERVERS_FOLDER;
+            case SERVER_PRINCIPALS_FOLDER, SERVER_PRINCIPAL -> Kind.SERVER_PRINCIPALS_FOLDER;
+            default -> null;
+        };
+        if (folderKind == null) {
+            highlightAndSelect(serverObjItem);
+            return;
+        }
+        TreeItem<DbObject> folder = serverObjItem.getChildren().stream()
+                .filter(c -> c.getValue() != null && c.getValue().getKind() == folderKind)
+                .findFirst().orElse(null);
+        if (folder != null) {
+            if (target.getKind() == folderKind) {
+                highlightAndSelect(folder);
+                return;
             }
-        } else if (target.getKind() == Kind.TABLESPACES_FOLDER || target.getKind() == Kind.TABLESPACE) {
-            TreeItem<DbObject> tsFolder = serverObjItem.getChildren().stream()
-                    .filter(c -> c.getValue() != null && c.getValue().getKind() == Kind.TABLESPACES_FOLDER)
-                    .findFirst().orElse(null);
-            if (tsFolder != null) {
-                if (target.getKind() == Kind.TABLESPACES_FOLDER) {
-                    highlightAndSelect(tsFolder);
-                    return;
-                }
-                expandNodeAndThen(tsFolder, () -> {
-                    for (TreeItem<DbObject> child : tsFolder.getChildren()) {
-                        if (child.getValue() != null && child.getValue().getName().equalsIgnoreCase(target.getName())) {
-                            highlightAndSelect(child);
-                            return;
-                        }
+            expandNodeAndThen(folder, () -> {
+                for (TreeItem<DbObject> child : folder.getChildren()) {
+                    if (child.getValue() != null && child.getValue().getName().equalsIgnoreCase(target.getName())) {
+                        highlightAndSelect(child);
+                        return;
                     }
-                });
-            }
+                }
+            });
         }
     }
 
@@ -2803,7 +2821,10 @@ public class SchemaTreePane extends VBox {
                 || kind == Kind.ACCESS_METHODS_FOLDER || kind == Kind.ACCESS_METHOD
                 || kind == Kind.CASTS_FOLDER || kind == Kind.CAST
                 || kind == Kind.EXTENSIONS_FOLDER || kind == Kind.EXTENSION
-                || kind == Kind.LANGUAGES_FOLDER || kind == Kind.LANGUAGE;
+                || kind == Kind.LANGUAGES_FOLDER || kind == Kind.LANGUAGE
+                || kind == Kind.ASSEMBLIES_FOLDER || kind == Kind.ASSEMBLY
+                || kind == Kind.FILEGROUPS_FOLDER || kind == Kind.FILEGROUP
+                || kind == Kind.DATABASE_PRINCIPALS_FOLDER || kind == Kind.DATABASE_PRINCIPAL;
     }
 
     private void navigateFromDatabaseObjects(TreeItem<DbObject> dbItem, DbObject target) {
@@ -2823,6 +2844,9 @@ public class SchemaTreePane extends VBox {
             case CASTS_FOLDER, CAST -> Kind.CASTS_FOLDER;
             case EXTENSIONS_FOLDER, EXTENSION -> Kind.EXTENSIONS_FOLDER;
             case LANGUAGES_FOLDER, LANGUAGE -> Kind.LANGUAGES_FOLDER;
+            case ASSEMBLIES_FOLDER, ASSEMBLY -> Kind.ASSEMBLIES_FOLDER;
+            case FILEGROUPS_FOLDER, FILEGROUP -> Kind.FILEGROUPS_FOLDER;
+            case DATABASE_PRINCIPALS_FOLDER, DATABASE_PRINCIPAL -> Kind.DATABASE_PRINCIPALS_FOLDER;
             default -> null;
         };
         if (subfolderKind == null) {
@@ -3096,5 +3120,30 @@ public class SchemaTreePane extends VBox {
             collapseNodeRecursively(child);
         }
         node.setExpanded(false);
+    }
+
+    public static String buildBreadcrumb(TreeItem<DbObject> item) {
+        if (item == null || item.getValue() == null) return "";
+        List<String> segments = new ArrayList<>();
+        segments.add("Database");
+        List<TreeItem<DbObject>> chain = new ArrayList<>();
+        TreeItem<DbObject> curr = item;
+        while (curr != null && curr.getValue() != null && curr.getParent() != null) {
+            chain.add(0, curr);
+            curr = curr.getParent();
+        }
+        for (TreeItem<DbObject> node : chain) {
+            DbObject obj = node.getValue();
+            if (obj != null) {
+                if (obj.getKind() == Kind.DATABASE_PRINCIPALS_FOLDER) {
+                    segments.add("roles");
+                } else if (obj.getKind() == Kind.SERVER_PRINCIPALS_FOLDER) {
+                    segments.add("logins");
+                } else {
+                    segments.add(obj.getName());
+                }
+            }
+        }
+        return String.join(" > ", segments);
     }
 }

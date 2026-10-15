@@ -75,7 +75,24 @@ public class DataTab extends Tab {
         this.profile = profile;
         this.table = table;
 
-        setText(table.getName());
+        if (profile != null && profile.getType() == ConnectionProfile.DatabaseType.SQLSERVER
+                && table.getKind() == DbObject.Kind.VIRTUAL_VIEW
+                && "sessions".equalsIgnoreCase(table.getName())
+                && (table.getQualifiedNameOverride() == null || table.getQualifiedNameOverride().isBlank())) {
+            table.setQualifiedNameOverride(
+                "(SELECT spid AS SPID, rtrim(status) AS Status, rtrim(loginame) AS Login, " +
+                "CASE WHEN rtrim(hostname) = '' THEN '.' ELSE rtrim(hostname) END AS HostName, " +
+                "CASE WHEN blocked = 0 THEN '.' ELSE cast(blocked as varchar(10)) END AS BlkBy, " +
+                "db_name(dbid) AS DBName, rtrim(cmd) AS Command " +
+                "FROM master.dbo.sysprocesses) AS sessions"
+            );
+        }
+
+        if (table.getCatalog() == null && table.getKind() == DbObject.Kind.VIRTUAL_VIEW) {
+            setText(table.getName() + " [" + profile.getName() + "]");
+        } else {
+            setText(table.getName());
+        }
         setGraphic(table.getKind() == DbObject.Kind.VIRTUAL_VIEW
                 ? Icons.of(FontAwesomeSolid.TABLE, "#c77dbb", 11)
                 : Icons.of(FontAwesomeSolid.TABLE, "#4a88c7", 11));

@@ -222,10 +222,12 @@ public final class MetadataService {
     }
 
     /**
-     * Loads PostgreSQL cluster-level Server Objects container: roles and tablespaces,
-     * matching DataGrip's Explorer tree hierarchy and live counts.
+     * Loads cluster-level Server Objects container: roles, tablespaces, collations, linked servers, server principals.
      */
     public static List<DbObject> loadServerObjects(ConnectionProfile profile) throws Exception {
+        if (profile.getType() == DatabaseType.SQLSERVER) {
+            return loadSqlServerServerObjects(profile);
+        }
         int rolesCount = 0;
         int tablespacesCount = 0;
         try (Connection conn = client(profile, null).getConnection();
@@ -244,6 +246,80 @@ public final class MetadataService {
         tablespacesFolder.setDetail(String.valueOf(tablespacesCount));
 
         return List.of(rolesFolder, tablespacesFolder);
+    }
+
+    private static List<DbObject> loadSqlServerServerObjects(ConnectionProfile profile) throws Exception {
+        int collationsCount = 0;
+        int linkedServersCount = 0;
+        int principalsCount = 0;
+
+        try (Connection conn = client(profile, null).getConnection();
+             Statement stmt = conn.createStatement()) {
+            try (ResultSet rs = stmt.executeQuery("SELECT count(*) FROM sys.fn_helpcollations()")) {
+                if (rs.next()) collationsCount = rs.getInt(1);
+            } catch (Exception ignored) {}
+            try (ResultSet rs = stmt.executeQuery("SELECT count(*) FROM sys.servers")) {
+                if (rs.next()) linkedServersCount = rs.getInt(1);
+            } catch (Exception ignored) {}
+            try (ResultSet rs = stmt.executeQuery("SELECT count(*) FROM sys.server_principals")) {
+                if (rs.next()) principalsCount = rs.getInt(1);
+            } catch (Exception ignored) {}
+        } catch (Exception ignored) {}
+
+        List<DbObject> result = new ArrayList<>();
+        if (collationsCount > 0) {
+            DbObject collations = new DbObject("collations", Kind.COLLATIONS_FOLDER);
+            collations.setDetail(String.valueOf(collationsCount));
+            result.add(collations);
+        }
+        if (linkedServersCount > 0) {
+            DbObject linkedServers = new DbObject("linked servers", Kind.LINKED_SERVERS_FOLDER);
+            linkedServers.setDetail(String.valueOf(linkedServersCount));
+            result.add(linkedServers);
+        }
+        if (principalsCount > 0) {
+            DbObject serverPrincipals = new DbObject("server principals", Kind.SERVER_PRINCIPALS_FOLDER);
+            serverPrincipals.setDetail(String.valueOf(principalsCount));
+            result.add(serverPrincipals);
+        }
+        return result;
+    }
+
+    public static List<DbObject> loadCollations(ConnectionProfile profile) throws Exception {
+        List<DbObject> list = new ArrayList<>();
+        try (Connection conn = client(profile, null).getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SELECT name FROM sys.fn_helpcollations() ORDER BY name")) {
+            while (rs.next()) {
+                list.add(new DbObject(rs.getString("name"), Kind.COLLATION));
+            }
+        }
+        return list;
+    }
+
+    public static List<DbObject> loadLinkedServers(ConnectionProfile profile) throws Exception {
+        List<DbObject> list = new ArrayList<>();
+        try (Connection conn = client(profile, null).getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(
+                     "SELECT name FROM sys.servers ORDER BY name")) {
+            while (rs.next()) {
+                list.add(new DbObject(rs.getString("name"), Kind.LINKED_SERVER));
+            }
+        }
+        return list;
+    }
+
+    public static List<DbObject> loadServerPrincipals(ConnectionProfile profile) throws Exception {
+        List<DbObject> list = new ArrayList<>();
+        try (Connection conn = client(profile, null).getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SELECT name FROM sys.server_principals ORDER BY name")) {
+            while (rs.next()) {
+                list.add(new DbObject(rs.getString("name"), Kind.SERVER_PRINCIPAL));
+            }
+        }
+        return list;
     }
 
     /**
@@ -279,10 +355,13 @@ public final class MetadataService {
     }
 
     /**
-     * Loads PostgreSQL database objects folder: access methods, casts, extensions, languages,
-     * matching DataGrip's Explorer tree hierarchy and live counts.
+     * Loads database objects folder: access methods, casts, extensions, languages (PostgreSQL),
+     * or assemblies, filegroups, database principals (SQL Server).
      */
     public static List<DbObject> loadDatabaseObjects(ConnectionProfile profile, DbObject dbObj) throws Exception {
+        if (profile.getType() == DatabaseType.SQLSERVER) {
+            return loadSqlServerDatabaseObjects(profile, dbObj);
+        }
         String catalog = dbObj.getCatalog();
         int amCount = 0;
         int castCount = 0;
@@ -318,6 +397,83 @@ public final class MetadataService {
         langFolder.setDetail(String.valueOf(langCount));
 
         return List.of(amFolder, castsFolder, extFolder, langFolder);
+    }
+
+    private static List<DbObject> loadSqlServerDatabaseObjects(ConnectionProfile profile, DbObject dbObj) throws Exception {
+        String catalog = dbObj.getCatalog();
+        int assembliesCount = 0;
+        int filegroupsCount = 0;
+        int principalsCount = 0;
+
+        try (Connection conn = client(profile, catalog).getConnection();
+             Statement stmt = conn.createStatement()) {
+            try (ResultSet rs = stmt.executeQuery("SELECT count(*) FROM sys.assemblies")) {
+                if (rs.next()) assembliesCount = rs.getInt(1);
+            } catch (Exception ignored) {}
+            try (ResultSet rs = stmt.executeQuery("SELECT count(*) FROM sys.filegroups")) {
+                if (rs.next()) filegroupsCount = rs.getInt(1);
+            } catch (Exception ignored) {}
+            try (ResultSet rs = stmt.executeQuery("SELECT count(*) FROM sys.database_principals")) {
+                if (rs.next()) principalsCount = rs.getInt(1);
+            } catch (Exception ignored) {}
+        } catch (Exception ignored) {}
+
+        List<DbObject> result = new ArrayList<>();
+        if (assembliesCount > 0) {
+            DbObject assemblies = new DbObject("assemblies", Kind.ASSEMBLIES_FOLDER, catalog, null);
+            assemblies.setDetail(String.valueOf(assembliesCount));
+            result.add(assemblies);
+        }
+        if (filegroupsCount > 0) {
+            DbObject filegroups = new DbObject("filegroups", Kind.FILEGROUPS_FOLDER, catalog, null);
+            filegroups.setDetail(String.valueOf(filegroupsCount));
+            result.add(filegroups);
+        }
+        if (principalsCount > 0) {
+            DbObject principals = new DbObject("database principals", Kind.DATABASE_PRINCIPALS_FOLDER, catalog, null);
+            principals.setDetail(String.valueOf(principalsCount));
+            result.add(principals);
+        }
+        return result;
+    }
+
+    public static List<DbObject> loadAssemblies(ConnectionProfile profile, DbObject folder) throws Exception {
+        String catalog = folder.getCatalog();
+        List<DbObject> list = new ArrayList<>();
+        try (Connection conn = client(profile, catalog).getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SELECT name FROM sys.assemblies ORDER BY name")) {
+            while (rs.next()) {
+                list.add(new DbObject(rs.getString("name"), Kind.ASSEMBLY, catalog, null));
+            }
+        }
+        return list;
+    }
+
+    public static List<DbObject> loadFilegroups(ConnectionProfile profile, DbObject folder) throws Exception {
+        String catalog = folder.getCatalog();
+        List<DbObject> list = new ArrayList<>();
+        try (Connection conn = client(profile, catalog).getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SELECT name FROM sys.filegroups ORDER BY name")) {
+            while (rs.next()) {
+                list.add(new DbObject(rs.getString("name"), Kind.FILEGROUP, catalog, null));
+            }
+        }
+        return list;
+    }
+
+    public static List<DbObject> loadDatabasePrincipals(ConnectionProfile profile, DbObject folder) throws Exception {
+        String catalog = folder.getCatalog();
+        List<DbObject> list = new ArrayList<>();
+        try (Connection conn = client(profile, catalog).getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SELECT name FROM sys.database_principals ORDER BY name")) {
+            while (rs.next()) {
+                list.add(new DbObject(rs.getString("name"), Kind.DATABASE_PRINCIPAL, catalog, null));
+            }
+        }
+        return list;
     }
 
     /**
@@ -393,11 +549,22 @@ public final class MetadataService {
     }
 
     /**
-     * Loads PostgreSQL virtual views for the database (e.g. sessions backed by pg_stat_activity).
+     * Loads virtual views for the database/server (e.g. sessions backed by pg_stat_activity in PostgreSQL
+     * or master.dbo.sysprocesses in SQL Server).
      */
     public static List<DbObject> loadVirtualViews(ConnectionProfile profile, DbObject folder) {
-        String catalog = folder.getCatalog();
-        return List.of(new DbObject("sessions", Kind.VIRTUAL_VIEW, catalog, null));
+        String catalog = folder != null ? folder.getCatalog() : null;
+        DbObject sessions = new DbObject("sessions", Kind.VIRTUAL_VIEW, catalog, null);
+        if (profile != null && profile.getType() == DatabaseType.SQLSERVER) {
+            sessions.setQualifiedNameOverride(
+                "(SELECT spid AS SPID, rtrim(status) AS Status, rtrim(loginame) AS Login, " +
+                "CASE WHEN rtrim(hostname) = '' THEN '.' ELSE rtrim(hostname) END AS HostName, " +
+                "CASE WHEN blocked = 0 THEN '.' ELSE cast(blocked as varchar(10)) END AS BlkBy, " +
+                "db_name(dbid) AS DBName, rtrim(cmd) AS Command " +
+                "FROM master.dbo.sysprocesses) AS sessions"
+            );
+        }
+        return List.of(sessions);
     }
 
 
