@@ -48,6 +48,8 @@ public final class DdlGeneratorService {
             case COLLATION -> generateCollationDdl(profile, obj);
             case LINKED_SERVER -> generateLinkedServerDdl(profile, obj);
             case SERVER_PRINCIPAL -> generateServerPrincipalDdl(profile, obj);
+            case USER -> generateUserDdl(profile, obj);
+            case DATA_FILE -> generateDataFileDdl(profile, obj);
             default -> "-- DDL not available for " + obj.getKind() + ": " + obj.getName();
         };
     }
@@ -563,6 +565,10 @@ public final class DdlGeneratorService {
         StringBuilder sb = new StringBuilder();
         sb.append("-- auto-generated definition\n");
         String spcName = obj.getName();
+        if (profile.getType() == DatabaseType.ORACLE) {
+            sb.append("create tablespace ").append(spcName).append(";\n");
+            return sb.toString();
+        }
         String owner = "postgres";
         String location = null;
         if (profile.getType() == DatabaseType.POSTGRESQL) {
@@ -829,6 +835,11 @@ public final class DdlGeneratorService {
         sb.append("create virtual view ").append(obj.getName()).append(" as\n");
 
         List<String> cols = new ArrayList<>();
+        if (profile.getType() == DatabaseType.ORACLE && "sessions".equalsIgnoreCase(obj.getName())) {
+            sb.append("select *\nfrom v$session;\n");
+            return sb.toString();
+        }
+
         if (profile.getType() == DatabaseType.SQLSERVER && "sessions".equalsIgnoreCase(obj.getName())) {
             cols = List.of("SPID", "Status", "Login", "HostName", "BlkBy", "DBName", "Command");
             sb.append("select ").append(cols.get(0));
@@ -943,6 +954,62 @@ public final class DdlGeneratorService {
         } else {
             return "-- auto-generated definition\ncreate login [" + name + "] with password = '***'\ngo\n";
         }
+    }
+
+    // ------------------------------------------------------------ User DDL
+
+    private static String generateUserDdl(ConnectionProfile profile, DbObject obj) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("-- auto-generated definition\n");
+        String username = obj.getName();
+        String defaultTs = null;
+        String tempTs = null;
+
+        if (profile.getType() == DatabaseType.ORACLE) {
+            String sql = "SELECT default_tablespace, temporary_tablespace FROM dba_users WHERE username = ?";
+            try (Connection conn = ClientRegistry.jdbc(profile, null).getConnection()) {
+                try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                    stmt.setString(1, username);
+                    try (ResultSet rs = stmt.executeQuery()) {
+                        if (rs.next()) {
+                            defaultTs = rs.getString(1);
+                            tempTs = rs.getString(2);
+                        }
+                    }
+                } catch (Exception ignored) {
+                    try (PreparedStatement stmt = conn.prepareStatement(
+                            "SELECT default_tablespace, temporary_tablespace FROM all_users WHERE username = ?")) {
+                        stmt.setString(1, username);
+                        try (ResultSet rs = stmt.executeQuery()) {
+                            if (rs.next()) {
+                                defaultTs = rs.getString(1);
+                                tempTs = rs.getString(2);
+                            }
+                        }
+                    } catch (Exception ignored2) {}
+                }
+            } catch (Exception ignored) {}
+        }
+
+        sb.append("create user ").append(username).append(" identified by ???");
+        if (defaultTs != null && !defaultTs.isBlank()) {
+            sb.append(" default tablespace ").append(defaultTs);
+        } else {
+            sb.append(" default tablespace USERS");
+        }
+        if (tempTs != null && !tempTs.isBlank()) {
+            sb.append(" temporary tablespace ").append(tempTs);
+        } else {
+            sb.append(" temporary tablespace TEMP");
+        }
+        sb.append("\n/\n");
+        return sb.toString();
+    }
+
+    // ------------------------------------------------------------ Datafile DDL
+
+    private static String generateDataFileDdl(ConnectionProfile profile, DbObject obj) {
+        return "-- auto-generated definition\n-- No source text available\n";
     }
 
     // ------------------------------------------------------------ Records

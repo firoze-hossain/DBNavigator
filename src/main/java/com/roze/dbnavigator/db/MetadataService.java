@@ -228,6 +228,9 @@ public final class MetadataService {
         if (profile.getType() == DatabaseType.SQLSERVER) {
             return loadSqlServerServerObjects(profile);
         }
+        if (profile.getType() == DatabaseType.ORACLE) {
+            return loadOracleServerObjects(profile);
+        }
         int rolesCount = 0;
         int tablespacesCount = 0;
         try (Connection conn = client(profile, null).getConnection();
@@ -246,6 +249,47 @@ public final class MetadataService {
         tablespacesFolder.setDetail(String.valueOf(tablespacesCount));
 
         return List.of(rolesFolder, tablespacesFolder);
+    }
+
+    private static List<DbObject> loadOracleServerObjects(ConnectionProfile profile) throws Exception {
+        int tablespacesCount = 0;
+        int usersCount = 0;
+
+        try (Connection conn = client(profile, null).getConnection();
+             Statement stmt = conn.createStatement()) {
+            try (ResultSet rs = stmt.executeQuery("SELECT count(*) FROM dba_tablespaces")) {
+                if (rs.next()) tablespacesCount = rs.getInt(1);
+            } catch (Exception e1) {
+                try (ResultSet rs = stmt.executeQuery("SELECT count(*) FROM all_tablespaces")) {
+                    if (rs.next()) tablespacesCount = rs.getInt(1);
+                } catch (Exception e2) {
+                    try (ResultSet rs = stmt.executeQuery("SELECT count(*) FROM v$tablespace")) {
+                        if (rs.next()) tablespacesCount = rs.getInt(1);
+                    } catch (Exception ignored) {}
+                }
+            }
+
+            try (ResultSet rs = stmt.executeQuery("SELECT count(*) FROM all_users")) {
+                if (rs.next()) usersCount = rs.getInt(1);
+            } catch (Exception e1) {
+                try (ResultSet rs = stmt.executeQuery("SELECT count(*) FROM dba_users")) {
+                    if (rs.next()) usersCount = rs.getInt(1);
+                } catch (Exception ignored) {}
+            }
+        } catch (Exception ignored) {}
+
+        List<DbObject> result = new ArrayList<>();
+        if (tablespacesCount > 0) {
+            DbObject tsFolder = new DbObject("tablespaces", Kind.TABLESPACES_FOLDER);
+            tsFolder.setDetail(String.valueOf(tablespacesCount));
+            result.add(tsFolder);
+        }
+        if (usersCount > 0) {
+            DbObject usersFolder = new DbObject("users", Kind.USERS_FOLDER);
+            usersFolder.setDetail(String.valueOf(usersCount));
+            result.add(usersFolder);
+        }
+        return result;
     }
 
     private static List<DbObject> loadSqlServerServerObjects(ConnectionProfile profile) throws Exception {
@@ -342,6 +386,9 @@ public final class MetadataService {
      * Queries PostgreSQL pg_tablespace to list cluster-level tablespaces.
      */
     public static List<DbObject> loadTablespaces(ConnectionProfile profile) throws Exception {
+        if (profile.getType() == DatabaseType.ORACLE) {
+            return loadOracleTablespaces(profile);
+        }
         List<DbObject> list = new ArrayList<>();
         try (Connection conn = client(profile, null).getConnection();
              Statement stmt = conn.createStatement();
@@ -349,6 +396,174 @@ public final class MetadataService {
             while (rs.next()) {
                 String name = rs.getString(1);
                 list.add(new DbObject(name, Kind.TABLESPACE));
+            }
+        }
+        return list;
+    }
+
+    private static List<DbObject> loadOracleTablespaces(ConnectionProfile profile) throws Exception {
+        List<DbObject> list = new ArrayList<>();
+        try (Connection conn = client(profile, null).getConnection();
+             Statement stmt = conn.createStatement()) {
+            boolean loaded = false;
+            try (ResultSet rs = stmt.executeQuery(
+                    "SELECT tablespace_name, contents, status, block_size, logging, force_logging " +
+                    "FROM dba_tablespaces ORDER BY tablespace_name")) {
+                while (rs.next()) {
+                    String name = rs.getString(1);
+                    String contents = rs.getString(2);
+                    String status = rs.getString(3);
+                    long blockSize = rs.getLong(4);
+                    String logging = rs.getString(5);
+                    String forceLogging = rs.getString(6);
+
+                    DbObject ts = new DbObject(name, Kind.TABLESPACE);
+                    ts.setDetail(formatOracleTablespaceDetail(contents, status, blockSize, logging, forceLogging));
+                    list.add(ts);
+                }
+                loaded = true;
+            } catch (Exception ignored) {}
+
+            if (!loaded) {
+                try (ResultSet rs = stmt.executeQuery(
+                        "SELECT tablespace_name, contents, status, block_size, logging, force_logging " +
+                        "FROM all_tablespaces ORDER BY tablespace_name")) {
+                    while (rs.next()) {
+                        String name = rs.getString(1);
+                        String contents = rs.getString(2);
+                        String status = rs.getString(3);
+                        long blockSize = rs.getLong(4);
+                        String logging = rs.getString(5);
+                        String forceLogging = rs.getString(6);
+
+                        DbObject ts = new DbObject(name, Kind.TABLESPACE);
+                        ts.setDetail(formatOracleTablespaceDetail(contents, status, blockSize, logging, forceLogging));
+                        list.add(ts);
+                    }
+                    loaded = true;
+                } catch (Exception ignored) {}
+            }
+
+            if (!loaded) {
+                try (ResultSet rs = stmt.executeQuery("SELECT name FROM v$tablespace ORDER BY name")) {
+                    while (rs.next()) {
+                        String name = rs.getString(1);
+                        list.add(new DbObject(name, Kind.TABLESPACE));
+                    }
+                } catch (Exception ignored) {}
+            }
+        }
+        return list;
+    }
+
+    public static String formatOracleTablespaceDetail(String contents, String status,
+                                                      long blockSize, String logging,
+                                                      String forceLogging) {
+        String contentsStr = (contents != null && !contents.isBlank()) ? contents.toLowerCase(Locale.ROOT) : "permanent";
+        String statusStr = (status != null && !status.isBlank()) ? status.toLowerCase(Locale.ROOT) : "online";
+        String blockSizeStr = blockSize > 0 ? "block size " + blockSize : "";
+        String loggingStr;
+        if ("YES".equalsIgnoreCase(forceLogging)) {
+            loggingStr = "force logging";
+        } else if ("NOLOGGING".equalsIgnoreCase(logging) || "NO".equalsIgnoreCase(logging)) {
+            loggingStr = "no logging";
+        } else {
+            loggingStr = "logging";
+        }
+        List<String> parts = new ArrayList<>();
+        if (!contentsStr.isEmpty()) parts.add(contentsStr);
+        if (!statusStr.isEmpty()) parts.add(statusStr);
+        if (!blockSizeStr.isEmpty()) parts.add(blockSizeStr);
+        if (!loggingStr.isEmpty()) parts.add(loggingStr);
+        return String.join(", ", parts);
+    }
+
+    public static List<DbObject> loadTablespaceDataFiles(ConnectionProfile profile, DbObject tablespaceObj) throws Exception {
+        if (profile.getType() != DatabaseType.ORACLE || tablespaceObj == null) {
+            return List.of();
+        }
+        List<DbObject> list = new ArrayList<>();
+        String tsName = tablespaceObj.getName();
+        try (Connection conn = client(profile, null).getConnection()) {
+            boolean loaded = false;
+            String sql = "SELECT file_name, bytes FROM dba_data_files WHERE tablespace_name = ? " +
+                         "UNION ALL " +
+                         "SELECT file_name, bytes FROM dba_temp_files WHERE tablespace_name = ? " +
+                         "ORDER BY 1";
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setString(1, tsName);
+                stmt.setString(2, tsName);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        String fileName = rs.getString(1);
+                        long bytes = rs.getLong(2);
+                        DbObject df = new DbObject(fileName, Kind.DATA_FILE);
+                        df.setDetail(formatFileSize(bytes));
+                        list.add(df);
+                    }
+                    loaded = true;
+                }
+            } catch (Exception ignored) {}
+
+            if (!loaded) {
+                try (PreparedStatement stmt = conn.prepareStatement(
+                        "SELECT file_name, bytes FROM dba_data_files WHERE tablespace_name = ? ORDER BY file_name")) {
+                    stmt.setString(1, tsName);
+                    try (ResultSet rs = stmt.executeQuery()) {
+                        while (rs.next()) {
+                            String fileName = rs.getString(1);
+                            long bytes = rs.getLong(2);
+                            DbObject df = new DbObject(fileName, Kind.DATA_FILE);
+                            df.setDetail(formatFileSize(bytes));
+                            list.add(df);
+                        }
+                    }
+                } catch (Exception ignored) {}
+            }
+        }
+        return list;
+    }
+
+    public static String formatFileSize(long bytes) {
+        if (bytes <= 0) return "0 B";
+        double kb = bytes / 1024.0;
+        double mb = kb / 1024.0;
+        double gb = mb / 1024.0;
+        if (gb >= 1.0) {
+            return String.format(Locale.US, "%.2f G", gb);
+        }
+        if (mb >= 1.0) {
+            return String.format(Locale.US, "%.2f M", mb);
+        }
+        if (kb >= 1.0) {
+            return String.format(Locale.US, "%.2f K", kb);
+        }
+        return bytes + " B";
+    }
+
+    public static List<DbObject> loadUsers(ConnectionProfile profile) throws Exception {
+        if (profile.getType() != DatabaseType.ORACLE) {
+            return List.of();
+        }
+        List<DbObject> list = new ArrayList<>();
+        try (Connection conn = client(profile, null).getConnection();
+             Statement stmt = conn.createStatement()) {
+            boolean loaded = false;
+            try (ResultSet rs = stmt.executeQuery("SELECT username FROM all_users ORDER BY username")) {
+                while (rs.next()) {
+                    String username = rs.getString(1);
+                    list.add(new DbObject(username, Kind.USER));
+                }
+                loaded = true;
+            } catch (Exception ignored) {}
+
+            if (!loaded) {
+                try (ResultSet rs = stmt.executeQuery("SELECT username FROM dba_users ORDER BY username")) {
+                    while (rs.next()) {
+                        String username = rs.getString(1);
+                        list.add(new DbObject(username, Kind.USER));
+                    }
+                } catch (Exception ignored) {}
             }
         }
         return list;
@@ -563,6 +778,8 @@ public final class MetadataService {
                 "db_name(dbid) AS DBName, rtrim(cmd) AS Command " +
                 "FROM master.dbo.sysprocesses) AS sessions"
             );
+        } else if (profile != null && profile.getType() == DatabaseType.ORACLE) {
+            sessions.setQualifiedNameOverride("v$session");
         }
         return List.of(sessions);
     }

@@ -22,7 +22,7 @@ import org.fxmisc.richtext.CodeArea;
 import org.kordamp.ikonli.fontawesome5.FontAwesomeSolid;
 
 /**
- * Tab displaying auto-generated DDL for a database object, matching DataGrip's DDL editor view.
+ * Tab displaying auto-generated DDL for a database object, matching the schema editor view.
  */
 public class DdlTab extends Tab {
 

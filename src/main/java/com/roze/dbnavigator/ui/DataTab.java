@@ -86,6 +86,11 @@ public class DataTab extends Tab {
                 "db_name(dbid) AS DBName, rtrim(cmd) AS Command " +
                 "FROM master.dbo.sysprocesses) AS sessions"
             );
+        } else if (profile != null && profile.getType() == ConnectionProfile.DatabaseType.ORACLE
+                && table.getKind() == DbObject.Kind.VIRTUAL_VIEW
+                && "sessions".equalsIgnoreCase(table.getName())
+                && (table.getQualifiedNameOverride() == null || table.getQualifiedNameOverride().isBlank())) {
+            table.setQualifiedNameOverride("v$session");
         }
 
         if (table.getCatalog() == null && table.getKind() == DbObject.Kind.VIRTUAL_VIEW) {
