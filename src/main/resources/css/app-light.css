@@ -332,8 +332,25 @@
 /* ---------- schema tree detail (counts, column types) ---------- */
 .tree-name   { -fx-text-fill: -text; }
 .tree-detail { -fx-text-fill: #6f7680; -fx-font-size: 11px; }
+.tree-detail-pill {
+    -fx-padding: 0 5 0 5;
+    -fx-background-color: rgba(0, 0, 0, 0.04);
+    -fx-border-color: rgba(0, 0, 0, 0.12);
+    -fx-background-radius: 8px;
+    -fx-border-radius: 8px;
+    -fx-text-fill: #6e6e76;
+}
+.tree-detail-pill:hover {
+    -fx-background-color: rgba(0, 0, 0, 0.08);
+    -fx-text-fill: #1a1a1e;
+}
 .schema-tree .tree-cell:selected .tree-name   { -fx-text-fill: white; }
 .schema-tree .tree-cell:selected .tree-detail { -fx-text-fill: #b9c4d4; }
+.schema-tree .tree-cell:selected .tree-detail-pill {
+    -fx-background-color: rgba(255, 255, 255, 0.25);
+    -fx-border-color: rgba(255, 255, 255, 0.40);
+    -fx-text-fill: #ffffff;
+}
 
 /* ---------- autocomplete popup ---------- */
 .completion-list {

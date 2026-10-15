@@ -33,20 +33,19 @@ public final class MetadataService {
             "db_denydatareader", "db_denydatawriter", "sys", "guest",
             "information_schema");
 
-    // Every Oracle install ships several dozen built-in component schemas
-    // (Oracle Text, Spatial, Multimedia, XML DB, label security, and so on)
-    // that are essentially never where a user's own tables live, alongside
-    // SYS/SYSTEM which — deliberately not included here — genuinely are
-    // used directly by many real users (this app's own SYSTEM user among
-    // them). DataGrip's equivalent tucks this same noise away under its own
-    // "Database Objects" node rather than listing it next to real schemas.
-    private static final Set<String> ORACLE_SYSTEM_SCHEMAS = Set.of(
+    // Built-in Oracle component schemas and administrative schemas
+    public static final Set<String> ORACLE_SYSTEM_SCHEMAS = Set.of(
             "anonymous", "appqossys", "audsys", "ctxsys", "dbsfwuser", "dbsnmp",
             "dip", "dvf", "dvsys", "ggsys", "gsmadmin_internal", "gsmcatuser",
             "gsmuser", "lbacsys", "mddata", "mdsys", "ojvmsys", "olapsys",
             "oracle_ocm", "orddata", "ordplugins", "ordsys", "outln", "pdbadmin",
-            "remote_scheduler_agent", "si_informtn_schema", "sys$umf",
-            "sysbackup", "sysdg", "syskm", "sysrac", "wmsys", "xdb", "xs$null");
+            "remote_scheduler_agent", "si_informtn_schema", "sys", "sys$umf",
+            "sysbackup", "sysdg", "syskm", "sysrac", "system", "wmsys", "xdb", "xs$null");
+
+    public static boolean isOracleSystemSchema(String schema) {
+        if (schema == null) return false;
+        return ORACLE_SYSTEM_SCHEMAS.contains(schema.toLowerCase(Locale.ROOT));
+    }
 
     private static JdbcClient client(ConnectionProfile profile, String catalog) {
         return ClientRegistry.jdbc(profile, catalog);
@@ -162,13 +161,12 @@ public final class MetadataService {
         }
 
         return switch (profile.getType()) {
-            // PostgreSQL: list EVERY database on the server (DataGrip style)
+            // PostgreSQL: list all databases on the server
             case POSTGRESQL -> loadPostgresDatabases(profile);
             case MYSQL, MARIADB -> loadCatalogs(profile);
-            // SQL Server: same idea as PostgreSQL — one login can see every
-            // database on the instance, and each has its own set of schemas,
-            // so it gets its own DATABASE level in the tree too (DataGrip
-            // does the same: CompanyDB, master, etc. each as their own node).
+            // SQL Server: one login can see every database on the instance,
+            // and each has its own set of schemas, so it gets its own DATABASE level
+            // in the tree too (master, tempdb, etc. each as their own node).
             case SQLSERVER -> loadSqlServerDatabases(profile);
             case ORACLE -> {
                 try (Connection conn = client(profile, null).getConnection()) {
@@ -214,7 +212,7 @@ public final class MetadataService {
             while (rs.next()) {
                 String db = rs.getString(1);
                 DbObject obj = new DbObject(db, Kind.DATABASE, db, null);
-                if (db.equals(profile.getDatabase())) obj.setDetail("(default)");
+                obj.setDetail("1 of 3");
                 result.add(obj);
             }
         }
@@ -848,8 +846,6 @@ public final class MetadataService {
                         && PG_SYSTEM_SCHEMAS.contains(schema)) continue;
                 if (profile.getType() == DatabaseType.SQLSERVER
                         && SQLSERVER_SYSTEM_SCHEMAS.contains(schema.toLowerCase(Locale.ROOT))) continue;
-                if (profile.getType() == DatabaseType.ORACLE
-                        && ORACLE_SYSTEM_SCHEMAS.contains(schema.toLowerCase(Locale.ROOT))) continue;
                 result.add(new DbObject(schema, Kind.SCHEMA, catalog, schema));
             }
         }

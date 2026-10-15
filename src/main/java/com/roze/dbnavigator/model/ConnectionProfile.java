@@ -89,6 +89,8 @@ public class ConnectionProfile {
     private String projectName = "default";
     /** Group / folder for organizing connections. */
     private String group = "";
+    /** Total number of databases/schemas on the server, used for explorer badges (e.g. 13 in "3 of 13"). */
+    private int totalDatabases;
 
     public ConnectionProfile() {}
 
@@ -320,10 +322,13 @@ public class ConnectionProfile {
         c.oracleConnectString = oracleConnectString;
         c.projectName = (projectName != null && !projectName.isBlank()) ? projectName : "default";
         c.group = group != null ? group : "";
+        c.totalDatabases = totalDatabases;
         return c;
     }
 
     // Getters / setters (Jackson needs these)
+    public int getTotalDatabases() { return totalDatabases; }
+    public void setTotalDatabases(int totalDatabases) { this.totalDatabases = totalDatabases; }
     public String getGroup() { return group != null ? group : ""; }
     public void setGroup(String group) { this.group = group == null ? "" : group; }
     public String getProjectName() {
