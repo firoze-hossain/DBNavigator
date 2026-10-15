@@ -93,9 +93,14 @@ public final class Icons {
             // icon as a real primary key, matching the reference exactly;
             // every other (schema-less, inferred) field gets a generic
             // document-field icon instead.
-            case FIELD -> "_id".equals(obj.getName())
-                    ? of(FontAwesomeSolid.KEY, "#e0a44c", 11)
-                    : of(FontAwesomeSolid.CODE, "#6897bb", 11);
+            case FIELD -> {
+                if ("_id".equals(obj.getName())) {
+                    yield of(FontAwesomeSolid.KEY, "#e0a44c", 11);
+                }
+                javafx.scene.control.Label brace = new javafx.scene.control.Label("{ }");
+                brace.setStyle("-fx-font-family: monospace; -fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #8c939f; -fx-padding: 0;");
+                yield brace;
+            }
             case MESSAGE    -> of(FontAwesomeSolid.INFO_CIRCLE, "#868a91", 11);
         };
     }

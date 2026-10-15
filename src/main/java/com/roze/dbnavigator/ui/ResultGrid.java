@@ -122,6 +122,13 @@ public class ResultGrid extends TableView<List<String>> {
     private List<String> columnTypes = List.of();
     private List<String> columnNames = List.of();
 
+    private final javafx.beans.property.StringProperty selectionStatusProperty =
+            new javafx.beans.property.SimpleStringProperty("");
+
+    public javafx.beans.property.ReadOnlyStringProperty selectionStatusProperty() {
+        return selectionStatusProperty;
+    }
+
     public ResultGrid() {
         getStyleClass().add("result-grid");
         setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
@@ -131,11 +138,14 @@ public class ResultGrid extends TableView<List<String>> {
         // Shift+click selects cell ranges.
         getSelectionModel().setCellSelectionEnabled(true);
         getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        getSelectionModel().getSelectedCells().addListener((javafx.collections.ListChangeListener<TablePosition>) c -> updateSelectionStatus());
+        itemsProperty().addListener((obs, oldV, newV) -> updateSelectionStatus());
 
         getFocusModel().focusedCellProperty().addListener((obs, oldVal, newVal) -> {
             if (!isHandlingShiftClick && newVal != null && newVal.getRow() >= 0) {
                 lastRowHeaderIndex = newVal.getRow();
             }
+            updateSelectionStatus();
         });
 
         setRowFactory(tv -> new TableRow<>() {
@@ -1081,6 +1091,8 @@ public class ResultGrid extends TableView<List<String>> {
             final int index = i;
             String columnName = columnNames.get(i);
             TableColumn<List<String>, String> col = new TableColumn<>(columnName);
+            col.setId(columnName);
+            col.setUserData(columnName);
             col.setCellValueFactory(data -> {
                 List<String> row = data.getValue();
                 String raw = index < row.size() ? row.get(index) : null;
@@ -1109,6 +1121,75 @@ public class ResultGrid extends TableView<List<String>> {
 
         ObservableList<List<String>> items = FXCollections.observableArrayList(result.getRows());
         setItems(items);
+    }
+
+    public void selectColumn(String columnName) {
+        if (columnName == null) return;
+        TableColumn<List<String>, ?> targetCol = null;
+        for (TableColumn<List<String>, ?> col : getColumns()) {
+            if (columnName.equalsIgnoreCase(col.getId())
+                    || columnName.equalsIgnoreCase(String.valueOf(col.getUserData()))) {
+                targetCol = col;
+                break;
+            }
+        }
+        if (targetCol == null && columnNames != null) {
+            for (int i = 0; i < columnNames.size(); i++) {
+                if (columnName.equalsIgnoreCase(columnNames.get(i))) {
+                    int colIndex = i + 1; // 0 is serialCol
+                    if (colIndex < getColumns().size()) {
+                        targetCol = getColumns().get(colIndex);
+                    }
+                    break;
+                }
+            }
+        }
+        if (targetCol == null) return;
+
+        if (!getItems().isEmpty()) {
+            getSelectionModel().clearSelection();
+            getSelectionModel().select(0, targetCol);
+            getFocusModel().focus(0, targetCol);
+            scrollTo(0);
+        }
+        scrollToColumn(targetCol);
+        requestFocus();
+    }
+
+    private void updateSelectionStatus() {
+        var selected = getSelectionModel().getSelectedCells();
+        if (selected == null || selected.isEmpty()) {
+            selectionStatusProperty.set("");
+            return;
+        }
+        TablePosition<?, ?> first = selected.get(0);
+        int r = first.getRow() + 1;
+        int c = first.getColumn();
+        String pos = (r > 0 && c > 0) ? (r + ":" + c) : "";
+
+        double sum = 0;
+        boolean hasNum = false;
+        for (TablePosition<?, ?> p : selected) {
+            if (p.getRow() >= 0 && p.getRow() < getItems().size() && p.getColumn() > 0) {
+                int colIdx = p.getColumn() - 1;
+                List<String> row = getItems().get(p.getRow());
+                if (row != null && colIdx >= 0 && colIdx < row.size()) {
+                    String val = row.get(colIdx);
+                    if (val != null && !val.isBlank()) {
+                        try {
+                            sum += Double.parseDouble(val.trim());
+                            hasNum = true;
+                        } catch (NumberFormatException ignored) {}
+                    }
+                }
+            }
+        }
+        if (hasNum) {
+            String sumStr = (sum == (long) sum) ? String.valueOf((long) sum) : String.format(java.util.Locale.ROOT, "%.2f", sum);
+            selectionStatusProperty.set("SUM: " + sumStr + (pos.isEmpty() ? "" : "   " + pos));
+        } else {
+            selectionStatusProperty.set(pos);
+        }
     }
 
     /**

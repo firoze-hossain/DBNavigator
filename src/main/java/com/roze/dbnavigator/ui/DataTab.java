@@ -28,7 +28,7 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 /**
- * DataGrip-style table data view: breadcrumb showing exactly which
+ * Interactive table data view: breadcrumb showing exactly which
  * connection ▸ database ▸ schema ▸ table is open, paged grid with WHERE/ORDER BY,
  * inline editing (incl. date picker), multi-row delete, transactional Submit.
  * Uses the same {@link ResultPager} component as the query console for a
@@ -70,6 +70,14 @@ public class DataTab extends Tab {
     private int page = 0;
     private long totalRows = -1;
     private boolean totalRowsExact = false;
+    private String pendingSelectColumn;
+
+    public void selectColumn(String columnName) {
+        this.pendingSelectColumn = columnName;
+        if (grid != null && !grid.getItems().isEmpty()) {
+            grid.selectColumn(columnName);
+        }
+    }
 
     public DataTab(ConnectionProfile profile, DbObject table) {
         this.profile = profile;
@@ -211,7 +219,12 @@ public class DataTab extends Tab {
         crumbBar.getStyleClass().add("breadcrumb-bar");
 
         statusLabel.getStyleClass().add("console-status");
-        HBox statusBar = new HBox(statusLabel);
+        Region statusSpacer = new Region();
+        HBox.setHgrow(statusSpacer, Priority.ALWAYS);
+        Label positionLabel = new Label();
+        positionLabel.getStyleClass().add("console-status");
+        positionLabel.textProperty().bind(grid.selectionStatusProperty());
+        HBox statusBar = new HBox(statusLabel, statusSpacer, positionLabel);
         statusBar.setPadding(new Insets(4, 10, 4, 10));
         statusBar.getStyleClass().add("console-status-bar");
 
@@ -241,7 +254,7 @@ public class DataTab extends Tab {
         detectPrimaryKeyThenLoad();
     }
 
-    /** DataGrip-like WHERE / ORDER BY controls with local table-column completion. */
+    /** Local WHERE / ORDER BY controls with local table-column completion. */
     private void setupClauseControls() {
         whereLabel.getStyleClass().add("data-clause-label");
         orderLabel.getStyleClass().add("data-clause-label");
@@ -507,6 +520,10 @@ public class DataTab extends Tab {
                     editManager.configure(table.qualifiedName(), pkColumns, columnTypes, finalResult);
                     grid.setRowNumberOffset(currentPage * PAGE_SIZE);
                     grid.showResult(finalResult);
+                    if (pendingSelectColumn != null) {
+                        grid.selectColumn(pendingSelectColumn);
+                        pendingSelectColumn = null;
+                    }
 
                     // Fewer rows than a full page means we've now directly observed the
                     // true end, regardless of what an earlier estimate suggested.

@@ -9,6 +9,7 @@ import com.roze.dbnavigator.model.QueryResult;
 import org.bson.Document;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -89,6 +90,10 @@ public class MongoDbClient implements AutoCloseable {
                     row.add(null);
                 } else if (value instanceof Document nested) {
                     row.add(nested.toJson());
+                } else if (value instanceof List<?> list) {
+                    String json = new Document("v", list).toJson();
+                    int colon = json.indexOf(':');
+                    row.add(colon >= 0 && json.endsWith("}") ? json.substring(colon + 1, json.length() - 1).trim() : list.toString());
                 } else {
                     row.add(String.valueOf(value));
                 }
@@ -136,45 +141,41 @@ public class MongoDbClient implements AutoCloseable {
      * Infers a collection's top-level fields and their types by sampling
      * documents, since MongoDB collections have no fixed schema to read
      * directly. The first type seen for each field name wins if documents
-     * disagree — good enough for the tree view's purposes; the actual data
-     * grid already shows each document's real values regardless.
+     * disagree.
+     * Top-level keys are extracted without flattening nested documents (so
+     * nested documents simply have type "Object"). The "_id" field is always
+     * listed first, followed by all remaining fields in alphabetical order.
      */
     public List<FieldInfo> inferFields(String database, String collection, int sampleSize) {
-        Map<String, String> typeByField = new LinkedHashMap<>();
-        typeByField.put("_id", "ObjectId");   // present on virtually every document; guarantee it's first
+        Map<String, String> typeByField = new HashMap<>();
 
         MongoCollection<Document> coll = client.getDatabase(database).getCollection(collection);
         for (Document doc : coll.find().limit(sampleSize)) {
-            collectFields(doc, "", typeByField, 0);
+            for (String key : doc.keySet()) {
+                if (!typeByField.containsKey(key)) {
+                    typeByField.put(key, bsonTypeName(doc.get(key)));
+                }
+            }
+        }
+        if (!typeByField.containsKey("_id")) {
+            typeByField.put("_id", "ObjectId");
         }
 
+        List<String> sortedKeys = new ArrayList<>(typeByField.keySet());
+        sortedKeys.sort((a, b) -> {
+            if ("_id".equals(a)) return -1;
+            if ("_id".equals(b)) return 1;
+            return a.compareToIgnoreCase(b);
+        });
+
         List<FieldInfo> result = new ArrayList<>();
-        for (Map.Entry<String, String> entry : typeByField.entrySet()) {
-            result.add(new FieldInfo(entry.getKey(), entry.getValue()));
+        for (String key : sortedKeys) {
+            result.add(new FieldInfo(key, typeByField.get(key)));
         }
         return result;
     }
 
-    /**
-     * Recursively walks a document's fields, adding a dot-notation entry
-     * for each nested sub-field (e.g. "address.city") right alongside the
-     * parent object field itself ("address") — matching the reference
-     * IDE's own field tree exactly, which lists both. Capped at a modest
-     * depth purely as a safety net against unusually deep documents.
-     */
-    private static void collectFields(Document doc, String prefix, Map<String, String> typeByField, int depth) {
-        if (depth > 4) return;
-        for (String key : doc.keySet()) {
-            String fullKey = prefix.isEmpty() ? key : prefix + "." + key;
-            Object value = doc.get(key);
-            typeByField.putIfAbsent(fullKey, bsonTypeName(value));
-            if (value instanceof Document nested) {
-                collectFields(nested, fullKey, typeByField, depth + 1);
-            }
-        }
-    }
-
-    /** One index, with a DataGrip-style "(keys) UNIQUE" detail string ready to display. */
+    /** One index, with a "(keys) UNIQUE" detail string ready to display. */
     public record IndexInfo(String name, String detail) {}
 
     public List<IndexInfo> listIndexes(String database, String collection) {
