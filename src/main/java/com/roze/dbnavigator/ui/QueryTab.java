@@ -177,8 +177,10 @@ public class QueryTab extends Tab {
         cancelButton.setManaged(false);
         cancelButton.setOnAction(e -> cancelRunningQuery());
 
+        boolean isMac = System.getProperty("os.name", "").toLowerCase().contains("mac");
+        String historyShortcut = isMac ? "⌥⌘E" : "Ctrl+Alt+E";
         historyButton.setGraphic(Icons.of(FontAwesomeSolid.HISTORY, "#a9b7c6", 11));
-        historyButton.setTooltip(new Tooltip("Query History"));
+        historyButton.setTooltip(new Tooltip("Browse Query History (" + historyShortcut + ")"));
         historyButton.setOnAction(e -> showHistory());
 
         statementsButton.setGraphic(Icons.of(FontAwesomeSolid.LIST_UL, "#a9b7c6", 11));
@@ -189,14 +191,6 @@ public class QueryTab extends Tab {
         reloadButton.setTooltip(new Tooltip("Reload Page  Ctrl+F5"));
         reloadButton.setOnAction(e -> handleReloadQuery());
 
-        Button deleteButton = new Button();
-        deleteButton.setGraphic(Icons.of(FontAwesomeSolid.MINUS, "#e05555", 11));
-        deleteButton.setTooltip(new Tooltip("Delete Selected Row(s)"));
-        deleteButton.setOnAction(e -> {
-            if (activeResultGrid().getDeleteRowsAction() != null) {
-                activeResultGrid().getDeleteRowsAction().run();
-            }
-        });
 
         submitButton.setGraphic(Icons.of(FontAwesomeSolid.CHECK, "#57965c", 11));
         submitButton.setTooltip(new Tooltip("Commit pending result edits/deletes"));
@@ -206,17 +200,6 @@ public class QueryTab extends Tab {
         editManager = new GridEditManager(profile, catalog, resultGrid,
                 submitButton, revertButton, this::rerunLastSql, statusLabel::setText);
 
-        Button exportButton = new Button("Export Data");
-        exportButton.setGraphic(Icons.of(FontAwesomeSolid.DOWNLOAD, "#e0a44c", 11));
-        exportButton.setOnAction(e -> {
-            ResultGrid activeGrid = activeResultGrid();
-            if (activeGrid != null && !activeGrid.getItems().isEmpty()) {
-                ExportDataDialog.show(mainWindow != null ? mainWindow.getOwnerWindow() : null,
-                        "query_result", activeGrid.toQueryResult(),
-                        profile != null ? profile.getType() : ConnectionProfile.DatabaseType.POSTGRESQL,
-                        activeGrid.getActiveExtractorFormat());
-            }
-        });
 
         limitSpinner.setEditable(true);
         limitSpinner.setPrefWidth(95);
@@ -225,9 +208,7 @@ public class QueryTab extends Tab {
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-        HBox toolbar = new HBox(8, runButton, cancelButton, reloadButton, historyButton, statementsButton,
-                deleteButton, submitButton, revertButton, exportButton,
-                new Label("Limit:"), limitSpinner, spacer, dbSelectorNode);
+        HBox toolbar = new HBox(8, runButton, cancelButton, historyButton, statementsButton, spacer, dbSelectorNode);
         toolbar.setAlignment(Pos.CENTER_LEFT);
         toolbar.setPadding(new Insets(6, 10, 6, 10));
         toolbar.getStyleClass().add("console-toolbar");
@@ -301,7 +282,6 @@ public class QueryTab extends Tab {
         VBox.setVgrow(tabPaneStack, Priority.ALWAYS);
         tabPaneStack.getChildren().add(resultsTabPane);
 
-        boolean isMac = System.getProperty("os.name", "").toLowerCase().contains("mac");
         String hideShortcut = isMac ? "⇧⎋" : "Shift+Escape";
 
         this.hideDataPanelButton = new Button();
@@ -373,6 +353,10 @@ public class QueryTab extends Tab {
                     hideDataPanel();
                     e.consume();
                 }
+            } else if (new KeyCodeCombination(KeyCode.E, KeyCombination.SHORTCUT_DOWN, KeyCombination.ALT_DOWN).match(e)
+                    || (e.isControlDown() && e.isAltDown() && e.getCode() == KeyCode.E)) {
+                showHistory();
+                e.consume();
             } else if (new KeyCodeCombination(KeyCode.ENTER, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN).match(e)) {
                 executeAction(1);
                 e.consume();
@@ -1733,7 +1717,7 @@ public class QueryTab extends Tab {
         });
     }
 
-    private void showHistory() {
+    public void showHistory() {
         List<QueryHistoryStore.Entry> entries = QueryHistoryStore.forConnection(profile.getId());
         if (entries.isEmpty()) {
             statusLabel.setText("No query history yet for this connection");
@@ -1741,9 +1725,16 @@ public class QueryTab extends Tab {
         }
         historyList.getItems().setAll(entries);
         historyList.getSelectionModel().selectFirst();
-        historyPopup.show(historyButton, historyButton.localToScreen(0, 0).getX(),
-                historyButton.localToScreen(0, 0).getY() + historyButton.getHeight() + 2);
-        historyList.requestFocus();
+        if (historyButton.getScene() != null && historyButton.getScene().getWindow() != null) {
+            javafx.geometry.Point2D screenCoords = historyButton.localToScreen(0, 0);
+            if (screenCoords != null) {
+                historyPopup.show(historyButton, screenCoords.getX(),
+                        screenCoords.getY() + historyButton.getHeight() + 2);
+            } else {
+                historyPopup.show(historyButton.getScene().getWindow());
+            }
+            historyList.requestFocus();
+        }
     }
 
     private void insertSelectedHistory() {
@@ -2071,7 +2062,13 @@ public class QueryTab extends Tab {
         DataExtractorsToolbar extractorsToolbar = new DataExtractorsToolbar(
                 profile != null ? profile.getType() : ConnectionProfile.DatabaseType.POSTGRESQL,
                 grid::toQueryResult,
-                () -> "query_result",
+                () -> {
+                    Tab selected = resultsTabPane.getSelectionModel().getSelectedItem();
+                    if (selected != null && selected.getText() != null && !selected.getText().isBlank()) {
+                        return selected.getText();
+                    }
+                    return "query_result";
+                },
                 () -> null,
                 () -> profile,
                 () -> mainWindow != null ? mainWindow.getOwnerWindow() : null
@@ -2404,6 +2401,10 @@ public class QueryTab extends Tab {
 
     public Button getHideDataPanelButton() {
         return hideDataPanelButton;
+    }
+
+    public Button getHistoryButton() {
+        return historyButton;
     }
 
     public VBox getDataPanelContainer() {
