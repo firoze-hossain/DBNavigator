@@ -16,7 +16,9 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
@@ -91,12 +93,14 @@ public class MongoConsoleTab extends Tab {
     private String sortDirection;   // "ASC", "DESC", or null
 
     // ---- find() pagination ----
-    private static final int FIND_PAGE_SIZE = 200;
+    private int findPageSize = 200;
     private int findPage = 0;
     private long findTotalDocs = -1;
-    private final Label findPageLabel = new Label();
-    private final Button findPrevButton = new Button();
-    private final Button findNextButton = new Button();
+    private final TablePagingWidget pagingWidget = new TablePagingWidget();
+    private BorderPane resultPagingBar;
+    private final Label statusLabel = new Label();
+    private final Label positionLabel = new Label();
+    private HBox dataToolbar;
 
     // ---- autocomplete ----
     private final Popup completionPopup = new Popup();
@@ -121,6 +125,7 @@ public class MongoConsoleTab extends Tab {
         editor.replaceText("// MongoDB console. Run/Ctrl+Enter execute the statement at the caret.\n"
                 + "// Example: use " + (initialDatabase != null ? initialDatabase : "mydb") + ";\n"
                 + "// db.collection.insertOne({ name: \"Ada\", age: 30 });\n\n");
+        editor.moveTo(0);
         VirtualizedScrollPane<CodeArea> editorScroll = new VirtualizedScrollPane<>(editor);
 
         Button runButton = new Button("Run");
@@ -161,18 +166,61 @@ public class MongoConsoleTab extends Tab {
 
         outputArea.setEditable(false);
         outputArea.getStyleClass().add("process-output");
-        findPrevButton.setGraphic(Icons.of(FontAwesomeSolid.CHEVRON_LEFT, "#a9b7c6", 11));
-        findPrevButton.setOnAction(e -> { if (findPage > 0) { findPage--; rerunLastFind(); } });
-        findNextButton.setGraphic(Icons.of(FontAwesomeSolid.CHEVRON_RIGHT, "#a9b7c6", 11));
-        findNextButton.setOnAction(e -> { findPage++; rerunLastFind(); });
-        findPrevButton.setDisable(true);
-        findNextButton.setDisable(true);
-        Region resultSpacer = new Region();
-        HBox.setHgrow(resultSpacer, Priority.ALWAYS);
-        HBox resultPagingBar = new HBox(6, resultSpacer, findPrevButton, findPageLabel, findNextButton);
-        resultPagingBar.setAlignment(Pos.CENTER_RIGHT);
+        pagingWidget.setActivePageSize(findPageSize);
+        pagingWidget.setOnCountRows(() -> {
+            if (lastFindCollection == null) return;
+            AppExecutor.run(() -> {
+                try {
+                    MongoDbClient client = ClientRegistry.mongo(profile);
+                    long count = client.countDocuments(lastFindDatabase, lastFindCollection, lastFindFilter);
+                    findTotalDocs = count;
+                    Platform.runLater(() -> {
+                        int rows = resultGrid.getItems().size();
+                        long from = rows == 0 ? 0 : (long) findPage * findPageSize + 1;
+                        long to = from + rows - 1;
+                        pagingWidget.update(from, to, findTotalDocs, true);
+                        statusLabel.setText("Counted " + count + " document(s)");
+                        log("Counted " + count + " document(s) in " + lastFindCollection);
+                    });
+                } catch (Exception ex) {
+                    Platform.runLater(() -> {
+                        statusLabel.setText("Error counting documents: " + ex.getMessage());
+                        log("Error counting documents: " + ex.getMessage());
+                    });
+                }
+            });
+        });
+        pagingWidget.setOnPageSizeChanged(newSize -> {
+            findPageSize = newSize;
+            findPage = 0;
+            rerunLastFind();
+        });
+        pagingWidget.setOnPlacementChanged(this::applyPagingPlacement);
+        pagingWidget.setOnReload(this::rerunLastFind);
+        pagingWidget.setOnFirst(() -> {
+            if (findPage != 0) {
+                findPage = 0;
+                rerunLastFind();
+            }
+        });
+        pagingWidget.setOnPrev(() -> {
+            if (findPage > 0) {
+                findPage--;
+                rerunLastFind();
+            }
+        });
+        pagingWidget.setOnNext(() -> {
+            findPage++;
+            rerunLastFind();
+        });
+
+        statusLabel.getStyleClass().add("console-status");
+        positionLabel.getStyleClass().add("console-status");
+        positionLabel.textProperty().bind(resultGrid.selectionStatusProperty());
+        resultPagingBar = new BorderPane();
         resultPagingBar.setPadding(new Insets(4, 8, 4, 8));
         resultPagingBar.getStyleClass().add("console-status-bar");
+        applyPagingPlacement(TablePagingWidget.Placement.BOTTOM_CENTER);
 
         resultGrid.setReloadAction(this::rerunLastFind);
 
@@ -229,7 +277,7 @@ public class MongoConsoleTab extends Tab {
         Region tbSpacer = new Region();
         HBox.setHgrow(tbSpacer, Priority.ALWAYS);
 
-        HBox dataToolbar = new HBox(6, addRowBtn, deleteRowsBtn, tabSubmitBtn, tabRevertBtn, tabReloadBtn, tbSpacer, extractorsToolbar);
+        dataToolbar = new HBox(6, addRowBtn, deleteRowsBtn, tabSubmitBtn, tabRevertBtn, tabReloadBtn, tbSpacer, extractorsToolbar);
         dataToolbar.setAlignment(Pos.CENTER_LEFT);
         dataToolbar.setPadding(new Insets(4, 8, 4, 8));
         dataToolbar.getStyleClass().add("result-data-toolbar");
@@ -764,7 +812,7 @@ public class MongoConsoleTab extends Tab {
                 result = client.findOne(lastFindDatabase, lastFindCollection, lastFindFilter);
             } else {
                 result = client.find(lastFindDatabase, lastFindCollection, lastFindFilter,
-                        sortField, "DESC".equals(sortDirection), findPage * FIND_PAGE_SIZE, FIND_PAGE_SIZE);
+                        sortField, "DESC".equals(sortDirection), findPage * findPageSize, findPageSize);
                 if (findTotalDocs < 0) {
                     try {
                         findTotalDocs = client.countDocuments(lastFindDatabase, lastFindCollection, lastFindFilter);
@@ -785,30 +833,86 @@ public class MongoConsoleTab extends Tab {
                 resultGrid.showResult(finalResult);
                 bottomTabs.getSelectionModel().select(resultTab);
                 updateFindPagingUi(finalResult);
+                String statusText = finalResult.getRows().size() + " document(s) in " + (System.currentTimeMillis() - start) + " ms";
+                statusLabel.setText(statusText);
                 log("db." + lastFindCollection + "." + (lastFindWasSingle ? "findOne" : "find")
-                        + "(...) \u2192 " + finalResult.getRows().size()
-                        + " document(s) in " + (System.currentTimeMillis() - start) + " ms");
+                        + "(...) \u2192 " + statusText);
             });
         } catch (Exception ex) {
             String msg = ex.getMessage() == null ? ex.toString() : ex.getMessage();
-            Platform.runLater(() -> log("Error running find(): " + msg));
+            Platform.runLater(() -> {
+                statusLabel.setText("Error: " + msg);
+                log("Error running find(): " + msg);
+            });
         }
     }
 
     private void updateFindPagingUi(QueryResult result) {
         if (lastFindWasSingle) {
-            findPageLabel.setText("");
-            findPrevButton.setDisable(true);
-            findNextButton.setDisable(true);
+            pagingWidget.update(1, 1, 1, true);
             return;
         }
         int rows = result.getRows().size();
-        long from = rows == 0 ? 0 : (long) findPage * FIND_PAGE_SIZE + 1;
+        long from = rows == 0 ? 0 : (long) findPage * findPageSize + 1;
         long to = from + rows - 1;
-        findPageLabel.setText(rows == 0 ? "0 docs"
-                : from + "\u2013" + to + (findTotalDocs >= 0 ? " of " + findTotalDocs : ""));
-        findPrevButton.setDisable(findPage == 0);
-        findNextButton.setDisable(rows < FIND_PAGE_SIZE);
+        pagingWidget.update(from, to, findTotalDocs, findTotalDocs >= 0);
+    }
+
+    private void applyPagingPlacement(TablePagingWidget.Placement placement) {
+        if (pagingWidget.getParent() instanceof Pane parent) {
+            parent.getChildren().remove(pagingWidget);
+        }
+        if (dataToolbar != null) {
+            dataToolbar.getChildren().remove(pagingWidget);
+        }
+        if (resultPagingBar != null) {
+            resultPagingBar.setLeft(null);
+            resultPagingBar.setCenter(null);
+            resultPagingBar.setRight(null);
+        }
+        pagingWidget.setPlacement(placement);
+        if (resultPagingBar == null) return;
+
+        switch (placement) {
+            case BOTTOM_CENTER -> {
+                resultPagingBar.setLeft(statusLabel);
+                BorderPane.setAlignment(statusLabel, Pos.CENTER_LEFT);
+                resultPagingBar.setCenter(pagingWidget);
+                BorderPane.setAlignment(pagingWidget, Pos.CENTER);
+                resultPagingBar.setRight(positionLabel);
+                BorderPane.setAlignment(positionLabel, Pos.CENTER_RIGHT);
+            }
+            case BOTTOM_LEFT -> {
+                HBox leftBox = new HBox(10, pagingWidget, statusLabel);
+                leftBox.setAlignment(Pos.CENTER_LEFT);
+                resultPagingBar.setLeft(leftBox);
+                resultPagingBar.setCenter(null);
+                resultPagingBar.setRight(positionLabel);
+                BorderPane.setAlignment(positionLabel, Pos.CENTER_RIGHT);
+            }
+            case BOTTOM_RIGHT -> {
+                resultPagingBar.setLeft(statusLabel);
+                BorderPane.setAlignment(statusLabel, Pos.CENTER_LEFT);
+                resultPagingBar.setCenter(null);
+                HBox rightBox = new HBox(10, positionLabel, pagingWidget);
+                rightBox.setAlignment(Pos.CENTER_RIGHT);
+                resultPagingBar.setRight(rightBox);
+            }
+            case TOOLBAR -> {
+                resultPagingBar.setLeft(statusLabel);
+                BorderPane.setAlignment(statusLabel, Pos.CENTER_LEFT);
+                resultPagingBar.setCenter(null);
+                resultPagingBar.setRight(positionLabel);
+                BorderPane.setAlignment(positionLabel, Pos.CENTER_RIGHT);
+                if (dataToolbar != null && !dataToolbar.getChildren().contains(pagingWidget)) {
+                    dataToolbar.getChildren().add(pagingWidget);
+                }
+            }
+        }
+    }
+
+    public TablePagingWidget getPagingWidget() {
+        return pagingWidget;
     }
 
     private void reportCommand(MongoShellParser.Statement stmt, String message, long start) {

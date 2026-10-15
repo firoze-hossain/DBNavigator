@@ -26,7 +26,7 @@ public class PagedResultCursor implements AutoCloseable {
     private static final int SAFETY_CAP = 50_000;
     private static final int DEFAULT_QUERY_TIMEOUT_SECONDS = 120;
 
-    private final int pageSize;
+    private int pageSize;
     private Connection connection;
     private Statement statement;
     private ResultSet resultSet;
@@ -235,6 +235,7 @@ public class PagedResultCursor implements AutoCloseable {
     public List<List<String>> getCachedRows() { return cachedRows; }
     public boolean isExhausted() { return exhausted; }
     public int getPageSize() { return pageSize; }
+    public void setPageSize(int pageSize) { this.pageSize = Math.max(1, pageSize); }
     public int getUpdateCount() { return updateCount; }
     public String getMessage() { return message; }
     public long getExecutionMillis() { return executionMillis; }

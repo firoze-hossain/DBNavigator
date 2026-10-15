@@ -1015,6 +1015,53 @@
 }
 .result-pager-overflow > .arrow { -fx-background-color: transparent; -fx-padding: 0; }
 
+/* ---------- result paging pill ("3 rows ⌄ | ⋮") ---------- */
+.result-paging-pill {
+    -fx-background-color: #2b2d30;
+    -fx-border-color: #393b40;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+    -fx-padding: 1 2 1 2;
+    -fx-alignment: CENTER_LEFT;
+}
+.result-paging-pill:hover {
+    -fx-border-color: #4e5157;
+}
+.result-paging-pill .rows-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: -text-normal;
+    -fx-font-size: 11px;
+    -fx-padding: 2 6 2 6;
+    -fx-border-width: 0;
+    -fx-cursor: hand;
+}
+.result-paging-pill .rows-button:hover {
+    -fx-background-color: #35373c;
+    -fx-background-radius: 3px;
+}
+.result-paging-pill .options-button {
+    -fx-background-color: transparent;
+    -fx-padding: 2 4 2 4;
+    -fx-border-width: 0;
+    -fx-cursor: hand;
+}
+.result-paging-pill .options-button:hover {
+    -fx-background-color: #35373c;
+    -fx-background-radius: 3px;
+}
+.result-paging-pill .pill-divider {
+    -fx-background-color: #393b40;
+    -fx-pref-width: 1px;
+    -fx-min-width: 1px;
+    -fx-max-width: 1px;
+    -fx-padding: 0;
+}
+.ddl-button {
+    -fx-font-weight: bold;
+    -fx-font-size: 11px;
+    -fx-padding: 3 8 3 8;
+}
+
 /* ---------- pinned tab (right-click > Pin Tab) ---------- */
 .pinned-tab { -fx-font-style: italic; }
 .pinned-tab .tab-label { -fx-font-style: italic; }
@@ -1026,10 +1073,55 @@
     -fx-border-width: 0 0 0 3;
 }
 
-/* ---------- sortable column header (DataGrip-style sort icon) ---------- */
+/* ---------- sortable column header (sort icon) ---------- */
 .grid-header-label { -fx-text-fill: -text; -fx-font-weight: bold; }
 .grid-sort-icon { -fx-cursor: hand; }
 
 /* ---------- inline dialog status (Modify Collection, etc.) ---------- */
 .status-success { -fx-text-fill: #57965c; -fx-font-weight: bold; }
 .status-error { -fx-text-fill: #e05555; -fx-font-weight: bold; }
+
+/* ---------- change page size dialog ---------- */
+.change-page-size-dialog {
+    -fx-background-color: -bg-dark;
+    -fx-min-width: 300px;
+}
+.change-page-size-dialog .limit-page-size-checkbox {
+    -fx-text-fill: -text;
+    -fx-font-size: 12px;
+}
+.change-page-size-dialog .page-size-field {
+    -fx-background-color: #1e1f22;
+    -fx-border-color: #4e5157;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+    -fx-text-fill: -text;
+    -fx-font-size: 12px;
+    -fx-padding: 3 6 3 6;
+}
+.change-page-size-dialog .page-size-field:focused {
+    -fx-border-color: #3574f0;
+}
+.change-page-size-dialog .button-bar .ok-button {
+    -fx-background-color: #3574f0;
+    -fx-text-fill: #ffffff;
+    -fx-font-weight: bold;
+    -fx-background-radius: 4px;
+    -fx-padding: 5 16 5 16;
+    -fx-cursor: hand;
+}
+.change-page-size-dialog .button-bar .ok-button:hover {
+    -fx-background-color: #4682f4;
+}
+.change-page-size-dialog .button-bar .cancel-button {
+    -fx-background-color: #393b40;
+    -fx-text-fill: -text;
+    -fx-background-radius: 4px;
+    -fx-border-color: #4e5157;
+    -fx-border-radius: 4px;
+    -fx-padding: 5 14 5 14;
+    -fx-cursor: hand;
+}
+.change-page-size-dialog .button-bar .cancel-button:hover {
+    -fx-background-color: #43454b;
+}

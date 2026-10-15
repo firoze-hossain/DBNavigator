@@ -30,6 +30,7 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
@@ -126,7 +127,9 @@ public class QueryTab extends Tab {
     private File savedFile;
 
     // ---- pagination state (see PagedResultCursor) ----
-    private final ResultPager pager = new ResultPager();
+    private final TablePagingWidget pagingWidget = new TablePagingWidget();
+    private BorderPane statusBar;
+    private final Label positionLabel = new Label();
     private com.roze.dbnavigator.db.PagedResultCursor activeCursor;
     private int currentPageStart = 0;
     private String currentEditableTable;
@@ -142,6 +145,10 @@ public class QueryTab extends Tab {
     private final ListView<CompletionService.Suggestion> completionList = new ListView<>();
     private int tokenStart = -1;
     private boolean suppressCompletion = false;
+
+    public QueryTab(ConnectionProfile profile, String catalog, String title) {
+        this(null, profile, catalog, title);
+    }
 
     public QueryTab(MainWindow mainWindow, ConnectionProfile profile, String catalog, String title) {
         this.mainWindow = mainWindow;
@@ -213,9 +220,9 @@ public class QueryTab extends Tab {
         toolbar.setPadding(new Insets(6, 10, 6, 10));
         toolbar.getStyleClass().add("console-toolbar");
 
-        // ---- Editor ----
         editor.replaceText("-- " + profile.getType().getDisplayName()
                 + " console. Ctrl+Enter runs, Ctrl+Space completes.\n");
+        editor.moveTo(0);
         editorScroll = new VirtualizedScrollPane<>(editor);
         VBox.setVgrow(editorScroll, Priority.ALWAYS);
         initBreadcrumbsBar();
@@ -236,24 +243,36 @@ public class QueryTab extends Tab {
             closeActiveCursor();
         });
 
-        pager.setOnFirst(() -> {
+        pagingWidget.setActivePageSize(currentPageSize());
+        pagingWidget.setOnFirst(() -> {
             if (editManager != null && !editManager.confirmAndClearPendingIfDiscarded(getOwnerWindow())) return;
             currentPageStart = 0; displayCurrentPage();
         });
-        pager.setOnPrev(() -> {
+        pagingWidget.setOnPrev(() -> {
             if (editManager != null && !editManager.confirmAndClearPendingIfDiscarded(getOwnerWindow())) return;
             currentPageStart = Math.max(0, currentPageStart - currentPageSize());
             displayCurrentPage();
         });
-        pager.setOnNext(() -> {
+        pagingWidget.setOnNext(() -> {
             if (editManager != null && !editManager.confirmAndClearPendingIfDiscarded(getOwnerWindow())) return;
             pageForward();
         });
-        pager.setOnLast(() -> {
+        pagingWidget.setOnLast(() -> {
             if (editManager != null && !editManager.confirmAndClearPendingIfDiscarded(getOwnerWindow())) return;
             pageToLast();
         });
-        pager.addOverflowItem("Refresh (re-run query)", this::handleReloadQuery);
+        pagingWidget.setOnCountRows(this::countCursorRows);
+        pagingWidget.setOnPageSizeChanged(newSize -> {
+            if (limitSpinner != null && limitSpinner.getValueFactory() != null) {
+                limitSpinner.getValueFactory().setValue(newSize);
+            }
+            if (activeCursor != null) {
+                activeCursor.setPageSize(newSize);
+            }
+            rerunLastSql();
+        });
+        pagingWidget.setOnPlacementChanged(this::applyPagingPlacement);
+        pagingWidget.setOnReload(this::handleReloadQuery);
 
         // ---- Layout ----
         Pane initialResultContent = wrapResultGridWithToolbar(resultGrid);
@@ -264,16 +283,26 @@ public class QueryTab extends Tab {
         resultsTabPane.setStyle("-fx-tab-min-width: 80px;");
         resultsTabPane.getSelectionModel().selectedItemProperty().addListener((obs, oldTab, newTab) -> {
             if (newTab != null) {
+                ResultGrid activeGrid = null;
                 if (newTab.getUserData() instanceof GridEditManager mgr) {
                     editManager = mgr;
                     editManager.updateButtons();
+                    activeGrid = extractResultGrid(newTab);
                 } else {
                     ResultGrid grid = extractResultGrid(newTab);
                     if (grid != null) {
                         editManager = new GridEditManager(profile, catalog, grid,
                                 submitButton, revertButton, this::rerunLastSql, statusLabel::setText);
                         newTab.setUserData(editManager);
+                        activeGrid = grid;
                     }
+                }
+                if (activeGrid != null) {
+                    positionLabel.textProperty().unbind();
+                    positionLabel.textProperty().bind(activeGrid.selectionStatusProperty());
+                }
+                if (pagingWidget.getPlacement() == TablePagingWidget.Placement.TOOLBAR) {
+                    applyPagingPlacement(TablePagingWidget.Placement.TOOLBAR);
                 }
             }
         });
@@ -318,11 +347,12 @@ public class QueryTab extends Tab {
         tabPaneStack.getChildren().add(chromeButtons);
 
         statusLabel.getStyleClass().add("console-status");
-        Region statusSpacer = new Region();
-        HBox.setHgrow(statusSpacer, Priority.ALWAYS);
-        HBox statusBar = new HBox(statusLabel, statusSpacer, pager);
+        positionLabel.getStyleClass().add("console-status");
+        positionLabel.textProperty().bind(resultGrid.selectionStatusProperty());
+        statusBar = new BorderPane();
         statusBar.setPadding(new Insets(4, 10, 4, 10));
         statusBar.getStyleClass().add("console-status-bar");
+        applyPagingPlacement(TablePagingWidget.Placement.BOTTOM_CENTER);
 
         dataPanelContainer.getChildren().addAll(tabPaneStack, statusBar);
         VBox.setVgrow(tabPaneStack, Priority.ALWAYS);
@@ -374,7 +404,16 @@ public class QueryTab extends Tab {
     public void setSql(String sql) {
         suppressCompletion = true;
         editor.replaceText(sql);
+        editor.moveTo(0);
         suppressCompletion = false;
+    }
+
+    public String getLastExecutedSql() {
+        return lastExecutedSql;
+    }
+
+    public void setLastExecutedSql(String sql) {
+        this.lastExecutedSql = sql;
     }
 
     public CodeArea getEditor() {
@@ -2079,7 +2118,35 @@ public class QueryTab extends Tab {
 
         Region tbSpacer = new Region();
         HBox.setHgrow(tbSpacer, Priority.ALWAYS);
-        HBox dataToolbar = new HBox(6, addRowBtn, deleteRowsBtn, tabSubmitBtn, tabRevertBtn, tabReloadBtn, tbSpacer, extractorsToolbar);
+        List<Node> tbNodes = new ArrayList<>();
+        tbNodes.add(addRowBtn);
+        tbNodes.add(deleteRowsBtn);
+        tbNodes.add(tabSubmitBtn);
+        tbNodes.add(tabRevertBtn);
+        tbNodes.add(tabReloadBtn);
+
+        if (profile != null && profile.getType() != DatabaseType.MONGODB) {
+            Button ddlBtn = new Button("DDL");
+            ddlBtn.getStyleClass().add("ddl-button");
+            ddlBtn.setTooltip(new Tooltip("Go to DDL"));
+            ddlBtn.setOnAction(e -> {
+                DbObject tableObj = resolveCurrentTableObject();
+                if (tableObj != null && mainWindow != null) {
+                    mainWindow.openDdlTab(profile, tableObj);
+                } else if (tableObj != null && MainWindow.getInstance() != null) {
+                    MainWindow.getInstance().openDdlTab(profile, tableObj);
+                } else {
+                    statusLabel.setText("No table detected for DDL");
+                }
+            });
+            tbNodes.add(ddlBtn);
+        }
+
+        tbNodes.add(tbSpacer);
+        tbNodes.add(extractorsToolbar);
+
+        HBox dataToolbar = new HBox(6);
+        dataToolbar.getChildren().addAll(tbNodes);
         dataToolbar.setAlignment(Pos.CENTER_LEFT);
         dataToolbar.setPadding(new Insets(4, 8, 4, 8));
         dataToolbar.getStyleClass().add("result-data-toolbar");
@@ -2310,7 +2377,7 @@ public class QueryTab extends Tab {
                         String completion = "Completed successfully: " + finalCursor.getMessage()
                                 + " in " + finalCursor.getExecutionMillis() + " ms.";
                         statusLabel.setText(completion);
-                        pager.update(0, 0, -1, true);
+                        pagingWidget.update(0, 0, -1, true);
                         output.appendLine(completion);
                         // A CREATE/ALTER/DROP/TRUNCATE just succeeded — without
                         // this, the explorer keeps showing whatever it last
@@ -2569,7 +2636,7 @@ public class QueryTab extends Tab {
         long toDisplay = currentPageStart + pageRows.size();
         long total = cached.size();
         boolean exact = activeCursor.isExhausted();
-        pager.update(fromDisplay, toDisplay, total, exact);
+        pagingWidget.update(fromDisplay, toDisplay, total, exact);
 
         statusLabel.setText(pageRows.size() + " row(s) in " + activeCursor.getExecutionMillis() + " ms"
                 + (editManager.isEditable()
@@ -2623,6 +2690,98 @@ public class QueryTab extends Tab {
             activeCursor.close();
             activeCursor = null;
         }
+    }
+
+    private void countCursorRows() {
+        if (activeCursor == null) return;
+        statusLabel.setText("Counting rows\u2026");
+        AppExecutor.run(() -> {
+            try {
+                while (!activeCursor.isExhausted()) {
+                    activeCursor.fetchMore(1000);
+                }
+                Platform.runLater(() -> {
+                    int total = activeCursor.getCachedRows().size();
+                    long fromDisplay = total == 0 ? 0 : currentPageStart + 1L;
+                    long toDisplay = Math.min(currentPageStart + currentPageSize(), total);
+                    pagingWidget.update(fromDisplay, toDisplay, total, true);
+                    statusLabel.setText("Exact count: " + total + " row(s)");
+                });
+            } catch (Exception ex) {
+                String msg = ex.getMessage() == null ? ex.toString() : ex.getMessage();
+                Platform.runLater(() -> statusLabel.setText("Could not count rows: " + msg));
+            }
+        });
+    }
+
+    private Pane activeResultPane() {
+        Tab selected = resultsTabPane.getSelectionModel().getSelectedItem();
+        if (selected != null && selected.getContent() instanceof Pane p) {
+            return p;
+        }
+        return null;
+    }
+
+    private void applyPagingPlacement(TablePagingWidget.Placement placement) {
+        if (pagingWidget.getParent() instanceof Pane parent) {
+            parent.getChildren().remove(pagingWidget);
+        }
+        if (statusBar != null) {
+            statusBar.setLeft(null);
+            statusBar.setCenter(null);
+            statusBar.setRight(null);
+        }
+        pagingWidget.setPlacement(placement);
+        if (statusBar == null) return;
+
+        switch (placement) {
+            case BOTTOM_CENTER -> {
+                statusBar.setLeft(statusLabel);
+                BorderPane.setAlignment(statusLabel, Pos.CENTER_LEFT);
+                statusBar.setCenter(pagingWidget);
+                BorderPane.setAlignment(pagingWidget, Pos.CENTER);
+                statusBar.setRight(positionLabel);
+                BorderPane.setAlignment(positionLabel, Pos.CENTER_RIGHT);
+            }
+            case BOTTOM_LEFT -> {
+                HBox leftBox = new HBox(10, pagingWidget, statusLabel);
+                leftBox.setAlignment(Pos.CENTER_LEFT);
+                statusBar.setLeft(leftBox);
+                statusBar.setCenter(null);
+                statusBar.setRight(positionLabel);
+                BorderPane.setAlignment(positionLabel, Pos.CENTER_RIGHT);
+            }
+            case BOTTOM_RIGHT -> {
+                statusBar.setLeft(statusLabel);
+                BorderPane.setAlignment(statusLabel, Pos.CENTER_LEFT);
+                statusBar.setCenter(null);
+                HBox rightBox = new HBox(10, positionLabel, pagingWidget);
+                rightBox.setAlignment(Pos.CENTER_RIGHT);
+                statusBar.setRight(rightBox);
+            }
+            case TOOLBAR -> {
+                statusBar.setLeft(statusLabel);
+                BorderPane.setAlignment(statusLabel, Pos.CENTER_LEFT);
+                statusBar.setCenter(null);
+                statusBar.setRight(positionLabel);
+                BorderPane.setAlignment(positionLabel, Pos.CENTER_RIGHT);
+                Pane activeContent = activeResultPane();
+                if (activeContent != null) {
+                    for (Node n : activeContent.getChildren()) {
+                        if (n instanceof HBox tb && tb.getStyleClass().contains("result-data-toolbar")) {
+                            if (!tb.getChildren().contains(pagingWidget)) {
+                                tb.getChildren().add(pagingWidget);
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    public TablePagingWidget getPagingWidget() {
+        return pagingWidget;
     }
 
     // ------------------------------------------- editable-target detection
@@ -2821,32 +2980,67 @@ public class QueryTab extends Tab {
         return matcher.group(2);
     }
 
+    private static final Pattern FROM_TABLE_PATTERN = Pattern.compile(
+            "(?i)\\bfrom\\s+([A-Za-z0-9_.\\\"`\\[\\]]+)");
+
+    public DbObject resolveCurrentTableObject() {
+        String token = currentEditableTable;
+        if (token == null || token.isBlank()) {
+            token = detectEditableTable(lastExecutedSql);
+        }
+        if (token == null || token.isBlank()) {
+            if (lastExecutedSql != null) {
+                Matcher m = FROM_TABLE_PATTERN.matcher(stripComments(lastExecutedSql));
+                if (m.find()) {
+                    token = m.group(1);
+                }
+            }
+        }
+        if (token == null || token.isBlank()) {
+            Tab sel = resultsTabPane != null ? resultsTabPane.getSelectionModel().getSelectedItem() : null;
+            if (sel != null && sel.getText() != null && !sel.getText().startsWith("Result ")) {
+                token = sel.getText();
+            }
+        }
+        if (token == null || token.isBlank()) {
+            token = detectEditableTable(editor != null ? editor.getText() : null);
+        }
+        if (token != null && !token.isBlank()) {
+            return tableRef(token);
+        }
+        return null;
+    }
+
     /** Builds a DbObject reference from a (possibly qualified) table token. */
     private DbObject tableRef(String token) {
-        boolean quoted = token.contains("\"");
-        String[] parts = token.replace("\"", "").split("\\.");
+        if (token == null || token.isBlank()) return null;
+        boolean quoted = token.contains("\"") || token.contains("[") || token.contains("`");
+        String[] parts = token.replace("\"", "").replace("[", "").replace("]", "").replace("`", "").split("\\.");
         String rawTable = parts[parts.length - 1];
         String prefix = parts.length > 1 ? parts[parts.length - 2] : null;
 
         String tableName = rawTable;
         if (!quoted) {
-            if (profile.getType() == DatabaseType.POSTGRESQL) {
+            if (profile != null && profile.getType() == DatabaseType.POSTGRESQL) {
                 tableName = rawTable.toLowerCase(Locale.ROOT);
-            } else if (profile.getType() == DatabaseType.ORACLE) {
+            } else if (profile != null && profile.getType() == DatabaseType.ORACLE) {
                 tableName = rawTable.toUpperCase(Locale.ROOT);
             }
         }
 
         String cat = catalog;
         String schema = null;
-        if (prefix != null) {
-            if (profile.getType() == DatabaseType.MYSQL
-                    || profile.getType() == DatabaseType.MARIADB) {
+        if (parts.length >= 3) {
+            cat = parts[parts.length - 3];
+            schema = parts[parts.length - 2];
+        } else if (prefix != null) {
+            if (profile != null && (profile.getType() == DatabaseType.MYSQL
+                    || profile.getType() == DatabaseType.MARIADB)) {
                 cat = prefix;      // MySQL qualifies by database
             } else {
-                schema = (!quoted && profile.getType() == DatabaseType.POSTGRESQL)
+                schema = (!quoted && profile != null && profile.getType() == DatabaseType.POSTGRESQL)
                         ? prefix.toLowerCase(Locale.ROOT)
-                        : (!quoted && profile.getType() == DatabaseType.ORACLE)
+                        : (!quoted && profile != null && profile.getType() == DatabaseType.ORACLE)
                         ? prefix.toUpperCase(Locale.ROOT)
                         : prefix;
             }
