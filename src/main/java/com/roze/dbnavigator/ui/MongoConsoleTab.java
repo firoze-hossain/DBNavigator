@@ -2,6 +2,7 @@ package com.roze.dbnavigator.ui;
 
 import com.roze.dbnavigator.db.ClientRegistry;
 import com.roze.dbnavigator.db.MongoDbClient;
+import com.roze.dbnavigator.db.QueryHistoryStore;
 import com.roze.dbnavigator.model.ConnectionProfile;
 import com.roze.dbnavigator.model.QueryResult;
 import com.roze.dbnavigator.util.AppExecutor;
@@ -105,6 +106,11 @@ public class MongoConsoleTab extends Tab {
     private List<String> cachedCollectionNames = List.of();
     private String cachedCollectionsDatabase;
 
+    // ---- history ----
+    private final Button historyButton = new Button();
+    private final Popup historyPopup = new Popup();
+    private final ListView<QueryHistoryStore.Entry> historyList = new ListView<>();
+
     public MongoConsoleTab(ConnectionProfile profile, String initialDatabase, String title) {
         this.profile = profile;
         this.currentDatabase = initialDatabase;
@@ -122,20 +128,18 @@ public class MongoConsoleTab extends Tab {
         runButton.getStyleClass().add("run-button");
         runButton.setOnAction(e -> runCurrentStatement());
 
+        boolean isMac = System.getProperty("os.name", "").toLowerCase().contains("mac");
+        String historyShortcut = isMac ? "⌥⌘E" : "Ctrl+Alt+E";
+        historyButton.setGraphic(Icons.of(FontAwesomeSolid.HISTORY, "#a9b7c6", 11));
+        historyButton.setTooltip(new Tooltip("Browse Query History (" + historyShortcut + ")"));
+        historyButton.setOnAction(e -> showHistory());
+
         submitButton.getStyleClass().add("run-button");
         submitButton.setGraphic(Icons.of(FontAwesomeSolid.CHECK, "#ffffff", 11));
         revertButton.setGraphic(Icons.of(FontAwesomeSolid.UNDO, "#a9b7c6", 11));
         editManager = new MongoGridEditManager(profile, resultGrid,
                 submitButton, revertButton, this::rerunLastFind, this::log);
 
-        MenuButton exportButton = new MenuButton();
-        exportButton.setGraphic(Icons.of(FontAwesomeSolid.DOWNLOAD, "#e0a44c", 11));
-        exportButton.setTooltip(new Tooltip("Export the current result"));
-        MenuItem exportCsv = new MenuItem("Export to CSV\u2026");
-        exportCsv.setOnAction(e -> resultGrid.exportCsv());
-        MenuItem exportJson = new MenuItem("Export to JSON\u2026");
-        exportJson.setOnAction(e -> resultGrid.exportJson());
-        exportButton.getItems().addAll(exportCsv, exportJson);
 
         resultGrid.setSortRequestListener((columnName, direction) -> {
             sortField = direction == null ? null : columnName;
@@ -150,8 +154,7 @@ public class MongoConsoleTab extends Tab {
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-        HBox toolbar = new HBox(8, runButton, new Separator(), submitButton, revertButton,
-                exportButton, spacer, dbLabel);
+        HBox toolbar = new HBox(8, runButton, historyButton, spacer, dbLabel);
         toolbar.setAlignment(Pos.CENTER_LEFT);
         toolbar.setPadding(new Insets(6, 10, 6, 10));
         toolbar.getStyleClass().add("console-toolbar");
@@ -171,7 +174,67 @@ public class MongoConsoleTab extends Tab {
         resultPagingBar.setPadding(new Insets(4, 8, 4, 8));
         resultPagingBar.getStyleClass().add("console-status-bar");
 
-        VBox resultContent = new VBox(resultGrid, resultPagingBar);
+        resultGrid.setReloadAction(this::rerunLastFind);
+
+        Button addRowBtn = new Button();
+        addRowBtn.setGraphic(Icons.of(FontAwesomeSolid.PLUS, "#57965c", 11));
+        addRowBtn.setTooltip(new Tooltip("Add Document / Row"));
+        addRowBtn.disableProperty().bind(resultGrid.editableProperty().not());
+        addRowBtn.setOnAction(e -> {
+            if (resultGrid.getAddRowAction() != null) {
+                resultGrid.getAddRowAction().run();
+            }
+        });
+
+        Button deleteRowsBtn = new Button();
+        deleteRowsBtn.setGraphic(Icons.of(FontAwesomeSolid.MINUS, "#e05555", 11));
+        deleteRowsBtn.setTooltip(new Tooltip("Delete Selected Document(s)"));
+        deleteRowsBtn.disableProperty().bind(resultGrid.editableProperty().not()
+                .or(javafx.beans.binding.Bindings.isEmpty(resultGrid.getSelectionModel().getSelectedCells())));
+        deleteRowsBtn.setOnAction(e -> {
+            if (resultGrid.getDeleteRowsAction() != null) {
+                resultGrid.getDeleteRowsAction().run();
+            }
+        });
+
+        Button tabSubmitBtn = new Button("Submit");
+        tabSubmitBtn.setGraphic(Icons.of(FontAwesomeSolid.CHECK, "#57965c", 11));
+        tabSubmitBtn.setTooltip(new Tooltip("Commit pending edits/deletes to MongoDB"));
+        tabSubmitBtn.disableProperty().bind(submitButton.disableProperty());
+        tabSubmitBtn.setOnAction(e -> submitButton.fire());
+
+        Button tabRevertBtn = new Button("Revert");
+        tabRevertBtn.setGraphic(Icons.of(FontAwesomeSolid.UNDO, "#e05555", 11));
+        tabRevertBtn.setTooltip(new Tooltip("Discard pending edits and re-run query"));
+        tabRevertBtn.disableProperty().bind(revertButton.disableProperty());
+        tabRevertBtn.setOnAction(e -> revertButton.fire());
+
+        Button tabReloadBtn = new Button();
+        tabReloadBtn.setGraphic(Icons.of(FontAwesomeSolid.SYNC_ALT, "#6897bb", 11));
+        tabReloadBtn.setTooltip(new Tooltip("Reload Page / Re-run query  Ctrl+F5"));
+        tabReloadBtn.setOnAction(e -> rerunLastFind());
+
+        DataExtractorsToolbar extractorsToolbar = new DataExtractorsToolbar(
+                ConnectionProfile.DatabaseType.MONGODB,
+                resultGrid::toQueryResult,
+                () -> (lastFindDatabase != null && lastFindCollection != null ? lastFindDatabase + "." + lastFindCollection : "collection"),
+                () -> null,
+                () -> profile,
+                () -> getTabPane() != null && getTabPane().getScene() != null ? getTabPane().getScene().getWindow() : null
+        );
+        extractorsToolbar.addFormatListener(resultGrid::setActiveExtractorFormat);
+        resultGrid.setActiveExtractorFormat(extractorsToolbar.getActiveFormat());
+        resultGrid.setExportDataAction(extractorsToolbar::openExportDialog);
+
+        Region tbSpacer = new Region();
+        HBox.setHgrow(tbSpacer, Priority.ALWAYS);
+
+        HBox dataToolbar = new HBox(6, addRowBtn, deleteRowsBtn, tabSubmitBtn, tabRevertBtn, tabReloadBtn, tbSpacer, extractorsToolbar);
+        dataToolbar.setAlignment(Pos.CENTER_LEFT);
+        dataToolbar.setPadding(new Insets(4, 8, 4, 8));
+        dataToolbar.getStyleClass().add("result-data-toolbar");
+
+        VBox resultContent = new VBox(dataToolbar, resultGrid, resultPagingBar);
         VBox.setVgrow(resultGrid, Priority.ALWAYS);
 
         Tab outputTab = new Tab("Output", outputArea);
@@ -180,7 +243,6 @@ public class MongoConsoleTab extends Tab {
         resultTab.setClosable(false);
         bottomTabs = new TabPane(outputTab, resultTab);
 
-        boolean isMac = System.getProperty("os.name", "").toLowerCase().contains("mac");
         String hideShortcut = isMac ? "⇧⎋" : "Shift+Escape";
 
         Button hideDataPanelButton = new Button();
@@ -217,6 +279,10 @@ public class MongoConsoleTab extends Tab {
                     hideDataPanel();
                     e.consume();
                 }
+            } else if (new KeyCodeCombination(KeyCode.E, KeyCombination.SHORTCUT_DOWN, KeyCombination.ALT_DOWN).match(e)
+                    || (e.isControlDown() && e.isAltDown() && e.getCode() == KeyCode.E)) {
+                showHistory();
+                e.consume();
             } else if (e.isControlDown() && e.getCode() == KeyCode.ENTER) {
                 runCurrentStatement();
                 e.consume();
@@ -225,6 +291,7 @@ public class MongoConsoleTab extends Tab {
 
         setupStatementHighlighting();
         setupCompletion();
+        setupHistory();
     }
 
     private void updateDbLabel() {
@@ -236,7 +303,12 @@ public class MongoConsoleTab extends Tab {
     public ConnectionProfile getProfile() { return profile; }
     public String getCurrentDatabase() { return currentDatabase; }
     public String getScriptText() { return editor.getText(); }
-    public void setScriptText(String text) { editor.replaceText(text); }
+    public void setScriptText(String text) {
+        suppressCompletion = true;
+        editor.replaceText(text != null ? text : "");
+        editor.moveTo(Math.min(editor.getCaretPosition(), editor.getLength()));
+        suppressCompletion = false;
+    }
     public CodeArea getEditor() { return editor; }
     public void focusEditor() { if (editor != null) editor.requestFocus(); }
     public void execute() { runCurrentStatement(); }
@@ -479,6 +551,84 @@ public class MongoConsoleTab extends Tab {
         editor.requestFocus();
     }
 
+    // ------------------------------------------------------------- history
+
+    private void setupHistory() {
+        historyList.getStyleClass().add("completion-list");
+        historyList.setPrefSize(560, 260);
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("MMM d, HH:mm");
+        historyList.setCellFactory(list -> new ListCell<>() {
+            @Override
+            protected void updateItem(QueryHistoryStore.Entry item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) { setGraphic(null); setText(null); return; }
+                String when = java.time.Instant.ofEpochMilli(item.executedAtEpochMillis())
+                        .atZone(java.time.ZoneId.systemDefault()).format(fmt);
+                String sqlPreview = item.sql().replaceAll("\\s+", " ").strip();
+                if (sqlPreview.length() > 90) sqlPreview = sqlPreview.substring(0, 90) + "…";
+                Label sql = new Label(sqlPreview);
+                sql.getStyleClass().addAll("completion-name", "completion-table");
+                Label time = new Label(when);
+                time.getStyleClass().add("completion-detail");
+                Region gap = new Region();
+                HBox.setHgrow(gap, Priority.ALWAYS);
+                HBox box = new HBox(10, sql, gap, time);
+                box.setAlignment(Pos.CENTER_LEFT);
+                setGraphic(box);
+            }
+        });
+        historyPopup.getContent().add(historyList);
+        historyPopup.setAutoHide(true);
+        historyList.setOnMouseClicked(e -> { if (e.getClickCount() == 2) insertSelectedHistory(); });
+        historyList.setOnKeyPressed(e -> {
+            if (e.getCode() == KeyCode.ENTER) insertSelectedHistory();
+            else if (e.getCode() == KeyCode.ESCAPE) historyPopup.hide();
+        });
+    }
+
+    public void showHistory() {
+        List<QueryHistoryStore.Entry> entries = QueryHistoryStore.forConnection(profile.getId());
+        if (entries.isEmpty()) {
+            log("No query history yet for this connection");
+            return;
+        }
+        historyList.getItems().setAll(entries);
+        historyList.getSelectionModel().selectFirst();
+        if (historyButton.getScene() != null && historyButton.getScene().getWindow() != null) {
+            javafx.geometry.Point2D screenCoords = historyButton.localToScreen(0, 0);
+            if (screenCoords != null) {
+                historyPopup.show(historyButton, screenCoords.getX(),
+                        screenCoords.getY() + historyButton.getHeight() + 2);
+            } else {
+                historyPopup.show(historyButton.getScene().getWindow());
+            }
+            historyList.requestFocus();
+        }
+    }
+
+    private void insertSelectedHistory() {
+        QueryHistoryStore.Entry selected = historyList.getSelectionModel().getSelectedItem();
+        if (selected == null) return;
+        suppressCompletion = true;
+        String query = selected.sql();
+        IndexRange selection = editor.getSelection();
+        if (selection != null && selection.getLength() > 0) {
+            editor.replaceText(selection, query);
+        } else if (editor.getText().isBlank() || editor.getText().trim().startsWith("// MongoDB console.")) {
+            editor.replaceText(query);
+        } else {
+            editor.replaceText(query);
+        }
+        editor.moveTo(Math.min(editor.getCaretPosition(), editor.getLength()));
+        suppressCompletion = false;
+        historyPopup.hide();
+        editor.requestFocus();
+    }
+
+    public Button getHistoryButton() {
+        return historyButton;
+    }
+
     // --------------------------------------------------------------- run
 
     /** Run / Ctrl+Enter: the statement at the caret, or the only statement if there's just one. */
@@ -490,6 +640,9 @@ public class MongoConsoleTab extends Tab {
         MongoShellParser.RawStatement target = statements.size() == 1
                 ? statements.get(0) : statementAtCaret(statements);
         if (target == null) return;
+
+        String rawQuery = target.text().trim();
+        QueryHistoryStore.record(profile.getId(), rawQuery);
 
         MongoShellParser.Statement stmt = MongoShellParser.parse(target.text());
         Platform.runLater(this::showDataPanel);
@@ -622,6 +775,11 @@ public class MongoConsoleTab extends Tab {
             }
             QueryResult finalResult = result;
             Platform.runLater(() -> {
+                if (lastFindCollection != null && !lastFindCollection.isBlank()) {
+                    String tabTitle = (lastFindDatabase != null ? lastFindDatabase + "." : "") + lastFindCollection;
+                    resultTab.setText(tabTitle);
+                    resultTab.setGraphic(Icons.of(FontAwesomeSolid.TABLE, "#4a88c7", 11));
+                }
                 resultGrid.setCurrentSort(sortField, sortDirection);
                 editManager.configure(lastFindDatabase, lastFindCollection, finalResult);
                 resultGrid.showResult(finalResult);
