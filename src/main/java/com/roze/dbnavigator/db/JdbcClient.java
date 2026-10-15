@@ -262,11 +262,31 @@ public class JdbcClient implements AutoCloseable {
             List<String> row = new ArrayList<>(colCount);
             for (int i = 1; i <= colCount; i++) {
                 Object value = rs.getObject(i);
-                row.add(value == null ? null : String.valueOf(value));
+                row.add(formatValue(value));
             }
             result.getRows().add(row);
             count++;
         }
+    }
+
+    public static String formatValue(Object value) {
+        if (value == null) return null;
+        if (value instanceof byte[] bytes) {
+            return "0x" + java.util.HexFormat.of().formatHex(bytes).toUpperCase();
+        }
+        if (value instanceof java.sql.Clob clob) {
+            try {
+                return clob.getSubString(1, (int) Math.min(clob.length(), 100_000));
+            } catch (SQLException ignored) {}
+        }
+        if (value instanceof java.sql.Blob blob) {
+            try {
+                int len = (int) Math.min(blob.length(), 100_000);
+                byte[] b = blob.getBytes(1, len);
+                return "0x" + java.util.HexFormat.of().formatHex(b).toUpperCase();
+            } catch (SQLException ignored) {}
+        }
+        return String.valueOf(value);
     }
 
     @Override

@@ -421,9 +421,17 @@ public class SchemaTreePane extends VBox {
             case TABLE, VIEW, PARTITION, VIRTUAL_VIEW -> mainWindow.openDataTab(profile, obj);
             case COLLECTION  -> mainWindow.openMongoTab(profile, obj);
             case PROCEDURE, FUNCTION -> mainWindow.openRoutineSourceTab(profile, obj);
-            case ROLE, TABLESPACE, ACCESS_METHOD, CAST, EXTENSION, LANGUAGE, SEQUENCE,
-                 COLLATION, LINKED_SERVER, SERVER_PRINCIPAL, ASSEMBLY, FILEGROUP, DATABASE_PRINCIPAL -> mainWindow.openDdlTab(profile, obj);
-            case CONNECTION, SERVER_OBJECTS, ROLES_FOLDER, TABLESPACES_FOLDER,
+            case ROLE, ACCESS_METHOD, CAST, EXTENSION, LANGUAGE, SEQUENCE,
+                 COLLATION, LINKED_SERVER, SERVER_PRINCIPAL, ASSEMBLY, FILEGROUP, DATABASE_PRINCIPAL,
+                 USER, DATA_FILE -> mainWindow.openDdlTab(profile, obj);
+            case TABLESPACE -> {
+                if (profile.getType() == ConnectionProfile.DatabaseType.ORACLE) {
+                    item.setExpanded(!item.isExpanded());
+                } else {
+                    mainWindow.openDdlTab(profile, obj);
+                }
+            }
+            case CONNECTION, SERVER_OBJECTS, ROLES_FOLDER, TABLESPACES_FOLDER, USERS_FOLDER,
                  DATABASE_OBJECTS, ACCESS_METHODS_FOLDER, CASTS_FOLDER, EXTENSIONS_FOLDER, LANGUAGES_FOLDER,
                  COLLATIONS_FOLDER, LINKED_SERVERS_FOLDER, SERVER_PRINCIPALS_FOLDER,
                  ASSEMBLIES_FOLDER, FILEGROUPS_FOLDER, DATABASE_PRINCIPALS_FOLDER,
@@ -509,6 +517,8 @@ public class SchemaTreePane extends VBox {
             case SERVER_OBJECTS -> MetadataService.loadServerObjects(profile);
             case ROLES_FOLDER -> MetadataService.loadRoles(profile);
             case TABLESPACES_FOLDER -> MetadataService.loadTablespaces(profile);
+            case USERS_FOLDER -> MetadataService.loadUsers(profile);
+            case TABLESPACE -> MetadataService.loadTablespaceDataFiles(profile, obj);
             case COLLATIONS_FOLDER -> MetadataService.loadCollations(profile);
             case LINKED_SERVERS_FOLDER -> MetadataService.loadLinkedServers(profile);
             case SERVER_PRINCIPALS_FOLDER -> MetadataService.loadServerPrincipals(profile);
@@ -535,7 +545,7 @@ public class SchemaTreePane extends VBox {
                  FUNCTIONS_FOLDER, SEQUENCES_FOLDER, COLLECTIONS_FOLDER,
                  TABLE, PARTITION, COLUMNS_FOLDER, INDEXES_FOLDER, PARTITIONS_FOLDER,
                  KEYS_FOLDER, FOREIGN_KEYS_FOLDER, COLLECTION, FIELDS_FOLDER,
-                 SERVER_OBJECTS, ROLES_FOLDER, TABLESPACES_FOLDER,
+                 SERVER_OBJECTS, ROLES_FOLDER, TABLESPACES_FOLDER, USERS_FOLDER, TABLESPACE,
                  COLLATIONS_FOLDER, LINKED_SERVERS_FOLDER, SERVER_PRINCIPALS_FOLDER,
                  DATABASE_OBJECTS, ACCESS_METHODS_FOLDER, CASTS_FOLDER, EXTENSIONS_FOLDER, LANGUAGES_FOLDER,
                  ASSEMBLIES_FOLDER, FILEGROUPS_FOLDER, DATABASE_PRINCIPALS_FOLDER,
@@ -1993,7 +2003,7 @@ public class SchemaTreePane extends VBox {
                 case DATABASE_OBJECTS, ACCESS_METHODS_FOLDER, CASTS_FOLDER, EXTENSIONS_FOLDER,
                      LANGUAGES_FOLDER, COLLATIONS_FOLDER, LINKED_SERVERS_FOLDER, SERVER_PRINCIPALS_FOLDER,
                      ASSEMBLIES_FOLDER, FILEGROUPS_FOLDER, DATABASE_PRINCIPALS_FOLDER,
-                     VIRTUAL_VIEWS_FOLDER -> {
+                     VIRTUAL_VIEWS_FOLDER, USERS_FOLDER -> {
                     MenuItem refresh = new MenuItem("Refresh");
                     refresh.setOnAction(e -> refreshNode(getTreeItem(), obj, obj.getName()));
                     MenuItem jumpConsole = new MenuItem("Jump to Query Console");
@@ -2002,7 +2012,8 @@ public class SchemaTreePane extends VBox {
                 }
                 case ACCESS_METHOD, CAST, EXTENSION, LANGUAGE,
                      COLLATION, LINKED_SERVER, SERVER_PRINCIPAL,
-                     ASSEMBLY, FILEGROUP, DATABASE_PRINCIPAL -> {
+                     ASSEMBLY, FILEGROUP, DATABASE_PRINCIPAL,
+                     USER, DATA_FILE -> {
                     MenuItem goToDdl = new MenuItem("Go to DDL");
                     goToDdl.setOnAction(e -> goToDdl());
                     MenuItem jumpConsole = new MenuItem("Jump to Query Console");
@@ -2454,7 +2465,8 @@ public class SchemaTreePane extends VBox {
                  ROLE, TABLESPACE,
                  ACCESS_METHOD, CAST, EXTENSION, LANGUAGE, VIRTUAL_VIEW,
                  COLLATION, LINKED_SERVER, SERVER_PRINCIPAL,
-                 ASSEMBLY, FILEGROUP, DATABASE_PRINCIPAL -> true;
+                 ASSEMBLY, FILEGROUP, DATABASE_PRINCIPAL,
+                 USER, DATA_FILE -> true;
             default -> false;
         };
         goToDdlButton.setDisable(!hasDdl);
@@ -2710,7 +2722,10 @@ public class SchemaTreePane extends VBox {
                 || target.getKind() == Kind.LINKED_SERVERS_FOLDER
                 || target.getKind() == Kind.LINKED_SERVER
                 || target.getKind() == Kind.SERVER_PRINCIPALS_FOLDER
-                || target.getKind() == Kind.SERVER_PRINCIPAL) {
+                || target.getKind() == Kind.SERVER_PRINCIPAL
+                || target.getKind() == Kind.USERS_FOLDER
+                || target.getKind() == Kind.USER
+                || target.getKind() == Kind.DATA_FILE) {
             TreeItem<DbObject> serverObjItem = connItem.getChildren().stream()
                     .filter(c -> c.getValue() != null && c.getValue().getKind() == Kind.SERVER_OBJECTS)
                     .findFirst().orElse(null);
@@ -2787,10 +2802,11 @@ public class SchemaTreePane extends VBox {
     private void navigateFromServerObjects(TreeItem<DbObject> serverObjItem, DbObject target) {
         Kind folderKind = switch (target.getKind()) {
             case ROLES_FOLDER, ROLE -> Kind.ROLES_FOLDER;
-            case TABLESPACES_FOLDER, TABLESPACE -> Kind.TABLESPACES_FOLDER;
+            case TABLESPACES_FOLDER, TABLESPACE, DATA_FILE -> Kind.TABLESPACES_FOLDER;
             case COLLATIONS_FOLDER, COLLATION -> Kind.COLLATIONS_FOLDER;
             case LINKED_SERVERS_FOLDER, LINKED_SERVER -> Kind.LINKED_SERVERS_FOLDER;
             case SERVER_PRINCIPALS_FOLDER, SERVER_PRINCIPAL -> Kind.SERVER_PRINCIPALS_FOLDER;
+            case USERS_FOLDER, USER -> Kind.USERS_FOLDER;
             default -> null;
         };
         if (folderKind == null) {
@@ -2803,6 +2819,21 @@ public class SchemaTreePane extends VBox {
         if (folder != null) {
             if (target.getKind() == folderKind) {
                 highlightAndSelect(folder);
+                return;
+            }
+            if (target.getKind() == Kind.DATA_FILE) {
+                expandNodeAndThen(folder, () -> {
+                    for (TreeItem<DbObject> tsItem : folder.getChildren()) {
+                        expandNodeAndThen(tsItem, () -> {
+                            for (TreeItem<DbObject> dfItem : tsItem.getChildren()) {
+                                if (dfItem.getValue() != null && dfItem.getValue().getName().equalsIgnoreCase(target.getName())) {
+                                    highlightAndSelect(dfItem);
+                                    return;
+                                }
+                            }
+                        });
+                    }
+                });
                 return;
             }
             expandNodeAndThen(folder, () -> {

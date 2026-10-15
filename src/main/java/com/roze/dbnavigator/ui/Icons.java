@@ -57,7 +57,7 @@ public final class Icons {
             }
             case SCHEMA     -> of(FontAwesomeSolid.PROJECT_DIAGRAM, "#c77dbb", 12);
             case SERVER_OBJECTS -> of(FontAwesomeSolid.SERVER, "#3592c4", 12);
-            case ROLES_FOLDER, TABLESPACES_FOLDER,
+            case ROLES_FOLDER, TABLESPACES_FOLDER, USERS_FOLDER,
                  COLLATIONS_FOLDER, LINKED_SERVERS_FOLDER, SERVER_PRINCIPALS_FOLDER -> of(FontAwesomeSolid.FOLDER, "#3592c4", 12);
             case DATABASE_OBJECTS -> of(FontAwesomeSolid.FOLDER, "#3592c4", 12);
             case ACCESS_METHODS_FOLDER, CASTS_FOLDER, EXTENSIONS_FOLDER, LANGUAGES_FOLDER,
@@ -67,8 +67,9 @@ public final class Icons {
                  FUNCTIONS_FOLDER, SEQUENCES_FOLDER, COLLECTIONS_FOLDER,
                  COLUMNS_FOLDER, INDEXES_FOLDER, PARTITIONS_FOLDER, KEYS_FOLDER, FOREIGN_KEYS_FOLDER, FIELDS_FOLDER
                             -> of(FontAwesomeSolid.FOLDER, "#e0a44c", 12);
-            case ROLE, DATABASE_PRINCIPAL, SERVER_PRINCIPAL -> of(FontAwesomeSolid.USER, "#868a91", 11);
+            case ROLE, DATABASE_PRINCIPAL, SERVER_PRINCIPAL, USER -> of(FontAwesomeSolid.USER, "#868a91", 11);
             case TABLESPACE, FILEGROUP -> of(FontAwesomeSolid.HDD, "#3592c4", 11);
+            case DATA_FILE     -> of(FontAwesomeSolid.FILE_ALT, "#3592c4", 11);
             case COLLATION     -> of(FontAwesomeSolid.SORT_ALPHA_DOWN, "#868a91", 11);
             case LINKED_SERVER -> of(FontAwesomeSolid.SERVER, "#3592c4", 11);
             case ASSEMBLY      -> of(FontAwesomeSolid.CUBES, "#e0a44c", 11);
