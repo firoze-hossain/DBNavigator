@@ -13,7 +13,9 @@ import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
@@ -58,10 +60,14 @@ public class DataTab extends Tab {
     private final Label orderLabel = new Label("ORDER BY");
     private final Popup clauseCompletionPopup = new Popup();
     private final ListView<String> clauseCompletionList = new ListView<>();
-    private final ResultPager pager = new ResultPager();
+    private final TablePagingWidget pagingWidget = new TablePagingWidget();
     private final Label statusLabel = new Label("Loading…");
+    private final Label positionLabel = new Label();
     private final Button submitButton = new Button("Submit");
     private final Button revertButton = new Button("Revert");
+    private Button ddlButton;
+    private HBox toolbar;
+    private BorderPane statusBar;
     private final GridEditManager editManager;
 
     private final List<String> pkColumns = new ArrayList<>();
@@ -167,23 +173,30 @@ public class DataTab extends Tab {
         grid.setActiveExtractorFormat(extractorsToolbar.getActiveFormat());
         grid.setExportDataAction(extractorsToolbar::openExportDialog);
 
-        pager.setOnFirst(() -> {
+        pagingWidget.setActivePageSize(getEffectivePageSize());
+        pagingWidget.setOnCountRows(this::fetchExactCount);
+        pagingWidget.setOnPageSizeChanged(newSize -> {
+            page = 0;
+            loadPage();
+        });
+        pagingWidget.setOnPlacementChanged(this::applyPagingPlacement);
+        pagingWidget.setOnReload(this::loadPage);
+        pagingWidget.setOnFirst(() -> {
             if (editManager != null && !editManager.confirmAndClearPendingIfDiscarded(getOwnerWindow())) return;
             if (page != 0) { page = 0; loadPage(); }
         });
-        pager.setOnPrev(() -> {
+        pagingWidget.setOnPrev(() -> {
             if (editManager != null && !editManager.confirmAndClearPendingIfDiscarded(getOwnerWindow())) return;
             if (page > 0) { page--; loadPage(); }
         });
-        pager.setOnNext(() -> {
+        pagingWidget.setOnNext(() -> {
             if (editManager != null && !editManager.confirmAndClearPendingIfDiscarded(getOwnerWindow())) return;
             page++; loadPage();
         });
-        pager.setOnLast(() -> {
+        pagingWidget.setOnLast(() -> {
             if (editManager != null && !editManager.confirmAndClearPendingIfDiscarded(getOwnerWindow())) return;
             jumpToLastPage();
         });
-        pager.addOverflowItem("Get exact row count", this::fetchExactCount);
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
@@ -211,8 +224,33 @@ public class DataTab extends Tab {
             if (grid.getDeleteRowsAction() != null) grid.getDeleteRowsAction().run();
         });
 
-        HBox toolbar = new HBox(8, addRowBtn, deleteRowsBtn, submitButton, revertButton, refreshButton,
-                whereControl, orderControl, applyButton, spacer, extractorsToolbar, pager);
+        List<javafx.scene.Node> tbNodes = new ArrayList<>();
+        tbNodes.add(addRowBtn);
+        tbNodes.add(deleteRowsBtn);
+        tbNodes.add(submitButton);
+        tbNodes.add(revertButton);
+
+        if (profile != null && profile.getType() != ConnectionProfile.DatabaseType.MONGODB) {
+            ddlButton = new Button("DDL");
+            ddlButton.getStyleClass().add("ddl-button");
+            ddlButton.setTooltip(new Tooltip("Go to DDL"));
+            ddlButton.setOnAction(e -> {
+                if (MainWindow.getInstance() != null) {
+                    MainWindow.getInstance().openDdlTab(profile, table);
+                }
+            });
+            tbNodes.add(ddlButton);
+        }
+
+        tbNodes.add(refreshButton);
+        tbNodes.add(whereControl);
+        tbNodes.add(orderControl);
+        tbNodes.add(applyButton);
+        tbNodes.add(spacer);
+        tbNodes.add(extractorsToolbar);
+
+        toolbar = new HBox(8);
+        toolbar.getChildren().addAll(tbNodes);
         toolbar.setAlignment(Pos.CENTER_LEFT);
         toolbar.setPadding(new Insets(6, 10, 6, 10));
         toolbar.getStyleClass().add("console-toolbar");
@@ -226,14 +264,12 @@ public class DataTab extends Tab {
         crumbBar.getStyleClass().add("breadcrumb-bar");
 
         statusLabel.getStyleClass().add("console-status");
-        Region statusSpacer = new Region();
-        HBox.setHgrow(statusSpacer, Priority.ALWAYS);
-        Label positionLabel = new Label();
         positionLabel.getStyleClass().add("console-status");
         positionLabel.textProperty().bind(grid.selectionStatusProperty());
-        HBox statusBar = new HBox(statusLabel, statusSpacer, positionLabel);
+        statusBar = new BorderPane();
         statusBar.setPadding(new Insets(4, 10, 4, 10));
         statusBar.getStyleClass().add("console-status-bar");
+        applyPagingPlacement(TablePagingWidget.Placement.BOTTOM_CENTER);
 
         VBox root = new VBox(crumbBar, toolbar, grid, statusBar);
         VBox.setVgrow(grid, Priority.ALWAYS);
@@ -403,9 +439,12 @@ public class DataTab extends Tab {
     }
 
     private int getEffectivePageSize() {
+        if (pagingWidget != null && pagingWidget.getActivePageSize() > 0) {
+            return pagingWidget.getActivePageSize();
+        }
         AppSettingsStore.Settings s = AppSettingsStore.load();
         if (!s.isLimitPageSize()) {
-            return 50000;
+            return 100000;
         }
         return s.getPageSize() > 0 ? s.getPageSize() : 500;
     }
@@ -468,7 +507,7 @@ public class DataTab extends Tab {
         long shown = grid.getItems().size();
         long from = shown == 0 ? 0 : (long) page * pageSize + 1;
         long to = shown == 0 ? 0 : from + shown - 1;
-        pager.update(from, to, totalRows, totalRowsExact);
+        pagingWidget.update(from, to, totalRows, totalRowsExact);
     }
 
     private void loadPage() {
@@ -525,7 +564,7 @@ public class DataTab extends Tab {
                 final QueryResult finalResult = result;
                 Platform.runLater(() -> {
                     editManager.configure(table.qualifiedName(), pkColumns, columnTypes, finalResult);
-                    grid.setRowNumberOffset(currentPage * PAGE_SIZE);
+                    grid.setRowNumberOffset(currentPage * pageSize);
                     grid.showResult(finalResult);
                     if (pendingSelectColumn != null) {
                         grid.selectColumn(pendingSelectColumn);
@@ -534,8 +573,8 @@ public class DataTab extends Tab {
 
                     // Fewer rows than a full page means we've now directly observed the
                     // true end, regardless of what an earlier estimate suggested.
-                    if (finalResult.getRows().size() < PAGE_SIZE) {
-                        totalRows = (long) currentPage * PAGE_SIZE + finalResult.getRows().size();
+                    if (finalResult.getRows().size() < pageSize) {
+                        totalRows = (long) currentPage * pageSize + finalResult.getRows().size();
                         totalRowsExact = true;
                     }
                     refreshPager();
@@ -555,6 +594,67 @@ public class DataTab extends Tab {
                 Platform.runLater(() -> statusLabel.setText("Error: " + msg));
             }
         });
+    }
+
+    private void applyPagingPlacement(TablePagingWidget.Placement placement) {
+        if (pagingWidget.getParent() instanceof Pane parent) {
+            parent.getChildren().remove(pagingWidget);
+        }
+        if (toolbar != null) {
+            toolbar.getChildren().remove(pagingWidget);
+        }
+        if (statusBar != null) {
+            statusBar.setLeft(null);
+            statusBar.setCenter(null);
+            statusBar.setRight(null);
+        }
+        pagingWidget.setPlacement(placement);
+        if (statusBar == null) return;
+
+        switch (placement) {
+            case BOTTOM_CENTER -> {
+                statusBar.setLeft(statusLabel);
+                BorderPane.setAlignment(statusLabel, Pos.CENTER_LEFT);
+                statusBar.setCenter(pagingWidget);
+                BorderPane.setAlignment(pagingWidget, Pos.CENTER);
+                statusBar.setRight(positionLabel);
+                BorderPane.setAlignment(positionLabel, Pos.CENTER_RIGHT);
+            }
+            case BOTTOM_LEFT -> {
+                HBox leftBox = new HBox(10, pagingWidget, statusLabel);
+                leftBox.setAlignment(Pos.CENTER_LEFT);
+                statusBar.setLeft(leftBox);
+                statusBar.setCenter(null);
+                statusBar.setRight(positionLabel);
+                BorderPane.setAlignment(positionLabel, Pos.CENTER_RIGHT);
+            }
+            case BOTTOM_RIGHT -> {
+                statusBar.setLeft(statusLabel);
+                BorderPane.setAlignment(statusLabel, Pos.CENTER_LEFT);
+                statusBar.setCenter(null);
+                HBox rightBox = new HBox(10, positionLabel, pagingWidget);
+                rightBox.setAlignment(Pos.CENTER_RIGHT);
+                statusBar.setRight(rightBox);
+            }
+            case TOOLBAR -> {
+                statusBar.setLeft(statusLabel);
+                BorderPane.setAlignment(statusLabel, Pos.CENTER_LEFT);
+                statusBar.setCenter(null);
+                statusBar.setRight(positionLabel);
+                BorderPane.setAlignment(positionLabel, Pos.CENTER_RIGHT);
+                if (toolbar != null && !toolbar.getChildren().contains(pagingWidget)) {
+                    toolbar.getChildren().add(pagingWidget);
+                }
+            }
+        }
+    }
+
+    public Button getDdlButton() {
+        return ddlButton;
+    }
+
+    public TablePagingWidget getPagingWidget() {
+        return pagingWidget;
     }
 
     public void handleReload() {
