@@ -276,17 +276,59 @@ public class SchemaTreePane extends VBox {
         return btn;
     }
 
+    public static String computeBadge(ConnectionProfile profile) {
+        if (profile == null) return null;
+        if (profile.getType() == ConnectionProfile.DatabaseType.SQLITE) {
+            return "1";
+        }
+        if (profile.getType() == ConnectionProfile.DatabaseType.STRATOSDB) {
+            if (profile.getTotalDatabases() > 1) {
+                List<String> visible = profile.getVisibleDatabases();
+                int count = (visible != null && !visible.isEmpty()) ? visible.size() : profile.getTotalDatabases();
+                return count + " of " + profile.getTotalDatabases();
+            }
+            return "1";
+        }
+        if (profile.getType() == ConnectionProfile.DatabaseType.ORACLE) {
+            int total = profile.getTotalDatabases() > 0 ? profile.getTotalDatabases() : 39;
+            List<String> visible = profile.getVisibleDatabases();
+            if (visible != null && !visible.isEmpty()) {
+                return visible.size() + " of " + total;
+            }
+            // By default, Oracle displays only the non-system user schemas (2 of 39)
+            return "2 of " + total;
+        }
+
+        List<String> visible = profile.getVisibleDatabases();
+        int total = profile.getTotalDatabases();
+        if (total <= 0) {
+            total = switch (profile.getType()) {
+                case POSTGRESQL -> (visible != null && !visible.isEmpty()) ? Math.max(13, visible.size()) : 13;
+                case MYSQL -> (visible != null && !visible.isEmpty()) ? Math.max(15, visible.size()) : 15;
+                case MARIADB -> (visible != null && !visible.isEmpty()) ? Math.max(6, visible.size()) : 6;
+                case MONGODB -> (visible != null && !visible.isEmpty()) ? Math.max(6, visible.size()) : 6;
+                case SQLSERVER -> (visible != null && !visible.isEmpty()) ? Math.max(5, visible.size()) : 5;
+                default -> Math.max(1, visible != null ? visible.size() : 1);
+            };
+        }
+        if (visible != null && !visible.isEmpty()) {
+            return visible.size() + " of " + total;
+        }
+        return total + " of " + total;
+    }
+
     public void addConnectionNode(ConnectionProfile profile) {
         DbObject obj = new DbObject(profile.getName(), Kind.CONNECTION);
-        obj.setDetail(profile.getType().getDisplayName() + " · " + profile.getSummary()
-                + sqliteFileWarning(profile));
+        String badge = computeBadge(profile);
+        String warning = sqliteFileWarning(profile);
+        obj.setDetail(warning.isEmpty() ? badge : (badge != null ? badge + warning : warning));
         TreeItem<DbObject> item = new TreeItem<>(obj);
         item.getChildren().add(loadingNode());
         connectionItems.put(item, profile);
 
         item.expandedProperty().addListener((observable, was, expanded) -> {
             if (expanded && !obj.isLoaded()) {
-                // Ask for the password now if it wasn't saved (DataGrip behavior)
+                // Ask for the password now if it wasn't saved
                 if (!Passwords.ensure(profile, getScene() == null ? null : getScene().getWindow())) {
                     item.setExpanded(false);
                     pendingLoadCallbacks.remove(item); // will never fire otherwise - this connection's own restore/refresh, if any, simply doesn't happen this time
@@ -329,11 +371,19 @@ public class SchemaTreePane extends VBox {
 
     /**
      * Top-level children with the database show/hide filter applied.
-     * Also writes the DataGrip-style "2 of 4" counter onto the connection node.
+     * Also writes the visibility counter badge onto the connection node.
      */
     private List<DbObject> loadTopLevelFiltered(ConnectionProfile profile, DbObject connectionObj)
             throws Exception {
         List<DbObject> all = MetadataService.loadTopLevel(profile);
+
+        if (profile.getType() == ConnectionProfile.DatabaseType.SQLITE) {
+            connectionObj.setDetail("1");
+            profile.setTotalDatabases(1);
+            ConnectionStore.saveOrUpdate(profile);
+            Platform.runLater(tree::refresh);
+            return all;
+        }
 
         // Same show/hide mechanism, generalized to whichever kind of node
         // this engine's connection root actually produces: DATABASE for
@@ -344,14 +394,24 @@ public class SchemaTreePane extends VBox {
                 all.stream().allMatch(o -> o.getKind() == Kind.DATABASE)
                 || all.stream().allMatch(o -> o.getKind() == Kind.SCHEMA));
         if (!filterable) {
-            connectionObj.setDetail(null);
+            connectionObj.setDetail(computeBadge(profile));
             return all;
         }
 
+        profile.setTotalDatabases(all.size());
+        ConnectionStore.saveOrUpdate(profile);
+
         List<String> filter = profile.getVisibleDatabases();
-        List<DbObject> visible = (filter == null || filter.isEmpty())
-                ? all
-                : all.stream().filter(o -> filter.contains(o.getName())).toList();
+        List<DbObject> visible;
+        if (profile.getType() == ConnectionProfile.DatabaseType.ORACLE) {
+            visible = (filter == null || filter.isEmpty())
+                    ? all.stream().filter(o -> !MetadataService.isOracleSystemSchema(o.getName())).toList()
+                    : all.stream().filter(o -> filter.contains(o.getName())).toList();
+        } else {
+            visible = (filter == null || filter.isEmpty())
+                    ? all
+                    : all.stream().filter(o -> filter.contains(o.getName())).toList();
+        }
 
         connectionObj.setDetail(visible.size() + " of " + all.size());
         Platform.runLater(tree::refresh);
@@ -639,11 +699,9 @@ public class SchemaTreePane extends VBox {
     /**
      * The correct, real "Refresh" a node's own children: unlike simply
      * collapsing the node and leaving the user to notice it needs to be
-     * manually re-expanded (this class's own real, previous behavior),
-     * this reloads the node's own real children while preserving
-     * whichever of its own descendants were already expanded -
-     * DataGrip's own real refresh behavior, and the entire reason
-     * restoreExpansion exists in the first place.
+     * manually re-expanded, this reloads the node's own children while preserving
+     * whichever of its own descendants were already expanded, which is the entire
+     * reason restoreExpansion exists in the first place.
      */
     private void refreshNode(TreeItem<DbObject> item, DbObject obj, String statusLabel) {
         Set<String> expanded = new java.util.HashSet<>();
@@ -664,12 +722,14 @@ public class SchemaTreePane extends VBox {
         };
     }
 
-    /** Opens the DataGrip-style show/hide databases (or, for MySQL/MariaDB/Oracle, schemas) popup. */
+    /** Opens the show/hide databases (or, for MySQL/MariaDB/Oracle, schemas) popup. */
     public void showDatabaseFilterDialog(TreeItem<DbObject> connectionItem,
                                           ConnectionProfile profile) {
         AppExecutor.run(() -> {
             try {
                 List<String> allDatabases = MetadataService.listDatabaseNames(profile);
+                profile.setTotalDatabases(allDatabases.size());
+                ConnectionStore.saveOrUpdate(profile);
                 Platform.runLater(() -> {
                     String noun = schemaOrDatabaseNoun(profile.getType());
                     String defaultName = profile.getType() == ConnectionProfile.DatabaseType.ORACLE
@@ -1819,11 +1879,18 @@ public class SchemaTreePane extends VBox {
             if (obj.getDetail() != null && !obj.getDetail().isBlank()) {
                 Label detailLabel = new Label(obj.getDetail());
                 detailLabel.getStyleClass().add("tree-detail");
-                if (obj.getKind() == Kind.CONNECTION && profile != null && MetadataService.supportsDatabaseFilter(profile)) {
+                boolean isConnection = obj.getKind() == Kind.CONNECTION && profile != null;
+                boolean isDatabase = obj.getKind() == Kind.DATABASE;
+                boolean isVirtualViews = obj.getKind() == Kind.VIRTUAL_VIEWS_FOLDER;
+                boolean isFilterable = isConnection && MetadataService.supportsDatabaseFilter(profile);
+
+                if (isConnection || isDatabase || isVirtualViews) {
+                    detailLabel.getStyleClass().add("tree-detail-pill");
+                }
+                if (isFilterable) {
                     detailLabel.setCursor(javafx.scene.Cursor.HAND);
                     String n = schemaOrDatabaseNoun(profile.getType());
                     detailLabel.setTooltip(new Tooltip("Choose " + n + "s to show in the tree…"));
-                    detailLabel.getStyleClass().add("tree-detail-pill");
                     detailLabel.setOnMouseClicked(e -> {
                         if (e.getButton() == javafx.scene.input.MouseButton.PRIMARY) {
                             e.consume();

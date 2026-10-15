@@ -173,4 +173,89 @@ public class OracleObjectsTest {
         assertNotNull(Icons.forObject(new DbObject("/path/to/file.dbf", Kind.DATA_FILE), false));
         assertNotNull(Icons.forObject(new DbObject("sessions", Kind.VIRTUAL_VIEW), false));
     }
+
+    @Test
+    public void testComputeBadgeAcrossEngines() {
+        // SQLite
+        ConnectionProfile sqlite = new ConnectionProfile();
+        sqlite.setType(DatabaseType.SQLITE);
+        assertEquals("1", SchemaTreePane.computeBadge(sqlite));
+
+        // Oracle default (empty filter)
+        ConnectionProfile oracleDefault = new ConnectionProfile();
+        oracleDefault.setType(DatabaseType.ORACLE);
+        oracleDefault.setTotalDatabases(39);
+        assertEquals("2 of 39", SchemaTreePane.computeBadge(oracleDefault));
+
+        // Oracle customized filter
+        ConnectionProfile oracleFiltered = new ConnectionProfile();
+        oracleFiltered.setType(DatabaseType.ORACLE);
+        oracleFiltered.setTotalDatabases(39);
+        oracleFiltered.setVisibleDatabases(List.of("GGG", "HELLO", "SYS", "SYSTEM"));
+        assertEquals("4 of 39", SchemaTreePane.computeBadge(oracleFiltered));
+
+        // PostgreSQL
+        ConnectionProfile pg = new ConnectionProfile();
+        pg.setType(DatabaseType.POSTGRESQL);
+        pg.setTotalDatabases(13);
+        pg.setVisibleDatabases(List.of("nexacom_db", "thunder_db", "tik"));
+        assertEquals("3 of 13", SchemaTreePane.computeBadge(pg));
+
+        // PostgreSQL without filter (all visible)
+        ConnectionProfile pgAll = new ConnectionProfile();
+        pgAll.setType(DatabaseType.POSTGRESQL);
+        pgAll.setTotalDatabases(13);
+        assertEquals("13 of 13", SchemaTreePane.computeBadge(pgAll));
+
+        // MariaDB
+        ConnectionProfile maria = new ConnectionProfile();
+        maria.setType(DatabaseType.MARIADB);
+        maria.setTotalDatabases(8);
+        maria.setVisibleDatabases(List.of("hellodb", "nation"));
+        assertEquals("2 of 8", SchemaTreePane.computeBadge(maria));
+
+        // MongoDB
+        ConnectionProfile mongo = new ConnectionProfile();
+        mongo.setType(DatabaseType.MONGODB);
+        mongo.setTotalDatabases(6);
+        mongo.setVisibleDatabases(List.of("oladb", "studentdb"));
+        assertEquals("2 of 6", SchemaTreePane.computeBadge(mongo));
+
+        // SQL Server
+        ConnectionProfile mssql = new ConnectionProfile();
+        mssql.setType(DatabaseType.SQLSERVER);
+        mssql.setTotalDatabases(6);
+        assertEquals("6 of 6", SchemaTreePane.computeBadge(mssql));
+
+        // MySQL
+        ConnectionProfile mysql = new ConnectionProfile();
+        mysql.setType(DatabaseType.MYSQL);
+        mysql.setTotalDatabases(16);
+        mysql.setVisibleDatabases(List.of("bagisto", "classicmodels", "dddd", "sakila"));
+        assertEquals("4 of 16", SchemaTreePane.computeBadge(mysql));
+    }
+
+    @Test
+    public void testIsOracleSystemSchema() {
+        assertTrue(MetadataService.isOracleSystemSchema("SYS"));
+        assertTrue(MetadataService.isOracleSystemSchema("sys"));
+        assertTrue(MetadataService.isOracleSystemSchema("SYSTEM"));
+        assertTrue(MetadataService.isOracleSystemSchema("system"));
+        assertTrue(MetadataService.isOracleSystemSchema("ANONYMOUS"));
+        assertTrue(MetadataService.isOracleSystemSchema("XDB"));
+        assertTrue(MetadataService.isOracleSystemSchema("APPQOSSYS"));
+
+        assertFalse(MetadataService.isOracleSystemSchema("GGG"));
+        assertFalse(MetadataService.isOracleSystemSchema("HELLO"));
+        assertFalse(MetadataService.isOracleSystemSchema("MY_APP"));
+        assertFalse(MetadataService.isOracleSystemSchema(null));
+    }
+
+    @Test
+    public void testTotalDatabasesProfileCopy() {
+        ConnectionProfile p = new ConnectionProfile();
+        p.setTotalDatabases(39);
+        ConnectionProfile copy = p.copy();
+        assertEquals(39, copy.getTotalDatabases());
+    }
 }

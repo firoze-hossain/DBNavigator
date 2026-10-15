@@ -1,5 +1,6 @@
 package com.roze.dbnavigator.ui;
 
+import com.roze.dbnavigator.db.MetadataService;
 import com.roze.dbnavigator.model.ConnectionProfile;
 import javafx.geometry.Insets;
 import javafx.scene.control.*;
@@ -11,11 +12,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * DataGrip-style visibility popup: "All databases"/"All schemas" master
- * checkbox plus one checkbox per item, with a "(Default)" marker on
- * whichever one the profile actually connects to/as.
+ * Visibility popup: master checkbox plus one checkbox per item, with a
+ * "(Default)" marker on whichever one the profile connects to/as.
  *
- * Result: empty list = show all; otherwise only the checked ones.
+ * Result: empty list = show all (non-Oracle); otherwise only the checked ones.
  */
 public class DatabaseFilterDialog extends Dialog<List<String>> {
 
@@ -42,12 +42,14 @@ public class DatabaseFilterDialog extends Dialog<List<String>> {
         getDialogPane().setPrefWidth(420);
 
         List<String> filter = profile.getVisibleDatabases();
-        boolean showAll = filter == null || filter.isEmpty();
+        boolean hasFilter = filter != null && !filter.isEmpty();
+        boolean isOracle = profile.getType() == ConnectionProfile.DatabaseType.ORACLE;
 
         VBox list = new VBox(8);
         list.setPadding(new Insets(12));
 
         allBox = new CheckBox("All " + nounPlural);
+        boolean showAll = !isOracle ? !hasFilter : (hasFilter && filter.size() >= allDatabases.size());
         allBox.setSelected(showAll);
         allBox.selectedProperty().addListener((obs, was, all) -> {
             for (CheckBox box : databaseBoxes.values()) {
@@ -60,7 +62,17 @@ public class DatabaseFilterDialog extends Dialog<List<String>> {
         for (String db : allDatabases) {
             boolean isDefault = db.equalsIgnoreCase(defaultName);
             CheckBox box = new CheckBox(db + (isDefault ? "   (Default)" : ""));
-            box.setSelected(showAll || filter.contains(db));
+            boolean selected;
+            if (showAll) {
+                selected = true;
+            } else if (hasFilter) {
+                selected = filter.contains(db);
+            } else if (isOracle) {
+                selected = !MetadataService.isOracleSystemSchema(db);
+            } else {
+                selected = true;
+            }
+            box.setSelected(selected);
             box.setDisable(showAll);
             databaseBoxes.put(db, box);
             list.getChildren().add(box);
@@ -75,13 +87,17 @@ public class DatabaseFilterDialog extends Dialog<List<String>> {
 
         setResultConverter(button -> {
             if (button != ButtonType.OK) return null;
-            if (allBox.isSelected()) return new ArrayList<>();   // empty = all
+            if (allBox.isSelected()) {
+                return isOracle ? new ArrayList<>(allDatabases) : new ArrayList<>();
+            }
             List<String> selected = new ArrayList<>();
             for (var entry : databaseBoxes.entrySet()) {
                 if (entry.getValue().isSelected()) selected.add(entry.getKey());
             }
-            // Selecting everything manually is the same as "all"
-            return selected.size() == allDatabases.size() ? new ArrayList<>() : selected;
+            if (selected.size() == allDatabases.size()) {
+                return isOracle ? new ArrayList<>(allDatabases) : new ArrayList<>();
+            }
+            return selected;
         });
     }
 
