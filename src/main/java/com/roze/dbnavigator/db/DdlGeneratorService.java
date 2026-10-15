@@ -14,7 +14,7 @@ import java.sql.Statement;
 import java.util.*;
 
 /**
- * Service to generate DataGrip-compatible DDL for database objects
+ * Service to generate DDL for database objects
  * (tables, views, schemas, databases, routines, sequences, indexes).
  */
 public final class DdlGeneratorService {
@@ -22,7 +22,7 @@ public final class DdlGeneratorService {
     private DdlGeneratorService() {}
 
     /**
-     * Generates a DataGrip-style DDL definition for the specified object.
+     * Generates a DDL definition for the specified object.
      */
     public static String generateDdl(ConnectionProfile profile, DbObject obj) throws Exception {
         if (profile == null || obj == null) return "-- No object selected";
@@ -42,6 +42,12 @@ public final class DdlGeneratorService {
             case EXTENSION -> generateExtensionDdl(profile, obj);
             case LANGUAGE -> generateLanguageDdl(profile, obj);
             case VIRTUAL_VIEW -> generateVirtualViewDdl(profile, obj);
+            case ASSEMBLY -> generateAssemblyDdl(profile, obj);
+            case FILEGROUP -> generateFilegroupDdl(profile, obj);
+            case DATABASE_PRINCIPAL -> generateDatabasePrincipalDdl(profile, obj);
+            case COLLATION -> generateCollationDdl(profile, obj);
+            case LINKED_SERVER -> generateLinkedServerDdl(profile, obj);
+            case SERVER_PRINCIPAL -> generateServerPrincipalDdl(profile, obj);
             default -> "-- DDL not available for " + obj.getKind() + ": " + obj.getName();
         };
     }
@@ -823,6 +829,16 @@ public final class DdlGeneratorService {
         sb.append("create virtual view ").append(obj.getName()).append(" as\n");
 
         List<String> cols = new ArrayList<>();
+        if (profile.getType() == DatabaseType.SQLSERVER && "sessions".equalsIgnoreCase(obj.getName())) {
+            cols = List.of("SPID", "Status", "Login", "HostName", "BlkBy", "DBName", "Command");
+            sb.append("select ").append(cols.get(0));
+            for (int i = 1; i < cols.size(); i++) {
+                sb.append(",\n       ").append(cols.get(i));
+            }
+            sb.append("\nfrom master.dbo.sysprocesses;\n");
+            return sb.toString();
+        }
+
         if (profile.getType() == DatabaseType.POSTGRESQL && "sessions".equalsIgnoreCase(obj.getName())) {
             String sql = "SELECT column_name FROM information_schema.columns " +
                          "WHERE table_name = 'pg_stat_activity' AND table_schema = 'pg_catalog' " +
@@ -854,7 +870,80 @@ public final class DdlGeneratorService {
         return sb.toString();
     }
 
+    private static String generateAssemblyDdl(ConnectionProfile profile, DbObject obj) {
+        return "-- auto-generated definition\n-- No source text available\n";
+    }
 
+    private static String generateCollationDdl(ConnectionProfile profile, DbObject obj) {
+        return "-- auto-generated definition\n-- No source text available\n";
+    }
+
+    private static String generateLinkedServerDdl(ConnectionProfile profile, DbObject obj) {
+        return "-- auto-generated definition\n-- No source text available\n";
+    }
+
+    private static String generateFilegroupDdl(ConnectionProfile profile, DbObject obj) {
+        String db = obj.getCatalog() != null ? obj.getCatalog() : profile.getDatabase();
+        if (db == null || db.isBlank()) db = "master";
+        return "-- auto-generated definition\nalter database " + db + "\n    add filegroup [" + obj.getName() + "]\ngo\n";
+    }
+
+    private static String generateDatabasePrincipalDdl(ConnectionProfile profile, DbObject obj) {
+        String name = obj.getName();
+        String catalog = obj.getCatalog() != null ? obj.getCatalog() : profile.getDatabase();
+        boolean isRole = false;
+        try (Connection conn = ClientRegistry.jdbc(profile, catalog).getConnection();
+             PreparedStatement ps = conn.prepareStatement("SELECT type FROM sys.database_principals WHERE name = ?")) {
+            ps.setString(1, name);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    String type = rs.getString("type");
+                    if ("R".equalsIgnoreCase(type != null ? type.trim() : "")) {
+                        isRole = true;
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+            if (name.startsWith("db_") || "public".equalsIgnoreCase(name)) {
+                isRole = true;
+            }
+        }
+
+        if (isRole) {
+            return "-- auto-generated definition\ncreate role " + name + " authorization dbo\ngo\n";
+        } else {
+            return "-- auto-generated definition\ncreate user [" + name + "] without login\ngo\n";
+        }
+    }
+
+    private static String generateServerPrincipalDdl(ConnectionProfile profile, DbObject obj) {
+        String name = obj.getName();
+        String type = null;
+        try (Connection conn = ClientRegistry.jdbc(profile, null).getConnection();
+             PreparedStatement ps = conn.prepareStatement("SELECT type FROM sys.server_principals WHERE name = ?")) {
+            ps.setString(1, name);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    type = rs.getString("type");
+                    if (type != null) type = type.trim();
+                }
+            }
+        } catch (Exception ignored) {
+            if (name.contains("Connector") || name.contains("Manager") || name.contains("Reader") ||
+                    List.of("bulkadmin", "dbcreator", "diskadmin", "processadmin", "securityadmin", "serveradmin", "setupadmin", "sysadmin", "public")
+                            .contains(name.toLowerCase())) {
+                type = "R";
+            }
+        }
+
+        if ("R".equalsIgnoreCase(type)) {
+            return "-- auto-generated definition\ncreate server role " + name + " authorization dbo\ngo\n";
+        } else if ("U".equalsIgnoreCase(type) || "G".equalsIgnoreCase(type)) {
+            return "-- auto-generated definition\ncreate login [" + name + "] from windows\ngo\n";
+        } else {
+            return "-- auto-generated definition\ncreate login [" + name + "] with password = '***'\ngo\n";
+        }
+    }
 
     // ------------------------------------------------------------ Records
 

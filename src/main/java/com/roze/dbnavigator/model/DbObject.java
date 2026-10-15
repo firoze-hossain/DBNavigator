@@ -6,8 +6,10 @@ public class DbObject {
     public enum Kind {
         CONNECTION, DATABASE, SCHEMA,
         SERVER_OBJECTS, ROLES_FOLDER, TABLESPACES_FOLDER,
+        COLLATIONS_FOLDER, LINKED_SERVERS_FOLDER, SERVER_PRINCIPALS_FOLDER,
         DATABASE_OBJECTS,
         ACCESS_METHODS_FOLDER, CASTS_FOLDER, EXTENSIONS_FOLDER, LANGUAGES_FOLDER,
+        ASSEMBLIES_FOLDER, FILEGROUPS_FOLDER, DATABASE_PRINCIPALS_FOLDER,
         VIRTUAL_VIEWS_FOLDER,
         TABLES_FOLDER, VIEWS_FOLDER, PROCEDURES_FOLDER, FUNCTIONS_FOLDER,
         SEQUENCES_FOLDER, COLLECTIONS_FOLDER,
@@ -15,6 +17,8 @@ public class DbObject {
         TABLE, VIEW, PROCEDURE, FUNCTION, SEQUENCE, COLLECTION,
         ROLE, TABLESPACE,
         ACCESS_METHOD, CAST, EXTENSION, LANGUAGE,
+        COLLATION, LINKED_SERVER, SERVER_PRINCIPAL,
+        ASSEMBLY, FILEGROUP, DATABASE_PRINCIPAL,
         VIRTUAL_VIEW,
         COLUMN, INDEX, PARTITION, KEY, FOREIGN_KEY, FIELD,
         MESSAGE
@@ -42,6 +46,7 @@ public class DbObject {
      * dedicated connection.
      */
     private boolean skipCatalogQualifier;
+    private String qualifiedNameOverride;
 
     public DbObject(String name, Kind kind) {
         this(name, kind, null, null);
@@ -65,9 +70,14 @@ public class DbObject {
     public boolean isLoaded()  { return loaded; }
     public void setLoaded(boolean loaded) { this.loaded = loaded; }
     public void setSkipCatalogQualifier(boolean skipCatalogQualifier) { this.skipCatalogQualifier = skipCatalogQualifier; }
+    public String getQualifiedNameOverride() { return qualifiedNameOverride; }
+    public void setQualifiedNameOverride(String qualifiedNameOverride) { this.qualifiedNameOverride = qualifiedNameOverride; }
 
     /** Fully qualified name for use in SQL. */
     public String qualifiedName() {
+        if (qualifiedNameOverride != null && !qualifiedNameOverride.isBlank()) {
+            return qualifiedNameOverride;
+        }
         if (kind == Kind.VIRTUAL_VIEW && "sessions".equalsIgnoreCase(name)) {
             return "pg_stat_activity";
         }
