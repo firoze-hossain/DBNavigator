@@ -229,6 +229,9 @@ public final class MetadataService {
         if (profile.getType() == DatabaseType.ORACLE) {
             return loadOracleServerObjects(profile);
         }
+        if (profile.getType() == DatabaseType.MYSQL || profile.getType() == DatabaseType.MARIADB) {
+            return loadMysqlServerObjects(profile);
+        }
         int rolesCount = 0;
         int tablespacesCount = 0;
         try (Connection conn = client(profile, null).getConnection();
@@ -247,6 +250,44 @@ public final class MetadataService {
         tablespacesFolder.setDetail(String.valueOf(tablespacesCount));
 
         return List.of(rolesFolder, tablespacesFolder);
+    }
+
+    private static List<DbObject> loadMysqlServerObjects(ConnectionProfile profile) throws Exception {
+        int collationsCount = 0;
+        int usersCount = 0;
+
+        try (Connection conn = client(profile, null).getConnection();
+             Statement stmt = conn.createStatement()) {
+            try (ResultSet rs = stmt.executeQuery("SELECT count(*) FROM information_schema.COLLATIONS")) {
+                if (rs.next()) collationsCount = rs.getInt(1);
+            } catch (Exception ignored) {}
+
+            String userCountSql = (profile.getType() == DatabaseType.MARIADB)
+                    ? "SELECT count(*) FROM mysql.user WHERE is_role != 'Y'"
+                    : "SELECT count(*) FROM mysql.user";
+            try (ResultSet rs = stmt.executeQuery(userCountSql)) {
+                if (rs.next()) usersCount = rs.getInt(1);
+            } catch (Exception ex) {
+                if (profile.getType() == DatabaseType.MARIADB) {
+                    try (ResultSet rs = stmt.executeQuery("SELECT count(*) FROM mysql.user")) {
+                        if (rs.next()) usersCount = rs.getInt(1);
+                    } catch (Exception ignored) {}
+                }
+            }
+        } catch (Exception ignored) {}
+
+        List<DbObject> result = new ArrayList<>();
+        if (collationsCount > 0) {
+            DbObject collations = new DbObject("collations", Kind.COLLATIONS_FOLDER);
+            collations.setDetail(String.valueOf(collationsCount));
+            result.add(collations);
+        }
+        if (usersCount > 0) {
+            DbObject usersFolder = new DbObject("users", Kind.USERS_FOLDER);
+            usersFolder.setDetail(String.valueOf(usersCount));
+            result.add(usersFolder);
+        }
+        return result;
     }
 
     private static List<DbObject> loadOracleServerObjects(ConnectionProfile profile) throws Exception {
@@ -329,6 +370,17 @@ public final class MetadataService {
 
     public static List<DbObject> loadCollations(ConnectionProfile profile) throws Exception {
         List<DbObject> list = new ArrayList<>();
+        if (profile.getType() == DatabaseType.MYSQL || profile.getType() == DatabaseType.MARIADB) {
+            try (Connection conn = client(profile, null).getConnection();
+                 Statement stmt = conn.createStatement();
+                 ResultSet rs = stmt.executeQuery(
+                         "SELECT COLLATION_NAME FROM information_schema.COLLATIONS ORDER BY COLLATION_NAME")) {
+                while (rs.next()) {
+                    list.add(new DbObject(rs.getString("COLLATION_NAME"), Kind.COLLATION));
+                }
+            }
+            return list;
+        }
         try (Connection conn = client(profile, null).getConnection();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery("SELECT name FROM sys.fn_helpcollations() ORDER BY name")) {
@@ -540,6 +592,9 @@ public final class MetadataService {
     }
 
     public static List<DbObject> loadUsers(ConnectionProfile profile) throws Exception {
+        if (profile.getType() == DatabaseType.MYSQL || profile.getType() == DatabaseType.MARIADB) {
+            return loadMysqlUsers(profile);
+        }
         if (profile.getType() != DatabaseType.ORACLE) {
             return List.of();
         }
@@ -562,6 +617,50 @@ public final class MetadataService {
                         list.add(new DbObject(username, Kind.USER));
                     }
                 } catch (Exception ignored) {}
+            }
+        }
+        return list;
+    }
+
+    private static List<DbObject> loadMysqlUsers(ConnectionProfile profile) throws Exception {
+        List<DbObject> list = new ArrayList<>();
+        String sql = (profile.getType() == DatabaseType.MARIADB)
+                ? "SELECT User, Host FROM mysql.user WHERE is_role != 'Y' ORDER BY User, Host"
+                : "SELECT User, Host FROM mysql.user ORDER BY User, Host";
+
+        try (Connection conn = client(profile, null).getConnection();
+             Statement stmt = conn.createStatement()) {
+            boolean queried = false;
+            try (ResultSet rs = stmt.executeQuery(sql)) {
+                while (rs.next()) {
+                    String u = rs.getString(1);
+                    String h = rs.getString(2);
+                    if (u == null) u = "";
+                    String displayName = u.isEmpty() ? "\"\"" : u;
+                    DbObject obj = new DbObject(displayName, Kind.USER);
+                    if (h != null && !h.isBlank()) {
+                        obj.setDetail("@" + h);
+                    }
+                    list.add(obj);
+                }
+                queried = true;
+            } catch (Exception ex) {
+                if (profile.getType() == DatabaseType.MARIADB) {
+                    try (ResultSet rs = stmt.executeQuery("SELECT User, Host FROM mysql.user ORDER BY User, Host")) {
+                        while (rs.next()) {
+                            String u = rs.getString(1);
+                            String h = rs.getString(2);
+                            if (u == null) u = "";
+                            String displayName = u.isEmpty() ? "\"\"" : u;
+                            DbObject obj = new DbObject(displayName, Kind.USER);
+                            if (h != null && !h.isBlank()) {
+                                obj.setDetail("@" + h);
+                            }
+                            list.add(obj);
+                        }
+                        queried = true;
+                    } catch (Exception ignored) {}
+                }
             }
         }
         return list;
@@ -778,6 +877,18 @@ public final class MetadataService {
             );
         } else if (profile != null && profile.getType() == DatabaseType.ORACLE) {
             sessions.setQualifiedNameOverride("v$session");
+        } else if (profile != null && profile.getType() == DatabaseType.MARIADB) {
+            sessions.setQualifiedNameOverride(
+                "(SELECT ID AS Id, USER AS User, HOST AS Host, DB AS db, COMMAND AS Command, " +
+                "TIME AS Time, STATE AS State, INFO AS Info, PROGRESS AS Progress " +
+                "FROM information_schema.PROCESSLIST) AS sessions"
+            );
+        } else if (profile != null && profile.getType() == DatabaseType.MYSQL) {
+            sessions.setQualifiedNameOverride(
+                "(SELECT ID AS Id, USER AS User, HOST AS Host, DB AS db, COMMAND AS Command, " +
+                "TIME AS Time, STATE AS State, INFO AS Info " +
+                "FROM information_schema.PROCESSLIST) AS sessions"
+            );
         }
         return List.of(sessions);
     }

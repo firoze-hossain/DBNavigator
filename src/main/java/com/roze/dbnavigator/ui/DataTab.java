@@ -91,6 +91,24 @@ public class DataTab extends Tab {
                 && "sessions".equalsIgnoreCase(table.getName())
                 && (table.getQualifiedNameOverride() == null || table.getQualifiedNameOverride().isBlank())) {
             table.setQualifiedNameOverride("v$session");
+        } else if (profile != null && profile.getType() == ConnectionProfile.DatabaseType.MARIADB
+                && table.getKind() == DbObject.Kind.VIRTUAL_VIEW
+                && "sessions".equalsIgnoreCase(table.getName())
+                && (table.getQualifiedNameOverride() == null || table.getQualifiedNameOverride().isBlank())) {
+            table.setQualifiedNameOverride(
+                "(SELECT ID AS Id, USER AS User, HOST AS Host, DB AS db, COMMAND AS Command, " +
+                "TIME AS Time, STATE AS State, INFO AS Info, PROGRESS AS Progress " +
+                "FROM information_schema.PROCESSLIST) AS sessions"
+            );
+        } else if (profile != null && profile.getType() == ConnectionProfile.DatabaseType.MYSQL
+                && table.getKind() == DbObject.Kind.VIRTUAL_VIEW
+                && "sessions".equalsIgnoreCase(table.getName())
+                && (table.getQualifiedNameOverride() == null || table.getQualifiedNameOverride().isBlank())) {
+            table.setQualifiedNameOverride(
+                "(SELECT ID AS Id, USER AS User, HOST AS Host, DB AS db, COMMAND AS Command, " +
+                "TIME AS Time, STATE AS State, INFO AS Info " +
+                "FROM information_schema.PROCESSLIST) AS sessions"
+            );
         }
 
         if (table.getCatalog() == null && table.getKind() == DbObject.Kind.VIRTUAL_VIEW) {

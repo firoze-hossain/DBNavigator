@@ -840,6 +840,26 @@ public final class DdlGeneratorService {
             return sb.toString();
         }
 
+        if (profile.getType() == DatabaseType.MARIADB && "sessions".equalsIgnoreCase(obj.getName())) {
+            cols = List.of("Id", "User", "Host", "db", "Command", "Time", "State", "Info", "Progress");
+            sb.append("select ").append(cols.get(0));
+            for (int i = 1; i < cols.size(); i++) {
+                sb.append(",\n       ").append(cols.get(i));
+            }
+            sb.append("\nfrom information_schema.PROCESSLIST;\n");
+            return sb.toString();
+        }
+
+        if (profile.getType() == DatabaseType.MYSQL && "sessions".equalsIgnoreCase(obj.getName())) {
+            cols = List.of("Id", "User", "Host", "db", "Command", "Time", "State", "Info");
+            sb.append("select ").append(cols.get(0));
+            for (int i = 1; i < cols.size(); i++) {
+                sb.append(",\n       ").append(cols.get(i));
+            }
+            sb.append("\nfrom information_schema.PROCESSLIST;\n");
+            return sb.toString();
+        }
+
         if (profile.getType() == DatabaseType.SQLSERVER && "sessions".equalsIgnoreCase(obj.getName())) {
             cols = List.of("SPID", "Status", "Login", "HostName", "BlkBy", "DBName", "Command");
             sb.append("select ").append(cols.get(0));
@@ -962,6 +982,56 @@ public final class DdlGeneratorService {
         StringBuilder sb = new StringBuilder();
         sb.append("-- auto-generated definition\n");
         String username = obj.getName();
+
+        if (profile.getType() == DatabaseType.MYSQL || profile.getType() == DatabaseType.MARIADB) {
+            String u = username;
+            if (u.startsWith("\"") && u.endsWith("\"") && u.length() >= 2) {
+                u = u.substring(1, u.length() - 1);
+            }
+            String host = "localhost";
+            if (obj.getDetail() != null && obj.getDetail().startsWith("@")) {
+                host = obj.getDetail().substring(1);
+            }
+
+            boolean isRole = false;
+            if (profile.getType() == DatabaseType.MARIADB) {
+                try (Connection conn = ClientRegistry.jdbc(profile, null).getConnection();
+                     PreparedStatement stmt = conn.prepareStatement("SELECT is_role FROM mysql.user WHERE User = ?")) {
+                    stmt.setString(1, u);
+                    try (ResultSet rs = stmt.executeQuery()) {
+                        if (rs.next() && "Y".equalsIgnoreCase(rs.getString(1))) isRole = true;
+                    }
+                } catch (Exception ignored) {}
+            } else {
+                if (u.startsWith("mysql.infoschema") || u.startsWith("mysql.session") || u.startsWith("mysql.sys")) {
+                    isRole = true;
+                } else {
+                    try (Connection conn = ClientRegistry.jdbc(profile, null).getConnection();
+                         PreparedStatement stmt = conn.prepareStatement(
+                                 "SELECT account_locked, authentication_string FROM mysql.user WHERE User = ? AND Host = ?")) {
+                        stmt.setString(1, u);
+                        stmt.setString(2, host);
+                        try (ResultSet rs = stmt.executeQuery()) {
+                            if (rs.next()) {
+                                String locked = rs.getString("account_locked");
+                                String auth = rs.getString("authentication_string");
+                                if ("Y".equalsIgnoreCase(locked) && auth != null && auth.contains("THISISACOMBINATION")) {
+                                    isRole = true;
+                                }
+                            }
+                        }
+                    } catch (Exception ignored) {}
+                }
+            }
+
+            String hostFormatted = host.matches("[a-zA-Z0-9_.-]+") ? "@" + host : "@'" + host + "'";
+            if (isRole) {
+                return "-- auto-generated definition\ncreate role '" + u + "'" + hostFormatted + ";\n";
+            } else {
+                return "-- auto-generated definition\ncreate user '" + u + "'" + hostFormatted + ";\n";
+            }
+        }
+
         String defaultTs = null;
         String tempTs = null;
 

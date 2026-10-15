@@ -2806,6 +2806,17 @@ public class SchemaTreePane extends VBox {
             }
         }
 
+        // 0.1 Check for virtual views navigation directly under connection (e.g. MySQL, MariaDB, Oracle)
+        if (target.getKind() == Kind.VIRTUAL_VIEWS_FOLDER || target.getKind() == Kind.VIRTUAL_VIEW) {
+            TreeItem<DbObject> vvFolder = connItem.getChildren().stream()
+                    .filter(c -> c.getValue() != null && c.getValue().getKind() == Kind.VIRTUAL_VIEWS_FOLDER)
+                    .findFirst().orElse(null);
+            if (vvFolder != null) {
+                navigateFromVirtualViews(connItem, target);
+                return;
+            }
+        }
+
         // 1. Look for matching DATABASE nodes
         List<TreeItem<DbObject>> dbItems = connItem.getChildren().stream()
                 .filter(c -> c.getValue() != null && c.getValue().getKind() == Kind.DATABASE)
