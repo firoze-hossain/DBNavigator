@@ -75,14 +75,17 @@ public class MongoCollectionTab extends Tab {
         applyButton.setGraphic(Icons.of(FontAwesomeSolid.SEARCH, "#6897bb", 11));
         applyButton.setOnAction(e -> reloadFromStart());
 
-        MenuButton exportButton = new MenuButton();
-        exportButton.setGraphic(Icons.of(FontAwesomeSolid.DOWNLOAD, "#e0a44c", 11));
-        exportButton.setTooltip(new Tooltip("Export current page"));
-        MenuItem exportCsv = new MenuItem("Export to CSV\u2026");
-        exportCsv.setOnAction(e -> grid.exportCsv());
-        MenuItem exportJson = new MenuItem("Export to JSON\u2026");
-        exportJson.setOnAction(e -> grid.exportJson());
-        exportButton.getItems().addAll(exportCsv, exportJson);
+        DataExtractorsToolbar extractorsToolbar = new DataExtractorsToolbar(
+                ConnectionProfile.DatabaseType.MONGODB,
+                grid::toQueryResult,
+                () -> (collection != null ? collection.getCatalog() + "." + collection.getName() : "collection"),
+                () -> collection,
+                () -> profile,
+                () -> getTabPane() != null && getTabPane().getScene() != null ? getTabPane().getScene().getWindow() : null
+        );
+        extractorsToolbar.addFormatListener(grid::setActiveExtractorFormat);
+        grid.setActiveExtractorFormat(extractorsToolbar.getActiveFormat());
+        grid.setExportDataAction(extractorsToolbar::openExportDialog);
 
         prevButton.setGraphic(Icons.of(FontAwesomeSolid.CHEVRON_LEFT, "#a9b7c6", 11));
         prevButton.setOnAction(e -> { if (page > 0) { page--; loadPage(); } });
@@ -91,8 +94,8 @@ public class MongoCollectionTab extends Tab {
 
         Region spacer = new Region();
         HBox toolbar = new HBox(8, submitButton, revertButton, new Separator(),
-                filterField, applyButton, exportButton,
-                spacer, prevButton, pageLabel, nextButton);
+                filterField, applyButton,
+                spacer, extractorsToolbar, prevButton, pageLabel, nextButton);
         toolbar.setAlignment(Pos.CENTER_LEFT);
         toolbar.setPadding(new Insets(6, 10, 6, 10));
         toolbar.getStyleClass().add("console-toolbar");

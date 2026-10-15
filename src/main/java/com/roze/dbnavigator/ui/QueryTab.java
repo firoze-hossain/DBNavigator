@@ -206,9 +206,17 @@ public class QueryTab extends Tab {
         editManager = new GridEditManager(profile, catalog, resultGrid,
                 submitButton, revertButton, this::rerunLastSql, statusLabel::setText);
 
-        Button exportButton = new Button("Export CSV");
-        exportButton.setGraphic(Icons.of(FontAwesomeSolid.FILE_CSV, "#e0a44c", 11));
-        exportButton.setOnAction(e -> activeResultGrid().exportCsv());
+        Button exportButton = new Button("Export Data");
+        exportButton.setGraphic(Icons.of(FontAwesomeSolid.DOWNLOAD, "#e0a44c", 11));
+        exportButton.setOnAction(e -> {
+            ResultGrid activeGrid = activeResultGrid();
+            if (activeGrid != null && !activeGrid.getItems().isEmpty()) {
+                ExportDataDialog.show(mainWindow != null ? mainWindow.getOwnerWindow() : null,
+                        "query_result", activeGrid.toQueryResult(),
+                        profile != null ? profile.getType() : ConnectionProfile.DatabaseType.POSTGRESQL,
+                        activeGrid.getActiveExtractorFormat());
+            }
+        });
 
         limitSpinner.setEditable(true);
         limitSpinner.setPrefWidth(95);
@@ -2060,12 +2068,21 @@ public class QueryTab extends Tab {
         tabReloadBtn.setTooltip(new Tooltip("Reload Page  Ctrl+F5"));
         tabReloadBtn.setOnAction(e -> handleReloadQuery());
 
-        Button tabExportCsv = new Button();
-        tabExportCsv.setGraphic(Icons.of(FontAwesomeSolid.FILE_CSV, "#e0a44c", 11));
-        tabExportCsv.setTooltip(new Tooltip("Export current page to CSV"));
-        tabExportCsv.setOnAction(e -> grid.exportCsv());
+        DataExtractorsToolbar extractorsToolbar = new DataExtractorsToolbar(
+                profile != null ? profile.getType() : ConnectionProfile.DatabaseType.POSTGRESQL,
+                grid::toQueryResult,
+                () -> "query_result",
+                () -> null,
+                () -> profile,
+                () -> mainWindow != null ? mainWindow.getOwnerWindow() : null
+        );
+        extractorsToolbar.addFormatListener(grid::setActiveExtractorFormat);
+        grid.setActiveExtractorFormat(extractorsToolbar.getActiveFormat());
+        grid.setExportDataAction(extractorsToolbar::openExportDialog);
 
-        HBox dataToolbar = new HBox(6, addRowBtn, deleteRowsBtn, tabSubmitBtn, tabRevertBtn, tabReloadBtn, tabExportCsv);
+        Region tbSpacer = new Region();
+        HBox.setHgrow(tbSpacer, Priority.ALWAYS);
+        HBox dataToolbar = new HBox(6, addRowBtn, deleteRowsBtn, tabSubmitBtn, tabRevertBtn, tabReloadBtn, tbSpacer, extractorsToolbar);
         dataToolbar.setAlignment(Pos.CENTER_LEFT);
         dataToolbar.setPadding(new Insets(4, 8, 4, 8));
         dataToolbar.getStyleClass().add("result-data-toolbar");

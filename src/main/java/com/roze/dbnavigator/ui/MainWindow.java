@@ -124,6 +124,12 @@ public class MainWindow {
             Map.entry("memory", false)
     ));
 
+    private static MainWindow instance;
+
+    public static MainWindow getInstance() {
+        return instance;
+    }
+
     private Project currentProject;
     private boolean isExiting = false;
 
@@ -132,6 +138,7 @@ public class MainWindow {
     }
 
     public MainWindow(Stage stage, Project project) {
+        instance = this;
         this.stage = stage;
         this.currentProject = project != null ? project : ProjectStore.getCurrentProject();
         this.schemaPane = new SchemaTreePane(this);

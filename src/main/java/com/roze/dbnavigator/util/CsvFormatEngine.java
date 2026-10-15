@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * DataGrip-style dynamic CSV / delimited format engine.
+ * Dynamic CSV / delimited format engine.
  * Handles custom value separators, row separators, quotation rules,
  * null representations, row prefixes/suffixes, and whitespace trimming.
  */
@@ -37,7 +37,7 @@ public final class CsvFormatEngine {
 
     private CsvFormatEngine() {}
 
-    /** Converts DataGrip dropdown labels ("Comma", "Tab", etc.) or custom string to literal separator. */
+    /** Converts standard dropdown labels ("Comma", "Tab", etc.) or custom string to literal separator. */
     public static String resolveSeparator(String text) {
         if (text == null || text.isEmpty()) return ",";
         String s = text.trim();
