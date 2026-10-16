@@ -8,6 +8,8 @@ import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.TreeItem;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCodeCombination;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -1074,12 +1076,451 @@ public class SchemaTreePaneToolbarTest {
         ContextMenu menu = pane.buildMenuForTest(seq, profile);
         assertNotNull(menu, "Sequence context menu must not be null");
 
-        List<String> itemTexts = menu.getItems().stream().map(MenuItem::getText).filter(java.util.Objects::nonNull).toList();
-        assertTrue(itemTexts.contains("Go to DDL"), "Sequence menu must contain 'Go to DDL'");
-        assertTrue(itemTexts.contains("Jump to Query Console"), "Sequence menu must contain 'Jump to Query Console'");
-        assertTrue(itemTexts.contains("Refresh"), "Sequence menu must contain 'Refresh'");
+        Menu nav = findMenu(menu, "Navigation");
+        assertNotNull(nav, "Sequence menu must contain 'Navigation'");
+        assertTrue(menuHasItem(nav, "Go to DDL"), "Sequence Navigation must contain 'Go to DDL'");
+        assertTrue(menuHasItem(nav, "Jump to Query Console"), "Sequence Navigation must contain 'Jump to Query Console'");
+        assertTrue(menuHasItem(nav, "Select in Database Explorer"), "Sequence Navigation must contain 'Select in Database Explorer'");
+
+        MenuItem refresh = findItem(menu, "Refresh");
+        assertNotNull(refresh, "Sequence menu must contain 'Refresh'");
+
+        assertNotNull(findItem(menu, "Modify Sequence"), "Sequence menu must contain 'Modify Sequence…'");
+        assertNotNull(findMenu(menu, "New"), "Sequence menu must contain 'New'");
 
         assertNotNull(Icons.forObject(seq, profile, false), "Sequence must have non-null icon");
+    }
+
+    @Test
+    public void testPostgreSqlSchemaContextMenuMatchingDataGripImage1() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = createPostgreSqlProfile();
+        DbObject schemaObj = new DbObject("public", Kind.SCHEMA, "thunder_db", "public");
+        ContextMenu menu = pane.buildMenuForTest(schemaObj, profile);
+        assertNotNull(menu);
+
+        // 1. New >
+        Menu newMenu = findMenu(menu, "New");
+        assertNotNull(newMenu);
+        assertTrue(menuHasItem(newMenu, "Query Console"));
+        assertTrue(menuHasItem(newMenu, "Query File"));
+        assertTrue(menuHasItem(newMenu, "Table"));
+        assertTrue(menuHasItem(newMenu, "Materialized View"));
+        assertTrue(menuHasItem(newMenu, "View"));
+        assertTrue(menuHasItem(newMenu, "Operator"));
+        assertTrue(menuHasItem(newMenu, "Sequence"));
+        assertTrue(menuHasItem(newMenu, "Collation"));
+        assertTrue(menuHasItem(newMenu, "Schema"));
+        assertTrue(menuHasItem(newMenu, "Language"));
+        assertTrue(menuHasItem(newMenu, "Database"));
+        assertTrue(menuHasItem(newMenu, "Role"));
+        assertTrue(menuHasItem(newMenu, "User"));
+        assertTrue(menuHasItem(newMenu, "Virtual View"));
+        assertTrue(menuHasItem(newMenu, "Data Source"));
+        assertTrue(menuHasItem(newMenu, "Driver"));
+
+        // 2. Modify Schema…
+        MenuItem modify = findItem(menu, "Modify Schema");
+        assertNotNull(modify);
+        assertEquals(KeyCode.F6, ((KeyCodeCombination) modify.getAccelerator()).getCode());
+
+        // 3. Copy/Paste >
+        Menu copyPaste = findMenu(menu, "Copy/Paste");
+        assertNotNull(copyPaste);
+        assertTrue(menuHasItem(copyPaste, "Copy"));
+        assertTrue(menuHasItem(copyPaste, "Copy Path/Reference"));
+
+        // 4. Refresh (Ctrl+F5)
+        MenuItem refresh = findItem(menu, "Refresh");
+        assertNotNull(refresh);
+        assertEquals(KeyCode.F5, ((KeyCodeCombination) refresh.getAccelerator()).getCode());
+
+        // 5. Rename… (Shift+F6, enabled)
+        MenuItem rename = findItem(menu, "Rename");
+        assertNotNull(rename);
+        assertFalse(rename.isDisable());
+
+        // 6. Quick Documentation (Ctrl+Q)
+        MenuItem quickDoc = findItem(menu, "Quick Documentation");
+        assertNotNull(quickDoc);
+        assertFalse(quickDoc.isDisable());
+
+        // 7. Compare Schema Structure With… (Ctrl+D)
+        MenuItem compare = findItem(menu, "Compare Schema Structure With");
+        assertNotNull(compare);
+
+        // 8. Navigation >
+        Menu nav = findMenu(menu, "Navigation");
+        assertNotNull(nav);
+        assertTrue(menuHasItem(nav, "Go to DDL"));
+        assertTrue(menuHasItem(nav, "Jump to Query Console"));
+        assertTrue(menuHasItem(nav, "Select in Database Explorer"));
+
+        // 9. Find Usages (Alt+Shift+7)
+        assertNotNull(findItem(menu, "Find Usages"));
+
+        // 10. Introspection Level >
+        Menu intro = findMenu(menu, "Introspection Level");
+        assertNotNull(intro);
+        assertTrue(menuHasItem(intro, "Auto"));
+        assertTrue(menuHasItem(intro, "High"));
+        assertTrue(menuHasItem(intro, "Medium"));
+        assertTrue(menuHasItem(intro, "Low"));
+
+        // 11. SQL Scripts >
+        Menu sql = findMenu(menu, "SQL Scripts");
+        assertNotNull(sql);
+        assertTrue(menuHasItem(sql, "Open Query Console"));
+        assertTrue(menuHasItem(sql, "Run SQL Script"));
+        assertTrue(menuHasItem(sql, "Generate DDL to Query Console"));
+
+        // 12. Object Actions >
+        Menu objActions = findMenu(menu, "Object Actions");
+        assertNotNull(objActions);
+        assertTrue(menuHasItem(objActions, "Show / Hide Schemas"));
+        assertTrue(menuHasItem(objActions, "Forget Saved Passwords"));
+
+        // 13. Tools >
+        Menu tools = findMenu(menu, "Tools");
+        assertNotNull(tools);
+        assertTrue(menuHasItem(tools, "Manage Schemas"));
+        assertTrue(menuHasItem(tools, "Verify Connection"));
+
+        // 14. Import/Export >
+        Menu impExp = findMenu(menu, "Import/Export");
+        assertNotNull(impExp);
+        assertTrue(menuHasItem(impExp, "Dump with pg_dump"));
+        assertTrue(menuHasItem(impExp, "Restore"));
+
+        // 15. Diagrams >
+        Menu diagrams = findMenu(menu, "Diagrams");
+        assertNotNull(diagrams);
+        assertTrue(menuHasItem(diagrams, "Show Diagram"));
+
+        // 16. Diagnostics >
+        Menu diagnostics = findMenu(menu, "Diagnostics");
+        assertNotNull(diagnostics);
+        assertTrue(menuHasItem(diagnostics, "Diagnostic Refresh"));
+
+        // 17. Drop… (Delete, enabled)
+        MenuItem drop = findItem(menu, "Drop");
+        assertNotNull(drop);
+        assertFalse(drop.isDisable());
+    }
+
+    @Test
+    public void testPostgreSqlTablesFolderContextMenuMatchingDataGripImage2() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = createPostgreSqlProfile();
+        DbObject folder = new DbObject("tables", Kind.TABLES_FOLDER, "thunder_db", "public");
+        ContextMenu menu = pane.buildMenuForTest(folder, profile);
+        assertNotNull(menu);
+
+        // 1. New > (starts with Table)
+        Menu newMenu = findMenu(menu, "New");
+        assertNotNull(newMenu);
+        assertEquals("Table", newMenu.getItems().get(3).getText());
+
+        // Category folder must NOT have Modify
+        assertNull(findItem(menu, "Modify"));
+
+        // Copy/Paste
+        assertNotNull(findMenu(menu, "Copy/Paste"));
+
+        // Open the List (F4)
+        MenuItem openList = findItem(menu, "Open the List");
+        assertNotNull(openList);
+        assertEquals(KeyCode.F4, ((KeyCodeCombination) openList.getAccelerator()).getCode());
+
+        // Refresh
+        assertNotNull(findItem(menu, "Refresh"));
+
+        // Rename… (disabled)
+        MenuItem rename = findItem(menu, "Rename");
+        assertNotNull(rename);
+        assertTrue(rename.isDisable());
+
+        // Quick Documentation (disabled)
+        MenuItem quickDoc = findItem(menu, "Quick Documentation");
+        assertNotNull(quickDoc);
+        assertTrue(quickDoc.isDisable());
+
+        // Compare Schema Structure (disabled)
+        MenuItem compare = findItem(menu, "Compare Schema Structure");
+        assertNotNull(compare);
+        assertTrue(compare.isDisable());
+
+        // NO Navigation and NO Find Usages on category folders
+        assertNull(findMenu(menu, "Navigation"));
+        assertNull(findItem(menu, "Find Usages"));
+
+        // Introspection Level
+        assertNotNull(findMenu(menu, "Introspection Level"));
+
+        // SQL Scripts
+        assertNotNull(findMenu(menu, "SQL Scripts"));
+
+        // Object Actions
+        assertNotNull(findMenu(menu, "Object Actions"));
+
+        // Tools
+        assertNotNull(findMenu(menu, "Tools"));
+
+        // Import/Export
+        assertNotNull(findMenu(menu, "Import/Export"));
+
+        // Diagrams
+        assertNotNull(findMenu(menu, "Diagrams"));
+
+        // Diagnostics
+        assertNotNull(findMenu(menu, "Diagnostics"));
+
+        // Drop… (disabled)
+        MenuItem drop = findItem(menu, "Drop");
+        assertNotNull(drop);
+        assertTrue(drop.isDisable());
+    }
+
+    @Test
+    public void testPostgreSqlTableContextMenuMatchingDataGripImage3() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = createPostgreSqlProfile();
+        DbObject table = new DbObject("collection_variables", Kind.TABLE, "thunder_db", "public");
+        ContextMenu menu = pane.buildMenuForTest(table, profile);
+        assertNotNull(menu);
+
+        // 1. New > (has table-specific items: Column, Unique Key, Foreign Key, Index, Check)
+        Menu newMenu = findMenu(menu, "New");
+        assertNotNull(newMenu);
+        assertTrue(menuHasItem(newMenu, "Column"));
+        assertTrue(menuHasItem(newMenu, "Unique Key"));
+        assertTrue(menuHasItem(newMenu, "Foreign Key"));
+        assertTrue(menuHasItem(newMenu, "Index"));
+        assertTrue(menuHasItem(newMenu, "Check"));
+        assertTrue(menuHasItem(newMenu, "Table"));
+        assertTrue(menuHasItem(newMenu, "Virtual Column"));
+        assertTrue(menuHasItem(newMenu, "Virtual Foreign Key"));
+        assertTrue(menuHasItem(newMenu, "Virtual View"));
+
+        // 2. Modify Table…
+        MenuItem modify = findItem(menu, "Modify Table");
+        assertNotNull(modify);
+        assertEquals(KeyCode.F6, ((KeyCodeCombination) modify.getAccelerator()).getCode());
+
+        // 3. Copy/Paste >
+        assertNotNull(findMenu(menu, "Copy/Paste"));
+
+        // 4. Edit Data (F4)
+        MenuItem editData = findItem(menu, "Edit Data");
+        assertNotNull(editData);
+        assertEquals(KeyCode.F4, ((KeyCodeCombination) editData.getAccelerator()).getCode());
+
+        // 5. Refresh
+        assertNotNull(findItem(menu, "Refresh"));
+
+        // 6. Rename… (enabled)
+        MenuItem rename = findItem(menu, "Rename");
+        assertNotNull(rename);
+        assertFalse(rename.isDisable());
+
+        // 7. Quick Documentation
+        assertNotNull(findItem(menu, "Quick Documentation"));
+
+        // 8. Compare Schema Structure With…
+        assertNotNull(findItem(menu, "Compare Schema Structure With"));
+
+        // 9. Navigation >
+        Menu nav = findMenu(menu, "Navigation");
+        assertNotNull(nav);
+        assertTrue(menuHasItem(nav, "Go to DDL"));
+        assertTrue(menuHasItem(nav, "Jump to Query Console"));
+        assertTrue(menuHasItem(nav, "Select in Database Explorer"));
+
+        // 10. Find Usages
+        assertNotNull(findItem(menu, "Find Usages"));
+
+        // 11. Introspection Level
+        assertNotNull(findMenu(menu, "Introspection Level"));
+
+        // 12. SQL Scripts > (includes SELECT * and COUNT(*))
+        Menu sql = findMenu(menu, "SQL Scripts");
+        assertNotNull(sql);
+        assertTrue(menuHasItem(sql, "New Query: SELECT *"));
+        assertTrue(menuHasItem(sql, "New Query: COUNT(*)"));
+
+        // 13. Object Actions
+        assertNotNull(findMenu(menu, "Object Actions"));
+
+        // 14. Tools
+        assertNotNull(findMenu(menu, "Tools"));
+
+        // 15. Import/Export > (Table specific: Export Data to File, Import Data from File, Export with 'pg_dump', Restore with 'pg_restore')
+        Menu impExp = findMenu(menu, "Import/Export");
+        assertNotNull(impExp);
+        assertTrue(menuHasItem(impExp, "Export Data to File"));
+        assertTrue(menuHasItem(impExp, "Import Data from File(s)"));
+        assertTrue(menuHasItem(impExp, "Export with 'pg_dump'"));
+        assertTrue(menuHasItem(impExp, "Restore with 'pg_restore'"));
+
+        // 16. Diagrams
+        assertNotNull(findMenu(menu, "Diagrams"));
+
+        // 17. Diagnostics
+        assertNotNull(findMenu(menu, "Diagnostics"));
+
+        // 18. Drop… (enabled)
+        MenuItem drop = findItem(menu, "Drop");
+        assertNotNull(drop);
+        assertFalse(drop.isDisable());
+    }
+
+    @Test
+    public void testPostgreSqlSequencesFolderContextMenuMatchingDataGripImage4() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = createPostgreSqlProfile();
+        DbObject folder = new DbObject("sequences", Kind.SEQUENCES_FOLDER, "thunder_db", "public");
+        ContextMenu menu = pane.buildMenuForTest(folder, profile);
+        assertNotNull(menu);
+
+        // 1. New > (starts with Sequence)
+        Menu newMenu = findMenu(menu, "New");
+        assertNotNull(newMenu);
+        assertEquals("Sequence", newMenu.getItems().get(3).getText());
+
+        // Category folder must NOT have Modify
+        assertNull(findItem(menu, "Modify"));
+
+        // Copy/Paste
+        assertNotNull(findMenu(menu, "Copy/Paste"));
+
+        // Open the List (F4)
+        MenuItem openList = findItem(menu, "Open the List");
+        assertNotNull(openList);
+        assertEquals(KeyCode.F4, ((KeyCodeCombination) openList.getAccelerator()).getCode());
+
+        // Refresh
+        assertNotNull(findItem(menu, "Refresh"));
+
+        // Rename… (disabled)
+        MenuItem rename = findItem(menu, "Rename");
+        assertNotNull(rename);
+        assertTrue(rename.isDisable());
+
+        // Quick Documentation (disabled)
+        MenuItem quickDoc = findItem(menu, "Quick Documentation");
+        assertNotNull(quickDoc);
+        assertTrue(quickDoc.isDisable());
+
+        // Compare Schema Structure (disabled)
+        MenuItem compare = findItem(menu, "Compare Schema Structure");
+        assertNotNull(compare);
+        assertTrue(compare.isDisable());
+
+        // NO Navigation and NO Find Usages on category folders
+        assertNull(findMenu(menu, "Navigation"));
+        assertNull(findItem(menu, "Find Usages"));
+
+        // Introspection Level
+        assertNotNull(findMenu(menu, "Introspection Level"));
+
+        // SQL Scripts
+        assertNotNull(findMenu(menu, "SQL Scripts"));
+
+        // In DataGrip Image 4: sequences category folder does NOT have Object Actions
+        assertNull(findMenu(menu, "Object Actions"));
+
+        // Tools
+        assertNotNull(findMenu(menu, "Tools"));
+
+        // Import/Export
+        assertNotNull(findMenu(menu, "Import/Export"));
+
+        // Diagrams
+        assertNotNull(findMenu(menu, "Diagrams"));
+
+        // Diagnostics
+        assertNotNull(findMenu(menu, "Diagnostics"));
+
+        // Drop… (disabled)
+        MenuItem drop = findItem(menu, "Drop");
+        assertNotNull(drop);
+        assertTrue(drop.isDisable());
+    }
+
+    @Test
+    public void testPostgreSqlSequenceContextMenuMatchingDataGripImage5() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = createPostgreSqlProfile();
+        DbObject seq = new DbObject("mail_settings_id_seq", Kind.SEQUENCE, "thunder_db", "public");
+        ContextMenu menu = pane.buildMenuForTest(seq, profile);
+        assertNotNull(menu);
+
+        // 1. New > (starts with Sequence)
+        Menu newMenu = findMenu(menu, "New");
+        assertNotNull(newMenu);
+        assertEquals("Sequence", newMenu.getItems().get(3).getText());
+
+        // 2. Modify Sequence…
+        MenuItem modify = findItem(menu, "Modify Sequence");
+        assertNotNull(modify);
+        assertEquals(KeyCode.F6, ((KeyCodeCombination) modify.getAccelerator()).getCode());
+
+        // 3. Copy/Paste >
+        assertNotNull(findMenu(menu, "Copy/Paste"));
+
+        // Sequence does NOT have Edit Data or Open the List
+        assertNull(findItem(menu, "Edit Data"));
+        assertNull(findItem(menu, "Open the List"));
+
+        // 4. Refresh
+        assertNotNull(findItem(menu, "Refresh"));
+
+        // 5. Rename… (enabled)
+        MenuItem rename = findItem(menu, "Rename");
+        assertNotNull(rename);
+        assertFalse(rename.isDisable());
+
+        // 6. Quick Documentation
+        assertNotNull(findItem(menu, "Quick Documentation"));
+
+        // 7. Compare Schema Structure With…
+        assertNotNull(findItem(menu, "Compare Schema Structure With"));
+
+        // 8. Navigation >
+        Menu nav = findMenu(menu, "Navigation");
+        assertNotNull(nav);
+        assertTrue(menuHasItem(nav, "Go to DDL"));
+        assertTrue(menuHasItem(nav, "Jump to Query Console"));
+        assertTrue(menuHasItem(nav, "Select in Database Explorer"));
+
+        // 9. Find Usages
+        assertNotNull(findItem(menu, "Find Usages"));
+
+        // 10. Introspection Level
+        assertNotNull(findMenu(menu, "Introspection Level"));
+
+        // 11. SQL Scripts
+        assertNotNull(findMenu(menu, "SQL Scripts"));
+
+        // 12. Object Actions
+        assertNotNull(findMenu(menu, "Object Actions"));
+
+        // 13. Tools
+        assertNotNull(findMenu(menu, "Tools"));
+
+        // 14. Import/Export
+        assertNotNull(findMenu(menu, "Import/Export"));
+
+        // 15. Diagrams
+        assertNotNull(findMenu(menu, "Diagrams"));
+
+        // 16. Diagnostics
+        assertNotNull(findMenu(menu, "Diagnostics"));
+
+        // 17. Drop… (enabled)
+        MenuItem drop = findItem(menu, "Drop");
+        assertNotNull(drop);
+        assertFalse(drop.isDisable());
     }
 
     @Test
@@ -1464,5 +1905,1604 @@ public class SchemaTreePaneToolbarTest {
         assertEquals(conn1, pane.getTree().getSelectionModel().getSelectedItem(),
                 "Selection should gracefully fall back to the top-level connection ancestor");
     }
+
+    @Test
+    public void testPostgreSqlDatabaseObjectsFolderContextMenuMatchingDataGripImage1() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = createPostgreSqlProfile();
+        DbObject dbObjs = new DbObject("Database Objects", Kind.DATABASE_OBJECTS, "thunder_db", null);
+        ContextMenu menu = pane.buildMenuForTest(dbObjs, profile);
+        assertNotNull(menu);
+
+        // 1. + New >
+        Menu newMenu = findMenu(menu, "New");
+        assertNotNull(newMenu);
+        assertTrue(menuHasItem(newMenu, "Query Console"));
+        assertTrue(menuHasItem(newMenu, "Query File"));
+        assertFalse(menuHasItem(newMenu, "Table"));
+        assertFalse(menuHasItem(newMenu, "View"));
+        assertFalse(menuHasItem(newMenu, "Schema"));
+        assertTrue(menuHasItem(newMenu, "Data Source"));
+        assertTrue(menuHasItem(newMenu, "DDL Data Source"));
+
+        // No Modify
+        assertNull(findItem(menu, "Modify"));
+
+        // Copy/Paste (disabled)
+        Menu cp = findMenu(menu, "Copy/Paste");
+        assertNotNull(cp);
+        assertTrue(cp.isDisable());
+
+        // Refresh (Ctrl+F5)
+        assertNotNull(findItem(menu, "Refresh"));
+
+        // Rename… (disabled)
+        MenuItem rename = findItem(menu, "Rename");
+        assertNotNull(rename);
+        assertTrue(rename.isDisable());
+
+        // Open the List (F4)
+        MenuItem openList = findItem(menu, "Open the List");
+        assertNotNull(openList);
+        assertEquals(KeyCode.F4, ((KeyCodeCombination) openList.getAccelerator()).getCode());
+
+        // Quick Documentation (disabled)
+        MenuItem quickDoc = findItem(menu, "Quick Documentation");
+        assertNotNull(quickDoc);
+        assertTrue(quickDoc.isDisable());
+
+        // Compare Schema Structure (disabled, no "With…")
+        MenuItem compare = findItem(menu, "Compare Schema Structure");
+        assertNotNull(compare);
+        assertTrue(compare.isDisable());
+        assertNull(findItem(menu, "Compare Schema Structure With"));
+
+        // No Navigation, No Find Usages
+        assertNull(findMenu(menu, "Navigation"));
+        assertNull(findItem(menu, "Find Usages"));
+
+        // Introspection Level
+        assertNotNull(findMenu(menu, "Introspection Level"));
+
+        // SQL Scripts
+        assertNotNull(findMenu(menu, "SQL Scripts"));
+
+        // Tools
+        assertNotNull(findMenu(menu, "Tools"));
+
+        // No Object Actions and No Import/Export
+        assertNull(findMenu(menu, "Object Actions"));
+        assertNull(findMenu(menu, "Import/Export"));
+
+        // Diagrams
+        assertNotNull(findMenu(menu, "Diagrams"));
+
+        // Diagnostics
+        assertNotNull(findMenu(menu, "Diagnostics"));
+
+        // Drop… (disabled)
+        MenuItem drop = findItem(menu, "Drop");
+        assertNotNull(drop);
+        assertTrue(drop.isDisable());
+    }
+
+    @Test
+    public void testPostgreSqlVirtualViewsFolderContextMenuMatchingDataGripImage2() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = createPostgreSqlProfile();
+        DbObject vvFolder = new DbObject("virtual views", Kind.VIRTUAL_VIEWS_FOLDER, "thunder_db", null);
+        ContextMenu menu = pane.buildMenuForTest(vvFolder, profile);
+        assertNotNull(menu);
+
+        // 1. + New >
+        Menu newMenu = findMenu(menu, "New");
+        assertNotNull(newMenu);
+        assertTrue(menuHasItem(newMenu, "Query Console"));
+        assertTrue(menuHasItem(newMenu, "Query File"));
+        assertTrue(menuHasItem(newMenu, "Virtual View"));
+        assertTrue(menuHasItem(newMenu, "Schema"));
+        assertTrue(menuHasItem(newMenu, "Language"));
+        assertTrue(menuHasItem(newMenu, "Database"));
+        assertTrue(menuHasItem(newMenu, "Role"));
+        assertTrue(menuHasItem(newMenu, "User"));
+        assertFalse(menuHasItem(newMenu, "Table"));
+
+        // Modify Virtual View… (Ctrl+F6, enabled)
+        MenuItem modify = findItem(menu, "Modify Virtual View");
+        assertNotNull(modify);
+        assertFalse(modify.isDisable());
+        assertEquals(KeyCode.F6, ((KeyCodeCombination) modify.getAccelerator()).getCode());
+
+        // Copy/Paste (disabled)
+        Menu cp = findMenu(menu, "Copy/Paste");
+        assertNotNull(cp);
+        assertTrue(cp.isDisable());
+
+        // Refresh (Ctrl+F5)
+        assertNotNull(findItem(menu, "Refresh"));
+
+        // Rename… (disabled)
+        MenuItem rename = findItem(menu, "Rename");
+        assertNotNull(rename);
+        assertTrue(rename.isDisable());
+
+        // Open the List (F4)
+        MenuItem openList = findItem(menu, "Open the List");
+        assertNotNull(openList);
+        assertEquals(KeyCode.F4, ((KeyCodeCombination) openList.getAccelerator()).getCode());
+
+        // Quick Documentation (disabled)
+        MenuItem quickDoc = findItem(menu, "Quick Documentation");
+        assertNotNull(quickDoc);
+        assertTrue(quickDoc.isDisable());
+
+        // Compare Schema Structure (disabled)
+        MenuItem compare = findItem(menu, "Compare Schema Structure");
+        assertNotNull(compare);
+        assertTrue(compare.isDisable());
+
+        // No Navigation, No Find Usages
+        assertNull(findMenu(menu, "Navigation"));
+        assertNull(findItem(menu, "Find Usages"));
+
+        // Introspection Level
+        assertNotNull(findMenu(menu, "Introspection Level"));
+
+        // SQL Scripts
+        assertNotNull(findMenu(menu, "SQL Scripts"));
+
+        // No Object Actions
+        assertNull(findMenu(menu, "Object Actions"));
+
+        // Tools
+        assertNotNull(findMenu(menu, "Tools"));
+
+        // Import/Export (has pg_dump, restore)
+        Menu impExp = findMenu(menu, "Import/Export");
+        assertNotNull(impExp);
+        assertTrue(menuHasItem(impExp, "Dump with pg_dump"));
+
+        // Diagrams
+        assertNotNull(findMenu(menu, "Diagrams"));
+
+        // Diagnostics
+        assertNotNull(findMenu(menu, "Diagnostics"));
+
+        // Drop… (disabled)
+        MenuItem drop = findItem(menu, "Drop");
+        assertNotNull(drop);
+        assertTrue(drop.isDisable());
+    }
+
+    @Test
+    public void testPostgreSqlAccessMethodsFolderContextMenuMatchingDataGripImage3() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = createPostgreSqlProfile();
+        DbObject amFolder = new DbObject("access methods", Kind.ACCESS_METHODS_FOLDER, "thunder_db", null);
+        ContextMenu menu = pane.buildMenuForTest(amFolder, profile);
+        assertNotNull(menu);
+
+        // 1. + New >
+        Menu newMenu = findMenu(menu, "New");
+        assertNotNull(newMenu);
+        assertTrue(menuHasItem(newMenu, "Query Console"));
+        assertTrue(menuHasItem(newMenu, "Query File"));
+        assertFalse(menuHasItem(newMenu, "Table"));
+        assertFalse(menuHasItem(newMenu, "Virtual View"));
+
+        // No Modify
+        assertNull(findItem(menu, "Modify"));
+
+        // Copy/Paste (disabled)
+        Menu cp = findMenu(menu, "Copy/Paste");
+        assertNotNull(cp);
+        assertTrue(cp.isDisable());
+
+        // Open the List (F4)
+        MenuItem openList = findItem(menu, "Open the List");
+        assertNotNull(openList);
+        assertEquals(KeyCode.F4, ((KeyCodeCombination) openList.getAccelerator()).getCode());
+
+        // Rename… (disabled)
+        MenuItem rename = findItem(menu, "Rename");
+        assertNotNull(rename);
+        assertTrue(rename.isDisable());
+
+        // Quick Documentation (disabled)
+        MenuItem quickDoc = findItem(menu, "Quick Documentation");
+        assertNotNull(quickDoc);
+        assertTrue(quickDoc.isDisable());
+
+        // Compare Schema Structure (disabled)
+        MenuItem compare = findItem(menu, "Compare Schema Structure");
+        assertNotNull(compare);
+        assertTrue(compare.isDisable());
+
+        // No Navigation, No Find Usages
+        assertNull(findMenu(menu, "Navigation"));
+        assertNull(findItem(menu, "Find Usages"));
+
+        // Introspection Level
+        assertNotNull(findMenu(menu, "Introspection Level"));
+
+        // SQL Scripts
+        assertNotNull(findMenu(menu, "SQL Scripts"));
+
+        // Tools
+        assertNotNull(findMenu(menu, "Tools"));
+
+        // No Object Actions and No Import/Export
+        assertNull(findMenu(menu, "Object Actions"));
+        assertNull(findMenu(menu, "Import/Export"));
+
+        // Diagrams
+        assertNotNull(findMenu(menu, "Diagrams"));
+
+        // Diagnostics
+        assertNotNull(findMenu(menu, "Diagnostics"));
+
+        // Drop… (disabled)
+        MenuItem drop = findItem(menu, "Drop");
+        assertNotNull(drop);
+        assertTrue(drop.isDisable());
+    }
+
+    @Test
+    public void testPostgreSqlAccessMethodItemContextMenuMatchingDataGripImage4() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = createPostgreSqlProfile();
+        DbObject brin = new DbObject("brin", Kind.ACCESS_METHOD, "thunder_db", null);
+        ContextMenu menu = pane.buildMenuForTest(brin, profile);
+        assertNotNull(menu);
+
+        // 1. + New >
+        Menu newMenu = findMenu(menu, "New");
+        assertNotNull(newMenu);
+        assertTrue(menuHasItem(newMenu, "Query Console"));
+        assertTrue(menuHasItem(newMenu, "Query File"));
+        assertTrue(menuHasItem(newMenu, "Schema"));
+        assertTrue(menuHasItem(newMenu, "Language"));
+        assertTrue(menuHasItem(newMenu, "Database"));
+        assertTrue(menuHasItem(newMenu, "Role"));
+        assertTrue(menuHasItem(newMenu, "User"));
+        assertTrue(menuHasItem(newMenu, "Virtual View"));
+
+        // No Modify
+        assertNull(findItem(menu, "Modify"));
+
+        // Copy/Paste (enabled)
+        Menu cp = findMenu(menu, "Copy/Paste");
+        assertNotNull(cp);
+        assertFalse(cp.isDisable());
+
+        // No Edit Data and No Open the List
+        assertNull(findItem(menu, "Edit Data"));
+        assertNull(findItem(menu, "Open the List"));
+
+        // Refresh (Ctrl+F5)
+        assertNotNull(findItem(menu, "Refresh"));
+
+        // Rename… (disabled)
+        MenuItem rename = findItem(menu, "Rename");
+        assertNotNull(rename);
+        assertTrue(rename.isDisable());
+
+        // Quick Documentation (enabled)
+        MenuItem quickDoc = findItem(menu, "Quick Documentation");
+        assertNotNull(quickDoc);
+        assertFalse(quickDoc.isDisable());
+
+        // Compare Schema Structure With… (disabled)
+        MenuItem compare = findItem(menu, "Compare Schema Structure With");
+        assertNotNull(compare);
+        assertTrue(compare.isDisable());
+
+        // Navigation
+        Menu nav = findMenu(menu, "Navigation");
+        assertNotNull(nav);
+        assertTrue(menuHasItem(nav, "Go to DDL"));
+        assertTrue(menuHasItem(nav, "Jump to Query Console"));
+        assertTrue(menuHasItem(nav, "Select in Database Explorer"));
+
+        // Find Usages (disabled)
+        MenuItem findUsages = findItem(menu, "Find Usages");
+        assertNotNull(findUsages);
+        assertTrue(findUsages.isDisable());
+
+        // Introspection Level
+        assertNotNull(findMenu(menu, "Introspection Level"));
+
+        // SQL Scripts
+        assertNotNull(findMenu(menu, "SQL Scripts"));
+
+        // Object Actions (enabled)
+        Menu objActions = findMenu(menu, "Object Actions");
+        assertNotNull(objActions);
+        assertTrue(menuHasItem(objActions, "Show / Hide Schemas"));
+        assertTrue(menuHasItem(objActions, "Forget Saved Passwords"));
+
+        // Tools
+        assertNotNull(findMenu(menu, "Tools"));
+
+        // Import/Export
+        assertNotNull(findMenu(menu, "Import/Export"));
+
+        // Diagrams
+        assertNotNull(findMenu(menu, "Diagrams"));
+
+        // Diagnostics
+        assertNotNull(findMenu(menu, "Diagnostics"));
+
+        // Drop… (enabled!)
+        MenuItem drop = findItem(menu, "Drop");
+        assertNotNull(drop);
+        assertFalse(drop.isDisable());
+    }
+
+    @Test
+    public void testPostgreSqlVirtualViewItemContextMenuMatchingDataGripImage5() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = createPostgreSqlProfile();
+        DbObject sessionView = new DbObject("sessions", Kind.VIRTUAL_VIEW, "thunder_db", null);
+        ContextMenu menu = pane.buildMenuForTest(sessionView, profile);
+        assertNotNull(menu);
+
+        // 1. + New >
+        Menu newMenu = findMenu(menu, "New");
+        assertNotNull(newMenu);
+        assertTrue(menuHasItem(newMenu, "Query Console"));
+        assertTrue(menuHasItem(newMenu, "Query File"));
+        assertTrue(menuHasItem(newMenu, "Virtual Column"));
+        assertTrue(menuHasItem(newMenu, "Virtual Foreign Key"));
+        assertTrue(menuHasItem(newMenu, "Virtual View"));
+        assertTrue(menuHasItem(newMenu, "Schema"));
+        assertTrue(menuHasItem(newMenu, "Language"));
+        assertTrue(menuHasItem(newMenu, "Database"));
+        assertTrue(menuHasItem(newMenu, "Role"));
+        assertTrue(menuHasItem(newMenu, "User"));
+
+        // Modify Virtual View… (Ctrl+F6, enabled)
+        MenuItem modify = findItem(menu, "Modify Virtual View");
+        assertNotNull(modify);
+        assertFalse(modify.isDisable());
+        assertEquals(KeyCode.F6, ((KeyCodeCombination) modify.getAccelerator()).getCode());
+
+        // Copy/Paste (enabled)
+        Menu cp = findMenu(menu, "Copy/Paste");
+        assertNotNull(cp);
+        assertFalse(cp.isDisable());
+
+        // Edit Data (F4, enabled)
+        MenuItem editData = findItem(menu, "Edit Data");
+        assertNotNull(editData);
+        assertFalse(editData.isDisable());
+        assertEquals(KeyCode.F4, ((KeyCodeCombination) editData.getAccelerator()).getCode());
+
+        // Refresh (Ctrl+F5)
+        assertNotNull(findItem(menu, "Refresh"));
+
+        // Rename… (disabled)
+        MenuItem rename = findItem(menu, "Rename");
+        assertNotNull(rename);
+        assertTrue(rename.isDisable());
+
+        // Quick Documentation (enabled)
+        MenuItem quickDoc = findItem(menu, "Quick Documentation");
+        assertNotNull(quickDoc);
+        assertFalse(quickDoc.isDisable());
+
+        // Compare Schema Structure (disabled, no "With…")
+        MenuItem compare = findItem(menu, "Compare Schema Structure");
+        assertNotNull(compare);
+        assertTrue(compare.isDisable());
+        assertNull(findItem(menu, "Compare Schema Structure With"));
+
+        // Navigation
+        Menu nav = findMenu(menu, "Navigation");
+        assertNotNull(nav);
+        assertTrue(menuHasItem(nav, "Go to DDL"));
+        assertTrue(menuHasItem(nav, "Jump to Query Console"));
+        assertTrue(menuHasItem(nav, "Select in Database Explorer"));
+
+        // Find Usages (disabled)
+        MenuItem findUsages = findItem(menu, "Find Usages");
+        assertNotNull(findUsages);
+        assertTrue(findUsages.isDisable());
+
+        // Introspection Level
+        assertNotNull(findMenu(menu, "Introspection Level"));
+
+        // SQL Scripts
+        assertNotNull(findMenu(menu, "SQL Scripts"));
+
+        // No Object Actions for Virtual View
+        assertNull(findMenu(menu, "Object Actions"));
+
+        // Tools
+        assertNotNull(findMenu(menu, "Tools"));
+
+        // Import/Export
+        assertNotNull(findMenu(menu, "Import/Export"));
+
+        // Diagrams
+        assertNotNull(findMenu(menu, "Diagrams"));
+
+        // Diagnostics
+        assertNotNull(findMenu(menu, "Diagnostics"));
+
+        // Drop… (enabled!)
+        MenuItem drop = findItem(menu, "Drop");
+        assertNotNull(drop);
+        assertFalse(drop.isDisable());
+    }
+
+    @Test
+    public void testPostgreSqlCastsFolderContextMenuMatchingDataGripImage1() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = createPostgreSqlProfile();
+        DbObject castsFolder = new DbObject("casts", Kind.CASTS_FOLDER, "thunder_db", null);
+        ContextMenu menu = pane.buildMenuForTest(castsFolder, profile);
+        assertNotNull(menu);
+
+        // 1. + New > (only consoles and data sources)
+        Menu newMenu = findMenu(menu, "New");
+        assertNotNull(newMenu);
+        assertTrue(menuHasItem(newMenu, "Query Console"));
+        assertTrue(menuHasItem(newMenu, "Query File"));
+        assertFalse(menuHasItem(newMenu, "Table"));
+        assertFalse(menuHasItem(newMenu, "View"));
+        assertFalse(menuHasItem(newMenu, "Virtual View"));
+        assertTrue(menuHasItem(newMenu, "Data Source"));
+        assertTrue(menuHasItem(newMenu, "DDL Data Source"));
+
+        // No Modify
+        assertNull(findItem(menu, "Modify"));
+
+        // Copy/Paste (disabled)
+        Menu cp = findMenu(menu, "Copy/Paste");
+        assertNotNull(cp);
+        assertTrue(cp.isDisable());
+
+        // Refresh (Ctrl+F5)
+        assertNotNull(findItem(menu, "Refresh"));
+
+        // Rename… (disabled)
+        MenuItem rename = findItem(menu, "Rename");
+        assertNotNull(rename);
+        assertTrue(rename.isDisable());
+
+        // Open the List (F4)
+        MenuItem openList = findItem(menu, "Open the List");
+        assertNotNull(openList);
+        assertEquals(KeyCode.F4, ((KeyCodeCombination) openList.getAccelerator()).getCode());
+
+        // Quick Documentation (disabled)
+        MenuItem quickDoc = findItem(menu, "Quick Documentation");
+        assertNotNull(quickDoc);
+        assertTrue(quickDoc.isDisable());
+
+        // Compare Schema Structure (disabled, no "With…")
+        MenuItem compare = findItem(menu, "Compare Schema Structure");
+        assertNotNull(compare);
+        assertTrue(compare.isDisable());
+        assertNull(findItem(menu, "Compare Schema Structure With"));
+
+        // No Navigation, No Find Usages
+        assertNull(findMenu(menu, "Navigation"));
+        assertNull(findItem(menu, "Find Usages"));
+
+        // Introspection Level
+        assertNotNull(findMenu(menu, "Introspection Level"));
+
+        // SQL Scripts
+        assertNotNull(findMenu(menu, "SQL Scripts"));
+
+        // Tools
+        assertNotNull(findMenu(menu, "Tools"));
+
+        // No Object Actions and No Import/Export
+        assertNull(findMenu(menu, "Object Actions"));
+        assertNull(findMenu(menu, "Import/Export"));
+
+        // Diagrams
+        assertNotNull(findMenu(menu, "Diagrams"));
+
+        // Diagnostics
+        assertNotNull(findMenu(menu, "Diagnostics"));
+
+        // Drop… (disabled)
+        MenuItem drop = findItem(menu, "Drop");
+        assertNotNull(drop);
+        assertTrue(drop.isDisable());
+    }
+
+    @Test
+    public void testPostgreSqlExtensionsFolderContextMenuMatchingDataGripImage2() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = createPostgreSqlProfile();
+        DbObject extFolder = new DbObject("extensions", Kind.EXTENSIONS_FOLDER, "thunder_db", null);
+        ContextMenu menu = pane.buildMenuForTest(extFolder, profile);
+        assertNotNull(menu);
+
+        Menu newMenu = findMenu(menu, "New");
+        assertNotNull(newMenu);
+        assertTrue(menuHasItem(newMenu, "Query Console"));
+        assertTrue(menuHasItem(newMenu, "Query File"));
+        assertFalse(menuHasItem(newMenu, "Table"));
+        assertFalse(menuHasItem(newMenu, "Virtual View"));
+
+        assertNull(findItem(menu, "Modify"));
+
+        Menu cp = findMenu(menu, "Copy/Paste");
+        assertNotNull(cp);
+        assertTrue(cp.isDisable());
+
+        MenuItem rename = findItem(menu, "Rename");
+        assertNotNull(rename);
+        assertTrue(rename.isDisable());
+
+        MenuItem openList = findItem(menu, "Open the List");
+        assertNotNull(openList);
+        assertEquals(KeyCode.F4, ((KeyCodeCombination) openList.getAccelerator()).getCode());
+
+        MenuItem quickDoc = findItem(menu, "Quick Documentation");
+        assertNotNull(quickDoc);
+        assertTrue(quickDoc.isDisable());
+
+        MenuItem compare = findItem(menu, "Compare Schema Structure");
+        assertNotNull(compare);
+        assertTrue(compare.isDisable());
+
+        assertNull(findMenu(menu, "Navigation"));
+        assertNull(findItem(menu, "Find Usages"));
+        assertNull(findMenu(menu, "Object Actions"));
+        assertNull(findMenu(menu, "Import/Export"));
+
+        MenuItem drop = findItem(menu, "Drop");
+        assertNotNull(drop);
+        assertTrue(drop.isDisable());
+    }
+
+    @Test
+    public void testPostgreSqlLanguagesFolderContextMenuMatchingDataGripImage3() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = createPostgreSqlProfile();
+        DbObject langFolder = new DbObject("languages", Kind.LANGUAGES_FOLDER, "thunder_db", null);
+        ContextMenu menu = pane.buildMenuForTest(langFolder, profile);
+        assertNotNull(menu);
+
+        Menu newMenu = findMenu(menu, "New");
+        assertNotNull(newMenu);
+        assertTrue(menuHasItem(newMenu, "Query Console"));
+        assertTrue(menuHasItem(newMenu, "Query File"));
+        assertFalse(menuHasItem(newMenu, "Table"));
+        assertFalse(menuHasItem(newMenu, "Virtual View"));
+
+        assertNull(findItem(menu, "Modify"));
+
+        Menu cp = findMenu(menu, "Copy/Paste");
+        assertNotNull(cp);
+        assertTrue(cp.isDisable());
+
+        MenuItem rename = findItem(menu, "Rename");
+        assertNotNull(rename);
+        assertTrue(rename.isDisable());
+
+        MenuItem openList = findItem(menu, "Open the List");
+        assertNotNull(openList);
+        assertEquals(KeyCode.F4, ((KeyCodeCombination) openList.getAccelerator()).getCode());
+
+        MenuItem quickDoc = findItem(menu, "Quick Documentation");
+        assertNotNull(quickDoc);
+        assertTrue(quickDoc.isDisable());
+
+        MenuItem compare = findItem(menu, "Compare Schema Structure");
+        assertNotNull(compare);
+        assertTrue(compare.isDisable());
+
+        assertNull(findMenu(menu, "Navigation"));
+        assertNull(findItem(menu, "Find Usages"));
+        assertNull(findMenu(menu, "Object Actions"));
+        assertNull(findMenu(menu, "Import/Export"));
+
+        MenuItem drop = findItem(menu, "Drop");
+        assertNotNull(drop);
+        assertTrue(drop.isDisable());
+    }
+
+    @Test
+    public void testPostgreSqlCastItemContextMenuMatchingDataGripImage4() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = createPostgreSqlProfile();
+        DbObject castObj = new DbObject("bit as bit", Kind.CAST, "thunder_db", null);
+        ContextMenu menu = pane.buildMenuForTest(castObj, profile);
+        assertNotNull(menu);
+
+        // 1. + New >
+        Menu newMenu = findMenu(menu, "New");
+        assertNotNull(newMenu);
+        assertTrue(menuHasItem(newMenu, "Query Console"));
+        assertTrue(menuHasItem(newMenu, "Query File"));
+        assertTrue(menuHasItem(newMenu, "Schema"));
+        assertTrue(menuHasItem(newMenu, "Language"));
+        assertTrue(menuHasItem(newMenu, "Database"));
+        assertTrue(menuHasItem(newMenu, "Role"));
+        assertTrue(menuHasItem(newMenu, "User"));
+        assertTrue(menuHasItem(newMenu, "Virtual View"));
+
+        // No Modify
+        assertNull(findItem(menu, "Modify"));
+
+        // Copy/Paste (enabled)
+        Menu cp = findMenu(menu, "Copy/Paste");
+        assertNotNull(cp);
+        assertFalse(cp.isDisable());
+
+        // No Edit Data and No Open the List
+        assertNull(findItem(menu, "Edit Data"));
+        assertNull(findItem(menu, "Open the List"));
+
+        // Refresh (Ctrl+F5)
+        assertNotNull(findItem(menu, "Refresh"));
+
+        // Rename… (disabled)
+        MenuItem rename = findItem(menu, "Rename");
+        assertNotNull(rename);
+        assertTrue(rename.isDisable());
+
+        // Quick Documentation (enabled)
+        MenuItem quickDoc = findItem(menu, "Quick Documentation");
+        assertNotNull(quickDoc);
+        assertFalse(quickDoc.isDisable());
+
+        // Compare Schema Structure With… (disabled)
+        MenuItem compare = findItem(menu, "Compare Schema Structure With");
+        assertNotNull(compare);
+        assertTrue(compare.isDisable());
+
+        // Navigation
+        Menu nav = findMenu(menu, "Navigation");
+        assertNotNull(nav);
+        assertTrue(menuHasItem(nav, "Go to DDL"));
+        assertTrue(menuHasItem(nav, "Jump to Query Console"));
+        assertTrue(menuHasItem(nav, "Select in Database Explorer"));
+
+        // Find Usages (disabled)
+        MenuItem findUsages = findItem(menu, "Find Usages");
+        assertNotNull(findUsages);
+        assertTrue(findUsages.isDisable());
+
+        // Introspection Level
+        assertNotNull(findMenu(menu, "Introspection Level"));
+
+        // SQL Scripts
+        assertNotNull(findMenu(menu, "SQL Scripts"));
+
+        // Object Actions (enabled)
+        Menu objActions = findMenu(menu, "Object Actions");
+        assertNotNull(objActions);
+        assertTrue(menuHasItem(objActions, "Show / Hide Schemas"));
+        assertTrue(menuHasItem(objActions, "Forget Saved Passwords"));
+
+        // Tools
+        assertNotNull(findMenu(menu, "Tools"));
+
+        // Import/Export (enabled)
+        Menu impExp = findMenu(menu, "Import/Export");
+        assertNotNull(impExp);
+        assertTrue(menuHasItem(impExp, "Dump with pg_dump"));
+
+        // Diagrams
+        assertNotNull(findMenu(menu, "Diagrams"));
+
+        // Diagnostics
+        assertNotNull(findMenu(menu, "Diagnostics"));
+
+        // Drop… (enabled!)
+        MenuItem drop = findItem(menu, "Drop");
+        assertNotNull(drop);
+        assertFalse(drop.isDisable());
+    }
+
+    @Test
+    public void testPostgreSqlExtensionItemContextMenuMatchingDataGripImage5() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = createPostgreSqlProfile();
+        DbObject extObj = new DbObject("plpgsql", Kind.EXTENSION, "thunder_db", null);
+        ContextMenu menu = pane.buildMenuForTest(extObj, profile);
+        assertNotNull(menu);
+
+        // 1. + New >
+        Menu newMenu = findMenu(menu, "New");
+        assertNotNull(newMenu);
+        assertTrue(menuHasItem(newMenu, "Query Console"));
+        assertTrue(menuHasItem(newMenu, "Query File"));
+        assertTrue(menuHasItem(newMenu, "Schema"));
+        assertTrue(menuHasItem(newMenu, "Language"));
+        assertTrue(menuHasItem(newMenu, "Database"));
+        assertTrue(menuHasItem(newMenu, "Role"));
+        assertTrue(menuHasItem(newMenu, "User"));
+        assertTrue(menuHasItem(newMenu, "Virtual View"));
+
+        // No Modify
+        assertNull(findItem(menu, "Modify"));
+
+        // Copy/Paste (enabled)
+        Menu cp = findMenu(menu, "Copy/Paste");
+        assertNotNull(cp);
+        assertFalse(cp.isDisable());
+
+        // No Edit Data and No Open the List
+        assertNull(findItem(menu, "Edit Data"));
+        assertNull(findItem(menu, "Open the List"));
+
+        // Refresh (Ctrl+F5)
+        assertNotNull(findItem(menu, "Refresh"));
+
+        // Rename… (disabled)
+        MenuItem rename = findItem(menu, "Rename");
+        assertNotNull(rename);
+        assertTrue(rename.isDisable());
+
+        // Quick Documentation (enabled)
+        MenuItem quickDoc = findItem(menu, "Quick Documentation");
+        assertNotNull(quickDoc);
+        assertFalse(quickDoc.isDisable());
+
+        // Compare Schema Structure With… (disabled)
+        MenuItem compare = findItem(menu, "Compare Schema Structure With");
+        assertNotNull(compare);
+        assertTrue(compare.isDisable());
+
+        // Navigation
+        Menu nav = findMenu(menu, "Navigation");
+        assertNotNull(nav);
+        assertTrue(menuHasItem(nav, "Go to DDL"));
+        assertTrue(menuHasItem(nav, "Jump to Query Console"));
+        assertTrue(menuHasItem(nav, "Select in Database Explorer"));
+
+        // Find Usages (disabled)
+        MenuItem findUsages = findItem(menu, "Find Usages");
+        assertNotNull(findUsages);
+        assertTrue(findUsages.isDisable());
+
+        // Introspection Level
+        assertNotNull(findMenu(menu, "Introspection Level"));
+
+        // SQL Scripts
+        assertNotNull(findMenu(menu, "SQL Scripts"));
+
+        // Object Actions (enabled)
+        Menu objActions = findMenu(menu, "Object Actions");
+        assertNotNull(objActions);
+        assertTrue(menuHasItem(objActions, "Show / Hide Schemas"));
+        assertTrue(menuHasItem(objActions, "Forget Saved Passwords"));
+
+        // Tools
+        assertNotNull(findMenu(menu, "Tools"));
+
+        // Import/Export (enabled)
+        Menu impExp = findMenu(menu, "Import/Export");
+        assertNotNull(impExp);
+        assertTrue(menuHasItem(impExp, "Dump with pg_dump"));
+
+        // Diagrams
+        assertNotNull(findMenu(menu, "Diagrams"));
+
+        // Diagnostics
+        assertNotNull(findMenu(menu, "Diagnostics"));
+
+        // Drop… (enabled!)
+        MenuItem drop = findItem(menu, "Drop");
+        assertNotNull(drop);
+        assertFalse(drop.isDisable());
+    }
+
+    @Test
+    public void testPostgreSqlLanguageItemContextMenuImage1() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = createPostgreSqlProfile();
+        DbObject langObj = new DbObject("c", Kind.LANGUAGE, "thunder_db", null);
+        ContextMenu menu = pane.buildMenuForTest(langObj, profile);
+        assertNotNull(menu);
+
+        // 1. + New >
+        Menu newMenu = findMenu(menu, "New");
+        assertNotNull(newMenu);
+        assertTrue(menuHasItem(newMenu, "Query Console"));
+        assertTrue(menuHasItem(newMenu, "Query File"));
+        assertEquals("Language", newMenu.getItems().get(3).getText(), "Language must be first after separator");
+        assertEquals("Schema", newMenu.getItems().get(4).getText());
+        assertEquals("Database", newMenu.getItems().get(5).getText());
+        assertEquals("Role", newMenu.getItems().get(6).getText());
+        assertEquals("User", newMenu.getItems().get(7).getText());
+        assertTrue(menuHasItem(newMenu, "Virtual View"));
+
+        // 2. Modify Language… (enabled, Ctrl+F6)
+        MenuItem modify = findItem(menu, "Modify Language");
+        assertNotNull(modify);
+        assertFalse(modify.isDisable());
+        assertEquals(KeyCode.F6, ((KeyCodeCombination) modify.getAccelerator()).getCode());
+
+        // 3. Copy/Paste (enabled)
+        Menu cp = findMenu(menu, "Copy/Paste");
+        assertNotNull(cp);
+        assertFalse(cp.isDisable());
+
+        // No Edit Data and No Open the List
+        assertNull(findItem(menu, "Edit Data"));
+        assertNull(findItem(menu, "Open the List"));
+
+        // 4. Refresh (Ctrl+F5)
+        assertNotNull(findItem(menu, "Refresh"));
+
+        // 5. Rename… (disabled)
+        MenuItem rename = findItem(menu, "Rename");
+        assertNotNull(rename);
+        assertTrue(rename.isDisable());
+
+        // 6. Quick Documentation (enabled)
+        MenuItem quickDoc = findItem(menu, "Quick Documentation");
+        assertNotNull(quickDoc);
+        assertFalse(quickDoc.isDisable());
+
+        // 7. Compare Schema Structure With… (disabled)
+        MenuItem compare = findItem(menu, "Compare Schema Structure With");
+        assertNotNull(compare);
+        assertTrue(compare.isDisable());
+
+        // 8. Navigation
+        Menu nav = findMenu(menu, "Navigation");
+        assertNotNull(nav);
+        assertTrue(menuHasItem(nav, "Go to DDL"));
+        assertTrue(menuHasItem(nav, "Jump to Query Console"));
+        assertTrue(menuHasItem(nav, "Select in Database Explorer"));
+
+        // 9. Find Usages (disabled)
+        MenuItem findUsages = findItem(menu, "Find Usages");
+        assertNotNull(findUsages);
+        assertTrue(findUsages.isDisable());
+
+        // 10. Introspection Level
+        assertNotNull(findMenu(menu, "Introspection Level"));
+
+        // 11. SQL Scripts
+        assertNotNull(findMenu(menu, "SQL Scripts"));
+
+        // 12. Object Actions (enabled)
+        Menu objActions = findMenu(menu, "Object Actions");
+        assertNotNull(objActions);
+        assertTrue(menuHasItem(objActions, "Show / Hide Schemas"));
+        assertTrue(menuHasItem(objActions, "Forget Saved Passwords"));
+
+        // 13. Tools
+        assertNotNull(findMenu(menu, "Tools"));
+
+        // 14. Import/Export (enabled)
+        Menu impExp = findMenu(menu, "Import/Export");
+        assertNotNull(impExp);
+        assertTrue(menuHasItem(impExp, "Dump with pg_dump"));
+
+        // 15. Diagrams
+        assertNotNull(findMenu(menu, "Diagrams"));
+
+        // 16. Diagnostics
+        assertNotNull(findMenu(menu, "Diagnostics"));
+
+        // 17. Drop… (enabled!)
+        MenuItem drop = findItem(menu, "Drop");
+        assertNotNull(drop);
+        assertFalse(drop.isDisable());
+    }
+
+    @Test
+    public void testPostgreSqlColumnsFolderContextMenuImage2() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = createPostgreSqlProfile();
+        DbObject colsObj = new DbObject("columns", Kind.COLUMNS_FOLDER, "thunder_db", "public");
+        colsObj.setTableName("collection_variables");
+        ContextMenu menu = pane.buildMenuForTest(colsObj, profile);
+        assertNotNull(menu);
+
+        // 1. + New >
+        Menu newMenu = findMenu(menu, "New");
+        assertNotNull(newMenu);
+        assertEquals("Column", newMenu.getItems().get(3).getText(), "Columns folder starts with Column");
+        assertEquals("Unique Key", newMenu.getItems().get(4).getText());
+        assertEquals("Foreign Key", newMenu.getItems().get(5).getText());
+        assertEquals("Index", newMenu.getItems().get(6).getText());
+        assertEquals("Check", newMenu.getItems().get(7).getText());
+        assertEquals("Table", newMenu.getItems().get(8).getText(), "Immediately followed by Table with no separator");
+        assertTrue(menuHasItem(newMenu, "Virtual Column"));
+        assertTrue(menuHasItem(newMenu, "Virtual Foreign Key"));
+        assertTrue(menuHasItem(newMenu, "Virtual View"));
+
+        // No Modify
+        assertNull(findItem(menu, "Modify"));
+
+        // Copy/Paste (disabled)
+        Menu cp = findMenu(menu, "Copy/Paste");
+        assertNotNull(cp);
+        assertTrue(cp.isDisable());
+
+        // Open the List (F4)
+        MenuItem openList = findItem(menu, "Open the List");
+        assertNotNull(openList);
+        assertEquals(KeyCode.F4, ((KeyCodeCombination) openList.getAccelerator()).getCode());
+
+        // Refresh
+        assertNotNull(findItem(menu, "Refresh"));
+
+        // Rename… (disabled)
+        MenuItem rename = findItem(menu, "Rename");
+        assertNotNull(rename);
+        assertTrue(rename.isDisable());
+
+        // Quick Documentation (disabled)
+        MenuItem quickDoc = findItem(menu, "Quick Documentation");
+        assertNotNull(quickDoc);
+        assertTrue(quickDoc.isDisable());
+
+        // Compare Schema Structure (disabled, no With)
+        MenuItem compare = findItem(menu, "Compare Schema Structure");
+        assertNotNull(compare);
+        assertTrue(compare.isDisable());
+
+        // NO Navigation and NO Find Usages on category folders
+        assertNull(findMenu(menu, "Navigation"));
+        assertNull(findItem(menu, "Find Usages"));
+
+        // Introspection Level
+        assertNotNull(findMenu(menu, "Introspection Level"));
+
+        // SQL Scripts
+        assertNotNull(findMenu(menu, "SQL Scripts"));
+
+        // Columns folder does NOT have Object Actions
+        assertNull(findMenu(menu, "Object Actions"));
+
+        // Tools
+        assertNotNull(findMenu(menu, "Tools"));
+
+        // Import/Export
+        assertNotNull(findMenu(menu, "Import/Export"));
+
+        // Diagrams
+        assertNotNull(findMenu(menu, "Diagrams"));
+
+        // Diagnostics
+        assertNotNull(findMenu(menu, "Diagnostics"));
+
+        // Drop… (disabled)
+        MenuItem drop = findItem(menu, "Drop");
+        assertNotNull(drop);
+        assertTrue(drop.isDisable());
+    }
+
+    @Test
+    public void testPostgreSqlKeysFolderContextMenuImage3() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = createPostgreSqlProfile();
+        DbObject keysObj = new DbObject("keys", Kind.KEYS_FOLDER, "thunder_db", "public");
+        keysObj.setTableName("collection_variables");
+        ContextMenu menu = pane.buildMenuForTest(keysObj, profile);
+        assertNotNull(menu);
+
+        // 1. + New >
+        Menu newMenu = findMenu(menu, "New");
+        assertNotNull(newMenu);
+        assertEquals("Unique Key", newMenu.getItems().get(3).getText(), "Keys folder starts with Unique Key");
+        assertEquals("Column", newMenu.getItems().get(4).getText());
+        assertEquals("Foreign Key", newMenu.getItems().get(5).getText());
+        assertEquals("Index", newMenu.getItems().get(6).getText());
+        assertEquals("Check", newMenu.getItems().get(7).getText());
+        assertEquals("Table", newMenu.getItems().get(8).getText());
+
+        // 2. Modify Key… (Ctrl+F6, enabled)
+        MenuItem modify = findItem(menu, "Modify Key");
+        assertNotNull(modify);
+        assertFalse(modify.isDisable());
+        assertEquals(KeyCode.F6, ((KeyCodeCombination) modify.getAccelerator()).getCode());
+
+        // Copy/Paste (disabled)
+        Menu cp = findMenu(menu, "Copy/Paste");
+        assertNotNull(cp);
+        assertTrue(cp.isDisable());
+
+        // Open the List (F4)
+        MenuItem openList = findItem(menu, "Open the List");
+        assertNotNull(openList);
+
+        // Refresh
+        assertNotNull(findItem(menu, "Refresh"));
+
+        // Rename… (disabled)
+        MenuItem rename = findItem(menu, "Rename");
+        assertNotNull(rename);
+        assertTrue(rename.isDisable());
+
+        // Quick Documentation (disabled)
+        MenuItem quickDoc = findItem(menu, "Quick Documentation");
+        assertNotNull(quickDoc);
+        assertTrue(quickDoc.isDisable());
+
+        // Compare Schema Structure (disabled)
+        MenuItem compare = findItem(menu, "Compare Schema Structure");
+        assertNotNull(compare);
+        assertTrue(compare.isDisable());
+
+        // NO Navigation and NO Find Usages
+        assertNull(findMenu(menu, "Navigation"));
+        assertNull(findItem(menu, "Find Usages"));
+
+        // Introspection Level
+        assertNotNull(findMenu(menu, "Introspection Level"));
+
+        // SQL Scripts
+        assertNotNull(findMenu(menu, "SQL Scripts"));
+
+        // Keys folder HAS Object Actions
+        Menu objActions = findMenu(menu, "Object Actions");
+        assertNotNull(objActions);
+        assertTrue(menuHasItem(objActions, "Show / Hide Schemas"));
+        assertTrue(menuHasItem(objActions, "Forget Saved Passwords"));
+
+        // Tools
+        assertNotNull(findMenu(menu, "Tools"));
+
+        // Import/Export
+        assertNotNull(findMenu(menu, "Import/Export"));
+
+        // Diagrams
+        assertNotNull(findMenu(menu, "Diagrams"));
+
+        // Diagnostics
+        assertNotNull(findMenu(menu, "Diagnostics"));
+
+        // Drop… (disabled)
+        MenuItem drop = findItem(menu, "Drop");
+        assertNotNull(drop);
+        assertTrue(drop.isDisable());
+    }
+
+    @Test
+    public void testPostgreSqlForeignKeysFolderContextMenuImage4() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = createPostgreSqlProfile();
+        DbObject fkObj = new DbObject("foreign keys", Kind.FOREIGN_KEYS_FOLDER, "thunder_db", "public");
+        fkObj.setTableName("collection_variables");
+        ContextMenu menu = pane.buildMenuForTest(fkObj, profile);
+        assertNotNull(menu);
+
+        // 1. + New >
+        Menu newMenu = findMenu(menu, "New");
+        assertNotNull(newMenu);
+        assertEquals("Foreign Key", newMenu.getItems().get(3).getText(), "Foreign keys folder starts with Foreign Key");
+        assertEquals("Column", newMenu.getItems().get(4).getText());
+        assertEquals("Unique Key", newMenu.getItems().get(5).getText());
+        assertEquals("Index", newMenu.getItems().get(6).getText());
+        assertEquals("Check", newMenu.getItems().get(7).getText());
+        assertEquals("Table", newMenu.getItems().get(8).getText());
+
+        // 2. Modify Foreign Key… (Ctrl+F6, enabled)
+        MenuItem modify = findItem(menu, "Modify Foreign Key");
+        assertNotNull(modify);
+        assertFalse(modify.isDisable());
+        assertEquals(KeyCode.F6, ((KeyCodeCombination) modify.getAccelerator()).getCode());
+
+        // Copy/Paste (disabled)
+        Menu cp = findMenu(menu, "Copy/Paste");
+        assertNotNull(cp);
+        assertTrue(cp.isDisable());
+
+        // Open the List (F4)
+        MenuItem openList = findItem(menu, "Open the List");
+        assertNotNull(openList);
+
+        // Refresh
+        assertNotNull(findItem(menu, "Refresh"));
+
+        // Rename… (disabled)
+        MenuItem rename = findItem(menu, "Rename");
+        assertNotNull(rename);
+        assertTrue(rename.isDisable());
+
+        // Quick Documentation (disabled)
+        MenuItem quickDoc = findItem(menu, "Quick Documentation");
+        assertNotNull(quickDoc);
+        assertTrue(quickDoc.isDisable());
+
+        // Compare Schema Structure (disabled)
+        MenuItem compare = findItem(menu, "Compare Schema Structure");
+        assertNotNull(compare);
+        assertTrue(compare.isDisable());
+
+        // NO Navigation and NO Find Usages
+        assertNull(findMenu(menu, "Navigation"));
+        assertNull(findItem(menu, "Find Usages"));
+
+        // Introspection Level
+        assertNotNull(findMenu(menu, "Introspection Level"));
+
+        // SQL Scripts
+        assertNotNull(findMenu(menu, "SQL Scripts"));
+
+        // Foreign keys folder HAS Object Actions
+        Menu objActions = findMenu(menu, "Object Actions");
+        assertNotNull(objActions);
+        assertTrue(menuHasItem(objActions, "Show / Hide Schemas"));
+        assertTrue(menuHasItem(objActions, "Forget Saved Passwords"));
+
+        // Tools
+        assertNotNull(findMenu(menu, "Tools"));
+
+        // Import/Export
+        assertNotNull(findMenu(menu, "Import/Export"));
+
+        // Diagrams
+        assertNotNull(findMenu(menu, "Diagrams"));
+
+        // Diagnostics
+        assertNotNull(findMenu(menu, "Diagnostics"));
+
+        // Drop… (disabled)
+        MenuItem drop = findItem(menu, "Drop");
+        assertNotNull(drop);
+        assertTrue(drop.isDisable());
+    }
+
+    @Test
+    public void testPostgreSqlIndexesFolderContextMenuImage5() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = createPostgreSqlProfile();
+        DbObject idxObj = new DbObject("indexes", Kind.INDEXES_FOLDER, "thunder_db", "public");
+        idxObj.setTableName("collection_variables");
+        ContextMenu menu = pane.buildMenuForTest(idxObj, profile);
+        assertNotNull(menu);
+
+        // 1. + New >
+        Menu newMenu = findMenu(menu, "New");
+        assertNotNull(newMenu);
+        assertEquals("Index", newMenu.getItems().get(3).getText(), "Indexes folder starts with Index");
+        assertEquals("Column", newMenu.getItems().get(4).getText());
+        assertEquals("Unique Key", newMenu.getItems().get(5).getText());
+        assertEquals("Foreign Key", newMenu.getItems().get(6).getText());
+        assertEquals("Check", newMenu.getItems().get(7).getText());
+        assertEquals("Table", newMenu.getItems().get(8).getText());
+
+        // 2. Modify Index… (Ctrl+F6, enabled)
+        MenuItem modify = findItem(menu, "Modify Index");
+        assertNotNull(modify);
+        assertFalse(modify.isDisable());
+        assertEquals(KeyCode.F6, ((KeyCodeCombination) modify.getAccelerator()).getCode());
+
+        // Copy/Paste (disabled)
+        Menu cp = findMenu(menu, "Copy/Paste");
+        assertNotNull(cp);
+        assertTrue(cp.isDisable());
+
+        // Open the List (F4)
+        MenuItem openList = findItem(menu, "Open the List");
+        assertNotNull(openList);
+
+        // Refresh
+        assertNotNull(findItem(menu, "Refresh"));
+
+        // Rename… (disabled)
+        MenuItem rename = findItem(menu, "Rename");
+        assertNotNull(rename);
+        assertTrue(rename.isDisable());
+
+        // Quick Documentation (disabled)
+        MenuItem quickDoc = findItem(menu, "Quick Documentation");
+        assertNotNull(quickDoc);
+        assertTrue(quickDoc.isDisable());
+
+        // Compare Schema Structure (disabled)
+        MenuItem compare = findItem(menu, "Compare Schema Structure");
+        assertNotNull(compare);
+        assertTrue(compare.isDisable());
+
+        // NO Navigation and NO Find Usages
+        assertNull(findMenu(menu, "Navigation"));
+        assertNull(findItem(menu, "Find Usages"));
+
+        // Introspection Level
+        assertNotNull(findMenu(menu, "Introspection Level"));
+
+        // SQL Scripts
+        assertNotNull(findMenu(menu, "SQL Scripts"));
+
+        // Indexes folder does NOT have Object Actions
+        assertNull(findMenu(menu, "Object Actions"));
+
+        // Tools
+        assertNotNull(findMenu(menu, "Tools"));
+
+        // Import/Export
+        assertNotNull(findMenu(menu, "Import/Export"));
+
+        // Diagrams
+        assertNotNull(findMenu(menu, "Diagrams"));
+
+        // Diagnostics
+        assertNotNull(findMenu(menu, "Diagnostics"));
+
+        // Drop… (disabled)
+        MenuItem drop = findItem(menu, "Drop");
+        assertNotNull(drop);
+        assertTrue(drop.isDisable());
+    }
+
+    @Test
+    public void testPostgreSqlColumnItemContextMenuImage1() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = createPostgreSqlProfile();
+        DbObject colObj = new DbObject("collection_id", Kind.COLUMN, "thunder_db", "public");
+        colObj.setTableName("collection_variables");
+        ContextMenu menu = pane.buildMenuForTest(colObj, profile);
+        assertNotNull(menu);
+
+        // 1. + New >
+        Menu newMenu = findMenu(menu, "New");
+        assertNotNull(newMenu);
+        assertEquals("Column", newMenu.getItems().get(3).getText(), "Column item starts with Column");
+        assertEquals("Unique Key", newMenu.getItems().get(4).getText());
+        assertEquals("Foreign Key", newMenu.getItems().get(5).getText());
+        assertEquals("Index", newMenu.getItems().get(6).getText());
+        assertEquals("Check", newMenu.getItems().get(7).getText());
+        assertEquals("Table", newMenu.getItems().get(8).getText(), "Followed by Table with no separator");
+        assertTrue(menuHasItem(newMenu, "Virtual Column"));
+        assertTrue(menuHasItem(newMenu, "Virtual Foreign Key"));
+        assertTrue(menuHasItem(newMenu, "Virtual View"));
+
+        // 2. Modify Column… (Ctrl+F6, enabled)
+        MenuItem modify = findItem(menu, "Modify Column");
+        assertNotNull(modify);
+        assertFalse(modify.isDisable());
+        assertEquals(KeyCode.F6, ((KeyCodeCombination) modify.getAccelerator()).getCode());
+
+        // 3. Copy/Paste (enabled)
+        Menu cp = findMenu(menu, "Copy/Paste");
+        assertNotNull(cp);
+        assertFalse(cp.isDisable());
+
+        // 4. Edit Data (F4, enabled)
+        MenuItem editData = findItem(menu, "Edit Data");
+        assertNotNull(editData);
+        assertFalse(editData.isDisable());
+        assertEquals(KeyCode.F4, ((KeyCodeCombination) editData.getAccelerator()).getCode());
+        assertNull(findItem(menu, "Open the List"));
+
+        // 5. Refresh (Ctrl+F5)
+        assertNotNull(findItem(menu, "Refresh"));
+
+        // 6. Rename… (disabled)
+        MenuItem rename = findItem(menu, "Rename");
+        assertNotNull(rename);
+        assertTrue(rename.isDisable());
+
+        // 7. Quick Documentation (enabled)
+        MenuItem quickDoc = findItem(menu, "Quick Documentation");
+        assertNotNull(quickDoc);
+        assertFalse(quickDoc.isDisable());
+
+        // 8. Compare Schema Structure With… (disabled)
+        MenuItem compare = findItem(menu, "Compare Schema Structure With");
+        assertNotNull(compare);
+        assertTrue(compare.isDisable());
+
+        // 9. Navigation
+        Menu nav = findMenu(menu, "Navigation");
+        assertNotNull(nav);
+        assertTrue(menuHasItem(nav, "Go to DDL"));
+        assertTrue(menuHasItem(nav, "Jump to Query Console"));
+        assertTrue(menuHasItem(nav, "Select in Database Explorer"));
+
+        // 10. Find Usages (disabled)
+        MenuItem findUsages = findItem(menu, "Find Usages");
+        assertNotNull(findUsages);
+        assertTrue(findUsages.isDisable());
+
+        // 11. Introspection Level
+        assertNotNull(findMenu(menu, "Introspection Level"));
+
+        // 12. SQL Scripts
+        assertNotNull(findMenu(menu, "SQL Scripts"));
+
+        // 13. Object Actions (enabled)
+        Menu objActions = findMenu(menu, "Object Actions");
+        assertNotNull(objActions);
+        assertTrue(menuHasItem(objActions, "Show / Hide Schemas"));
+        assertTrue(menuHasItem(objActions, "Forget Saved Passwords"));
+
+        // 14. Tools
+        assertNotNull(findMenu(menu, "Tools"));
+
+        // 15. Import/Export
+        assertNotNull(findMenu(menu, "Import/Export"));
+
+        // 16. Diagrams
+        assertNotNull(findMenu(menu, "Diagrams"));
+
+        // 17. Diagnostics
+        assertNotNull(findMenu(menu, "Diagnostics"));
+
+        // 18. Drop… (enabled!)
+        MenuItem drop = findItem(menu, "Drop");
+        assertNotNull(drop);
+        assertFalse(drop.isDisable());
+    }
+
+    @Test
+    public void testPostgreSqlKeyItemContextMenuImage2() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = createPostgreSqlProfile();
+        DbObject keyObj = new DbObject("collection_variables_pkey", Kind.KEY, "thunder_db", "public");
+        keyObj.setTableName("collection_variables");
+        ContextMenu menu = pane.buildMenuForTest(keyObj, profile);
+        assertNotNull(menu);
+
+        // 1. + New >
+        Menu newMenu = findMenu(menu, "New");
+        assertNotNull(newMenu);
+        assertEquals("Unique Key", newMenu.getItems().get(3).getText(), "Key item starts with Unique Key");
+        assertEquals("Column", newMenu.getItems().get(4).getText());
+        assertEquals("Foreign Key", newMenu.getItems().get(5).getText());
+        assertEquals("Index", newMenu.getItems().get(6).getText());
+        assertEquals("Check", newMenu.getItems().get(7).getText());
+        assertEquals("Table", newMenu.getItems().get(8).getText());
+
+        // 2. Modify Key… (Ctrl+F6, enabled)
+        MenuItem modify = findItem(menu, "Modify Key");
+        assertNotNull(modify);
+        assertFalse(modify.isDisable());
+        assertEquals(KeyCode.F6, ((KeyCodeCombination) modify.getAccelerator()).getCode());
+
+        // 3. Copy/Paste (enabled)
+        Menu cp = findMenu(menu, "Copy/Paste");
+        assertNotNull(cp);
+        assertFalse(cp.isDisable());
+
+        // 4. Edit Data (F4, enabled)
+        MenuItem editData = findItem(menu, "Edit Data");
+        assertNotNull(editData);
+        assertFalse(editData.isDisable());
+        assertNull(findItem(menu, "Open the List"));
+
+        // 5. Refresh
+        assertNotNull(findItem(menu, "Refresh"));
+
+        // 6. Rename… (disabled)
+        MenuItem rename = findItem(menu, "Rename");
+        assertNotNull(rename);
+        assertTrue(rename.isDisable());
+
+        // 7. Quick Documentation (enabled)
+        MenuItem quickDoc = findItem(menu, "Quick Documentation");
+        assertNotNull(quickDoc);
+        assertFalse(quickDoc.isDisable());
+
+        // 8. Compare Schema Structure With… (disabled)
+        MenuItem compare = findItem(menu, "Compare Schema Structure With");
+        assertNotNull(compare);
+        assertTrue(compare.isDisable());
+
+        // 9. Navigation
+        assertNotNull(findMenu(menu, "Navigation"));
+
+        // 10. Find Usages (disabled)
+        assertNotNull(findItem(menu, "Find Usages"));
+
+        // 11. Introspection Level
+        assertNotNull(findMenu(menu, "Introspection Level"));
+
+        // 12. SQL Scripts
+        assertNotNull(findMenu(menu, "SQL Scripts"));
+
+        // 13. Object Actions (enabled)
+        Menu objActions = findMenu(menu, "Object Actions");
+        assertNotNull(objActions);
+        assertTrue(menuHasItem(objActions, "Show / Hide Schemas"));
+        assertTrue(menuHasItem(objActions, "Forget Saved Passwords"));
+
+        // 14. Tools
+        assertNotNull(findMenu(menu, "Tools"));
+
+        // 15. Import/Export
+        assertNotNull(findMenu(menu, "Import/Export"));
+
+        // 16. Diagrams
+        assertNotNull(findMenu(menu, "Diagrams"));
+
+        // 17. Diagnostics
+        assertNotNull(findMenu(menu, "Diagnostics"));
+
+        // 18. Drop… (enabled!)
+        MenuItem drop = findItem(menu, "Drop");
+        assertNotNull(drop);
+        assertFalse(drop.isDisable());
+    }
+
+    @Test
+    public void testPostgreSqlForeignKeyItemContextMenuImage3() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = createPostgreSqlProfile();
+        DbObject fkObj = new DbObject("fkhdhikjmkt7o8ag61vwqxmxuta", Kind.FOREIGN_KEY, "thunder_db", "public");
+        fkObj.setTableName("collection_variables");
+        ContextMenu menu = pane.buildMenuForTest(fkObj, profile);
+        assertNotNull(menu);
+
+        // 1. + New >
+        Menu newMenu = findMenu(menu, "New");
+        assertNotNull(newMenu);
+        assertEquals("Foreign Key", newMenu.getItems().get(3).getText(), "Foreign Key item starts with Foreign Key");
+        assertEquals("Column", newMenu.getItems().get(4).getText());
+        assertEquals("Unique Key", newMenu.getItems().get(5).getText());
+        assertEquals("Index", newMenu.getItems().get(6).getText());
+        assertEquals("Check", newMenu.getItems().get(7).getText());
+        assertEquals("Table", newMenu.getItems().get(8).getText());
+
+        // 2. Modify Foreign Key… (Ctrl+F6, enabled)
+        MenuItem modify = findItem(menu, "Modify Foreign Key");
+        assertNotNull(modify);
+        assertFalse(modify.isDisable());
+        assertEquals(KeyCode.F6, ((KeyCodeCombination) modify.getAccelerator()).getCode());
+
+        // 3. Copy/Paste (enabled)
+        Menu cp = findMenu(menu, "Copy/Paste");
+        assertNotNull(cp);
+        assertFalse(cp.isDisable());
+
+        // 4. Edit Data (F4, enabled)
+        MenuItem editData = findItem(menu, "Edit Data");
+        assertNotNull(editData);
+        assertFalse(editData.isDisable());
+        assertNull(findItem(menu, "Open the List"));
+
+        // 5. Refresh
+        assertNotNull(findItem(menu, "Refresh"));
+
+        // 6. Rename… (disabled)
+        MenuItem rename = findItem(menu, "Rename");
+        assertNotNull(rename);
+        assertTrue(rename.isDisable());
+
+        // 7. Quick Documentation (enabled)
+        MenuItem quickDoc = findItem(menu, "Quick Documentation");
+        assertNotNull(quickDoc);
+        assertFalse(quickDoc.isDisable());
+
+        // 8. Compare Schema Structure With… (disabled)
+        MenuItem compare = findItem(menu, "Compare Schema Structure With");
+        assertNotNull(compare);
+        assertTrue(compare.isDisable());
+
+        // 9. Navigation
+        assertNotNull(findMenu(menu, "Navigation"));
+
+        // 10. Find Usages (disabled)
+        assertNotNull(findItem(menu, "Find Usages"));
+
+        // 11. Introspection Level
+        assertNotNull(findMenu(menu, "Introspection Level"));
+
+        // 12. SQL Scripts
+        assertNotNull(findMenu(menu, "SQL Scripts"));
+
+        // 13. Object Actions (enabled)
+        Menu objActions = findMenu(menu, "Object Actions");
+        assertNotNull(objActions);
+        assertTrue(menuHasItem(objActions, "Show / Hide Schemas"));
+        assertTrue(menuHasItem(objActions, "Forget Saved Passwords"));
+
+        // 14. Tools
+        assertNotNull(findMenu(menu, "Tools"));
+
+        // 15. Import/Export
+        assertNotNull(findMenu(menu, "Import/Export"));
+
+        // 16. Diagrams
+        assertNotNull(findMenu(menu, "Diagrams"));
+
+        // 17. Diagnostics
+        assertNotNull(findMenu(menu, "Diagnostics"));
+
+        // 18. Drop… (enabled!)
+        MenuItem drop = findItem(menu, "Drop");
+        assertNotNull(drop);
+        assertFalse(drop.isDisable());
+    }
+
+    @Test
+    public void testPostgreSqlIndexItemContextMenuImage4() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = createPostgreSqlProfile();
+        DbObject idxObj = new DbObject("collection_variables_pkey", Kind.INDEX, "thunder_db", "public");
+        idxObj.setTableName("collection_variables");
+        ContextMenu menu = pane.buildMenuForTest(idxObj, profile);
+        assertNotNull(menu);
+
+        // 1. + New >
+        Menu newMenu = findMenu(menu, "New");
+        assertNotNull(newMenu);
+        assertEquals("Index", newMenu.getItems().get(3).getText(), "Index item starts with Index");
+        assertEquals("Column", newMenu.getItems().get(4).getText());
+        assertEquals("Unique Key", newMenu.getItems().get(5).getText());
+        assertEquals("Foreign Key", newMenu.getItems().get(6).getText());
+        assertEquals("Check", newMenu.getItems().get(7).getText());
+        assertEquals("Table", newMenu.getItems().get(8).getText());
+
+        // 2. Modify Index… (Ctrl+F6, enabled)
+        MenuItem modify = findItem(menu, "Modify Index");
+        assertNotNull(modify);
+        assertFalse(modify.isDisable());
+        assertEquals(KeyCode.F6, ((KeyCodeCombination) modify.getAccelerator()).getCode());
+
+        // 3. Copy/Paste (enabled)
+        Menu cp = findMenu(menu, "Copy/Paste");
+        assertNotNull(cp);
+        assertFalse(cp.isDisable());
+
+        // 4. Edit Data (F4, enabled)
+        MenuItem editData = findItem(menu, "Edit Data");
+        assertNotNull(editData);
+        assertFalse(editData.isDisable());
+        assertNull(findItem(menu, "Open the List"));
+
+        // 5. Refresh
+        assertNotNull(findItem(menu, "Refresh"));
+
+        // 6. Rename… (disabled)
+        MenuItem rename = findItem(menu, "Rename");
+        assertNotNull(rename);
+        assertTrue(rename.isDisable());
+
+        // 7. Quick Documentation (enabled)
+        MenuItem quickDoc = findItem(menu, "Quick Documentation");
+        assertNotNull(quickDoc);
+        assertFalse(quickDoc.isDisable());
+
+        // 8. Compare Schema Structure With… (disabled)
+        MenuItem compare = findItem(menu, "Compare Schema Structure With");
+        assertNotNull(compare);
+        assertTrue(compare.isDisable());
+
+        // 9. Navigation
+        assertNotNull(findMenu(menu, "Navigation"));
+
+        // 10. Find Usages (disabled)
+        assertNotNull(findItem(menu, "Find Usages"));
+
+        // 11. Introspection Level
+        assertNotNull(findMenu(menu, "Introspection Level"));
+
+        // 12. SQL Scripts
+        assertNotNull(findMenu(menu, "SQL Scripts"));
+
+        // 13. Object Actions (enabled)
+        Menu objActions = findMenu(menu, "Object Actions");
+        assertNotNull(objActions);
+        assertTrue(menuHasItem(objActions, "Show / Hide Schemas"));
+        assertTrue(menuHasItem(objActions, "Forget Saved Passwords"));
+
+        // 14. Tools
+        assertNotNull(findMenu(menu, "Tools"));
+
+        // 15. Import/Export
+        assertNotNull(findMenu(menu, "Import/Export"));
+
+        // 16. Diagrams
+        assertNotNull(findMenu(menu, "Diagrams"));
+
+        // 17. Diagnostics
+        assertNotNull(findMenu(menu, "Diagnostics"));
+
+        // 18. Drop… (enabled!)
+        MenuItem drop = findItem(menu, "Drop");
+        assertNotNull(drop);
+        assertFalse(drop.isDisable());
+    }
 }
+
 
