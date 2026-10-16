@@ -1001,6 +1001,37 @@ public class SchemaTreePane extends VBox {
         });
     }
 
+    private void promptModifyVirtualView(ConnectionProfile profile, DbObject obj) {
+        String current = (obj != null && obj.getKind() == Kind.VIRTUAL_VIEW) ? obj.getName() : "";
+        TextInputDialog dialog = DialogTheme.apply(new TextInputDialog(current));
+        dialog.setTitle("Modify Virtual View");
+        String target = (obj != null) ? obj.getName() : "Virtual View";
+        dialog.setHeaderText("Modify Virtual View " + target);
+        dialog.setContentText("View Query / Name:");
+        dialog.initOwner(getScene() == null ? null : getScene().getWindow());
+        dialog.showAndWait().ifPresent(viewDef -> {
+            if (!viewDef.isBlank() && mainWindow != null) {
+                String cat = (obj != null) ? obj.getCatalog() : null;
+                mainWindow.openQueryTab(profile, cat, "-- Modified Virtual View: " + viewDef + "\nSELECT * FROM " + viewDef + ";\n");
+            }
+        });
+    }
+
+    private void promptModifyLanguage(ConnectionProfile profile, DbObject obj) {
+        String langName = obj != null ? obj.getName() : "plpgsql";
+        String catalog = obj != null ? obj.getCatalog() : null;
+        TextInputDialog dialog = DialogTheme.apply(new TextInputDialog(langName));
+        dialog.setTitle("Modify Language");
+        dialog.setHeaderText("Modify Language \"" + langName + "\"");
+        dialog.setContentText("Language Handler / Parameters:");
+        dialog.initOwner(getScene() == null ? null : getScene().getWindow());
+        dialog.showAndWait().ifPresent(val -> {
+            if (!val.isBlank() && mainWindow != null) {
+                mainWindow.openQueryTab(profile, catalog, "-- Modify Language " + langName + "\n-- " + val + "\n");
+            }
+        });
+    }
+
     private void showQuickDocumentation(ConnectionProfile profile) {
         showQuickDocumentation(profile, null);
     }
@@ -1402,7 +1433,7 @@ public class SchemaTreePane extends VBox {
     }
 
     private void appendCommonNewDataSourceItems(Menu newMenu, ConnectionProfile profile, boolean includeFolder) {
-        Menu dataSourceSub = new Menu("Data Source");
+        Menu dataSourceSub = new Menu("Data Source", Icons.of(FontAwesomeSolid.DATABASE, "#868a91", 12));
         MenuItem dsPg = new MenuItem("PostgreSQL…", Icons.forDatabase(ConnectionProfile.DatabaseType.POSTGRESQL, 13));
         dsPg.setOnAction(e -> mainWindow.showNewConnectionDialog(ConnectionProfile.DatabaseType.POSTGRESQL));
         MenuItem dsMy = new MenuItem("MySQL…", Icons.forDatabase(ConnectionProfile.DatabaseType.MYSQL, 13));
@@ -1421,7 +1452,7 @@ public class SchemaTreePane extends VBox {
         dsAll.setOnAction(e -> mainWindow.showNewConnectionDialog());
         dataSourceSub.getItems().addAll(dsPg, dsMy, dsMaria, dsLite, dsMongo, dsMssql, dsOracle, new SeparatorMenuItem(), dsAll);
 
-        Menu cloudSub = new Menu("Data Source from Cloud Provider");
+        Menu cloudSub = new Menu("Data Source from Cloud Provider", Icons.of(FontAwesomeSolid.CLOUD, "#868a91", 12));
         MenuItem cpGcp = new MenuItem("Google Cloud…");
         cpGcp.setOnAction(e -> mainWindow.setStatus("Google Cloud provider"));
         MenuItem cpAws = new MenuItem("Amazon Web Services (AWS)…");
@@ -1430,19 +1461,19 @@ public class SchemaTreePane extends VBox {
         cpAzure.setOnAction(e -> mainWindow.setStatus("Azure provider"));
         cloudSub.getItems().addAll(cpGcp, cpAws, cpAzure);
 
-        MenuItem dsTemplates = new MenuItem("Data Source Templates (Beta)");
+        MenuItem dsTemplates = new MenuItem("Data Source Templates (Beta)", Icons.of(FontAwesomeSolid.SLIDERS_H, "#868a91", 12));
         dsTemplates.setOnAction(e -> mainWindow.setStatus("Data Source Templates"));
 
-        MenuItem dsFromFile = new MenuItem("Data Source from File/Folder…");
+        MenuItem dsFromFile = new MenuItem("Data Source from File/Folder", Icons.of(FontAwesomeSolid.FOLDER, "#e0a44c", 12));
         dsFromFile.setOnAction(e -> mainWindow.showNewConnectionDialog(ConnectionProfile.DatabaseType.SQLITE));
 
-        MenuItem dsFromUrl = new MenuItem("Data Source from URL…");
+        MenuItem dsFromUrl = new MenuItem("Data Source from URL", Icons.of(FontAwesomeSolid.GLOBE, "#4a88c7", 12));
         dsFromUrl.setOnAction(e -> mainWindow.showNewConnectionDialog());
 
-        MenuItem ddlDs = new MenuItem("DDL Data Source…");
+        MenuItem ddlDs = new MenuItem("DDL Data Source", Icons.of(FontAwesomeSolid.FILE_CODE, "#3592c4", 12));
         ddlDs.setOnAction(e -> mainWindow.setStatus("DDL Data Source"));
 
-        MenuItem driverItem = new MenuItem("Driver…");
+        MenuItem driverItem = new MenuItem("Driver", Icons.of(FontAwesomeSolid.CUBES, "#868a91", 12));
         driverItem.setOnAction(e -> mainWindow.setStatus("Driver Configuration"));
 
         newMenu.getItems().addAll(
@@ -1457,11 +1488,656 @@ public class SchemaTreePane extends VBox {
         );
 
         if (includeFolder) {
-            MenuItem folderItem = new MenuItem("Folder");
+            MenuItem folderItem = new MenuItem("Folder", Icons.of(FontAwesomeSolid.FOLDER, "#e0a44c", 12));
             folderItem.setOnAction(e -> promptMoveToGroup(profile));
             newMenu.getItems().add(folderItem);
         }
         newMenu.getItems().add(driverItem);
+    }
+
+    Menu buildPostgreSqlNewMenu(TreeItem<DbObject> item, DbObject obj, ConnectionProfile profile) {
+        Menu newMenu = new Menu("New");
+
+        String targetCatalog = resolveCatalogFor(item, obj);
+        String schema = resolveSchemaFor(item, obj);
+
+        // Query Console (Ctrl+Shift+Q)
+        MenuItem queryConsole = new MenuItem("Query Console", Icons.of(FontAwesomeSolid.TERMINAL, "#4a88c7", 12));
+        queryConsole.setAccelerator(new KeyCodeCombination(KeyCode.Q, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN));
+        queryConsole.setOnAction(e -> {
+            if (mainWindow != null) mainWindow.openQueryTab(profile, targetCatalog, null);
+        });
+
+        // Query File… (Ctrl+Alt+Shift+Q)
+        MenuItem queryFile = new MenuItem("Query File…", Icons.of(FontAwesomeSolid.FILE_CODE, "#868a91", 12));
+        queryFile.setAccelerator(new KeyCodeCombination(KeyCode.Q, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN));
+        queryFile.setOnAction(e -> promptAndOpenQueryFile(profile));
+
+        newMenu.getItems().addAll(queryConsole, queryFile);
+
+        DbObject.Kind kind = obj != null ? obj.getKind() : null;
+
+        boolean isDbObjectsFolder = (kind == Kind.DATABASE_OBJECTS);
+        boolean isVirtualViewsFolder = (kind == Kind.VIRTUAL_VIEWS_FOLDER);
+        boolean isDbObjectSubFolder = (kind == Kind.ACCESS_METHODS_FOLDER
+                || kind == Kind.CASTS_FOLDER
+                || kind == Kind.EXTENSIONS_FOLDER
+                || kind == Kind.LANGUAGES_FOLDER);
+        boolean isGenericFolder = isDbObjectsFolder || isDbObjectSubFolder;
+        boolean isTableSubFolder = (kind == Kind.COLUMNS_FOLDER
+                || kind == Kind.KEYS_FOLDER
+                || kind == Kind.FOREIGN_KEYS_FOLDER
+                || kind == Kind.INDEXES_FOLDER
+                || kind == Kind.PARTITIONS_FOLDER
+                || kind == Kind.FIELDS_FOLDER);
+        boolean isTableSubItem = (kind == Kind.COLUMN
+                || kind == Kind.KEY
+                || kind == Kind.FOREIGN_KEY
+                || kind == Kind.INDEX
+                || kind == Kind.FIELD);
+        boolean isTableSubNode = isTableSubFolder || isTableSubItem;
+
+        boolean isTable = (obj != null && (kind == Kind.TABLE || kind == Kind.VIEW || kind == Kind.PARTITION));
+        boolean isSequenceOrSeqFolder = (obj != null && (kind == Kind.SEQUENCE || kind == Kind.SEQUENCES_FOLDER));
+        boolean isVirtualView = (kind == Kind.VIRTUAL_VIEW);
+        boolean isDbObjectItem = (kind == Kind.ACCESS_METHOD
+                || kind == Kind.CAST
+                || kind == Kind.EXTENSION
+                || kind == Kind.LANGUAGE);
+
+        // For Database Objects & its subfolders (access methods, casts, extensions, languages):
+        // Image 1 & Image 3: Only Query Console, Query File, then Data Source items
+        if (isGenericFolder) {
+            appendCommonNewDataSourceItems(newMenu, profile, false);
+            return newMenu;
+        }
+
+        MenuItem tableItem = new MenuItem("Table", Icons.of(FontAwesomeSolid.TABLE, "#4a88c7", 12));
+        tableItem.setOnAction(e -> {
+            if (mainWindow != null) mainWindow.openQueryTab(profile, targetCatalog,
+                    "CREATE TABLE \"" + schema + "\".\"new_table\" (\n    id SERIAL PRIMARY KEY\n);\n");
+        });
+
+        MenuItem matViewItem = new MenuItem("Materialized View", Icons.of(FontAwesomeSolid.EYE, "#e0a44c", 12));
+        matViewItem.setOnAction(e -> {
+            if (mainWindow != null) mainWindow.openQueryTab(profile, targetCatalog,
+                    "CREATE MATERIALIZED VIEW \"" + schema + "\".\"new_matview\" AS\nSELECT 1;\n");
+        });
+
+        MenuItem viewItem = new MenuItem("View", Icons.of(FontAwesomeSolid.EYE, "#57965c", 12));
+        viewItem.setOnAction(e -> {
+            if (mainWindow != null) mainWindow.openQueryTab(profile, targetCatalog,
+                    "CREATE VIEW \"" + schema + "\".\"new_view\" AS\nSELECT 1;\n");
+        });
+
+        MenuItem opItem = new MenuItem("Operator", Icons.of(FontAwesomeSolid.DOT_CIRCLE, "#3592c4", 12));
+        opItem.setOnAction(e -> {
+            if (mainWindow != null) mainWindow.openQueryTab(profile, targetCatalog,
+                    "CREATE OPERATOR \"" + schema + "\".### (\n    FUNCTION = func_name,\n    LEFTARG = type1,\n    RIGHTARG = type2\n);\n");
+        });
+
+        MenuItem seqItem = new MenuItem("Sequence", Icons.of(FontAwesomeSolid.SORT_NUMERIC_DOWN, "#e0a44c", 12));
+        seqItem.setOnAction(e -> {
+            if (mainWindow != null) mainWindow.openQueryTab(profile, targetCatalog,
+                    "CREATE SEQUENCE \"" + schema + "\".\"new_seq\";\n");
+        });
+
+        MenuItem collaItem = new MenuItem("Collation", Icons.of(FontAwesomeSolid.SORT_ALPHA_DOWN, "#868a91", 11));
+        collaItem.setOnAction(e -> {
+            if (mainWindow != null) mainWindow.openQueryTab(profile, targetCatalog,
+                    "CREATE COLLATION \"" + schema + "\".\"new_collation\" (LOCALE = 'en_US.utf8');\n");
+        });
+
+        MenuItem schemaItem = new MenuItem("Schema", Icons.of(FontAwesomeSolid.PROJECT_DIAGRAM, "#3592c4", 12));
+        schemaItem.setOnAction(e -> promptCreateSchema(profile, targetCatalog));
+
+        MenuItem langItem = new MenuItem("Language", Icons.of(FontAwesomeSolid.CODE, "#3592c4", 11));
+        langItem.setOnAction(e -> {
+            if (mainWindow != null) mainWindow.openQueryTab(profile, targetCatalog,
+                    "CREATE EXTENSION IF NOT EXISTS plpgsql;\n");
+        });
+
+        MenuItem dbItem = new MenuItem("Database", Icons.of(FontAwesomeSolid.DATABASE, "#3592c4", 12));
+        dbItem.setOnAction(e -> CreateDatabaseDialog.show(mainWindow, profile));
+
+        MenuItem roleItem = new MenuItem("Role", Icons.of(FontAwesomeSolid.USER, "#868a91", 11));
+        roleItem.setOnAction(e -> CreateRoleDialog.show(mainWindow, profile));
+
+        MenuItem userItem = new MenuItem("User", Icons.of(FontAwesomeSolid.USER, "#868a91", 11));
+        userItem.setOnAction(e -> CreateUserDialog.show(mainWindow, profile));
+
+        MenuItem routineItem = new MenuItem("Routine", Icons.of(FontAwesomeSolid.COG, "#c77dbb", 12));
+        routineItem.setOnAction(e -> {
+            if (mainWindow != null) mainWindow.openQueryTab(profile, targetCatalog,
+                    "CREATE OR REPLACE FUNCTION \"" + schema + "\".\"new_func\"()\nRETURNS void AS $$\nBEGIN\nEND;\n$$ LANGUAGE plpgsql;\n");
+        });
+
+        MenuItem virtualView = new MenuItem("Virtual View", Icons.of(FontAwesomeSolid.TABLE, "#c77dbb", 12));
+        virtualView.setOnAction(e -> showVirtualViewInfo(profile, targetCatalog));
+
+        MenuItem vCol = new MenuItem("Virtual Column", Icons.of(FontAwesomeSolid.COLUMNS, "#c77dbb", 11));
+        vCol.setOnAction(e -> {
+            if (mainWindow != null) mainWindow.setStatus("Virtual Column on " + (obj != null ? obj.getName() : ""));
+        });
+        MenuItem vFk = new MenuItem("Virtual Foreign Key", Icons.of(FontAwesomeSolid.KEY, "#c77dbb", 11));
+        vFk.setOnAction(e -> {
+            if (mainWindow != null) mainWindow.setStatus("Virtual Foreign Key on " + (obj != null ? obj.getName() : ""));
+        });
+
+        // Image 2: Virtual Views Folder
+        if (isVirtualViewsFolder) {
+            newMenu.getItems().addAll(
+                    new SeparatorMenuItem(),
+                    virtualView,
+                    new SeparatorMenuItem(),
+                    schemaItem, langItem, dbItem, roleItem, userItem
+            );
+            appendCommonNewDataSourceItems(newMenu, profile, false);
+            return newMenu;
+        }
+
+        // Image 5: Virtual View item (sessions)
+        if (isVirtualView) {
+            newMenu.getItems().addAll(
+                    new SeparatorMenuItem(),
+                    vCol, vFk, virtualView,
+                    new SeparatorMenuItem(),
+                    schemaItem, langItem, dbItem, roleItem, userItem
+            );
+            appendCommonNewDataSourceItems(newMenu, profile, false);
+            return newMenu;
+        }
+
+        // Image 4: Database Object Item (brin, cast, extension, language)
+        if (isDbObjectItem) {
+            newMenu.getItems().add(new SeparatorMenuItem());
+            if (kind == Kind.LANGUAGE) {
+                newMenu.getItems().addAll(langItem, schemaItem, dbItem, roleItem, userItem);
+            } else {
+                newMenu.getItems().addAll(schemaItem, langItem, dbItem, roleItem, userItem);
+            }
+            newMenu.getItems().addAll(
+                    new SeparatorMenuItem(),
+                    virtualView
+            );
+            appendCommonNewDataSourceItems(newMenu, profile, false);
+            return newMenu;
+        }
+
+        // Table / View / Partition or Table Sub-Folder / Sub-Item (columns, keys, foreign keys, indexes, etc.)
+        if (isTable || isTableSubNode) {
+            DbObject parentTable = resolveParentTableFor(item, obj);
+            String tblName = parentTable != null ? parentTable.getName()
+                    : (obj.getTableName() != null ? obj.getTableName() : obj.getName());
+
+            MenuItem colItem = new MenuItem("Column", Icons.of(FontAwesomeSolid.COLUMNS, "#868a91", 11));
+            colItem.setOnAction(e -> {
+                if (mainWindow != null) mainWindow.openQueryTab(profile, targetCatalog,
+                        "ALTER TABLE \"" + schema + "\".\"" + tblName + "\" ADD COLUMN new_column VARCHAR(255);\n");
+            });
+
+            MenuItem uqItem = new MenuItem("Unique Key", Icons.of(FontAwesomeSolid.KEY, "#e0a44c", 11));
+            uqItem.setOnAction(e -> {
+                if (mainWindow != null) mainWindow.openQueryTab(profile, targetCatalog,
+                        "ALTER TABLE \"" + schema + "\".\"" + tblName + "\" ADD CONSTRAINT uq_" + tblName + "_new UNIQUE (column_name);\n");
+            });
+
+            MenuItem fkItem = new MenuItem("Foreign Key", Icons.of(FontAwesomeSolid.KEY, "#4a88c7", 11));
+            fkItem.setOnAction(e -> {
+                if (mainWindow != null) mainWindow.openQueryTab(profile, targetCatalog,
+                        "ALTER TABLE \"" + schema + "\".\"" + tblName + "\" ADD CONSTRAINT fk_" + tblName + "_ref FOREIGN KEY (column_name) REFERENCES target_table (target_col);\n");
+            });
+
+            MenuItem idxItem = new MenuItem("Index", Icons.of(FontAwesomeSolid.BOLT, "#e0a44c", 11));
+            idxItem.setOnAction(e -> {
+                if (mainWindow != null) mainWindow.openQueryTab(profile, targetCatalog,
+                        "CREATE INDEX idx_" + tblName + "_col ON \"" + schema + "\".\"" + tblName + "\" (column_name);\n");
+            });
+
+            MenuItem chkItem = new MenuItem("Check", Icons.of(FontAwesomeSolid.CHECK, "#57965c", 11));
+            chkItem.setOnAction(e -> {
+                if (mainWindow != null) mainWindow.openQueryTab(profile, targetCatalog,
+                        "ALTER TABLE \"" + schema + "\".\"" + tblName + "\" ADD CONSTRAINT chk_" + tblName + " CHECK (/* condition */);\n");
+            });
+
+            if (isTableSubNode) {
+                newMenu.getItems().add(new SeparatorMenuItem());
+                if (kind == Kind.KEYS_FOLDER || kind == Kind.KEY) {
+                    newMenu.getItems().addAll(uqItem, colItem, fkItem, idxItem, chkItem);
+                } else if (kind == Kind.FOREIGN_KEYS_FOLDER || kind == Kind.FOREIGN_KEY) {
+                    newMenu.getItems().addAll(fkItem, colItem, uqItem, idxItem, chkItem);
+                } else if (kind == Kind.INDEXES_FOLDER || kind == Kind.INDEX) {
+                    newMenu.getItems().addAll(idxItem, colItem, uqItem, fkItem, chkItem);
+                } else {
+                    newMenu.getItems().addAll(colItem, uqItem, fkItem, idxItem, chkItem);
+                }
+                newMenu.getItems().addAll(
+                        tableItem, matViewItem, viewItem, opItem, seqItem, collaItem, schemaItem, langItem, dbItem, roleItem, userItem,
+                        new SeparatorMenuItem(),
+                        vCol, vFk, virtualView
+                );
+                appendCommonNewDataSourceItems(newMenu, profile, false);
+                return newMenu;
+            }
+
+            newMenu.getItems().addAll(new SeparatorMenuItem(), colItem, uqItem, fkItem, idxItem, chkItem, new SeparatorMenuItem(),
+                    tableItem, matViewItem, viewItem, opItem, seqItem, collaItem, schemaItem, langItem, dbItem, roleItem, userItem, routineItem,
+                    new SeparatorMenuItem(),
+                    vCol, vFk, virtualView);
+            appendCommonNewDataSourceItems(newMenu, profile, false);
+            return newMenu;
+        }
+
+        // Sequences or Sequences Folder
+        if (isSequenceOrSeqFolder) {
+            newMenu.getItems().addAll(new SeparatorMenuItem(),
+                    seqItem, tableItem, matViewItem, viewItem, opItem, collaItem, schemaItem, langItem, dbItem, roleItem, userItem,
+                    new SeparatorMenuItem(),
+                    virtualView);
+            appendCommonNewDataSourceItems(newMenu, profile, false);
+            return newMenu;
+        }
+
+        // Schema / Other Folders (tables folder, views folder, etc.)
+        newMenu.getItems().addAll(new SeparatorMenuItem(),
+                tableItem, matViewItem, viewItem, opItem, seqItem, collaItem, schemaItem, langItem, dbItem, roleItem, userItem, routineItem,
+                new SeparatorMenuItem(),
+                virtualView);
+        appendCommonNewDataSourceItems(newMenu, profile, false);
+
+        return newMenu;
+    }
+
+    ContextMenu buildPostgreSqlMenu(TreeItem<DbObject> item, DbObject obj, ConnectionProfile profile) {
+        if (profile == null || obj == null) return null;
+
+        DbObject.Kind kind = obj.getKind();
+
+        boolean isDbObjectsFolder = (kind == Kind.DATABASE_OBJECTS);
+        boolean isVirtualViewsFolder = (kind == Kind.VIRTUAL_VIEWS_FOLDER);
+        boolean isDbObjectSubFolder = (kind == Kind.ACCESS_METHODS_FOLDER
+                || kind == Kind.CASTS_FOLDER
+                || kind == Kind.EXTENSIONS_FOLDER
+                || kind == Kind.LANGUAGES_FOLDER);
+        boolean isGenericFolder = isDbObjectsFolder || isDbObjectSubFolder;
+        boolean isTableSubFolder = (kind == Kind.COLUMNS_FOLDER
+                || kind == Kind.KEYS_FOLDER
+                || kind == Kind.FOREIGN_KEYS_FOLDER
+                || kind == Kind.INDEXES_FOLDER
+                || kind == Kind.PARTITIONS_FOLDER
+                || kind == Kind.FIELDS_FOLDER);
+        boolean isTableSubItem = (kind == Kind.COLUMN
+                || kind == Kind.KEY
+                || kind == Kind.FOREIGN_KEY
+                || kind == Kind.INDEX
+                || kind == Kind.FIELD);
+
+        boolean isCategoryFolder = (kind == Kind.TABLES_FOLDER
+                || kind == Kind.SEQUENCES_FOLDER
+                || kind == Kind.VIEWS_FOLDER
+                || kind == Kind.PROCEDURES_FOLDER
+                || kind == Kind.FUNCTIONS_FOLDER
+                || isDbObjectsFolder
+                || isVirtualViewsFolder
+                || isDbObjectSubFolder
+                || isTableSubFolder);
+
+        boolean isTable = (kind == Kind.TABLE || kind == Kind.VIEW || kind == Kind.PARTITION);
+        boolean isSequence = (kind == Kind.SEQUENCE);
+        boolean isSchema = (kind == Kind.SCHEMA);
+        boolean isVirtualView = (kind == Kind.VIRTUAL_VIEW);
+        boolean isDbObjectItem = (kind == Kind.ACCESS_METHOD
+                || kind == Kind.CAST
+                || kind == Kind.EXTENSION
+                || kind == Kind.LANGUAGE);
+
+        if (!isCategoryFolder && !isTable && !isSequence && !isSchema && !isVirtualView && !isDbObjectItem && !isTableSubItem) {
+            return null;
+        }
+
+        ContextMenu menu = new ContextMenu();
+        String targetCatalog = resolveCatalogFor(item, obj);
+
+        // 1. + New >
+        Menu newMenu = buildPostgreSqlNewMenu(item, obj, profile);
+        menu.getItems().add(newMenu);
+
+        // 2. Modify <Object>… (Ctrl+F6) - present on Schema, Sequence, Table/View, Virtual Views Folder, Virtual View, Language, Keys Folder, Foreign Keys Folder, Indexes Folder, Table Sub-Items
+        boolean hasModify = isSchema || isSequence || isTable || isVirtualViewsFolder || isVirtualView
+                || kind == Kind.LANGUAGE
+                || kind == Kind.KEYS_FOLDER
+                || kind == Kind.FOREIGN_KEYS_FOLDER
+                || kind == Kind.INDEXES_FOLDER
+                || isTableSubItem;
+        if (hasModify) {
+            String modifyTitle;
+            if (isSchema) {
+                modifyTitle = "Modify Schema…";
+            } else if (isSequence) {
+                modifyTitle = "Modify Sequence…";
+            } else if (isVirtualViewsFolder || isVirtualView) {
+                modifyTitle = "Modify Virtual View…";
+            } else if (kind == Kind.LANGUAGE) {
+                modifyTitle = "Modify Language…";
+            } else if (kind == Kind.KEYS_FOLDER || kind == Kind.KEY) {
+                modifyTitle = "Modify Key…";
+            } else if (kind == Kind.FOREIGN_KEYS_FOLDER || kind == Kind.FOREIGN_KEY) {
+                modifyTitle = "Modify Foreign Key…";
+            } else if (kind == Kind.INDEXES_FOLDER || kind == Kind.INDEX) {
+                modifyTitle = "Modify Index…";
+            } else if (kind == Kind.COLUMN) {
+                modifyTitle = "Modify Column…";
+            } else if (kind == Kind.VIEW) {
+                modifyTitle = "Modify View…";
+            } else {
+                modifyTitle = "Modify Table…";
+            }
+            MenuItem modifyItem = new MenuItem(modifyTitle);
+            modifyItem.setAccelerator(new KeyCodeCombination(KeyCode.F6, KeyCombination.CONTROL_DOWN));
+            modifyItem.setOnAction(e -> {
+                if (isSchema) {
+                    ModifyDatabaseDialog.show(mainWindow, profile, obj.getName());
+                } else if (isSequence) {
+                    ModifySequenceDialog.show(mainWindow, profile, obj);
+                } else if (isVirtualViewsFolder || isVirtualView) {
+                    promptModifyVirtualView(profile, obj);
+                } else if (kind == Kind.LANGUAGE) {
+                    promptModifyLanguage(profile, obj);
+                } else {
+                    DbObject targetTable = resolveParentTableFor(item, obj);
+                    ModifyTableDialog.show(mainWindow, profile, targetTable != null ? targetTable : obj);
+                }
+            });
+            menu.getItems().add(modifyItem);
+        }
+
+        // 3. Copy/Paste >
+        Menu copyPasteMenu = new Menu("Copy/Paste");
+        MenuItem copyName = new MenuItem("Copy");
+        copyName.setAccelerator(new KeyCodeCombination(KeyCode.C, KeyCombination.CONTROL_DOWN));
+        copyName.setOnAction(e -> {
+            copyToClipboard(obj.getName());
+            if (mainWindow != null) mainWindow.setStatus("Copied to clipboard: " + obj.getName());
+        });
+        MenuItem copyPath = new MenuItem("Copy Path/Reference…");
+        copyPath.setAccelerator(new KeyCodeCombination(KeyCode.C, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN));
+        copyPath.setOnAction(e -> {
+            String ref = obj.qualifiedName();
+            copyToClipboard(ref);
+            if (mainWindow != null) mainWindow.setStatus("Copied reference: " + ref);
+        });
+        copyPasteMenu.getItems().addAll(copyName, copyPath);
+        if (isCategoryFolder) {
+            copyPasteMenu.setDisable(true);
+        }
+        menu.getItems().add(copyPasteMenu);
+
+        // 4. Edit Data (F4) on Table/View/Virtual View/Table Sub-Item OR Open the List (F4) on category folders
+        if (isTable || isVirtualView || isTableSubItem) {
+            MenuItem editDataItem = new MenuItem("Edit Data");
+            editDataItem.setGraphic(Icons.of(FontAwesomeSolid.TABLE, "#4a88c7", 12));
+            editDataItem.setAccelerator(new KeyCodeCombination(KeyCode.F4));
+            editDataItem.setOnAction(e -> {
+                DbObject targetTable = resolveParentTableFor(item, obj);
+                if (targetTable != null && mainWindow != null) {
+                    mainWindow.openDataTab(profile, targetTable);
+                } else {
+                    editData();
+                }
+            });
+            menu.getItems().add(editDataItem);
+        } else if (isCategoryFolder) {
+            MenuItem openListItem = new MenuItem("Open the List");
+            openListItem.setAccelerator(new KeyCodeCombination(KeyCode.F4));
+            openListItem.setOnAction(e -> {
+                if (item != null) item.setExpanded(!item.isExpanded());
+            });
+            menu.getItems().add(openListItem);
+        }
+
+        // 5. Refresh (Ctrl+F5)
+        MenuItem refresh = new MenuItem("Refresh");
+        refresh.setGraphic(Icons.of(FontAwesomeSolid.SYNC_ALT, "#868a91", 12));
+        refresh.setAccelerator(new KeyCodeCombination(KeyCode.F5, KeyCombination.CONTROL_DOWN));
+        refresh.setOnAction(e -> {
+            if (item != null) refreshNode(item, obj, obj.getName());
+            else reload();
+        });
+        menu.getItems().add(refresh);
+
+        menu.getItems().add(new SeparatorMenuItem());
+
+        // 6. Rename… (Shift+F6) - disabled on category folders, db object items, virtual views, table sub-items
+        MenuItem rename = new MenuItem("Rename…");
+        rename.setAccelerator(new KeyCodeCombination(KeyCode.F6, KeyCombination.SHIFT_DOWN));
+        if (isCategoryFolder || isDbObjectItem || isVirtualView || isTableSubItem) {
+            rename.setDisable(true);
+        } else if (isSchema) {
+            rename.setOnAction(e -> promptRenameSchema(profile, obj));
+        } else if (isSequence) {
+            rename.setOnAction(e -> promptRenameSequence(profile, obj));
+        } else {
+            rename.setOnAction(e -> promptRenameTable(profile, obj));
+        }
+        menu.getItems().add(rename);
+
+        if (!isCategoryFolder) {
+            menu.getItems().add(new SeparatorMenuItem());
+        }
+
+        // 7. Quick Documentation (Ctrl+Q)
+        MenuItem quickDoc = new MenuItem("Quick Documentation");
+        quickDoc.setAccelerator(new KeyCodeCombination(KeyCode.Q, KeyCombination.CONTROL_DOWN));
+        if (isCategoryFolder) {
+            quickDoc.setDisable(true);
+        } else {
+            quickDoc.setOnAction(e -> showQuickDocumentation(profile, obj));
+        }
+        menu.getItems().add(quickDoc);
+
+        // 8. Compare Schema Structure With… (Ctrl+D) / Compare Schema Structure (disabled)
+        if (isCategoryFolder || isVirtualView) {
+            MenuItem compareStructure = new MenuItem("Compare Schema Structure");
+            compareStructure.setAccelerator(new KeyCodeCombination(KeyCode.D, KeyCombination.CONTROL_DOWN));
+            compareStructure.setDisable(true);
+            menu.getItems().add(compareStructure);
+        } else {
+            MenuItem compareStructure = new MenuItem("Compare Schema Structure With…");
+            compareStructure.setGraphic(Icons.of(FontAwesomeSolid.EXCHANGE_ALT, "#868a91", 12));
+            compareStructure.setAccelerator(new KeyCodeCombination(KeyCode.D, KeyCombination.CONTROL_DOWN));
+            compareStructure.setDisable(true);
+            menu.getItems().add(compareStructure);
+        }
+
+        // 9. Navigation > (omitted on category folders)
+        if (!isCategoryFolder) {
+            Menu navMenu = new Menu("Navigation");
+            MenuItem goToDdl = new MenuItem("Go to DDL");
+            goToDdl.setOnAction(e -> {
+                if (mainWindow != null) {
+                    DbObject targetTable = resolveParentTableFor(item, obj);
+                    mainWindow.openDdlTab(profile, targetTable != null ? targetTable : obj);
+                }
+            });
+            MenuItem jumpConsole = new MenuItem("Jump to Query Console");
+            jumpConsole.setAccelerator(new KeyCodeCombination(KeyCode.F10, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN));
+            jumpConsole.setOnAction(e -> jumpToQueryConsole());
+            MenuItem selectInTree = new MenuItem("Select in Database Explorer");
+            selectInTree.setAccelerator(new KeyCodeCombination(KeyCode.F1, KeyCombination.ALT_DOWN));
+            selectInTree.setOnAction(e -> {
+                if (item != null) {
+                    tree.getSelectionModel().select(item);
+                }
+            });
+            navMenu.getItems().addAll(goToDdl, jumpConsole, selectInTree);
+            menu.getItems().add(navMenu);
+        }
+
+        // 10. Find Usages (Alt+Shift+7) (omitted on category folders)
+        if (!isCategoryFolder) {
+            MenuItem findUsages = new MenuItem("Find Usages");
+            findUsages.setAccelerator(new KeyCodeCombination(KeyCode.DIGIT7, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN));
+            findUsages.setDisable(true);
+            menu.getItems().add(findUsages);
+        }
+
+        menu.getItems().add(new SeparatorMenuItem());
+
+        // 11. Introspection Level >
+        Menu introMenu = new Menu("Introspection Level");
+        ToggleGroup introGroup = new ToggleGroup();
+        RadioMenuItem introAuto = new RadioMenuItem("Auto");
+        introAuto.setToggleGroup(introGroup);
+        introAuto.setSelected(true);
+        RadioMenuItem introHigh = new RadioMenuItem("High");
+        introHigh.setToggleGroup(introGroup);
+        RadioMenuItem introMed = new RadioMenuItem("Medium");
+        introMed.setToggleGroup(introGroup);
+        RadioMenuItem introLow = new RadioMenuItem("Low");
+        introLow.setToggleGroup(introGroup);
+        introMenu.getItems().addAll(introAuto, introHigh, introMed, introLow);
+        menu.getItems().add(introMenu);
+
+        menu.getItems().add(new SeparatorMenuItem());
+
+        // 12. SQL Scripts >
+        Menu sqlScripts = new Menu("SQL Scripts");
+        MenuItem openConsole = new MenuItem("Open Query Console");
+        openConsole.setOnAction(e -> {
+            if (mainWindow != null) mainWindow.openQueryTab(profile, targetCatalog, null);
+        });
+        MenuItem runSqlScript = new MenuItem("Run SQL Script…");
+        runSqlScript.setOnAction(e -> promptRunSqlScript(profile));
+        MenuItem genDdl = new MenuItem("Generate DDL to Query Console");
+        genDdl.setOnAction(e -> {
+            AppExecutor.run(() -> {
+                try {
+                    String ddl = DdlGeneratorService.generateDdl(profile, obj);
+                    Platform.runLater(() -> {
+                        if (mainWindow != null) mainWindow.openQueryTab(profile, targetCatalog, ddl);
+                    });
+                } catch (Exception ex) {
+                    Platform.runLater(() -> {
+                        if (mainWindow != null) mainWindow.openQueryTab(profile, targetCatalog,
+                                "-- Could not generate DDL: " + ex.getMessage());
+                    });
+                }
+            });
+        });
+        sqlScripts.getItems().addAll(openConsole, runSqlScript, genDdl);
+        if (isTable) {
+            MenuItem select = new MenuItem("New Query: SELECT *");
+            select.setOnAction(e -> mainWindow.openQueryTab(profile, obj.getCatalog(),
+                    selectTopRowsSql(profile.getType(), obj)));
+            MenuItem count = new MenuItem("New Query: COUNT(*)");
+            count.setOnAction(e -> mainWindow.openQueryTab(profile, obj.getCatalog(),
+                    "SELECT COUNT(*) FROM " + obj.qualifiedName() + ";"));
+            sqlScripts.getItems().addAll(new SeparatorMenuItem(), select, count);
+        }
+        menu.getItems().add(sqlScripts);
+
+        // 13. Object Actions > (omitted on SEQUENCES_FOLDER, COLUMNS_FOLDER, INDEXES_FOLDER, generic folders, virtual views folder, virtual view)
+        boolean includeObjActions = !isGenericFolder && !isVirtualViewsFolder && !isVirtualView
+                && kind != Kind.SEQUENCES_FOLDER
+                && kind != Kind.COLUMNS_FOLDER
+                && kind != Kind.INDEXES_FOLDER;
+        if (includeObjActions) {
+            Menu objActions = new Menu("Object Actions");
+            MenuItem showHideSchemas = new MenuItem("Show / Hide Schemas…");
+            TreeItem<DbObject> connItem = item != null ? item : findConnectionItem(profile);
+            showHideSchemas.setOnAction(e -> showDatabaseFilterDialog(connItem, profile));
+            MenuItem forgetPw = new MenuItem("Forget Saved Passwords");
+            forgetPw.setOnAction(e -> {
+                profile.setPassword("");
+                ConnectionStore.saveOrUpdate(profile);
+                if (mainWindow != null) mainWindow.setStatus("Forgot saved password for " + profile.getName());
+            });
+            objActions.getItems().addAll(showHideSchemas, forgetPw);
+            menu.getItems().add(objActions);
+        }
+
+        // 14. Tools >
+        Menu toolsMenu = new Menu("Tools");
+        MenuItem manageSchemas = new MenuItem("Manage Schemas…");
+        TreeItem<DbObject> connItem = item != null ? item : findConnectionItem(profile);
+        manageSchemas.setOnAction(e -> showDatabaseFilterDialog(connItem, profile));
+        MenuItem verifyConn = new MenuItem("Verify Connection");
+        verifyConn.setOnAction(e -> verifyConnection(profile));
+        toolsMenu.getItems().addAll(manageSchemas, verifyConn);
+        menu.getItems().add(toolsMenu);
+
+        // 15. Import/Export > (omitted on generic folders: DATABASE_OBJECTS, ACCESS_METHODS_FOLDER, etc.)
+        boolean includeImportExport = !isGenericFolder;
+        if (includeImportExport) {
+            Menu importExport = new Menu("Import/Export");
+            if (isTable) {
+                MenuItem exportData = new MenuItem("Export Data to File…");
+                exportData.setOnAction(e -> exportTableData(profile, obj));
+                MenuItem importData = new MenuItem("Import Data from File(s)…");
+                importData.setOnAction(e -> ImportDataDialog.show(mainWindow, profile, obj));
+                MenuItem exportPgDump = new MenuItem("Export with 'pg_dump'…");
+                exportPgDump.setOnAction(e -> PgDumpDialog.show(mainWindow, profile, targetCatalog));
+                MenuItem restorePgRestore = new MenuItem("Restore with 'pg_restore'…");
+                restorePgRestore.setOnAction(e -> RestoreDialog.show(mainWindow, profile, targetCatalog));
+                importExport.getItems().addAll(exportData, importData, new SeparatorMenuItem(), exportPgDump, restorePgRestore);
+            } else {
+                MenuItem dumpItem = new MenuItem("Dump with pg_dump…");
+                dumpItem.setOnAction(e -> PgDumpDialog.show(mainWindow, profile, targetCatalog));
+                MenuItem restoreItem = new MenuItem("Restore…");
+                restoreItem.setOnAction(e -> RestoreDialog.show(mainWindow, profile, targetCatalog));
+                importExport.getItems().addAll(dumpItem, restoreItem);
+            }
+            menu.getItems().add(importExport);
+        }
+
+        // 16. Diagrams >
+        Menu diagrams = new Menu("Diagrams");
+        MenuItem showDiagram = new MenuItem("Show Diagram…");
+        showDiagram.setOnAction(e -> {
+            if (mainWindow != null) {
+                if (isTable || isTableSubItem) {
+                    DbObject targetTable = resolveParentTableFor(item, obj);
+                    mainWindow.openDiagramTab(profile, targetTable != null ? targetTable : obj);
+                } else {
+                    mainWindow.openDatabaseDiagramTab(profile, targetCatalog);
+                }
+            }
+        });
+        diagrams.getItems().add(showDiagram);
+        menu.getItems().add(diagrams);
+
+        menu.getItems().add(new SeparatorMenuItem());
+
+        // 17. Diagnostics >
+        Menu diagnostics = new Menu("Diagnostics");
+        MenuItem diagRefresh = new MenuItem("Diagnostic Refresh");
+        diagRefresh.setOnAction(e -> {
+            if (item != null) refreshNode(item, obj, obj.getName());
+            else reload();
+            if (mainWindow != null) mainWindow.setStatus("Diagnostic refresh performed for " + obj.getName());
+        });
+        diagnostics.getItems().add(diagRefresh);
+        menu.getItems().add(diagnostics);
+
+        menu.getItems().add(new SeparatorMenuItem());
+
+        // 18. Drop… (Delete)
+        MenuItem drop = new MenuItem("Drop…");
+        drop.setAccelerator(new KeyCodeCombination(KeyCode.DELETE));
+        if (isCategoryFolder) {
+            drop.setDisable(true);
+        } else if (isTable) {
+            drop.setOnAction(e -> confirmAndDeleteTable(profile, obj));
+        } else if (isSequence) {
+            drop.setOnAction(e -> confirmAndDeleteSequence(profile, obj));
+        } else if (isSchema) {
+            drop.setOnAction(e -> confirmAndDeleteSchema(profile, obj));
+        } else {
+            drop.setOnAction(e -> confirmAndDropGenericObject(profile, obj));
+        }
+        menu.getItems().add(drop);
+
+        return menu;
     }
 
     ContextMenu buildDatabaseMenu(TreeItem<DbObject> item, DbObject obj, ConnectionProfile profile) {
@@ -1469,6 +2145,9 @@ public class SchemaTreePane extends VBox {
     }
 
     ContextMenu buildSchemaMenu(TreeItem<DbObject> item, DbObject obj, ConnectionProfile profile) {
+        if (profile != null && profile.getType() == ConnectionProfile.DatabaseType.POSTGRESQL) {
+            return buildPostgreSqlMenu(item, obj, profile);
+        }
         return buildDatabaseOrSchemaMenu(item, obj, profile);
     }
 
@@ -1946,6 +2625,12 @@ public class SchemaTreePane extends VBox {
             }
             if (obj.getKind() == Kind.SCHEMA) {
                 return buildSchemaMenu(getTreeItem(), obj, profile);
+            }
+            if (profile.getType() == ConnectionProfile.DatabaseType.POSTGRESQL) {
+                ContextMenu pgMenu = buildPostgreSqlMenu(getTreeItem(), obj, profile);
+                if (pgMenu != null) {
+                    return pgMenu;
+                }
             }
             ContextMenu menu = new ContextMenu();
 
@@ -2466,6 +3151,199 @@ public class SchemaTreePane extends VBox {
         });
     }
 
+    private void promptRenameTable(ConnectionProfile profile, DbObject obj) {
+        TextInputDialog dialog = DialogTheme.apply(new TextInputDialog(obj.getName()));
+        dialog.initOwner(getScene() == null ? null : getScene().getWindow());
+        dialog.setTitle("Rename Table");
+        dialog.setHeaderText(null);
+        dialog.setContentText("New name for \"" + obj.getName() + "\":");
+
+        dialog.showAndWait().ifPresent(newName -> {
+            String trimmed = newName.trim();
+            if (trimmed.isEmpty() || trimmed.equals(obj.getName())) return;
+            AppExecutor.run(() -> {
+                try {
+                    String schema = (obj.getSchema() != null && !obj.getSchema().isBlank()) ? obj.getSchema() : "public";
+                    String sql = "ALTER TABLE \"" + schema.replace("\"", "\"\"") + "\".\""
+                            + obj.getName().replace("\"", "\"\"") + "\" RENAME TO \""
+                            + trimmed.replace("\"", "\"\"") + "\"";
+                    try (java.sql.Connection conn = ClientRegistry.jdbc(profile, obj.getCatalog()).getConnection();
+                         java.sql.Statement stmt = conn.createStatement()) {
+                        stmt.execute(sql);
+                    }
+                    Platform.runLater(() -> {
+                        mainWindow.setStatus("Renamed table " + obj.getName() + " to " + trimmed);
+                        reload();
+                    });
+                } catch (Exception ex) {
+                    String msg = ex.getMessage() == null ? ex.toString() : ex.getMessage();
+                    Platform.runLater(() -> DialogTheme.apply(new Alert(Alert.AlertType.ERROR,
+                            "Could not rename table " + obj.getName() + ": " + msg)).showAndWait());
+                }
+            });
+        });
+    }
+
+    private void promptRenameSequence(ConnectionProfile profile, DbObject obj) {
+        TextInputDialog dialog = DialogTheme.apply(new TextInputDialog(obj.getName()));
+        dialog.initOwner(getScene() == null ? null : getScene().getWindow());
+        dialog.setTitle("Rename Sequence");
+        dialog.setHeaderText(null);
+        dialog.setContentText("New name for \"" + obj.getName() + "\":");
+
+        dialog.showAndWait().ifPresent(newName -> {
+            String trimmed = newName.trim();
+            if (trimmed.isEmpty() || trimmed.equals(obj.getName())) return;
+            AppExecutor.run(() -> {
+                try {
+                    String schema = (obj.getSchema() != null && !obj.getSchema().isBlank()) ? obj.getSchema() : "public";
+                    String sql = "ALTER SEQUENCE \"" + schema.replace("\"", "\"\"") + "\".\""
+                            + obj.getName().replace("\"", "\"\"") + "\" RENAME TO \""
+                            + trimmed.replace("\"", "\"\"") + "\"";
+                    try (java.sql.Connection conn = ClientRegistry.jdbc(profile, obj.getCatalog()).getConnection();
+                         java.sql.Statement stmt = conn.createStatement()) {
+                        stmt.execute(sql);
+                    }
+                    Platform.runLater(() -> {
+                        mainWindow.setStatus("Renamed sequence " + obj.getName() + " to " + trimmed);
+                        reload();
+                    });
+                } catch (Exception ex) {
+                    String msg = ex.getMessage() == null ? ex.toString() : ex.getMessage();
+                    Platform.runLater(() -> DialogTheme.apply(new Alert(Alert.AlertType.ERROR,
+                            "Could not rename sequence " + obj.getName() + ": " + msg)).showAndWait());
+                }
+            });
+        });
+    }
+
+    private void confirmAndDeleteTable(ConnectionProfile profile, DbObject obj) {
+        Alert warn = (Alert) DialogTheme.apply(new Alert(Alert.AlertType.WARNING,
+                "This permanently deletes table \"" + obj.getName() + "\". This cannot be undone.",
+                ButtonType.YES, ButtonType.NO));
+        warn.setTitle("Drop Table");
+        warn.setHeaderText("Drop table \"" + obj.getName() + "\"?");
+        warn.initOwner(getScene() == null ? null : getScene().getWindow());
+        if (warn.showAndWait().orElse(ButtonType.NO) != ButtonType.YES) return;
+
+        AppExecutor.run(() -> {
+            try {
+                String schema = (obj.getSchema() != null && !obj.getSchema().isBlank()) ? obj.getSchema() : "public";
+                String sql = "DROP TABLE \"" + schema.replace("\"", "\"\"") + "\".\""
+                        + obj.getName().replace("\"", "\"\"") + "\" CASCADE";
+                try (java.sql.Connection conn = ClientRegistry.jdbc(profile, obj.getCatalog()).getConnection();
+                     java.sql.Statement stmt = conn.createStatement()) {
+                    stmt.execute(sql);
+                }
+                Platform.runLater(() -> {
+                    mainWindow.setStatus("Dropped table " + obj.getName());
+                    reload();
+                });
+            } catch (Exception ex) {
+                String msg = ex.getMessage() == null ? ex.toString() : ex.getMessage();
+                Platform.runLater(() -> DialogTheme.apply(new Alert(Alert.AlertType.ERROR,
+                        "Could not drop table " + obj.getName() + ": " + msg)).showAndWait());
+            }
+        });
+    }
+
+    private void confirmAndDeleteSequence(ConnectionProfile profile, DbObject obj) {
+        Alert warn = (Alert) DialogTheme.apply(new Alert(Alert.AlertType.WARNING,
+                "This permanently deletes sequence \"" + obj.getName() + "\". This cannot be undone.",
+                ButtonType.YES, ButtonType.NO));
+        warn.setTitle("Drop Sequence");
+        warn.setHeaderText("Drop sequence \"" + obj.getName() + "\"?");
+        warn.initOwner(getScene() == null ? null : getScene().getWindow());
+        if (warn.showAndWait().orElse(ButtonType.NO) != ButtonType.YES) return;
+
+        AppExecutor.run(() -> {
+            try {
+                String schema = (obj.getSchema() != null && !obj.getSchema().isBlank()) ? obj.getSchema() : "public";
+                String sql = "DROP SEQUENCE \"" + schema.replace("\"", "\"\"") + "\".\""
+                        + obj.getName().replace("\"", "\"\"") + "\" CASCADE";
+                try (java.sql.Connection conn = ClientRegistry.jdbc(profile, obj.getCatalog()).getConnection();
+                     java.sql.Statement stmt = conn.createStatement()) {
+                    stmt.execute(sql);
+                }
+                Platform.runLater(() -> {
+                    mainWindow.setStatus("Dropped sequence " + obj.getName());
+                    reload();
+                });
+            } catch (Exception ex) {
+                String msg = ex.getMessage() == null ? ex.toString() : ex.getMessage();
+                Platform.runLater(() -> DialogTheme.apply(new Alert(Alert.AlertType.ERROR,
+                        "Could not drop sequence " + obj.getName() + ": " + msg)).showAndWait());
+            }
+        });
+    }
+
+    private void confirmAndDropGenericObject(ConnectionProfile profile, DbObject obj) {
+        if (profile == null || obj == null) return;
+        String typeLabel = switch (obj.getKind()) {
+            case ACCESS_METHOD -> "access method";
+            case CAST -> "cast";
+            case EXTENSION -> "extension";
+            case LANGUAGE -> "language";
+            case VIRTUAL_VIEW -> "virtual view";
+            case COLUMN -> "column";
+            case KEY -> "key";
+            case FOREIGN_KEY -> "foreign key";
+            case INDEX -> "index";
+            default -> "object";
+        };
+        Alert warn = (Alert) DialogTheme.apply(new Alert(Alert.AlertType.WARNING,
+                "This permanently drops " + typeLabel + " \"" + obj.getName() + "\". This cannot be undone.",
+                ButtonType.YES, ButtonType.NO));
+        warn.setTitle("Drop " + Character.toUpperCase(typeLabel.charAt(0)) + typeLabel.substring(1));
+        warn.setHeaderText("Drop " + typeLabel + " \"" + obj.getName() + "\"?");
+        warn.initOwner(getScene() == null ? null : getScene().getWindow());
+        if (warn.showAndWait().orElse(ButtonType.NO) != ButtonType.YES) return;
+
+        if (obj.getKind() == Kind.VIRTUAL_VIEW) {
+            mainWindow.setStatus("Dropped virtual view " + obj.getName());
+            reload();
+            return;
+        }
+
+        AppExecutor.run(() -> {
+            try {
+                String sql = switch (obj.getKind()) {
+                    case ACCESS_METHOD -> "DROP ACCESS METHOD \"" + obj.getName().replace("\"", "\"\"") + "\" CASCADE";
+                    case EXTENSION -> "DROP EXTENSION \"" + obj.getName().replace("\"", "\"\"") + "\" CASCADE";
+                    case LANGUAGE -> "DROP LANGUAGE \"" + obj.getName().replace("\"", "\"\"") + "\" CASCADE";
+                    case CAST -> "DROP CAST (" + obj.getName() + ") CASCADE";
+                    case COLUMN -> {
+                        String tbl = obj.getTableName() != null ? obj.getTableName() : "table_name";
+                        String sch = obj.getSchema() != null ? obj.getSchema() : "public";
+                        yield "ALTER TABLE \"" + sch.replace("\"", "\"\"") + "\".\"" + tbl.replace("\"", "\"\"") + "\" DROP COLUMN \"" + obj.getName().replace("\"", "\"\"") + "\" CASCADE";
+                    }
+                    case KEY, FOREIGN_KEY -> {
+                        String tbl = obj.getTableName() != null ? obj.getTableName() : "table_name";
+                        String sch = obj.getSchema() != null ? obj.getSchema() : "public";
+                        yield "ALTER TABLE \"" + sch.replace("\"", "\"\"") + "\".\"" + tbl.replace("\"", "\"\"") + "\" DROP CONSTRAINT \"" + obj.getName().replace("\"", "\"\"") + "\" CASCADE";
+                    }
+                    case INDEX -> {
+                        String sch = obj.getSchema() != null ? obj.getSchema() : "public";
+                        yield "DROP INDEX \"" + sch.replace("\"", "\"\"") + "\".\"" + obj.getName().replace("\"", "\"\"") + "\" CASCADE";
+                    }
+                    default -> "DROP " + obj.getKind() + " \"" + obj.getName().replace("\"", "\"\"") + "\" CASCADE";
+                };
+                try (java.sql.Connection conn = ClientRegistry.jdbc(profile, obj.getCatalog()).getConnection();
+                     java.sql.Statement stmt = conn.createStatement()) {
+                    stmt.execute(sql);
+                }
+                Platform.runLater(() -> {
+                    mainWindow.setStatus("Dropped " + typeLabel + " " + obj.getName());
+                    reload();
+                });
+            } catch (Exception ex) {
+                String msg = ex.getMessage() == null ? ex.toString() : ex.getMessage();
+                Platform.runLater(() -> DialogTheme.apply(new Alert(Alert.AlertType.ERROR,
+                        "Could not drop " + typeLabel + " " + obj.getName() + ": " + msg)).showAndWait());
+            }
+        });
+    }
+
     private void confirmAndDeleteSchema(ConnectionProfile profile, DbObject obj) {
         if (profile.getType() == ConnectionProfile.DatabaseType.SQLITE) return;
         Alert warn = (Alert) DialogTheme.apply(new Alert(Alert.AlertType.WARNING,
@@ -2683,6 +3561,42 @@ public class SchemaTreePane extends VBox {
         }
         ConnectionProfile profile = profileFor(item);
         return profile != null ? profile.getDatabase() : null;
+    }
+
+    private String resolveSchemaFor(TreeItem<DbObject> item, DbObject obj) {
+        if (obj != null && obj.getKind() == Kind.SCHEMA) {
+            return obj.getName();
+        }
+        if (obj != null && obj.getSchema() != null && !obj.getSchema().isBlank()) {
+            return obj.getSchema();
+        }
+        TreeItem<DbObject> curr = item != null ? item.getParent() : null;
+        while (curr != null) {
+            if (curr.getValue() != null && curr.getValue().getKind() == Kind.SCHEMA) {
+                return curr.getValue().getName();
+            }
+            curr = curr.getParent();
+        }
+        return "public";
+    }
+
+    private DbObject resolveParentTableFor(TreeItem<DbObject> item, DbObject obj) {
+        if (obj != null && (obj.getKind() == Kind.TABLE || obj.getKind() == Kind.VIEW || obj.getKind() == Kind.PARTITION)) {
+            return obj;
+        }
+        TreeItem<DbObject> curr = item != null ? item.getParent() : null;
+        while (curr != null) {
+            if (curr.getValue() != null && (curr.getValue().getKind() == Kind.TABLE
+                    || curr.getValue().getKind() == Kind.VIEW
+                    || curr.getValue().getKind() == Kind.PARTITION)) {
+                return curr.getValue();
+            }
+            curr = curr.getParent();
+        }
+        if (obj != null && obj.getTableName() != null && !obj.getTableName().isBlank()) {
+            return new DbObject(obj.getTableName(), Kind.TABLE, obj.getCatalog(), obj.getSchema());
+        }
+        return null;
     }
 
     public ConnectionProfile getSelectedProfile() {
