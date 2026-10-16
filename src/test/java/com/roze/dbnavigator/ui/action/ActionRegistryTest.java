@@ -414,18 +414,26 @@ public class ActionRegistryTest {
         // Separator 5
         assertInstanceOf(ActionSeparator.class, items.get(idx++));
 
-        // Section 6: Refactor >
+        // Section 6: Refactor > (Matching DataGrip Image 3)
         assertInstanceOf(ActionGroup.class, items.get(idx));
         ActionGroup refactorGroup = (ActionGroup) items.get(idx);
         assertEquals("edit.refactor", refactorGroup.getId());
         assertEquals("Refactor", refactorGroup.getText());
-        assertEquals(3, refactorGroup.getChildren().size());
+        assertEquals(13, refactorGroup.getChildren().size());
         assertEquals("edit.refactor.rename", refactorGroup.getChildren().get(0).getId());
         assertEquals("Rename…", ((AnAction) refactorGroup.getChildren().get(0)).getText());
-        assertEquals("edit.refactor.extract.view", refactorGroup.getChildren().get(1).getId());
-        assertEquals("Extract View…", ((AnAction) refactorGroup.getChildren().get(1)).getText());
-        assertEquals("edit.refactor.extract.subquery", refactorGroup.getChildren().get(2).getId());
-        assertEquals("Extract Subquery…", ((AnAction) refactorGroup.getChildren().get(2)).getText());
+        assertInstanceOf(ActionSeparator.class, refactorGroup.getChildren().get(1));
+        assertEquals("edit.refactor.expand.column.list", refactorGroup.getChildren().get(2).getId());
+        assertEquals("edit.refactor.convert.subquery", refactorGroup.getChildren().get(3).getId());
+        assertEquals("edit.refactor.extract.introduce.group", refactorGroup.getChildren().get(4).getId());
+        assertEquals("edit.refactor.qualify.identifier", refactorGroup.getChildren().get(5).getId());
+        assertEquals("edit.refactor.unqualify.identifier", refactorGroup.getChildren().get(6).getId());
+        assertEquals("edit.refactor.quote.identifier", refactorGroup.getChildren().get(7).getId());
+        assertEquals("edit.refactor.unquote.identifier", refactorGroup.getChildren().get(8).getId());
+        assertEquals("edit.refactor.flip.expression", refactorGroup.getChildren().get(9).getId());
+        assertInstanceOf(ActionSeparator.class, refactorGroup.getChildren().get(10));
+        assertEquals("edit.refactor.inject.language", refactorGroup.getChildren().get(11).getId());
+        assertEquals("edit.refactor.uninject.language", refactorGroup.getChildren().get(12).getId());
         idx++;
 
         // Separator 6
@@ -436,10 +444,11 @@ public class ActionRegistryTest {
         ActionGroup selectionGroup = (ActionGroup) items.get(idx);
         assertEquals("edit.selection", selectionGroup.getId());
         assertEquals("Selection", selectionGroup.getText());
-        assertEquals(3, selectionGroup.getChildren().size());
+        assertEquals(4, selectionGroup.getChildren().size());
         assertEquals("edit.select.all", selectionGroup.getChildren().get(0).getId());
-        assertEquals("edit.selection.extend", selectionGroup.getChildren().get(1).getId());
-        assertEquals("edit.selection.shrink", selectionGroup.getChildren().get(2).getId());
+        assertEquals("edit.selection.add.carets.ends", selectionGroup.getChildren().get(1).getId());
+        assertEquals("edit.selection.extend", selectionGroup.getChildren().get(2).getId());
+        assertEquals("edit.selection.shrink", selectionGroup.getChildren().get(3).getId());
         idx++;
 
         assertEquals("edit.toggle.case", items.get(idx).getId());
@@ -510,6 +519,37 @@ public class ActionRegistryTest {
         assertEquals(KeyCode.U, tcAcc.getCode());
         assertEquals(KeyCombination.ModifierValue.DOWN, tcAcc.getControl());
         assertEquals(KeyCombination.ModifierValue.DOWN, tcAcc.getShift());
+
+        // Join Lines: Ctrl+Shift+J
+        AnAction joinLines = (AnAction) actionManager.getAction("edit.join.lines");
+        assertNotNull(joinLines.getAccelerator());
+        KeyCodeCombination jlAcc = (KeyCodeCombination) joinLines.getAccelerator();
+        assertEquals(KeyCode.J, jlAcc.getCode());
+        assertEquals(KeyCombination.ModifierValue.DOWN, jlAcc.getControl());
+        assertEquals(KeyCombination.ModifierValue.DOWN, jlAcc.getShift());
+
+        // Insert Live Template: Ctrl+J
+        AnAction insertTemplate = (AnAction) actionManager.getAction("edit.insert.live.template");
+        assertNotNull(insertTemplate.getAccelerator());
+        KeyCodeCombination itAcc = (KeyCodeCombination) insertTemplate.getAccelerator();
+        assertEquals(KeyCode.J, itAcc.getCode());
+        assertEquals(KeyCombination.ModifierValue.DOWN, itAcc.getControl());
+
+        // Reformat Code: Ctrl+Alt+L
+        AnAction reformatCode = (AnAction) actionManager.getAction("edit.format.code");
+        assertNotNull(reformatCode.getAccelerator());
+        KeyCodeCombination rcAcc = (KeyCodeCombination) reformatCode.getAccelerator();
+        assertEquals(KeyCode.L, rcAcc.getCode());
+        assertEquals(KeyCombination.ModifierValue.DOWN, rcAcc.getControl());
+        assertEquals(KeyCombination.ModifierValue.DOWN, rcAcc.getAlt());
+
+        // Auto-Indent Lines: Ctrl+Alt+I
+        AnAction autoIndent = (AnAction) actionManager.getAction("edit.auto.indent");
+        assertNotNull(autoIndent.getAccelerator());
+        KeyCodeCombination aiAcc = (KeyCodeCombination) autoIndent.getAccelerator();
+        assertEquals(KeyCode.I, aiAcc.getCode());
+        assertEquals(KeyCombination.ModifierValue.DOWN, aiAcc.getControl());
+        assertEquals(KeyCombination.ModifierValue.DOWN, aiAcc.getAlt());
     }
 
     @Test

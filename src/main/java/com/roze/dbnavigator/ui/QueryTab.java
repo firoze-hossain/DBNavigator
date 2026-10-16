@@ -238,6 +238,26 @@ public class QueryTab extends Tab {
         editor.plainTextChanges()
                 .successionEnds(Duration.ofSeconds(3))
                 .subscribe(change -> LocalHistoryStore.record(fileId, editor.getText()));
+
+        editor.selectedTextProperty().addListener((obs, oldSel, newSel) -> {
+            MainWindow mw = mainWindow != null ? mainWindow : MainWindow.getInstance();
+            if (mw != null) {
+                com.roze.dbnavigator.ui.action.ActionManager.getInstance().updateActions(mw);
+            }
+        });
+        editor.undoAvailableProperty().addListener((obs, oldVal, newVal) -> {
+            MainWindow mw = mainWindow != null ? mainWindow : MainWindow.getInstance();
+            if (mw != null) {
+                com.roze.dbnavigator.ui.action.ActionManager.getInstance().updateActions(mw);
+            }
+        });
+        editor.redoAvailableProperty().addListener((obs, oldVal, newVal) -> {
+            MainWindow mw = mainWindow != null ? mainWindow : MainWindow.getInstance();
+            if (mw != null) {
+                com.roze.dbnavigator.ui.action.ActionManager.getInstance().updateActions(mw);
+            }
+        });
+
         setOnClosed(e -> {
             LocalHistoryStore.record(fileId, editor.getText());
             closeActiveCursor();

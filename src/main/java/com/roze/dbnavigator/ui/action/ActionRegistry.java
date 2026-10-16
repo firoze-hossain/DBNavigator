@@ -758,54 +758,129 @@ public final class ActionRegistry {
         AnAction undo = AnAction.builder("edit.undo", "Undo")
                 .icon(FontAwesomeSolid.UNDO, "#a9b7c6", 11)
                 .accelerator(new KeyCodeCombination(KeyCode.Z, KeyCombination.CONTROL_DOWN))
-                .enabledWhen(MainWindow::hasActiveConsole)
+                .enabledWhen(MainWindow::canUndo)
                 .onAction(MainWindow::undoCurrentEditor)
                 .build();
 
         AnAction redo = AnAction.builder("edit.redo", "Redo")
                 .icon(FontAwesomeSolid.REDO, "#a9b7c6", 11)
                 .accelerator(new KeyCodeCombination(KeyCode.Z, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN))
-                .enabledWhen(MainWindow::hasActiveConsole)
+                .enabledWhen(MainWindow::canRedo)
                 .onAction(MainWindow::redoCurrentEditor)
                 .build();
 
-        // Section 2: Cut, Copy, Copy as Plain Text, Copy Path/Reference, Paste, Delete
+        // Section 2: Cut, Copy, Copy Path/Reference, Paste, Delete
         AnAction cut = AnAction.builder("edit.cut", "Cut")
                 .icon(FontAwesomeSolid.CUT, "#a9b7c6", 11)
                 .accelerator(new KeyCodeCombination(KeyCode.X, KeyCombination.CONTROL_DOWN))
-                .enabledWhen(MainWindow::hasActiveConsole)
+                .enabledWhen(MainWindow::hasEditorSelection)
                 .onAction(MainWindow::cutCurrentEditor)
                 .build();
 
         AnAction copy = AnAction.builder("edit.copy", "Copy")
                 .icon(FontAwesomeSolid.COPY, "#a9b7c6", 11)
                 .accelerator(new KeyCodeCombination(KeyCode.C, KeyCombination.CONTROL_DOWN))
-                .enabledWhen(MainWindow::hasActiveConsole)
+                .enabledWhen(MainWindow::hasEditorSelection)
                 .onAction(MainWindow::copyCurrentEditor)
                 .build();
 
         AnAction copyPlain = AnAction.builder("edit.copy.plain", "Copy as Plain Text")
-                .enabledWhen(MainWindow::hasActiveConsole)
+                .enabledWhen(MainWindow::hasEditorSelection)
                 .onAction(MainWindow::copyAsPlainTextCurrentEditor)
                 .build();
 
         AnAction copyRef = AnAction.builder("edit.copy.reference", "Copy Path/Reference…")
-                .enabledWhen(MainWindow::hasActiveConsole)
+                .accelerator(new KeyCodeCombination(KeyCode.C, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN))
+                .enabledWhen(ctx -> true)
                 .onAction(MainWindow::copyPathOrReferenceCurrentEditor)
                 .build();
 
         AnAction paste = AnAction.builder("edit.paste", "Paste")
                 .icon(FontAwesomeSolid.PASTE, "#a9b7c6", 11)
                 .accelerator(new KeyCodeCombination(KeyCode.V, KeyCombination.CONTROL_DOWN))
-                .enabledWhen(MainWindow::hasActiveConsole)
+                .enabledWhen(ctx -> true)
                 .onAction(MainWindow::pasteCurrentEditor)
                 .build();
 
+        AnAction pasteHistory = AnAction.builder("edit.paste.history", "Paste from History…")
+                .accelerator(new KeyCodeCombination(KeyCode.V, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN))
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(MainWindow::showPasteFromHistoryDialog)
+                .build();
+
+        AnAction pastePlain = AnAction.builder("edit.paste.plain", "Paste as Plain Text")
+                .accelerator(new KeyCodeCombination(KeyCode.V, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN))
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(MainWindow::pasteAsPlainTextCurrentEditor)
+                .build();
+
+        ActionGroup pasteGroup = new ActionGroup("edit.paste.group", "Paste", true);
+        pasteGroup.addAll(paste, pasteHistory, pastePlain);
+
         AnAction deleteAction = AnAction.builder("edit.delete", "Delete")
                 .accelerator(new KeyCodeCombination(KeyCode.DELETE))
-                .enabledWhen(MainWindow::hasActiveConsole)
+                .enabledWhen(MainWindow::hasEditorSelection)
                 .onAction(MainWindow::deleteCurrentEditor)
                 .build();
+
+        AnAction copyPaths = AnAction.builder("edit.copy.paths", "Copy Paths")
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .visibleWhen(ctx -> false)
+                .onAction(MainWindow::copyPathOrReferenceCurrentEditor)
+                .build();
+        AnAction copyRich = AnAction.builder("edit.copy.rich", "Copy as Rich Text")
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .visibleWhen(ctx -> false)
+                .onAction(MainWindow::copyCurrentEditor)
+                .build();
+        AnAction copyJsonPointer = AnAction.builder("edit.copy.json.pointer", "Copy JSON Pointer")
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .visibleWhen(ctx -> false)
+                .onAction(ctx -> ctx.setStatus("JSON Pointer copied"))
+                .build();
+        AnAction copyPathAbs = AnAction.builder("edit.copy.path.absolute", "Absolute Path")
+                .enabledWhen(ctx -> true)
+                .onAction(MainWindow::copyPathOrReferenceCurrentEditor)
+                .build();
+        AnAction copyPathFilename = AnAction.builder("edit.copy.path.filename", "File Name")
+                .enabledWhen(ctx -> true)
+                .onAction(MainWindow::copyPathOrReferenceCurrentEditor)
+                .build();
+        AnAction copyPathLineNumber = AnAction.builder("edit.copy.path.line.number", "Path with Line Number")
+                .enabledWhen(ctx -> true)
+                .onAction(MainWindow::copyPathOrReferenceCurrentEditor)
+                .build();
+        AnAction copyPathContentRoot = AnAction.builder("edit.copy.path.content.root", "Path from Content Root")
+                .enabledWhen(ctx -> true)
+                .onAction(MainWindow::copyPathOrReferenceCurrentEditor)
+                .build();
+        AnAction copyPathSourceRoot = AnAction.builder("edit.copy.path.source.root", "Path from Source Root")
+                .enabledWhen(ctx -> true)
+                .onAction(MainWindow::copyPathOrReferenceCurrentEditor)
+                .build();
+        AnAction copyPathRepoRoot = AnAction.builder("edit.copy.path.repo.root", "Path From Repository Root")
+                .enabledWhen(ctx -> true)
+                .onAction(MainWindow::copyPathOrReferenceCurrentEditor)
+                .build();
+        AnAction copyGitHostingLink = AnAction.builder("edit.copy.git.hosting.link", "Git.Hosting.Copy.Link.Group")
+                .onAction(ctx -> ctx.setStatus("Git Hosting Link copied"))
+                .build();
+        AnAction copyToolboxUrl = AnAction.builder("edit.copy.toolbox.url", "Toolbox URL")
+                .icon(FontAwesomeSolid.CUBES, "#4a88c7", 11)
+                .onAction(ctx -> ctx.setStatus("Toolbox URL copied"))
+                .build();
+
+        ActionGroup copyFileRefGroup = new ActionGroup("edit.copy.file.reference.group", "CopyFileReference", false);
+        copyFileRefGroup.addAll(copyPathAbs, copyPathFilename)
+                .addSeparator()
+                .addAll(copyPathLineNumber, copyPathContentRoot, copyPathSourceRoot, copyPathRepoRoot, copyGitHostingLink);
+        ActionGroup copyExtRefGroup = new ActionGroup("edit.copy.external.reference.group", "CopyExternalReferenceGroup", false);
+        copyExtRefGroup.add(copyToolboxUrl);
+        ActionGroup copyPathRefGroup = new ActionGroup("edit.copy.path.reference.group", "Copy Path/Reference…", true);
+        copyPathRefGroup.add(copyFileRefGroup).addSeparator().add(copyExtRefGroup).add(copyRef);
+
+        ActionGroup cutCopyPasteActions = new ActionGroup("edit.cut.copy.paste.actions", "Cut/Copy/Paste Actions", false);
+        cutCopyPasteActions.addAll(cut, copy, copyPaths, copyPlain, copyRich, copyPathRefGroup, pasteGroup, copyJsonPointer);
 
         // Section 3: Find, Replace, Find in Files, Replace in Files, Find Usages
         AnAction findAction = AnAction.builder("edit.find", "Find…")
@@ -815,100 +890,294 @@ public final class ActionRegistry {
                 .onAction(MainWindow::showFindDialog)
                 .build();
 
+        AnAction findInFiles = AnAction.builder("edit.find.in.files", "Find in Files…")
+                .icon(FontAwesomeSolid.SEARCH, "#a9b7c6", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN))
+                .enabledWhen(ctx -> true)
+                .onAction(MainWindow::showSearchEverywhere)
+                .build();
+
         AnAction replaceAction = AnAction.builder("edit.replace", "Replace…")
                 .accelerator(new KeyCodeCombination(KeyCode.R, KeyCombination.CONTROL_DOWN))
                 .enabledWhen(MainWindow::hasActiveConsole)
                 .onAction(MainWindow::showReplaceDialog)
                 .build();
 
-        AnAction findInFiles = AnAction.builder("edit.find.in.files", "Find in Files…")
-                .icon(FontAwesomeSolid.SEARCH, "#a9b7c6", 11)
-                .accelerator(new KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN))
-                .onAction(MainWindow::showSearchEverywhere)
-                .build();
-
         AnAction replaceInFiles = AnAction.builder("edit.replace.in.files", "Replace in Files…")
                 .accelerator(new KeyCodeCombination(KeyCode.R, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN))
+                .enabledWhen(ctx -> true)
                 .onAction(MainWindow::showReplaceInFilesDialog)
                 .build();
 
         AnAction findUsages = AnAction.builder("edit.find.usages", "Find Usages")
                 .accelerator(new KeyCodeCombination(KeyCode.DIGIT7, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN))
-                .enabledWhen(MainWindow::hasActiveConsole)
+                .enabledWhen(ctx -> true)
                 .onAction(MainWindow::findUsagesCurrentSymbol)
                 .build();
 
-        // Section 4: Generate, Insert Live Template, Surround With
+        // Section 4: Refactor > (Matching DataGrip Image 3)
+        AnAction editRefactorRename = AnAction.builder("edit.refactor.rename", "Rename…")
+                .accelerator(new KeyCodeCombination(KeyCode.F6, KeyCombination.SHIFT_DOWN))
+                .enabledWhen(ctx -> true)
+                .onAction(ctx -> ctx.setStatus("Refactor: Rename symbol"))
+                .build();
+        AnAction refactorChangeSig = AnAction.builder("edit.refactor.change.signature", "Change Signature…")
+                .accelerator(new KeyCodeCombination(KeyCode.F6, KeyCombination.CONTROL_DOWN))
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(ctx -> ctx.setStatus("Refactor: Change Signature"))
+                .build();
+        AnAction editRefactorMove = AnAction.builder("edit.refactor.move", "Move…")
+                .accelerator(new KeyCodeCombination(KeyCode.F6))
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(ctx -> ctx.setStatus("Refactor: Move"))
+                .build();
+        AnAction editRefactorCopy = AnAction.builder("edit.refactor.copy", "Copy…")
+                .accelerator(new KeyCodeCombination(KeyCode.F5))
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(ctx -> ctx.setStatus("Refactor: Copy"))
+                .build();
+        AnAction editRefactorSafeDelete = AnAction.builder("edit.refactor.safe.delete", "Safe Delete…")
+                .accelerator(new KeyCodeCombination(KeyCode.DELETE, KeyCombination.ALT_DOWN))
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(ctx -> ctx.setStatus("Refactor: Safe Delete"))
+                .build();
+
+        AnAction extractTableAlias = AnAction.builder("edit.refactor.table.alias", "Table alias…")
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(ctx -> ctx.setStatus("Refactor: Table alias…"))
+                .build();
+        AnAction extractVariable = AnAction.builder("edit.refactor.introduce.variable", "Introduce Variable…")
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(ctx -> ctx.setStatus("Refactor: Introduce Variable…"))
+                .build();
+        AnAction extractRoutine = AnAction.builder("edit.refactor.extract.routine", "Extract Routine…")
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(ctx -> ctx.setStatus("Refactor: Extract Routine…"))
+                .build();
+        AnAction refactorExtractView = AnAction.builder("edit.refactor.extract.view", "Extract View…")
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(MainWindow::createNewVirtualViewAction)
+                .build();
+        AnAction refactorExtractSubquery = AnAction.builder("edit.refactor.extract.subquery", "Extract Subquery…")
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(ctx -> ctx.setStatus("Refactor: Extract subquery"))
+                .build();
+        ActionGroup extractIntroduceGroup = new ActionGroup("edit.refactor.extract.introduce.group", "Extract/Introduce", true);
+        extractIntroduceGroup.addAll(extractTableAlias, extractVariable, extractRoutine);
+
+        AnAction editRefactorInline = AnAction.builder("edit.refactor.inline", "Inline…")
+                .accelerator(new KeyCodeCombination(KeyCode.N, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN))
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(ctx -> ctx.setStatus("Refactor: Inline"))
+                .build();
+        AnAction refactorInvertBool = AnAction.builder("edit.refactor.invert.boolean", "Invert Boolean…")
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(ctx -> ctx.setStatus("Refactor: Invert Boolean"))
+                .build();
+        AnAction refactorMigrate = AnAction.builder("edit.refactor.migrate", "Migrate…")
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(ctx -> ctx.setStatus("Refactor: Migrate"))
+                .build();
+        AnAction refactorRunInspection = AnAction.builder("edit.refactor.run.inspection", "Run Inspection by Name…")
+                .accelerator(new KeyCodeCombination(KeyCode.I, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN))
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(ctx -> ctx.setStatus("Refactor: Run Inspection"))
+                .build();
+
+        AnAction refactorExpandCols = AnAction.builder("edit.refactor.expand.column.list", "Expand Column List")
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(ctx -> ctx.setStatus("Refactor: Expand Column List"))
+                .build();
+        AnAction refactorSubquery = AnAction.builder("edit.refactor.convert.subquery", "Convert to Subquery")
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(ctx -> ctx.setStatus("Refactor: Convert to Subquery"))
+                .build();
+        AnAction refactorSubqueryCte = AnAction.builder("edit.refactor.subquery.cte", "Subquery as CTE")
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(ctx -> ctx.setStatus("Refactor: Subquery as CTE"))
+                .build();
+        AnAction qualifyId = AnAction.builder("edit.refactor.qualify.identifier", "Qualify Identifier")
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(ctx -> ctx.setStatus("Refactor: Qualify Identifier"))
+                .build();
+        AnAction unqualifyId = AnAction.builder("edit.refactor.unqualify.identifier", "Unqualify Identifier")
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(ctx -> ctx.setStatus("Refactor: Unqualify Identifier"))
+                .build();
+        AnAction quoteId = AnAction.builder("edit.refactor.quote.identifier", "Quote Identifier")
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(ctx -> ctx.setStatus("Refactor: Quote Identifier"))
+                .build();
+        AnAction unquoteId = AnAction.builder("edit.refactor.unquote.identifier", "Unquote Identifier")
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(ctx -> ctx.setStatus("Refactor: Unquote Identifier"))
+                .build();
+        AnAction flipExpr = AnAction.builder("edit.refactor.flip.expression", "Flip Expression")
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(ctx -> ctx.setStatus("Refactor: Flip Expression"))
+                .build();
+        AnAction injectLang = AnAction.builder("edit.refactor.inject.language", "Inject Language or Reference")
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(ctx -> ctx.setStatus("Refactor: Inject Language"))
+                .build();
+        AnAction uninjectLang = AnAction.builder("edit.refactor.uninject.language", "Uninject Language or Reference")
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(ctx -> ctx.setStatus("Refactor: Uninject Language"))
+                .build();
+
+        ActionGroup refactorGroup = new ActionGroup("edit.refactor", "Refactor", true);
+        refactorGroup.add(editRefactorRename)
+                .addSeparator()
+                .addAll(refactorExpandCols, refactorSubquery, extractIntroduceGroup,
+                        qualifyId, unqualifyId, quoteId, unquoteId, flipExpr)
+                .addSeparator()
+                .addAll(injectLang, uninjectLang);
+
+        // Section 5: Generate... > (Matching DataGrip Images 1, 2)
+        ActionGroup generateRootGroup = new ActionGroup("edit.generate.root.group", "Generate…", true);
         AnAction generate = AnAction.builder("edit.generate", "Generate…")
                 .accelerator(new KeyCodeCombination(KeyCode.INSERT, KeyCombination.ALT_DOWN))
                 .enabledWhen(MainWindow::hasActiveConsole)
                 .onAction(MainWindow::generateSqlSnippet)
                 .build();
 
+        String[][] ddlItems = {
+                {"edit.generate.table", "Table", "Table"},
+                {"edit.generate.view", "View", "View"},
+                {"edit.generate.materialized.view", "Materialized View", "Materialized View"},
+                {"edit.generate.index", "Index", "Index"},
+                {"edit.generate.unique.key", "Unique Key", "Unique Key"},
+                {"edit.generate.primary.key", "Primary Key", "Primary Key"},
+                {"edit.generate.foreign.key", "Foreign Key", "Foreign Key"},
+                {"edit.generate.check.constraint", "Check Constraint", "Check Constraint"},
+                {"edit.generate.column", "Column", "Column"},
+                {"edit.generate.trigger", "Trigger", "Trigger"},
+                {"edit.generate.procedure", "Procedure", "Procedure"},
+                {"edit.generate.function", "Function", "Function"},
+                {"edit.generate.package", "Package", "Package"},
+                {"edit.generate.sequence", "Sequence", "Sequence"},
+                {"edit.generate.synonym", "Synonym", "Synonym"},
+                {"edit.generate.type", "Type", "Type"},
+                {"edit.generate.rule", "Rule", "Rule"},
+                {"edit.generate.domain", "Domain", "Domain"},
+                {"edit.generate.user.mapping", "User Mapping", "User Mapping"},
+                {"edit.generate.server", "Server", "Server"},
+                {"edit.generate.fdw", "Foreign Data Wrapper", "Foreign Data Wrapper"},
+                {"edit.generate.event", "Event", "Event"},
+                {"edit.generate.aggregate", "Aggregate", "Aggregate"},
+                {"edit.generate.extension", "Extension", "Extension"},
+                {"edit.generate.operator", "Operator", "Operator"},
+                {"edit.generate.cast", "Cast", "Cast"},
+                {"edit.generate.collation", "Collation", "Collation"},
+                {"edit.generate.conversion", "Conversion", "Conversion"},
+                {"edit.generate.language", "Language", "Language"},
+                {"edit.generate.policy", "Policy", "Policy"},
+                {"edit.generate.database.link", "Database Link", "Database Link"}
+        };
+        for (String[] def : ddlItems) {
+            String actId = def[0];
+            String actName = def[1];
+            String typeName = def[2];
+            AnAction ddlAct = AnAction.builder(actId, actName)
+                    .enabledWhen(MainWindow::hasActiveConsole)
+                    .visibleWhen(MainWindow::hasActiveConsole)
+                    .onAction(ctx -> ctx.generateDdlSnippet(typeName))
+                    .build();
+            manager.registerAction(ddlAct);
+            generateRootGroup.add(ddlAct);
+        }
+
+        AnAction mdLink = AnAction.builder("edit.generate.markdown.link", "Create Link").visibleWhen(ctx -> false).build();
+        AnAction mdTable = AnAction.builder("edit.generate.markdown.table", "Insert Table").visibleWhen(ctx -> false).build();
+        AnAction mdImage = AnAction.builder("edit.generate.markdown.image", "Insert Image").visibleWhen(ctx -> false).build();
+        AnAction mdToc = AnAction.builder("edit.generate.markdown.toc", "Generate Table Of Contents")
+                .icon(FontAwesomeSolid.LIST, "#a9b7c6", 11)
+                .enabledWhen(ctx -> false)
+                .visibleWhen(ctx -> true)
+                .build();
+        ActionGroup mdInsertGroup = new ActionGroup("edit.generate.markdown.group", "Markdown.InsertGroup", true).visibleWhen(ctx -> false);
+        mdInsertGroup.addAll(mdLink, mdTable, mdImage, mdToc);
+
+        AnAction genSqlGroup = AnAction.builder("edit.generate.sql.group", "SqlGenerateGroup").enabledWhen(MainWindow::hasActiveConsole).visibleWhen(ctx -> false).build();
+        AnAction genXmlTag = AnAction.builder("edit.generate.xml.tag", "XML Tag…")
+                .enabledWhen(ctx -> false)
+                .visibleWhen(ctx -> true)
+                .build();
+        AnAction genOverride = AnAction.builder("edit.generate.override.methods", "Override Methods…").visibleWhen(ctx -> false).build();
+        AnAction genImplement = AnAction.builder("edit.generate.implement.methods", "Implement Methods…")
+                .accelerator(new KeyCodeCombination(KeyCode.I, KeyCombination.CONTROL_DOWN))
+                .enabledWhen(ctx -> false)
+                .visibleWhen(ctx -> true)
+                .build();
+        AnAction genDelegate = AnAction.builder("edit.generate.delegate.methods", "Delegate Methods…").visibleWhen(ctx -> false).build();
+        AnAction genTestCreators = AnAction.builder("edit.generate.test.creators.group", "GenerateFromTestCreatorsGroup").visibleWhen(ctx -> false).build();
+        ActionGroup generateInnerGroup = new ActionGroup("edit.generate.group", "Generate", false).visibleWhen(ctx -> false);
+        generateInnerGroup.addAll(genSqlGroup, genXmlTag, genOverride, genImplement, genDelegate, genTestCreators, mdInsertGroup);
+        generateRootGroup.addAll(genXmlTag, genImplement, mdToc);
+
+        // Section 6: Bookmarks (Matching Image 1, 2)
+        AnAction toggleBookmark = AnAction.builder("edit.toggle.bookmark", "Toggle Bookmark")
+                .icon(FontAwesomeSolid.BOOKMARK, "#a9b7c6", 11)
+                .accelerator(new KeyCodeCombination(KeyCode.F11))
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(MainWindow::toggleBookmarkCurrentEditor)
+                .build();
+        AnAction showBookmarks = AnAction.builder("edit.show.bookmarks", "Show Line Bookmarks…")
+                .accelerator(new KeyCodeCombination(KeyCode.F11, KeyCombination.SHIFT_DOWN))
+                .enabledWhen(ctx -> true)
+                .onAction(MainWindow::showBookmarksDialog)
+                .build();
+        ActionGroup bookmarksGroup = new ActionGroup("edit.bookmarks.group", "Bookmarks", true);
+        bookmarksGroup.addAll(toggleBookmark, showBookmarks);
+
+        // Code formatting, templates, and selection actions (Matching DataGrip Images 1, 2)
         AnAction insertLiveTemplate = AnAction.builder("edit.insert.live.template", "Insert Live Template…")
                 .accelerator(new KeyCodeCombination(KeyCode.J, KeyCombination.CONTROL_DOWN))
                 .enabledWhen(MainWindow::hasActiveConsole)
                 .onAction(MainWindow::insertLiveTemplate)
                 .build();
-
         AnAction surroundWith = AnAction.builder("edit.surround.with", "Surround With…")
                 .accelerator(new KeyCodeCombination(KeyCode.B, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN))
                 .enabledWhen(MainWindow::hasActiveConsole)
                 .onAction(MainWindow::surroundWithTemplate)
                 .build();
-
-        // Section 5: Reformat Code, Reformat File, Comment Line, Comment Block, Auto-Indent
         AnAction formatCode = AnAction.builder("edit.format.code", "Reformat Code")
-                .description("Reformat SQL queries with clean indentation and capitalized keywords")
                 .icon(FontAwesomeSolid.INDENT, "#4a88c7", 11)
                 .accelerator(new KeyCodeCombination(KeyCode.L, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN))
                 .enabledWhen(MainWindow::hasActiveQueryTab)
                 .onAction(MainWindow::formatCurrentSql)
                 .build();
-
         AnAction formatFile = AnAction.builder("edit.format.file", "Reformat File…")
                 .accelerator(new KeyCodeCombination(KeyCode.L, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN))
                 .enabledWhen(MainWindow::hasActiveQueryTab)
                 .onAction(MainWindow::formatCurrentSql)
                 .build();
-
         AnAction commentLine = AnAction.builder("edit.comment.line", "Comment with Line Comment")
                 .accelerator(new KeyCodeCombination(KeyCode.SLASH, KeyCombination.CONTROL_DOWN))
                 .enabledWhen(MainWindow::hasActiveConsole)
                 .onAction(MainWindow::toggleLineCommentCurrentEditor)
                 .build();
-
         AnAction commentBlock = AnAction.builder("edit.comment.block", "Comment with Block Comment")
                 .accelerator(new KeyCodeCombination(KeyCode.SLASH, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN))
                 .enabledWhen(MainWindow::hasActiveConsole)
                 .onAction(MainWindow::toggleBlockCommentCurrentEditor)
                 .build();
-
         AnAction autoIndent = AnAction.builder("edit.auto.indent", "Auto-Indent Lines")
                 .accelerator(new KeyCodeCombination(KeyCode.I, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN))
                 .enabledWhen(MainWindow::hasActiveConsole)
                 .onAction(MainWindow::autoIndentCurrentEditor)
                 .build();
 
-        // Section 6: Refactor >
-        ActionGroup refactorGroup = new ActionGroup("edit.refactor", "Refactor", true);
-        refactorGroup.add(AnAction.builder("edit.refactor.rename", "Rename…")
-                .accelerator(new KeyCodeCombination(KeyCode.F6, KeyCombination.SHIFT_DOWN))
-                .onAction(ctx -> ctx.setStatus("Refactor: Rename symbol"))
-                .build());
-        refactorGroup.add(AnAction.builder("edit.refactor.extract.view", "Extract View…")
-                .onAction(MainWindow::createNewVirtualViewAction)
-                .build());
-        refactorGroup.add(AnAction.builder("edit.refactor.extract.subquery", "Extract Subquery…")
-                .onAction(ctx -> ctx.setStatus("Refactor: Extract subquery"))
-                .build());
-
-        // Section 7: Selection >, Toggle Case, Join Lines, Duplicate Entire Lines, Sort Lines
         ActionGroup selectionGroup = new ActionGroup("edit.selection", "Selection", true);
         AnAction selectAll = AnAction.builder("edit.select.all", "Select All")
                 .accelerator(new KeyCodeCombination(KeyCode.A, KeyCombination.CONTROL_DOWN))
                 .enabledWhen(MainWindow::hasActiveConsole)
                 .onAction(MainWindow::selectAllCurrentEditor)
+                .build();
+        AnAction addCaretsEnds = AnAction.builder("edit.selection.add.carets.ends", "Add Carets to Ends of Selected Lines")
+                .accelerator(new KeyCodeCombination(KeyCode.G, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN))
+                .enabledWhen(MainWindow::hasActiveConsole)
+                .onAction(ctx -> ctx.setStatus("Add Carets to Ends of Selected Lines"))
                 .build();
         AnAction extendSelection = AnAction.builder("edit.selection.extend", "Extend Selection")
                 .accelerator(new KeyCodeCombination(KeyCode.W, KeyCombination.CONTROL_DOWN))
@@ -920,43 +1189,34 @@ public final class ActionRegistry {
                 .enabledWhen(MainWindow::hasActiveConsole)
                 .onAction(MainWindow::shrinkSelectionCurrentEditor)
                 .build();
-        selectionGroup.addAll(selectAll, extendSelection, shrinkSelection);
+        selectionGroup.addAll(selectAll, addCaretsEnds, extendSelection, shrinkSelection);
+
+        AnAction columnSelectionMode = AnAction.builder("edit.selection.column.mode", "Column Selection Mode").build();
+        ActionGroup selectWordGroup = new ActionGroup("edit.selection.word.actions", "Select Word Actions", false).visibleWhen(ctx -> false);
+        selectWordGroup.addAll(extendSelection, shrinkSelection);
+        ActionGroup editorSelectActions = new ActionGroup("edit.selection.editor.select.actions", "Editor Select Actions", false).visibleWhen(ctx -> false);
+        editorSelectActions.addAll(selectAll, addCaretsEnds, selectWordGroup);
 
         AnAction toggleCase = AnAction.builder("edit.toggle.case", "Toggle Case")
                 .accelerator(new KeyCodeCombination(KeyCode.U, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN))
-                .enabledWhen(MainWindow::hasActiveConsole)
+                .enabledWhen(MainWindow::hasEditorSelection)
                 .onAction(MainWindow::toggleCaseCurrentEditor)
                 .build();
-
         AnAction joinLines = AnAction.builder("edit.join.lines", "Join Lines")
                 .accelerator(new KeyCodeCombination(KeyCode.J, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN))
-                .enabledWhen(MainWindow::hasActiveConsole)
+                .enabledWhen(MainWindow::hasEditorSelection)
                 .onAction(MainWindow::joinLinesCurrentEditor)
                 .build();
-
         AnAction duplicateLines = AnAction.builder("edit.duplicate.lines", "Duplicate Entire Lines")
-                .enabledWhen(MainWindow::hasActiveConsole)
+                .enabledWhen(MainWindow::hasEditorSelection)
                 .onAction(MainWindow::duplicateLinesCurrentEditor)
                 .build();
-
         AnAction sortLines = AnAction.builder("edit.sort.lines", "Sort Lines")
-                .enabledWhen(MainWindow::hasActiveConsole)
+                .enabledWhen(MainWindow::hasEditorSelection)
                 .onAction(MainWindow::sortLinesCurrentEditor)
                 .build();
 
-        // Section 8: Bookmarks
-        AnAction toggleBookmark = AnAction.builder("edit.toggle.bookmark", "Toggle Bookmark")
-                .icon(FontAwesomeSolid.BOOKMARK, "#a9b7c6", 11)
-                .accelerator(new KeyCodeCombination(KeyCode.F11))
-                .enabledWhen(MainWindow::hasActiveConsole)
-                .onAction(MainWindow::toggleBookmarkCurrentEditor)
-                .build();
-
-        AnAction showBookmarks = AnAction.builder("edit.show.bookmarks", "Show Line Bookmarks…")
-                .accelerator(new KeyCodeCombination(KeyCode.F11, KeyCombination.SHIFT_DOWN))
-                .onAction(MainWindow::showBookmarksDialog)
-                .build();
-
+        // Main Menu: Edit (Images 1, 2)
         ActionGroup editMenu = new ActionGroup("menu.edit", "Edit");
         editMenu.addAll(undo, redo)
                 .addSeparator()
@@ -974,73 +1234,17 @@ public final class ActionRegistry {
                 .addSeparator()
                 .addAll(toggleBookmark, showBookmarks);
 
-        // Additional DataGrip Edit Actions & Groups (Images 1, 2, 3)
-        AnAction copyPaths = AnAction.builder("edit.copy.paths", "Copy Paths")
-                .enabledWhen(MainWindow::hasActiveConsole)
-                .onAction(MainWindow::copyPathOrReferenceCurrentEditor)
-                .build();
-        AnAction copyRich = AnAction.builder("edit.copy.rich", "Copy as Rich Text")
-                .enabledWhen(MainWindow::hasActiveConsole)
-                .onAction(MainWindow::copyCurrentEditor)
-                .build();
-        AnAction copyJsonPointer = AnAction.builder("edit.copy.json.pointer", "Copy JSON Pointer")
-                .enabledWhen(MainWindow::hasActiveConsole)
-                .onAction(ctx -> ctx.setStatus("JSON Pointer copied"))
-                .build();
-        AnAction copyPathAbs = AnAction.builder("edit.copy.path.absolute", "Absolute Path")
-                .enabledWhen(MainWindow::hasActiveConsole)
-                .onAction(MainWindow::copyPathOrReferenceCurrentEditor)
-                .build();
-        AnAction copyPathFilename = AnAction.builder("edit.copy.path.filename", "File Name")
-                .enabledWhen(MainWindow::hasActiveConsole)
-                .onAction(MainWindow::copyPathOrReferenceCurrentEditor)
-                .build();
-        AnAction copyPathLineNumber = AnAction.builder("edit.copy.path.line.number", "Path with Line Number")
-                .enabledWhen(MainWindow::hasActiveConsole)
-                .onAction(MainWindow::copyPathOrReferenceCurrentEditor)
-                .build();
-        AnAction copyPathContentRoot = AnAction.builder("edit.copy.path.content.root", "Path from Content Root")
-                .enabledWhen(MainWindow::hasActiveConsole)
-                .onAction(MainWindow::copyPathOrReferenceCurrentEditor)
-                .build();
-        AnAction copyPathSourceRoot = AnAction.builder("edit.copy.path.source.root", "Path from Source Root")
-                .enabledWhen(MainWindow::hasActiveConsole)
-                .onAction(MainWindow::copyPathOrReferenceCurrentEditor)
-                .build();
-        AnAction copyPathRepoRoot = AnAction.builder("edit.copy.path.repo.root", "Path From Repository Root")
-                .enabledWhen(MainWindow::hasActiveConsole)
-                .onAction(MainWindow::copyPathOrReferenceCurrentEditor)
-                .build();
-        AnAction copyGitHostingLink = AnAction.builder("edit.copy.git.hosting.link", "Git.Hosting.Copy.Link.Group")
-                .onAction(ctx -> ctx.setStatus("Git Hosting Link copied"))
-                .build();
-        AnAction copyToolboxUrl = AnAction.builder("edit.copy.toolbox.url", "Toolbox URL")
-                .icon(FontAwesomeSolid.CUBES, "#4a88c7", 11)
-                .onAction(ctx -> ctx.setStatus("Toolbox URL copied"))
-                .build();
-        AnAction pasteHistory = AnAction.builder("edit.paste.history", "Paste from History…")
-                .accelerator(new KeyCodeCombination(KeyCode.V, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN))
-                .enabledWhen(MainWindow::hasActiveConsole)
-                .onAction(MainWindow::showRecentLocationsDialog)
-                .build();
-        AnAction pastePlain = AnAction.builder("edit.paste.plain", "Paste as Plain Text")
-                .enabledWhen(MainWindow::hasActiveConsole)
-                .onAction(MainWindow::pasteCurrentEditor)
-                .build();
-
-        ActionGroup copyFileRefGroup = new ActionGroup("edit.copy.file.reference.group", "CopyFileReference", false);
-        copyFileRefGroup.addAll(copyPathAbs, copyPathFilename)
-                .addSeparator()
-                .addAll(copyPathLineNumber, copyPathContentRoot, copyPathSourceRoot, copyPathRepoRoot, copyGitHostingLink);
-        ActionGroup copyExtRefGroup = new ActionGroup("edit.copy.external.reference.group", "CopyExternalReferenceGroup", false);
-        copyExtRefGroup.add(copyToolboxUrl);
-        ActionGroup copyPathRefGroup = new ActionGroup("edit.copy.path.reference.group", "Copy Path/Reference…", true);
-        copyPathRefGroup.add(copyFileRefGroup).addSeparator().add(copyExtRefGroup).add(copyRef);
-        ActionGroup pasteGroup = new ActionGroup("edit.paste.group", "Paste", false);
-        pasteGroup.addAll(paste, pasteHistory, pastePlain);
-        ActionGroup cutCopyPasteActions = new ActionGroup("edit.cut.copy.paste.actions", "Cut/Copy/Paste Actions", false);
-        cutCopyPasteActions.addAll(cut, copy, copyPaths, copyPlain, copyRich, copyPathRefGroup, pasteGroup, copyJsonPointer);
-
+        // Register all actions with manager
+        manager.registerAction(undo);
+        manager.registerAction(redo);
+        manager.registerAction(cut);
+        manager.registerAction(copy);
+        manager.registerAction(copyPlain);
+        manager.registerAction(copyRef);
+        manager.registerAction(paste);
+        manager.registerAction(pasteHistory);
+        manager.registerAction(pastePlain);
+        manager.registerAction(deleteAction);
         manager.registerAction(copyPaths);
         manager.registerAction(copyRich);
         manager.registerAction(copyJsonPointer);
@@ -1052,59 +1256,36 @@ public final class ActionRegistry {
         manager.registerAction(copyPathRepoRoot);
         manager.registerAction(copyGitHostingLink);
         manager.registerAction(copyToolboxUrl);
-        manager.registerAction(pasteHistory);
-        manager.registerAction(pastePlain);
-        manager.registerGroup(copyFileRefGroup);
-        manager.registerGroup(copyExtRefGroup);
-        manager.registerGroup(copyPathRefGroup);
-        manager.registerGroup(pasteGroup);
-        manager.registerGroup(cutCopyPasteActions);
-
-        // DataGrip Generate Actions & Groups
-        AnAction mdLink = AnAction.builder("edit.generate.markdown.link", "Create Link")
-                .icon(FontAwesomeSolid.LINK, "#4a88c7", 11)
-                .onAction(ctx -> ctx.setStatus("Create Link"))
-                .build();
-        AnAction mdTable = AnAction.builder("edit.generate.markdown.table", "Insert Table")
-                .icon(FontAwesomeSolid.TABLE, "#57965c", 11)
-                .onAction(ctx -> ctx.setStatus("Insert Table"))
-                .build();
-        AnAction mdImage = AnAction.builder("edit.generate.markdown.image", "Insert Image")
-                .icon(FontAwesomeSolid.IMAGE, "#e0a44c", 11)
-                .onAction(ctx -> ctx.setStatus("Insert Image"))
-                .build();
-        AnAction mdToc = AnAction.builder("edit.generate.markdown.toc", "Generate Table Of Contents")
-                .icon(FontAwesomeSolid.LIST, "#c77dbb", 11)
-                .onAction(ctx -> ctx.setStatus("Generate Table Of Contents"))
-                .build();
-        ActionGroup mdInsertGroup = new ActionGroup("edit.generate.markdown.group", "Markdown.InsertGroup", true);
-        mdInsertGroup.addAll(mdLink, mdTable, mdImage, mdToc);
-
-        AnAction genSqlGroup = AnAction.builder("edit.generate.sql.group", "SqlGenerateGroup")
-                .enabledWhen(MainWindow::hasActiveConsole)
-                .onAction(MainWindow::generateSqlSnippet)
-                .build();
-        AnAction genXmlTag = AnAction.builder("edit.generate.xml.tag", "XML Tag…")
-                .enabledWhen(MainWindow::hasActiveConsole)
-                .onAction(MainWindow::insertLiveTemplate)
-                .build();
-        AnAction genOverride = AnAction.builder("edit.generate.override.methods", "Override Methods…")
-                .onAction(ctx -> ctx.setStatus("Override Methods…"))
-                .build();
-        AnAction genImplement = AnAction.builder("edit.generate.implement.methods", "Implement Methods…")
-                .onAction(ctx -> ctx.setStatus("Implement Methods…"))
-                .build();
-        AnAction genDelegate = AnAction.builder("edit.generate.delegate.methods", "Delegate Methods…")
-                .onAction(ctx -> ctx.setStatus("Delegate Methods…"))
-                .build();
-        AnAction genTestCreators = AnAction.builder("edit.generate.test.creators.group", "GenerateFromTestCreatorsGroup")
-                .onAction(ctx -> ctx.setStatus("GenerateFromTestCreatorsGroup"))
-                .build();
-        ActionGroup generateInnerGroup = new ActionGroup("edit.generate.group", "Generate", false);
-        generateInnerGroup.addAll(genSqlGroup, genXmlTag, genOverride, genImplement, genDelegate, genTestCreators, mdInsertGroup);
-        ActionGroup generateRootGroup = new ActionGroup("edit.generate.root.group", "Generate…", true);
-        generateRootGroup.add(generateInnerGroup);
-
+        manager.registerAction(findAction);
+        manager.registerAction(findInFiles);
+        manager.registerAction(replaceAction);
+        manager.registerAction(replaceInFiles);
+        manager.registerAction(findUsages);
+        manager.registerAction(editRefactorRename);
+        manager.registerAction(refactorChangeSig);
+        manager.registerAction(editRefactorMove);
+        manager.registerAction(editRefactorCopy);
+        manager.registerAction(editRefactorSafeDelete);
+        manager.registerAction(extractTableAlias);
+        manager.registerAction(extractVariable);
+        manager.registerAction(extractRoutine);
+        manager.registerAction(refactorExtractView);
+        manager.registerAction(refactorExtractSubquery);
+        manager.registerAction(editRefactorInline);
+        manager.registerAction(refactorInvertBool);
+        manager.registerAction(refactorMigrate);
+        manager.registerAction(refactorRunInspection);
+        manager.registerAction(refactorExpandCols);
+        manager.registerAction(refactorSubquery);
+        manager.registerAction(refactorSubqueryCte);
+        manager.registerAction(qualifyId);
+        manager.registerAction(unqualifyId);
+        manager.registerAction(quoteId);
+        manager.registerAction(unquoteId);
+        manager.registerAction(flipExpr);
+        manager.registerAction(injectLang);
+        manager.registerAction(uninjectLang);
+        manager.registerAction(generate);
         manager.registerAction(mdLink);
         manager.registerAction(mdTable);
         manager.registerAction(mdImage);
@@ -1115,83 +1296,37 @@ public final class ActionRegistry {
         manager.registerAction(genImplement);
         manager.registerAction(genDelegate);
         manager.registerAction(genTestCreators);
+        manager.registerAction(toggleBookmark);
+        manager.registerAction(showBookmarks);
+        manager.registerAction(insertLiveTemplate);
+        manager.registerAction(surroundWith);
+        manager.registerAction(formatCode);
+        manager.registerAction(formatFile);
+        manager.registerAction(commentLine);
+        manager.registerAction(commentBlock);
+        manager.registerAction(autoIndent);
+        manager.registerAction(selectAll);
+        manager.registerAction(extendSelection);
+        manager.registerAction(shrinkSelection);
+        manager.registerAction(columnSelectionMode);
+        manager.registerAction(addCaretsEnds);
+        manager.registerAction(toggleCase);
+        manager.registerAction(joinLines);
+        manager.registerAction(duplicateLines);
+        manager.registerAction(sortLines);
+
+        manager.registerGroup(copyFileRefGroup);
+        manager.registerGroup(copyExtRefGroup);
+        manager.registerGroup(copyPathRefGroup);
+        manager.registerGroup(pasteGroup);
+        manager.registerGroup(cutCopyPasteActions);
+        manager.registerGroup(extractIntroduceGroup);
+        manager.registerGroup(refactorGroup);
         manager.registerGroup(mdInsertGroup);
         manager.registerGroup(generateInnerGroup);
         manager.registerGroup(generateRootGroup);
-
-        // DataGrip Refactor Actions & Groups
-        AnAction refactorExpandCols = AnAction.builder("edit.refactor.expand.column.list", "Expand Column List")
-                .onAction(ctx -> ctx.setStatus("Refactor: Expand Column List"))
-                .build();
-        AnAction refactorSubquery = AnAction.builder("edit.refactor.convert.subquery", "Convert to Subquery")
-                .onAction(ctx -> ctx.setStatus("Refactor: Convert to Subquery"))
-                .build();
-        AnAction refactorSubqueryCte = AnAction.builder("edit.refactor.subquery.cte", "Subquery as CTE")
-                .onAction(ctx -> ctx.setStatus("Refactor: Subquery as CTE"))
-                .build();
-        AnAction extractTableAlias = AnAction.builder("edit.refactor.table.alias", "Table alias…")
-                .onAction(ctx -> ctx.setStatus("Refactor: Table alias…"))
-                .build();
-        AnAction extractVariable = AnAction.builder("edit.refactor.introduce.variable", "Introduce Variable…")
-                .onAction(ctx -> ctx.setStatus("Refactor: Introduce Variable…"))
-                .build();
-        AnAction extractRoutine = AnAction.builder("edit.refactor.extract.routine", "Extract Routine…")
-                .onAction(ctx -> ctx.setStatus("Refactor: Extract Routine…"))
-                .build();
-        ActionGroup extractIntroduceGroup = new ActionGroup("edit.refactor.extract.introduce.group", "Extract/Introduce", true);
-        extractIntroduceGroup.addAll(extractTableAlias, extractVariable, extractRoutine);
-        AnAction qualifyId = AnAction.builder("edit.refactor.qualify.identifier", "Qualify Identifier")
-                .onAction(ctx -> ctx.setStatus("Refactor: Qualify Identifier"))
-                .build();
-        AnAction unqualifyId = AnAction.builder("edit.refactor.unqualify.identifier", "Unqualify Identifier")
-                .onAction(ctx -> ctx.setStatus("Refactor: Unqualify Identifier"))
-                .build();
-        AnAction quoteId = AnAction.builder("edit.refactor.quote.identifier", "Quote Identifier")
-                .onAction(ctx -> ctx.setStatus("Refactor: Quote Identifier"))
-                .build();
-        AnAction unquoteId = AnAction.builder("edit.refactor.unquote.identifier", "Unquote Identifier")
-                .onAction(ctx -> ctx.setStatus("Refactor: Unquote Identifier"))
-                .build();
-        AnAction flipExpr = AnAction.builder("edit.refactor.flip.expression", "Flip Expression")
-                .onAction(ctx -> ctx.setStatus("Refactor: Flip Expression"))
-                .build();
-        AnAction injectLang = AnAction.builder("edit.refactor.inject.language", "Inject Language or Reference")
-                .onAction(ctx -> ctx.setStatus("Refactor: Inject Language"))
-                .build();
-        AnAction uninjectLang = AnAction.builder("edit.refactor.uninject.language", "Uninject Language or Reference")
-                .onAction(ctx -> ctx.setStatus("Refactor: Uninject Language"))
-                .build();
-
-        manager.registerAction(refactorExpandCols);
-        manager.registerAction(refactorSubquery);
-        manager.registerAction(refactorSubqueryCte);
-        manager.registerAction(extractTableAlias);
-        manager.registerAction(extractVariable);
-        manager.registerAction(extractRoutine);
-        manager.registerGroup(extractIntroduceGroup);
-        manager.registerAction(qualifyId);
-        manager.registerAction(unqualifyId);
-        manager.registerAction(quoteId);
-        manager.registerAction(unquoteId);
-        manager.registerAction(flipExpr);
-        manager.registerAction(injectLang);
-        manager.registerAction(uninjectLang);
-
-        // DataGrip Selection Actions & Groups
-        AnAction columnSelectionMode = AnAction.builder("edit.selection.column.mode", "Column Selection Mode")
-                .onAction(ctx -> ctx.setStatus("Column Selection Mode"))
-                .build();
-        AnAction addCaretsEnds = AnAction.builder("edit.selection.add.carets.ends", "Add Carets to Ends of Selected Lines")
-                .enabledWhen(MainWindow::hasActiveConsole)
-                .onAction(ctx -> ctx.setStatus("Add Carets to Ends of Selected Lines"))
-                .build();
-        ActionGroup selectWordGroup = new ActionGroup("edit.selection.word.actions", "Select Word Actions", false);
-        selectWordGroup.addAll(extendSelection, shrinkSelection);
-        ActionGroup editorSelectActions = new ActionGroup("edit.selection.editor.select.actions", "Editor Select Actions", false);
-        editorSelectActions.addAll(selectAll, addCaretsEnds, selectWordGroup);
-
-        manager.registerAction(columnSelectionMode);
-        manager.registerAction(addCaretsEnds);
+        manager.registerGroup(bookmarksGroup);
+        manager.registerGroup(selectionGroup);
         manager.registerGroup(selectWordGroup);
         manager.registerGroup(editorSelectActions);
 

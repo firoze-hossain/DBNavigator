@@ -144,9 +144,14 @@ public class ActionManager {
         if (group.getIcon() != null) {
             menu.setGraphic(com.roze.dbnavigator.ui.Icons.of(group.getIcon(), group.getIconColor(), group.getIconSize()));
         }
-        if (group.getOnMenuShowing() != null) {
-            menu.setOnShowing(ev -> group.getOnMenuShowing().accept(menu, ctx));
-        }
+        menu.setDisable(!group.isEnabled(ctx));
+        boundMenuItems.add(new BoundItem(new WeakReference<>(menu), group));
+        menu.setOnShowing(ev -> {
+            updateActionsNow(ctx);
+            if (group.getOnMenuShowing() != null) {
+                group.getOnMenuShowing().accept(menu, ctx);
+            }
+        });
 
         for (AnAction child : group.getChildren()) {
             appendActionToMenu(child, menu, ctx);
@@ -181,9 +186,17 @@ public class ActionManager {
         }
 
         ActionGroup regGroup = getGroup(groupConfig.getId());
-        if (regGroup != null && regGroup.getOnMenuShowing() != null) {
-            menu.setOnShowing(e -> regGroup.getOnMenuShowing().accept(menu, ctx));
+        if (regGroup != null) {
+            menu.setDisable(!regGroup.isEnabled(ctx));
+            boundMenuItems.add(new BoundItem(new WeakReference<>(menu), regGroup));
         }
+
+        menu.setOnShowing(e -> {
+            updateActionsNow(ctx);
+            if (regGroup != null && regGroup.getOnMenuShowing() != null) {
+                regGroup.getOnMenuShowing().accept(menu, ctx);
+            }
+        });
 
         List<MenuItemConfig> children = groupConfig.getChildren();
         if ((children == null || children.isEmpty()) && regGroup != null && !regGroup.getChildren().isEmpty()) {
@@ -573,6 +586,37 @@ public class ActionManager {
         editCat.addEntry(new ActionCatalogEntry("edit.generate.markdown.image", "Insert Image", "IMAGE", MenuItemConfig.Type.ACTION));
         editCat.addEntry(new ActionCatalogEntry("edit.generate.markdown.toc", "Generate Table Of Contents", "LIST", MenuItemConfig.Type.ACTION));
         editCat.addEntry(new ActionCatalogEntry("edit.generate", "Generate…", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.generate.table", "Table", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.generate.view", "View", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.generate.materialized.view", "Materialized View", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.generate.index", "Index", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.generate.unique.key", "Unique Key", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.generate.primary.key", "Primary Key", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.generate.foreign.key", "Foreign Key", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.generate.check.constraint", "Check Constraint", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.generate.column", "Column", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.generate.trigger", "Trigger", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.generate.procedure", "Procedure", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.generate.function", "Function", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.generate.package", "Package", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.generate.sequence", "Sequence", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.generate.synonym", "Synonym", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.generate.type", "Type", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.generate.rule", "Rule", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.generate.domain", "Domain", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.generate.user.mapping", "User Mapping", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.generate.server", "Server", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.generate.fdw", "Foreign Data Wrapper", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.generate.event", "Event", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.generate.aggregate", "Aggregate", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.generate.extension", "Extension", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.generate.operator", "Operator", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.generate.cast", "Cast", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.generate.collation", "Collation", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.generate.conversion", "Conversion", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.generate.language", "Language", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.generate.policy", "Policy", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.generate.database.link", "Database Link", null, MenuItemConfig.Type.ACTION));
         editCat.addEntry(new ActionCatalogEntry("edit.insert.live.template", "Insert Live Template…", null, MenuItemConfig.Type.ACTION));
         editCat.addEntry(new ActionCatalogEntry("edit.surround.with", "Surround With…", null, MenuItemConfig.Type.ACTION));
         editCat.addEntry(new ActionCatalogEntry("edit.format.code", "Reformat Code", "INDENT", MenuItemConfig.Type.ACTION));
@@ -581,6 +625,14 @@ public class ActionManager {
         editCat.addEntry(new ActionCatalogEntry("edit.comment.block", "Comment with Block Comment", null, MenuItemConfig.Type.ACTION));
         editCat.addEntry(new ActionCatalogEntry("edit.auto.indent", "Auto-Indent Lines", null, MenuItemConfig.Type.ACTION));
         editCat.addEntry(new ActionCatalogEntry("edit.refactor.rename", "Rename…", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.refactor.change.signature", "Change Signature…", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.refactor.move", "Move…", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.refactor.copy", "Copy…", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.refactor.safe.delete", "Safe Delete…", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.refactor.inline", "Inline…", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.refactor.invert.boolean", "Invert Boolean…", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.refactor.migrate", "Migrate…", null, MenuItemConfig.Type.ACTION));
+        editCat.addEntry(new ActionCatalogEntry("edit.refactor.run.inspection", "Run Inspection by Name…", null, MenuItemConfig.Type.ACTION));
         editCat.addEntry(new ActionCatalogEntry("edit.refactor.expand.column.list", "Expand Column List", null, MenuItemConfig.Type.ACTION));
         editCat.addEntry(new ActionCatalogEntry("edit.refactor.convert.subquery", "Convert to Subquery", null, MenuItemConfig.Type.ACTION));
         editCat.addEntry(new ActionCatalogEntry("edit.refactor.subquery.cte", "Subquery as CTE", null, MenuItemConfig.Type.ACTION));
@@ -1607,23 +1659,70 @@ public class ActionManager {
      * Dynamically updates the enabled/disabled state of all active menus and buttons.
      */
     public void updateActions(MainWindow ctx) {
-        Platform.runLater(() -> {
-            boundMenuItems.removeIf(b -> {
-                MenuItem item = b.itemRef().get();
-                if (item == null) return true;
-                item.setDisable(!b.action().isEnabled(ctx));
-                if (item instanceof CheckMenuItem checkItem && b.action() instanceof ToggleAction toggle) {
-                    checkItem.setSelected(toggle.isSelected(ctx));
-                }
-                return false;
-            });
+        if (Platform.isFxApplicationThread()) {
+            updateActionsNow(ctx);
+        } else {
+            Platform.runLater(() -> updateActionsNow(ctx));
+        }
+    }
 
-            boundButtons.removeIf(b -> {
-                Button btn = b.buttonRef().get();
-                if (btn == null) return true;
-                btn.setDisable(!b.action().isEnabled(ctx));
-                return false;
-            });
+    /**
+     * Synchronous update of enabled/disabled and visibility states on the JavaFX Application thread.
+     */
+    public void updateActionsNow(MainWindow ctx) {
+        java.util.Set<javafx.scene.control.Menu> parentMenus = new java.util.HashSet<>();
+        boundMenuItems.removeIf(b -> {
+            MenuItem item = b.itemRef().get();
+            if (item == null) return true;
+            item.setDisable(!b.action().isEnabled(ctx));
+            item.setVisible(b.action().isVisible(ctx));
+            if (item instanceof CheckMenuItem checkItem && b.action() instanceof ToggleAction toggle) {
+                checkItem.setSelected(toggle.isSelected(ctx));
+            }
+            if (item.getParentMenu() != null) {
+                parentMenus.add(item.getParentMenu());
+            }
+            if (item instanceof javafx.scene.control.Menu m) {
+                parentMenus.add(m);
+            }
+            return false;
         });
+
+        for (javafx.scene.control.Menu menu : parentMenus) {
+            cleanMenuSeparators(menu);
+        }
+
+        boundButtons.removeIf(b -> {
+            Button btn = b.buttonRef().get();
+            if (btn == null) return true;
+            btn.setDisable(!b.action().isEnabled(ctx));
+            btn.setVisible(b.action().isVisible(ctx));
+            return false;
+        });
+    }
+
+    public static void cleanMenuSeparators(javafx.scene.control.Menu menu) {
+        if (menu == null) return;
+        boolean lastWasVisibleItem = false;
+        SeparatorMenuItem pendingSep = null;
+        for (MenuItem item : menu.getItems()) {
+            if (item instanceof SeparatorMenuItem sep) {
+                if (lastWasVisibleItem) {
+                    if (pendingSep != null) pendingSep.setVisible(false);
+                    pendingSep = sep;
+                } else {
+                    sep.setVisible(false);
+                }
+            } else if (item.isVisible()) {
+                if (pendingSep != null) {
+                    pendingSep.setVisible(true);
+                    pendingSep = null;
+                }
+                lastWasVisibleItem = true;
+            }
+        }
+        if (pendingSep != null) {
+            pendingSep.setVisible(false);
+        }
     }
 }

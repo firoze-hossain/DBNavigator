@@ -903,7 +903,7 @@ public final class AppSettingsStore {
             cutCopyPasteChildren.add(MenuItemConfig.action("edit.copy.plain", "Copy as Plain Text"));
             cutCopyPasteChildren.add(MenuItemConfig.action("edit.copy.rich", "Copy as Rich Text"));
             cutCopyPasteChildren.add(MenuItemConfig.group("edit.copy.path.reference.group", "Copy Path/Reference\u2026", true, copyPathRefChildren));
-            cutCopyPasteChildren.add(MenuItemConfig.group("edit.paste.group", "Paste", false, pasteChildren));
+            cutCopyPasteChildren.add(MenuItemConfig.group("edit.paste.group", "Paste", true, pasteChildren));
             cutCopyPasteChildren.add(MenuItemConfig.action("edit.copy.json.pointer", "Copy JSON Pointer"));
 
             // Image 2: Generate...
@@ -923,7 +923,51 @@ public final class AppSettingsStore {
             generateInnerChildren.add(MenuItemConfig.group("edit.generate.markdown.group", "Markdown.InsertGroup", true, markdownChildren));
 
             List<MenuItemConfig> generateRootChildren = new ArrayList<>();
-            generateRootChildren.add(MenuItemConfig.group("edit.generate.group", "Generate", false, generateInnerChildren));
+            generateRootChildren.add(MenuItemConfig.action("edit.generate.function", "Function"));
+            generateRootChildren.add(MenuItemConfig.action("edit.generate.procedure", "Procedure"));
+            generateRootChildren.add(MenuItemConfig.action("edit.generate.table", "Table"));
+            generateRootChildren.add(MenuItemConfig.action("edit.generate.index", "Index"));
+            generateRootChildren.add(MenuItemConfig.action("edit.generate.rule", "Rule"));
+            generateRootChildren.add(MenuItemConfig.action("edit.generate.policy", "Security Policy"));
+            generateRootChildren.add(MenuItemConfig.action("edit.generate.trigger", "Trigger"));
+            generateRootChildren.add(MenuItemConfig.action("edit.generate.view", "View"));
+            generateRootChildren.add(MenuItemConfig.action("edit.generate.materialized.view", "Materialized View"));
+            generateRootChildren.add(MenuItemConfig.action("edit.generate.schema", "Schema", "CUBES"));
+            generateRootChildren.add(MenuItemConfig.action("edit.generate.database", "Database", "DATABASE"));
+            generateRootChildren.add(MenuItemConfig.action("edit.generate.role", "Role", "USER_SHIELD"));
+            generateRootChildren.add(MenuItemConfig.action("edit.generate.user", "User", "USER"));
+            generateRootChildren.add(MenuItemConfig.action("edit.generate.foreign.table", "Foreign Table"));
+            generateRootChildren.add(MenuItemConfig.action("edit.generate.aggregate", "Aggregate"));
+            generateRootChildren.add(MenuItemConfig.action("edit.generate.operator", "Operator"));
+            generateRootChildren.add(MenuItemConfig.action("edit.generate.sequence", "Sequence"));
+            generateRootChildren.add(MenuItemConfig.action("edit.generate.enum", "Enum"));
+            generateRootChildren.add(MenuItemConfig.action("edit.generate.domain", "Domain"));
+            generateRootChildren.add(MenuItemConfig.action("edit.generate.composite.type", "Composite Type"));
+            generateRootChildren.add(MenuItemConfig.action("edit.generate.collation", "Collation"));
+            generateRootChildren.add(MenuItemConfig.action("edit.generate.operator.class", "Operator Class"));
+            generateRootChildren.add(MenuItemConfig.action("edit.generate.operator.family", "Operator Family"));
+            generateRootChildren.add(MenuItemConfig.action("edit.generate.fdw", "Foreign Data Wrapper"));
+            generateRootChildren.add(MenuItemConfig.action("edit.generate.server", "Server"));
+            generateRootChildren.add(MenuItemConfig.action("edit.generate.access.method", "Access Method"));
+            generateRootChildren.add(MenuItemConfig.action("edit.generate.extension", "Extension"));
+            generateRootChildren.add(MenuItemConfig.action("edit.generate.language", "Language"));
+            generateRootChildren.add(MenuItemConfig.action("edit.generate.cast", "Cast"));
+            generateRootChildren.add(MenuItemConfig.action("edit.generate.tablespace", "Tablespace"));
+            generateRootChildren.add(MenuItemConfig.action("edit.generate.database.link", "Database Link"));
+            generateRootChildren.add(MenuItemConfig.action("edit.generate.unique.key", "Unique Key"));
+            generateRootChildren.add(MenuItemConfig.action("edit.generate.primary.key", "Primary Key"));
+            generateRootChildren.add(MenuItemConfig.action("edit.generate.foreign.key", "Foreign Key"));
+            generateRootChildren.add(MenuItemConfig.action("edit.generate.check.constraint", "Check Constraint"));
+            generateRootChildren.add(MenuItemConfig.action("edit.generate.column", "Column"));
+            generateRootChildren.add(MenuItemConfig.action("edit.generate.package", "Package"));
+            generateRootChildren.add(MenuItemConfig.action("edit.generate.synonym", "Synonym"));
+            generateRootChildren.add(MenuItemConfig.action("edit.generate.type", "Type"));
+            generateRootChildren.add(MenuItemConfig.action("edit.generate.user.mapping", "User Mapping"));
+            generateRootChildren.add(MenuItemConfig.action("edit.generate.event", "Event"));
+            generateRootChildren.add(MenuItemConfig.action("edit.generate.conversion", "Conversion"));
+            generateRootChildren.add(MenuItemConfig.action("edit.generate.xml.tag", "XML Tag\u2026"));
+            generateRootChildren.add(MenuItemConfig.action("edit.generate.implement.methods", "Implement Methods\u2026"));
+            generateRootChildren.add(MenuItemConfig.action("edit.generate.markdown.toc", "Generate Table Of Contents", "LIST"));
 
             // Image 3: Refactor
             List<MenuItemConfig> extractIntroduceChildren = new ArrayList<>();
@@ -935,38 +979,23 @@ public final class AppSettingsStore {
             refactorChildren.add(MenuItemConfig.action("edit.refactor.rename", "Rename\u2026"));
             refactorChildren.add(MenuItemConfig.separator());
             refactorChildren.add(MenuItemConfig.action("edit.refactor.expand.column.list", "Expand Column List"));
-            refactorChildren.add(MenuItemConfig.separator());
             refactorChildren.add(MenuItemConfig.action("edit.refactor.convert.subquery", "Convert to Subquery"));
-            refactorChildren.add(MenuItemConfig.action("edit.refactor.subquery.cte", "Subquery as CTE"));
-            refactorChildren.add(MenuItemConfig.separator());
             refactorChildren.add(MenuItemConfig.group("edit.refactor.extract.introduce.group", "Extract/Introduce", true, extractIntroduceChildren));
             refactorChildren.add(MenuItemConfig.action("edit.refactor.qualify.identifier", "Qualify Identifier"));
             refactorChildren.add(MenuItemConfig.action("edit.refactor.unqualify.identifier", "Unqualify Identifier"));
             refactorChildren.add(MenuItemConfig.action("edit.refactor.quote.identifier", "Quote Identifier"));
             refactorChildren.add(MenuItemConfig.action("edit.refactor.unquote.identifier", "Unquote Identifier"));
-            refactorChildren.add(MenuItemConfig.separator());
             refactorChildren.add(MenuItemConfig.action("edit.refactor.flip.expression", "Flip Expression"));
             refactorChildren.add(MenuItemConfig.separator());
             refactorChildren.add(MenuItemConfig.action("edit.refactor.inject.language", "Inject Language or Reference"));
             refactorChildren.add(MenuItemConfig.action("edit.refactor.uninject.language", "Uninject Language or Reference"));
 
-            // Image 2: Selection
-            List<MenuItemConfig> selectWordChildren = new ArrayList<>();
-            selectWordChildren.add(MenuItemConfig.action("edit.selection.extend", "Extend Selection"));
-            selectWordChildren.add(MenuItemConfig.action("edit.selection.shrink", "Shrink Selection"));
-
-            List<MenuItemConfig> editorSelectChildren = new ArrayList<>();
-            editorSelectChildren.add(MenuItemConfig.action("edit.select.all", "Select All"));
-            editorSelectChildren.add(MenuItemConfig.action("edit.selection.add.carets.ends", "Add Carets to Ends of Selected Lines"));
-            editorSelectChildren.add(MenuItemConfig.group("edit.selection.word.actions", "Select Word Actions", false, selectWordChildren));
-
+            // Image 4: Selection
             List<MenuItemConfig> selectionChildren = new ArrayList<>();
-            selectionChildren.add(MenuItemConfig.action("edit.selection.column.mode", "Column Selection Mode"));
-            selectionChildren.add(MenuItemConfig.group("edit.selection.editor.select.actions", "Editor Select Actions", false, editorSelectChildren));
-            selectionChildren.add(MenuItemConfig.action("edit.toggle.case", "Toggle Case"));
-            selectionChildren.add(MenuItemConfig.action("edit.join.lines", "Join Lines"));
-            selectionChildren.add(MenuItemConfig.action("edit.duplicate.lines", "Duplicate Entire Lines"));
-            selectionChildren.add(MenuItemConfig.action("edit.sort.lines", "Sort Lines"));
+            selectionChildren.add(MenuItemConfig.action("edit.select.all", "Select All"));
+            selectionChildren.add(MenuItemConfig.action("edit.selection.add.carets.ends", "Add Carets to Ends of Selected Lines"));
+            selectionChildren.add(MenuItemConfig.action("edit.selection.extend", "Extend Selection"));
+            selectionChildren.add(MenuItemConfig.action("edit.selection.shrink", "Shrink Selection"));
 
             List<MenuItemConfig> editMenu = new ArrayList<>();
             editMenu.add(MenuItemConfig.action("edit.undo", "Undo", "UNDO"));
@@ -982,7 +1011,6 @@ public final class AppSettingsStore {
             editMenu.add(MenuItemConfig.action("edit.find.usages", "Find Usages"));
             editMenu.add(MenuItemConfig.separator());
             editMenu.add(MenuItemConfig.group("edit.generate.root.group", "Generate\u2026", true, generateRootChildren));
-            editMenu.add(MenuItemConfig.separator());
             editMenu.add(MenuItemConfig.action("edit.insert.live.template", "Insert Live Template\u2026"));
             editMenu.add(MenuItemConfig.action("edit.surround.with", "Surround With\u2026"));
             editMenu.add(MenuItemConfig.separator());
@@ -995,9 +1023,13 @@ public final class AppSettingsStore {
             editMenu.add(MenuItemConfig.group("edit.refactor", "Refactor", true, refactorChildren));
             editMenu.add(MenuItemConfig.separator());
             editMenu.add(MenuItemConfig.group("edit.selection", "Selection", true, selectionChildren));
+            editMenu.add(MenuItemConfig.action("edit.toggle.case", "Toggle Case"));
+            editMenu.add(MenuItemConfig.action("edit.join.lines", "Join Lines"));
+            editMenu.add(MenuItemConfig.action("edit.duplicate.lines", "Duplicate Entire Lines"));
+            editMenu.add(MenuItemConfig.action("edit.sort.lines", "Sort Lines"));
             editMenu.add(MenuItemConfig.separator());
             editMenu.add(MenuItemConfig.action("edit.toggle.bookmark", "Toggle Bookmark", "BOOKMARK"));
-            editMenu.add(MenuItemConfig.action("edit.show.bookmarks", "Show Bookmarks\u2026"));
+            editMenu.add(MenuItemConfig.action("edit.show.bookmarks", "Show Line Bookmarks\u2026"));
             mainMenuChildren.add(MenuItemConfig.group("menu.edit", "Edit", true, editMenu));
 
             // -------------------------------------------------------------
@@ -4158,8 +4190,33 @@ public final class AppSettingsStore {
                                 needsMigration = true;
                             }
                         }
-                        if (editMenu != null && editMenu.getChildren().stream().noneMatch(c -> "edit.generate.root.group".equalsIgnoreCase(c.getId()))) {
-                            needsMigration = true;
+                        if (editMenu != null) {
+                            boolean hasGenerateFunction = editMenu.getChildren().stream()
+                                    .filter(c -> "edit.generate.root.group".equalsIgnoreCase(c.getId()))
+                                    .flatMap(g -> g.getChildren().stream())
+                                    .anyMatch(c -> "edit.generate.function".equalsIgnoreCase(c.getId()));
+                            boolean pasteIsPopup = editMenu.getChildren().stream()
+                                    .filter(c -> "edit.cut.copy.paste.actions".equalsIgnoreCase(c.getId()))
+                                    .flatMap(g -> g.getChildren().stream())
+                                    .anyMatch(c -> "edit.paste.group".equalsIgnoreCase(c.getId()) && c.isPopup());
+                            boolean hasFormatCode = editMenu.getChildren().stream()
+                                    .anyMatch(c -> "edit.format.code".equalsIgnoreCase(c.getId()));
+                            boolean hasInsertLiveTemplate = editMenu.getChildren().stream()
+                                    .anyMatch(c -> "edit.insert.live.template".equalsIgnoreCase(c.getId()));
+                            boolean hasToggleCase = editMenu.getChildren().stream()
+                                    .anyMatch(c -> "edit.toggle.case".equalsIgnoreCase(c.getId()));
+                            boolean hasRefactorExpandCols = editMenu.getChildren().stream()
+                                    .filter(c -> "edit.refactor".equalsIgnoreCase(c.getId()))
+                                    .flatMap(g -> g.getChildren().stream())
+                                    .anyMatch(c -> "edit.refactor.expand.column.list".equalsIgnoreCase(c.getId()));
+                            boolean hasSelectionAddCarets = editMenu.getChildren().stream()
+                                    .filter(c -> "edit.selection".equalsIgnoreCase(c.getId()))
+                                    .flatMap(g -> g.getChildren().stream())
+                                    .anyMatch(c -> "edit.selection.add.carets.ends".equalsIgnoreCase(c.getId()));
+                            if (!hasGenerateFunction || !pasteIsPopup || !hasFormatCode || !hasInsertLiveTemplate || !hasToggleCase
+                                    || !hasRefactorExpandCols || !hasSelectionAddCarets) {
+                                needsMigration = true;
+                            }
                         }
                         if (viewMenu != null && viewMenu.getChildren().stream().noneMatch(c -> "view.recent.actions.group".equalsIgnoreCase(c.getId()))) {
                             needsMigration = true;
