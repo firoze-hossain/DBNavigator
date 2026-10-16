@@ -11,6 +11,7 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
@@ -151,6 +152,21 @@ public final class ModifyTableDialog {
         }
     }
 
+    public static class ForeignKeyMapping {
+        public final SimpleStringProperty localColumn = new SimpleStringProperty("");
+        public final SimpleStringProperty targetColumn = new SimpleStringProperty("");
+
+        public ForeignKeyMapping(String localCol, String targetCol) {
+            this.localColumn.set(localCol != null ? localCol : "");
+            this.targetColumn.set(targetCol != null ? targetCol : "");
+        }
+
+        @Override
+        public String toString() {
+            return localColumn.get() + " \u2192 " + targetColumn.get();
+        }
+    }
+
     public static class ForeignKeyModel {
         public final String originalName;
         public final SimpleStringProperty name;
@@ -164,6 +180,13 @@ public final class ModifyTableDialog {
         public final SimpleBooleanProperty markedForDrop = new SimpleBooleanProperty(false);
         public final SimpleBooleanProperty deferrable = new SimpleBooleanProperty(false);
         public final SimpleBooleanProperty initiallyDeferred = new SimpleBooleanProperty(false);
+        public final SimpleBooleanProperty definedWithPeriod = new SimpleBooleanProperty(false);
+        public final SimpleBooleanProperty notEnforced = new SimpleBooleanProperty(false);
+        public final SimpleBooleanProperty notValidated = new SimpleBooleanProperty(false);
+        public final SimpleStringProperty matchType = new SimpleStringProperty("SIMPLE");
+        public final ObservableList<ForeignKeyMapping> mappings = FXCollections.observableArrayList(
+                m -> new javafx.beans.Observable[]{m.localColumn, m.targetColumn}
+        );
 
         public ForeignKeyModel(String originalName, String name, String targetTable,
                                String localColumn, String referencedColumn, boolean isNew) {
@@ -175,6 +198,48 @@ public final class ModifyTableDialog {
             this.onUpdate = new SimpleStringProperty("NO ACTION");
             this.onDelete = new SimpleStringProperty("NO ACTION");
             this.isNew = isNew;
+
+            if (localColumn != null && !localColumn.isBlank()) {
+                mappings.add(new ForeignKeyMapping(localColumn, referencedColumn != null && !referencedColumn.isBlank() ? referencedColumn : "id"));
+            }
+
+            final boolean[] updatingFromMapping = {false};
+            final boolean[] updatingFromProp = {false};
+
+            this.localColumn.addListener((o, ov, nv) -> {
+                if (updatingFromMapping[0]) return;
+                updatingFromProp[0] = true;
+                if (!mappings.isEmpty()) {
+                    mappings.get(0).localColumn.set(nv != null ? nv : "");
+                } else if (nv != null && !nv.isBlank()) {
+                    mappings.add(new ForeignKeyMapping(nv, this.referencedColumn.get()));
+                }
+                updatingFromProp[0] = false;
+            });
+            this.referencedColumn.addListener((o, ov, nv) -> {
+                if (updatingFromMapping[0]) return;
+                updatingFromProp[0] = true;
+                if (!mappings.isEmpty()) {
+                    mappings.get(0).targetColumn.set(nv != null ? nv : "");
+                } else if (nv != null && !nv.isBlank()) {
+                    mappings.add(new ForeignKeyMapping(this.localColumn.get(), nv));
+                }
+                updatingFromProp[0] = false;
+            });
+            mappings.addListener((javafx.collections.ListChangeListener<ForeignKeyMapping>) c -> {
+                if (updatingFromProp[0]) return;
+                updatingFromMapping[0] = true;
+                if (!mappings.isEmpty()) {
+                    ForeignKeyMapping first = mappings.get(0);
+                    if (!Objects.equals(this.localColumn.get(), first.localColumn.get())) {
+                        this.localColumn.set(first.localColumn.get());
+                    }
+                    if (!Objects.equals(this.referencedColumn.get(), first.targetColumn.get())) {
+                        this.referencedColumn.set(first.targetColumn.get());
+                    }
+                }
+                updatingFromMapping[0] = false;
+            });
         }
     }
 
@@ -237,12 +302,18 @@ public final class ModifyTableDialog {
     }
 
     public static class VirtualColumnModel {
+        public final String originalName;
         public final SimpleStringProperty name;
         public final SimpleStringProperty expression;
         public final boolean isNew;
         public final SimpleBooleanProperty markedForDrop = new SimpleBooleanProperty(false);
 
         public VirtualColumnModel(String name, String expression, boolean isNew) {
+            this(name, name, expression, isNew);
+        }
+
+        public VirtualColumnModel(String originalName, String name, String expression, boolean isNew) {
+            this.originalName = originalName;
             this.name = new SimpleStringProperty(name != null ? name : "");
             this.expression = new SimpleStringProperty(expression != null ? expression : "");
             this.isNew = isNew;
@@ -250,19 +321,72 @@ public final class ModifyTableDialog {
     }
 
     public static class VirtualForeignKeyModel {
+        public final String originalName;
         public final SimpleStringProperty name;
         public final SimpleStringProperty targetTable;
         public final SimpleStringProperty localColumn;
         public final SimpleStringProperty referencedColumn;
         public final boolean isNew;
         public final SimpleBooleanProperty markedForDrop = new SimpleBooleanProperty(false);
+        public final ObservableList<ForeignKeyMapping> mappings = FXCollections.observableArrayList(
+                m -> new javafx.beans.Observable[]{m.localColumn, m.targetColumn}
+        );
 
         public VirtualForeignKeyModel(String name, String targetTable, String localColumn, String referencedColumn, boolean isNew) {
+            this(name, name, targetTable, localColumn, referencedColumn, isNew);
+        }
+
+        public VirtualForeignKeyModel(String originalName, String name, String targetTable,
+                                      String localColumn, String referencedColumn, boolean isNew) {
+            this.originalName = originalName;
             this.name = new SimpleStringProperty(name != null ? name : "");
             this.targetTable = new SimpleStringProperty(targetTable != null ? targetTable : "");
             this.localColumn = new SimpleStringProperty(localColumn != null ? localColumn : "");
             this.referencedColumn = new SimpleStringProperty(referencedColumn != null ? referencedColumn : "");
             this.isNew = isNew;
+
+            if (localColumn != null && !localColumn.isBlank()) {
+                mappings.add(new ForeignKeyMapping(localColumn, referencedColumn != null && !referencedColumn.isBlank() ? referencedColumn : "id"));
+            }
+
+            final boolean[] updatingFromMapping = {false};
+            final boolean[] updatingFromProp = {false};
+
+            this.localColumn.addListener((o, ov, nv) -> {
+                if (updatingFromMapping[0]) return;
+                updatingFromProp[0] = true;
+                if (!mappings.isEmpty()) {
+                    mappings.get(0).localColumn.set(nv != null ? nv : "");
+                } else if (nv != null && !nv.isBlank()) {
+                    mappings.add(new ForeignKeyMapping(nv, this.referencedColumn.get()));
+                }
+                updatingFromProp[0] = false;
+            });
+
+            this.referencedColumn.addListener((o, ov, nv) -> {
+                if (updatingFromMapping[0]) return;
+                updatingFromProp[0] = true;
+                if (!mappings.isEmpty()) {
+                    mappings.get(0).targetColumn.set(nv != null ? nv : "");
+                } else if (nv != null && !nv.isBlank()) {
+                    mappings.add(new ForeignKeyMapping(this.localColumn.get(), nv));
+                }
+                updatingFromProp[0] = false;
+            });
+
+            mappings.addListener((ListChangeListener<ForeignKeyMapping>) c -> {
+                if (updatingFromProp[0]) return;
+                updatingFromMapping[0] = true;
+                if (!mappings.isEmpty()) {
+                    ForeignKeyMapping first = mappings.get(0);
+                    this.localColumn.set(first.localColumn.get());
+                    this.referencedColumn.set(first.targetColumn.get());
+                } else {
+                    this.localColumn.set("");
+                    this.referencedColumn.set("");
+                }
+                updatingFromMapping[0] = false;
+            });
         }
     }
 
@@ -591,8 +715,8 @@ public final class ModifyTableDialog {
 
                     if (item.subtitle != null && !item.subtitle.isBlank()) {
                         Label subLabel = new Label(item.subtitle);
-                        if (isNew(item)) {
-                            subLabel.setTextFill(Color.web("#57965c"));
+                        if ("(???)".equals(item.subtitle)) {
+                            subLabel.setTextFill(Color.web("#e06c75"));
                         } else {
                             subLabel.setTextFill(Color.web("#868a91"));
                         }
@@ -692,6 +816,8 @@ public final class ModifyTableDialog {
         pillIconLabel = new Label();
         pillTitleLabel = new Label("table");
         pillTitleLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: #dfe1e5;");
+        pillTitleLabel.setTextOverrun(OverrunStyle.CENTER_ELLIPSIS);
+        pillTitleLabel.setMaxWidth(300);
 
         headerPillBox = new HBox(6, pillIconLabel, pillTitleLabel);
         headerPillBox.setAlignment(Pos.CENTER_LEFT);
@@ -1336,6 +1462,26 @@ public final class ModifyTableDialog {
         }
     }
 
+    private void selectVirtualColumnInTree(VirtualColumnModel target) {
+        if (vcolCategoryItem == null || target == null || treeView == null) return;
+        for (TreeItem<ModifyNode> child : vcolCategoryItem.getChildren()) {
+            if (child.getValue() != null && child.getValue().item == target) {
+                treeView.getSelectionModel().select(child);
+                break;
+            }
+        }
+    }
+
+    private void selectVirtualForeignKeyInTree(VirtualForeignKeyModel target) {
+        if (vfkCategoryItem == null || target == null || treeView == null) return;
+        for (TreeItem<ModifyNode> child : vfkCategoryItem.getChildren()) {
+            if (child.getValue() != null && child.getValue().item == target) {
+                treeView.getSelectionModel().select(child);
+                break;
+            }
+        }
+    }
+
     private HBox createNameFieldWithReset(SimpleStringProperty nameProp, String originalName) {
         TextField nameField = new TextField(nameProp.get());
         nameField.textProperty().bindBidirectional(nameProp);
@@ -1655,10 +1801,15 @@ public final class ModifyTableDialog {
         rightColPropGrid.add(createFormLabel("Exclude operator"), 0, 1);
         rightColPropGrid.add(excludeOpField, 1, 1);
 
+        Label placeholder = new Label("No Columns");
+        placeholder.setStyle("-fx-text-fill: #868a91; -fx-font-size: 11px;");
+        colsListView.setPlaceholder(placeholder);
+
         final boolean[] updatingCombo = {false};
         colsListView.getSelectionModel().selectedItemProperty().addListener((o, ov, nv) -> {
             updatingCombo[0] = true;
             colNameCombo.setValue(nv);
+            rightColPropGrid.setVisible(nv != null);
             updatingCombo[0] = false;
         });
 
@@ -1679,6 +1830,7 @@ public final class ModifyTableDialog {
                     .orElse(tableColNames.isEmpty() ? "col" : tableColNames.get(0));
             key.columns.add(candidate);
             colsListView.getSelectionModel().select(key.columns.size() - 1);
+            rightColPropGrid.setVisible(true);
             updateCurrentItemInTree();
             refreshPreview();
         });
@@ -1687,6 +1839,9 @@ public final class ModifyTableDialog {
             int selIdx = colsListView.getSelectionModel().getSelectedIndex();
             if (selIdx >= 0 && selIdx < key.columns.size()) {
                 key.columns.remove(selIdx);
+                if (key.columns.isEmpty()) {
+                    rightColPropGrid.setVisible(false);
+                }
                 updateCurrentItemInTree();
                 refreshPreview();
             }
@@ -1716,6 +1871,9 @@ public final class ModifyTableDialog {
 
         if (!key.columns.isEmpty()) {
             colsListView.getSelectionModel().select(0);
+            rightColPropGrid.setVisible(true);
+        } else {
+            rightColPropGrid.setVisible(false);
         }
 
         HBox columnsSplitBox = new HBox(8, leftColsBox, rightColPropGrid);
@@ -1753,20 +1911,7 @@ public final class ModifyTableDialog {
         grid.add(createFormLabel("Comment"), 0, row);
         grid.add(createCommentFieldWithExpand(fk.comment), 1, row++);
 
-        // 3. Deferrable & Initially Deferred
-        CheckBox defCheck = new CheckBox("Deferrable");
-        defCheck.selectedProperty().bindBidirectional(fk.deferrable);
-        defCheck.selectedProperty().addListener((o, ov, nv) -> refreshPreview());
-
-        CheckBox initDefCheck = new CheckBox("Initially Deferred");
-        initDefCheck.selectedProperty().bindBidirectional(fk.initiallyDeferred);
-        initDefCheck.selectedProperty().addListener((o, ov, nv) -> refreshPreview());
-
-        HBox checkRow = new HBox(20, defCheck, initDefCheck);
-        grid.add(new Label(""), 0, row);
-        grid.add(checkRow, 1, row++);
-
-        // 4. Target Table
+        // 3. Target Table
         Label targetLbl = createFormLabel("Target Table");
         ComboBox<String> targetCombo = new ComboBox<>(availableTables);
         targetCombo.setEditable(true);
@@ -1780,59 +1925,258 @@ public final class ModifyTableDialog {
         grid.add(targetLbl, 0, row);
         grid.add(targetCombo, 1, row++);
 
-        // 5. Local Column
-        Label localColLbl = createFormLabel("Local Column");
-        ObservableList<String> colNames = FXCollections.observableArrayList(columns.stream().map(c -> c.name.get()).toList());
-        ComboBox<String> localColCombo = new ComboBox<>(colNames);
-        localColCombo.setValue(fk.localColumn.get());
-        localColCombo.valueProperty().addListener((o, ov, nv) -> {
-            fk.localColumn.set(nv != null ? nv : "");
+        // 4. Columns section matching DataGrip Image 1:
+        Label colsLbl = createFormLabel("Columns");
+
+        Button addColBtn = createToolButton(FontAwesomeSolid.PLUS, "#57965c", "Add Column Mapping");
+        Button remColBtn = createToolButton(FontAwesomeSolid.MINUS, "#cc6666", "Remove Column Mapping");
+        Button upColBtn = createToolButton(FontAwesomeSolid.ARROW_UP, "#a9b7c6", "Move Up");
+        Button downColBtn = createToolButton(FontAwesomeSolid.ARROW_DOWN, "#a9b7c6", "Move Down");
+
+        HBox miniToolbar = new HBox(3, addColBtn, remColBtn, upColBtn, downColBtn);
+        miniToolbar.setAlignment(Pos.CENTER_LEFT);
+        miniToolbar.setPadding(new Insets(0, 0, 4, 0));
+
+        ListView<ForeignKeyMapping> mappingsListView = new ListView<>(fk.mappings);
+        mappingsListView.setPrefHeight(130);
+        mappingsListView.setPrefWidth(180);
+
+        Label placeholder = new Label("No Columns");
+        placeholder.setStyle("-fx-text-fill: #868a91; -fx-font-size: 11px;");
+        mappingsListView.setPlaceholder(placeholder);
+
+        mappingsListView.setCellFactory(lv -> new ListCell<>() {
+            @Override
+            protected void updateItem(ForeignKeyMapping item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                } else {
+                    setText(item.localColumn.get() + " \u2192 " + item.targetColumn.get());
+                }
+            }
+        });
+
+        VBox leftColsBox = new VBox(miniToolbar, mappingsListView);
+
+        // Right side mapping editor
+        GridPane rightColPropGrid = new GridPane();
+        rightColPropGrid.setHgap(10);
+        rightColPropGrid.setVgap(8);
+        rightColPropGrid.setPadding(new Insets(0, 0, 0, 10));
+
+        ObservableList<String> tableColNames = FXCollections.observableArrayList(
+                columns.stream().map(c -> c.name.get()).toList()
+        );
+        ComboBox<String> colNameCombo = new ComboBox<>(tableColNames);
+        colNameCombo.setMaxWidth(Double.MAX_VALUE);
+
+        ObservableList<String> targetColNames = FXCollections.observableArrayList("id", "code", "user_id", "patient_id");
+        ComboBox<String> targetNameCombo = new ComboBox<>(targetColNames);
+        targetNameCombo.setEditable(true);
+        targetNameCombo.setMaxWidth(Double.MAX_VALUE);
+
+        rightColPropGrid.add(createFormLabel("Column Name"), 0, 0);
+        rightColPropGrid.add(colNameCombo, 1, 0);
+        rightColPropGrid.add(createFormLabel("Target Name"), 0, 1);
+        rightColPropGrid.add(targetNameCombo, 1, 1);
+
+        final boolean[] updatingRight = {false};
+        Runnable updateRightFromSelection = () -> {
+            ForeignKeyMapping sel = mappingsListView.getSelectionModel().getSelectedItem();
+            updatingRight[0] = true;
+            if (sel != null) {
+                rightColPropGrid.setVisible(true);
+                colNameCombo.setDisable(false);
+                targetNameCombo.setDisable(false);
+                colNameCombo.setValue(sel.localColumn.get());
+                targetNameCombo.setValue(sel.targetColumn.get());
+            } else {
+                rightColPropGrid.setVisible(false);
+                colNameCombo.setDisable(true);
+                targetNameCombo.setDisable(true);
+            }
+            updatingRight[0] = false;
+        };
+
+        mappingsListView.getSelectionModel().selectedItemProperty().addListener((o, ov, nv) -> updateRightFromSelection.run());
+
+        colNameCombo.valueProperty().addListener((o, ov, nv) -> {
+            if (updatingRight[0] || nv == null) return;
+            ForeignKeyMapping sel = mappingsListView.getSelectionModel().getSelectedItem();
+            if (sel != null) {
+                sel.localColumn.set(nv);
+                mappingsListView.refresh();
+                updateCurrentItemInTree();
+                refreshPreview();
+            }
+        });
+
+        targetNameCombo.getEditor().textProperty().addListener((o, ov, nv) -> {
+            if (updatingRight[0] || nv == null) return;
+            ForeignKeyMapping sel = mappingsListView.getSelectionModel().getSelectedItem();
+            if (sel != null) {
+                sel.targetColumn.set(nv);
+                mappingsListView.refresh();
+                updateCurrentItemInTree();
+                refreshPreview();
+            }
+        });
+        targetNameCombo.valueProperty().addListener((o, ov, nv) -> {
+            if (updatingRight[0] || nv == null) return;
+            ForeignKeyMapping sel = mappingsListView.getSelectionModel().getSelectedItem();
+            if (sel != null) {
+                sel.targetColumn.set(nv);
+                mappingsListView.refresh();
+                updateCurrentItemInTree();
+                refreshPreview();
+            }
+        });
+
+        addColBtn.setOnAction(e -> {
+            String localCand = tableColNames.stream()
+                    .filter(cn -> fk.mappings.stream().noneMatch(m -> m.localColumn.get().equals(cn)))
+                    .findFirst()
+                    .orElse(tableColNames.isEmpty() ? "col" : tableColNames.get(0));
+            ForeignKeyMapping newMapping = new ForeignKeyMapping(localCand, "id");
+            fk.mappings.add(newMapping);
+            mappingsListView.getSelectionModel().select(newMapping);
+            rightColPropGrid.setVisible(true);
             updateCurrentItemInTree();
             refreshPreview();
         });
-        localColCombo.setMaxWidth(Double.MAX_VALUE);
-        grid.add(localColLbl, 0, row);
-        grid.add(localColCombo, 1, row++);
 
-        // 6. Referenced Column
-        Label refColLbl = createFormLabel("Referenced Column");
-        TextField refColField = new TextField(fk.referencedColumn.get());
-        refColField.textProperty().bindBidirectional(fk.referencedColumn);
-        refColField.textProperty().addListener((o, ov, nv) -> {
-            updateCurrentItemInTree();
-            refreshPreview();
+        remColBtn.setOnAction(e -> {
+            int selIdx = mappingsListView.getSelectionModel().getSelectedIndex();
+            if (selIdx >= 0 && selIdx < fk.mappings.size()) {
+                fk.mappings.remove(selIdx);
+                if (fk.mappings.isEmpty()) {
+                    rightColPropGrid.setVisible(false);
+                }
+                updateCurrentItemInTree();
+                refreshPreview();
+            }
         });
-        grid.add(refColLbl, 0, row);
-        grid.add(refColField, 1, row++);
 
-        // 7. On Update
-        Label onUpdLbl = createFormLabel("On Update");
-        ComboBox<String> onUpdCombo = new ComboBox<>(FXCollections.observableArrayList("NO ACTION", "CASCADE", "SET NULL", "SET DEFAULT", "RESTRICT"));
-        onUpdCombo.setValue(fk.onUpdate.get());
-        onUpdCombo.valueProperty().addListener((o, ov, nv) -> {
-            fk.onUpdate.set(nv != null ? nv : "NO ACTION");
-            refreshPreview();
+        upColBtn.setOnAction(e -> {
+            int selIdx = mappingsListView.getSelectionModel().getSelectedIndex();
+            if (selIdx > 0) {
+                ForeignKeyMapping item = fk.mappings.remove(selIdx);
+                fk.mappings.add(selIdx - 1, item);
+                mappingsListView.getSelectionModel().select(selIdx - 1);
+                updateCurrentItemInTree();
+                refreshPreview();
+            }
         });
-        onUpdCombo.setMaxWidth(Double.MAX_VALUE);
-        grid.add(onUpdLbl, 0, row);
-        grid.add(onUpdCombo, 1, row++);
 
-        // 8. On Delete
+        downColBtn.setOnAction(e -> {
+            int selIdx = mappingsListView.getSelectionModel().getSelectedIndex();
+            if (selIdx >= 0 && selIdx < fk.mappings.size() - 1) {
+                ForeignKeyMapping item = fk.mappings.remove(selIdx);
+                fk.mappings.add(selIdx + 1, item);
+                mappingsListView.getSelectionModel().select(selIdx + 1);
+                updateCurrentItemInTree();
+                refreshPreview();
+            }
+        });
+
+        if (!fk.mappings.isEmpty()) {
+            mappingsListView.getSelectionModel().select(0);
+            rightColPropGrid.setVisible(true);
+        } else {
+            rightColPropGrid.setVisible(false);
+            updateRightFromSelection.run();
+        }
+
+        HBox columnsSplitBox = new HBox(8, leftColsBox, rightColPropGrid);
+        HBox.setHgrow(rightColPropGrid, Priority.ALWAYS);
+
+        grid.add(colsLbl, 0, row);
+        grid.add(columnsSplitBox, 1, row++);
+
+        // 5. Checkboxes matching DataGrip Image 1:
+        CheckBox defCheck = new CheckBox("Deferrable");
+        defCheck.selectedProperty().bindBidirectional(fk.deferrable);
+        defCheck.selectedProperty().addListener((o, ov, nv) -> refreshPreview());
+
+        CheckBox notEnfCheck = new CheckBox("Not Enforced");
+        notEnfCheck.selectedProperty().bindBidirectional(fk.notEnforced);
+        notEnfCheck.selectedProperty().addListener((o, ov, nv) -> refreshPreview());
+
+        CheckBox defPeriodCheck = new CheckBox("Defined With Period");
+        defPeriodCheck.selectedProperty().bindBidirectional(fk.definedWithPeriod);
+        defPeriodCheck.selectedProperty().addListener((o, ov, nv) -> refreshPreview());
+
+        CheckBox notValCheck = new CheckBox("Not Validated");
+        notValCheck.selectedProperty().bindBidirectional(fk.notValidated);
+        notValCheck.selectedProperty().addListener((o, ov, nv) -> refreshPreview());
+
+        CheckBox initDefCheck = new CheckBox("Initially Deferred");
+        initDefCheck.selectedProperty().bindBidirectional(fk.initiallyDeferred);
+        initDefCheck.selectedProperty().addListener((o, ov, nv) -> refreshPreview());
+
+        GridPane checkGrid = new GridPane();
+        checkGrid.setHgap(20);
+        checkGrid.setVgap(8);
+        checkGrid.add(defCheck, 0, 0);
+        checkGrid.add(notEnfCheck, 0, 1);
+        checkGrid.add(defPeriodCheck, 1, 0);
+        checkGrid.add(notValCheck, 1, 1);
+        checkGrid.add(initDefCheck, 2, 0);
+
+        grid.add(new Label(""), 0, row);
+        grid.add(checkGrid, 1, row++);
+
+        // 6. On Delete dropdown (Image 1: on_delete no_action)
         Label onDelLbl = createFormLabel("On Delete");
-        ComboBox<String> onDelCombo = new ComboBox<>(FXCollections.observableArrayList("NO ACTION", "CASCADE", "SET NULL", "SET DEFAULT", "RESTRICT"));
-        onDelCombo.setValue(fk.onDelete.get());
+        ComboBox<String> onDelCombo = new ComboBox<>(FXCollections.observableArrayList("no_action", "restrict", "cascade", "set_null", "set_default"));
+        onDelCombo.setValue(normalizeActionValue(fk.onDelete.get()));
         onDelCombo.valueProperty().addListener((o, ov, nv) -> {
-            fk.onDelete.set(nv != null ? nv : "NO ACTION");
+            fk.onDelete.set(nv != null ? nv : "no_action");
             refreshPreview();
         });
         onDelCombo.setMaxWidth(Double.MAX_VALUE);
         grid.add(onDelLbl, 0, row);
         grid.add(onDelCombo, 1, row++);
 
+        // 7. On Update dropdown (Image 1: on_update no_action)
+        Label onUpdLbl = createFormLabel("On Update");
+        ComboBox<String> onUpdCombo = new ComboBox<>(FXCollections.observableArrayList("no_action", "restrict", "cascade", "set_null", "set_default"));
+        onUpdCombo.setValue(normalizeActionValue(fk.onUpdate.get()));
+        onUpdCombo.valueProperty().addListener((o, ov, nv) -> {
+            fk.onUpdate.set(nv != null ? nv : "no_action");
+            refreshPreview();
+        });
+        onUpdCombo.setMaxWidth(Double.MAX_VALUE);
+        grid.add(onUpdLbl, 0, row);
+        grid.add(onUpdCombo, 1, row++);
+
+        // 8. Match Type dropdown (Image 1: Match Type SIMPLE)
+        Label matchLbl = createFormLabel("Match Type");
+        ComboBox<String> matchCombo = new ComboBox<>(FXCollections.observableArrayList("SIMPLE", "FULL", "PARTIAL"));
+        matchCombo.setValue(fk.matchType.get() != null ? fk.matchType.get() : "SIMPLE");
+        matchCombo.valueProperty().addListener((o, ov, nv) -> {
+            fk.matchType.set(nv != null ? nv : "SIMPLE");
+            refreshPreview();
+        });
+        matchCombo.setMaxWidth(Double.MAX_VALUE);
+        grid.add(matchLbl, 0, row);
+        grid.add(matchCombo, 1, row++);
+
         ScrollPane scroll = new ScrollPane(grid);
         scroll.setFitToWidth(true);
         scroll.getStyleClass().add("modify-form-scroll");
         return scroll;
+    }
+
+    private String normalizeActionValue(String val) {
+        if (val == null || val.isBlank()) return "no_action";
+        return val.trim().toLowerCase().replace(" ", "_");
+    }
+
+    private static String formatActionSql(String val) {
+        if (val == null || val.isBlank()) return "NO ACTION";
+        return val.trim().replace('_', ' ').toUpperCase();
     }
 
     private ScrollPane buildIndexForm(IndexModel idx) {
@@ -1890,6 +2234,10 @@ public final class ModifyTableDialog {
         colsListView.setPrefHeight(150);
         colsListView.setPrefWidth(160);
 
+        Label placeholder = new Label("No Columns");
+        placeholder.setStyle("-fx-text-fill: #868a91; -fx-font-size: 11px;");
+        colsListView.setPlaceholder(placeholder);
+
         VBox leftColsBox = new VBox(miniToolbar, colsListView);
 
         GridPane rightColPropGrid = new GridPane();
@@ -1926,6 +2274,7 @@ public final class ModifyTableDialog {
             String selCol = colsListView.getSelectionModel().getSelectedItem();
             updatingRightForm[0] = true;
             if (selCol != null) {
+                rightColPropGrid.setVisible(true);
                 colNameCombo.setDisable(false);
                 orderCombo.setDisable(false);
                 collationField.setDisable(false);
@@ -1936,6 +2285,7 @@ public final class ModifyTableDialog {
                 collationField.setText(idx.getCollationProperty(selCol).get());
                 opClassField.setText(idx.getOpClassProperty(selCol).get());
             } else {
+                rightColPropGrid.setVisible(false);
                 colNameCombo.setDisable(true);
                 orderCombo.setDisable(true);
                 collationField.setDisable(true);
@@ -1990,6 +2340,7 @@ public final class ModifyTableDialog {
                     .orElse(tableColNames.isEmpty() ? "col" : tableColNames.get(0));
             idx.columns.add(candidate);
             colsListView.getSelectionModel().select(idx.columns.size() - 1);
+            rightColPropGrid.setVisible(true);
             updateCurrentItemInTree();
             refreshPreview();
         });
@@ -1998,6 +2349,9 @@ public final class ModifyTableDialog {
             int selIdx = colsListView.getSelectionModel().getSelectedIndex();
             if (selIdx >= 0 && selIdx < idx.columns.size()) {
                 idx.columns.remove(selIdx);
+                if (idx.columns.isEmpty()) {
+                    rightColPropGrid.setVisible(false);
+                }
                 updateCurrentItemInTree();
                 refreshPreview();
             }
@@ -2027,7 +2381,9 @@ public final class ModifyTableDialog {
 
         if (!idx.columns.isEmpty()) {
             colsListView.getSelectionModel().select(0);
+            rightColPropGrid.setVisible(true);
         } else {
+            rightColPropGrid.setVisible(false);
             updateRightPaneForSelectedCol.run();
         }
 
@@ -2037,21 +2393,45 @@ public final class ModifyTableDialog {
         grid.add(colsLbl, 0, row);
         grid.add(columnsSplitBox, 1, row++);
 
-        // 5. Condition (Predicate)
+        // 5. Condition (Predicate) with history arrow button
         Label predLbl = createFormLabel("Condition");
         TextField predField = new TextField(idx.predicate.get());
         predField.textProperty().bindBidirectional(idx.predicate);
         predField.textProperty().addListener((o, ov, nv) -> refreshPreview());
+        Button predArrowBtn = new Button("\u25be");
+        predArrowBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: #868a91; -fx-cursor: hand;");
+        HBox predBox = new HBox(4, predField, predArrowBtn);
+        HBox.setHgrow(predField, Priority.ALWAYS);
         grid.add(predLbl, 0, row);
-        grid.add(predField, 1, row++);
+        grid.add(predBox, 1, row++);
 
-        // 6. Include Columns
+        // 6. Include Columns with expand button
         Label inclLbl = createFormLabel("Include Columns");
         TextField inclField = new TextField(idx.includeColumns.get());
         inclField.textProperty().bindBidirectional(idx.includeColumns);
         inclField.textProperty().addListener((o, ov, nv) -> refreshPreview());
+        Button expandInclBtn = new Button("\u2922");
+        expandInclBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: #868a91; -fx-cursor: hand;");
+        expandInclBtn.setOnAction(e -> {
+            Dialog<String> d = new Dialog<>();
+            d.setTitle("Include Columns");
+            d.initOwner(stage);
+            TextArea ta = new TextArea(idx.includeColumns.get());
+            ta.setPrefRowCount(4);
+            ta.setWrapText(true);
+            d.getDialogPane().setContent(ta);
+            d.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+            DialogTheme.apply(d);
+            d.setResultConverter(btn -> btn == ButtonType.OK ? ta.getText() : null);
+            d.showAndWait().ifPresent(nv -> {
+                idx.includeColumns.set(nv);
+                refreshPreview();
+            });
+        });
+        HBox inclBox = new HBox(4, inclField, expandInclBtn);
+        HBox.setHgrow(inclField, Priority.ALWAYS);
         grid.add(inclLbl, 0, row);
-        grid.add(inclField, 1, row++);
+        grid.add(inclBox, 1, row++);
 
         // 7. Access Method
         Label methodLbl = createFormLabel("Access Method");
@@ -2139,18 +2519,37 @@ public final class ModifyTableDialog {
         grid.add(new Label(""), 0, row);
         grid.add(checkGrid, 1, row++);
 
-        // 4. Expression
-        Label exprLbl = createFormLabel("Expression");
-        TextArea exprArea = new TextArea(chk.expression.get());
-        exprArea.setPrefRowCount(4);
-        exprArea.setWrapText(true);
-        exprArea.textProperty().bindBidirectional(chk.expression);
-        exprArea.textProperty().addListener((o, ov, nv) -> {
+        // 4. Predicate matching Image 2
+        Label predLbl = createFormLabel("Predicate");
+        TextField predField = new TextField(chk.expression.get());
+        predField.textProperty().bindBidirectional(chk.expression);
+        predField.textProperty().addListener((o, ov, nv) -> {
             updateCurrentItemInTree();
             refreshPreview();
         });
-        grid.add(exprLbl, 0, row);
-        grid.add(exprArea, 1, row++);
+        Button expandPredBtn = new Button("\u2922");
+        expandPredBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: #868a91; -fx-cursor: hand;");
+        expandPredBtn.setOnAction(e -> {
+            Dialog<String> d = new Dialog<>();
+            d.setTitle("Predicate");
+            d.initOwner(stage);
+            TextArea ta = new TextArea(chk.expression.get());
+            ta.setPrefRowCount(6);
+            ta.setWrapText(true);
+            d.getDialogPane().setContent(ta);
+            d.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+            DialogTheme.apply(d);
+            d.setResultConverter(btn -> btn == ButtonType.OK ? ta.getText() : null);
+            d.showAndWait().ifPresent(nv -> {
+                chk.expression.set(nv);
+                updateCurrentItemInTree();
+                refreshPreview();
+            });
+        });
+        HBox predBox = new HBox(4, predField, expandPredBtn);
+        HBox.setHgrow(predField, Priority.ALWAYS);
+        grid.add(predLbl, 0, row);
+        grid.add(predBox, 1, row++);
 
         ScrollPane scroll = new ScrollPane(grid);
         scroll.setFitToWidth(true);
@@ -2164,23 +2563,54 @@ public final class ModifyTableDialog {
         grid.setVgap(10);
         grid.setPadding(new Insets(10, 16, 16, 16));
 
-        grid.add(createFormLabel("Name"), 0, 0);
-        TextField nameField = new TextField(vc.name.get());
-        nameField.textProperty().bindBidirectional(vc.name);
-        nameField.textProperty().addListener((o, ov, nv) -> {
-            updateCurrentItemInTree();
-            refreshPreview();
-        });
-        grid.add(nameField, 1, 0);
+        ColumnConstraints col1 = new ColumnConstraints();
+        col1.setMinWidth(110);
+        col1.setPrefWidth(120);
+        ColumnConstraints col2 = new ColumnConstraints();
+        col2.setHgrow(Priority.ALWAYS);
+        grid.getColumnConstraints().addAll(col1, col2);
 
-        grid.add(createFormLabel("Expression"), 0, 1);
+        int row = 0;
+
+        // 1. Name with "…" reset button
+        grid.add(createFormLabel("Name"), 0, row);
+        grid.add(createNameFieldWithReset(vc.name, vc.originalName), 1, row++);
+
+        // 2. Expression with history "▾" and expand "⤢" button
+        grid.add(createFormLabel("Expression"), 0, row);
         TextField exprField = new TextField(vc.expression.get());
         exprField.textProperty().bindBidirectional(vc.expression);
         exprField.textProperty().addListener((o, ov, nv) -> {
             updateCurrentItemInTree();
             refreshPreview();
         });
-        grid.add(exprField, 1, 1);
+
+        Button historyBtn = new Button("\u25be");
+        historyBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: #868a91; -fx-cursor: hand;");
+
+        Button expandExprBtn = new Button("\u2922");
+        expandExprBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: #868a91; -fx-cursor: hand;");
+        expandExprBtn.setOnAction(e -> {
+            Dialog<String> d = new Dialog<>();
+            d.setTitle("Expression");
+            d.initOwner(stage);
+            TextArea ta = new TextArea(vc.expression.get());
+            ta.setPrefRowCount(6);
+            ta.setWrapText(true);
+            d.getDialogPane().setContent(ta);
+            d.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+            DialogTheme.apply(d);
+            d.setResultConverter(btn -> btn == ButtonType.OK ? ta.getText() : null);
+            d.showAndWait().ifPresent(nv -> {
+                vc.expression.set(nv);
+                updateCurrentItemInTree();
+                refreshPreview();
+            });
+        });
+
+        HBox exprBox = new HBox(4, exprField, historyBtn, expandExprBtn);
+        HBox.setHgrow(exprField, Priority.ALWAYS);
+        grid.add(exprBox, 1, row++);
 
         ScrollPane scroll = new ScrollPane(grid);
         scroll.setFitToWidth(true);
@@ -2194,33 +2624,205 @@ public final class ModifyTableDialog {
         grid.setVgap(10);
         grid.setPadding(new Insets(10, 16, 16, 16));
 
-        grid.add(createFormLabel("Name"), 0, 0);
-        TextField nameField = new TextField(vfk.name.get());
-        nameField.textProperty().bindBidirectional(vfk.name);
-        nameField.textProperty().addListener((o, ov, nv) -> {
+        ColumnConstraints col1 = new ColumnConstraints();
+        col1.setMinWidth(110);
+        col1.setPrefWidth(120);
+        ColumnConstraints col2 = new ColumnConstraints();
+        col2.setHgrow(Priority.ALWAYS);
+        grid.getColumnConstraints().addAll(col1, col2);
+
+        int row = 0;
+
+        // 1. Name with "…" reset button
+        grid.add(createFormLabel("Name"), 0, row);
+        grid.add(createNameFieldWithReset(vfk.name, vfk.originalName), 1, row++);
+
+        // 2. Target Table
+        Label targetLbl = createFormLabel("Target Table");
+        ObservableList<String> targetList = FXCollections.observableArrayList(availableTables);
+        if (!targetList.contains(vfk.targetTable.get()) && !vfk.targetTable.get().isBlank()) {
+            targetList.add(0, vfk.targetTable.get());
+        }
+        ComboBox<String> targetCombo = new ComboBox<>(targetList);
+        targetCombo.setEditable(true);
+        targetCombo.setValue(vfk.targetTable.get());
+        targetCombo.getEditor().textProperty().bindBidirectional(vfk.targetTable);
+        targetCombo.getEditor().textProperty().addListener((o, ov, nv) -> {
             updateCurrentItemInTree();
             refreshPreview();
         });
-        grid.add(nameField, 1, 0);
+        targetCombo.setMaxWidth(Double.MAX_VALUE);
+        grid.add(targetLbl, 0, row);
+        grid.add(targetCombo, 1, row++);
 
-        grid.add(createFormLabel("Target Table"), 0, 1);
-        TextField targetField = new TextField(vfk.targetTable.get());
-        targetField.textProperty().bindBidirectional(vfk.targetTable);
-        targetField.textProperty().addListener((o, ov, nv) -> {
+        // 3. Columns section matching DataGrip Image 3
+        Label colsLbl = createFormLabel("Columns");
+
+        Button addColBtn = createToolButton(FontAwesomeSolid.PLUS, "#57965c", "Add Column Mapping");
+        Button remColBtn = createToolButton(FontAwesomeSolid.MINUS, "#cc6666", "Remove Column Mapping");
+        Button upColBtn = createToolButton(FontAwesomeSolid.ARROW_UP, "#a9b7c6", "Move Up");
+        Button downColBtn = createToolButton(FontAwesomeSolid.ARROW_DOWN, "#a9b7c6", "Move Down");
+
+        HBox miniToolbar = new HBox(3, addColBtn, remColBtn, upColBtn, downColBtn);
+        miniToolbar.setAlignment(Pos.CENTER_LEFT);
+        miniToolbar.setPadding(new Insets(0, 0, 4, 0));
+
+        ListView<ForeignKeyMapping> mappingsListView = new ListView<>(vfk.mappings);
+        mappingsListView.setPrefHeight(130);
+        mappingsListView.setPrefWidth(180);
+
+        Label placeholder = new Label("No Columns");
+        placeholder.setStyle("-fx-text-fill: #868a91; -fx-font-size: 11px;");
+        mappingsListView.setPlaceholder(placeholder);
+
+        mappingsListView.setCellFactory(lv -> new ListCell<>() {
+            @Override
+            protected void updateItem(ForeignKeyMapping item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                } else {
+                    setText(item.localColumn.get() + " \u2192 " + item.targetColumn.get());
+                }
+            }
+        });
+
+        VBox leftColsBox = new VBox(miniToolbar, mappingsListView);
+
+        // Right side mapping editor
+        GridPane rightColPropGrid = new GridPane();
+        rightColPropGrid.setHgap(10);
+        rightColPropGrid.setVgap(8);
+        rightColPropGrid.setPadding(new Insets(0, 0, 0, 10));
+
+        ObservableList<String> tableColNames = FXCollections.observableArrayList(
+                columns.stream().map(c -> c.name.get()).toList()
+        );
+        ComboBox<String> colNameCombo = new ComboBox<>(tableColNames);
+        colNameCombo.setMaxWidth(Double.MAX_VALUE);
+
+        ObservableList<String> targetColNames = FXCollections.observableArrayList("id", "code", "user_id", "patient_id");
+        ComboBox<String> targetNameCombo = new ComboBox<>(targetColNames);
+        targetNameCombo.setEditable(true);
+        targetNameCombo.setMaxWidth(Double.MAX_VALUE);
+
+        rightColPropGrid.add(createFormLabel("Column Name"), 0, 0);
+        rightColPropGrid.add(colNameCombo, 1, 0);
+        rightColPropGrid.add(createFormLabel("Target Name"), 0, 1);
+        rightColPropGrid.add(targetNameCombo, 1, 1);
+
+        final boolean[] updatingRight = {false};
+        Runnable updateRightFromSelection = () -> {
+            ForeignKeyMapping sel = mappingsListView.getSelectionModel().getSelectedItem();
+            updatingRight[0] = true;
+            if (sel != null) {
+                rightColPropGrid.setVisible(true);
+                colNameCombo.setDisable(false);
+                targetNameCombo.setDisable(false);
+                colNameCombo.setValue(sel.localColumn.get());
+                targetNameCombo.setValue(sel.targetColumn.get());
+            } else {
+                rightColPropGrid.setVisible(false);
+                colNameCombo.setDisable(true);
+                targetNameCombo.setDisable(true);
+            }
+            updatingRight[0] = false;
+        };
+
+        mappingsListView.getSelectionModel().selectedItemProperty().addListener((o, ov, nv) -> updateRightFromSelection.run());
+
+        colNameCombo.valueProperty().addListener((o, ov, nv) -> {
+            if (updatingRight[0] || nv == null) return;
+            ForeignKeyMapping sel = mappingsListView.getSelectionModel().getSelectedItem();
+            if (sel != null) {
+                sel.localColumn.set(nv);
+                mappingsListView.refresh();
+                updateCurrentItemInTree();
+                refreshPreview();
+            }
+        });
+
+        targetNameCombo.getEditor().textProperty().addListener((o, ov, nv) -> {
+            if (updatingRight[0] || nv == null) return;
+            ForeignKeyMapping sel = mappingsListView.getSelectionModel().getSelectedItem();
+            if (sel != null) {
+                sel.targetColumn.set(nv);
+                mappingsListView.refresh();
+                updateCurrentItemInTree();
+                refreshPreview();
+            }
+        });
+        targetNameCombo.valueProperty().addListener((o, ov, nv) -> {
+            if (updatingRight[0] || nv == null) return;
+            ForeignKeyMapping sel = mappingsListView.getSelectionModel().getSelectedItem();
+            if (sel != null) {
+                sel.targetColumn.set(nv);
+                mappingsListView.refresh();
+                updateCurrentItemInTree();
+                refreshPreview();
+            }
+        });
+
+        addColBtn.setOnAction(e -> {
+            String localCand = tableColNames.stream()
+                    .filter(cn -> vfk.mappings.stream().noneMatch(m -> m.localColumn.get().equals(cn)))
+                    .findFirst()
+                    .orElse(tableColNames.isEmpty() ? "col" : tableColNames.get(0));
+            ForeignKeyMapping newMapping = new ForeignKeyMapping(localCand, "id");
+            vfk.mappings.add(newMapping);
+            mappingsListView.getSelectionModel().select(newMapping);
+            rightColPropGrid.setVisible(true);
             updateCurrentItemInTree();
             refreshPreview();
         });
-        grid.add(targetField, 1, 1);
 
-        grid.add(createFormLabel("Local Column"), 0, 2);
-        TextField localField = new TextField(vfk.localColumn.get());
-        localField.textProperty().bindBidirectional(vfk.localColumn);
-        grid.add(localField, 1, 2);
+        remColBtn.setOnAction(e -> {
+            int selIdx = mappingsListView.getSelectionModel().getSelectedIndex();
+            if (selIdx >= 0 && selIdx < vfk.mappings.size()) {
+                vfk.mappings.remove(selIdx);
+                if (vfk.mappings.isEmpty()) {
+                    rightColPropGrid.setVisible(false);
+                }
+                updateCurrentItemInTree();
+                refreshPreview();
+            }
+        });
 
-        grid.add(createFormLabel("Referenced Column"), 0, 3);
-        TextField refField = new TextField(vfk.referencedColumn.get());
-        refField.textProperty().bindBidirectional(vfk.referencedColumn);
-        grid.add(refField, 1, 3);
+        upColBtn.setOnAction(e -> {
+            int selIdx = mappingsListView.getSelectionModel().getSelectedIndex();
+            if (selIdx > 0) {
+                ForeignKeyMapping item = vfk.mappings.remove(selIdx);
+                vfk.mappings.add(selIdx - 1, item);
+                mappingsListView.getSelectionModel().select(selIdx - 1);
+                updateCurrentItemInTree();
+                refreshPreview();
+            }
+        });
+
+        downColBtn.setOnAction(e -> {
+            int selIdx = mappingsListView.getSelectionModel().getSelectedIndex();
+            if (selIdx >= 0 && selIdx < vfk.mappings.size() - 1) {
+                ForeignKeyMapping item = vfk.mappings.remove(selIdx);
+                vfk.mappings.add(selIdx + 1, item);
+                mappingsListView.getSelectionModel().select(selIdx + 1);
+                updateCurrentItemInTree();
+                refreshPreview();
+            }
+        });
+
+        if (!vfk.mappings.isEmpty()) {
+            mappingsListView.getSelectionModel().select(0);
+            rightColPropGrid.setVisible(true);
+        } else {
+            rightColPropGrid.setVisible(false);
+            updateRightFromSelection.run();
+        }
+
+        HBox columnsSplitBox = new HBox(8, leftColsBox, rightColPropGrid);
+        HBox.setHgrow(rightColPropGrid, Priority.ALWAYS);
+
+        grid.add(colsLbl, 0, row);
+        grid.add(columnsSplitBox, 1, row++);
 
         ScrollPane scroll = new ScrollPane(grid);
         scroll.setFitToWidth(true);
@@ -2284,7 +2886,12 @@ public final class ModifyTableDialog {
         fkCategoryItem = new TreeItem<>(new ModifyNode(NodeType.CATEGORY_FOREIGN_KEYS, "foreign keys", String.valueOf(foreignKeys.size()), null));
         fkCategoryItem.setExpanded(true);
         for (ForeignKeyModel fk : foreignKeys) {
-            String sub = "(" + fk.localColumn.get() + " -> " + fk.targetTable.get() + "." + fk.referencedColumn.get() + ")";
+            String sub = "";
+            if (!fk.mappings.isEmpty()) {
+                sub = "(" + String.join(", ", fk.mappings.stream().map(m -> m.localColumn.get() + " -> " + fk.targetTable.get() + "." + m.targetColumn.get()).toList()) + ")";
+            } else if (!fk.localColumn.get().isBlank()) {
+                sub = "(" + fk.localColumn.get() + " -> " + fk.targetTable.get() + "." + fk.referencedColumn.get() + ")";
+            }
             TreeItem<ModifyNode> item = new TreeItem<>(new ModifyNode(NodeType.ITEM_FOREIGN_KEY, fk.name.get(), sub, fk));
             fkCategoryItem.getChildren().add(item);
         }
@@ -2304,7 +2911,8 @@ public final class ModifyTableDialog {
         chkCategoryItem = new TreeItem<>(new ModifyNode(NodeType.CATEGORY_CHECKS, "checks", String.valueOf(checks.size()), null));
         chkCategoryItem.setExpanded(true);
         for (CheckModel chk : checks) {
-            String sub = "(" + chk.expression.get() + ")";
+            String expr = chk.expression.get();
+            String sub = (expr != null && expr.length() > 22) ? "(" + expr.substring(0, 19) + "...)" : "(" + (expr != null ? expr : "") + ")";
             TreeItem<ModifyNode> item = new TreeItem<>(new ModifyNode(NodeType.ITEM_CHECK, chk.name.get(), sub, chk));
             chkCategoryItem.getChildren().add(item);
         }
@@ -2313,7 +2921,8 @@ public final class ModifyTableDialog {
         // Virtual Columns
         vcolCategoryItem = new TreeItem<>(new ModifyNode(NodeType.CATEGORY_VIRTUAL_COLUMNS, "virtual columns", String.valueOf(virtualColumns.size()), null));
         for (VirtualColumnModel vc : virtualColumns) {
-            TreeItem<ModifyNode> item = new TreeItem<>(new ModifyNode(NodeType.ITEM_VIRTUAL_COLUMN, vc.name.get(), vc.expression.get(), vc));
+            String sub = (vc.expression.get() == null || vc.expression.get().isBlank()) ? "unknown" : vc.expression.get();
+            TreeItem<ModifyNode> item = new TreeItem<>(new ModifyNode(NodeType.ITEM_VIRTUAL_COLUMN, vc.name.get(), sub, vc));
             vcolCategoryItem.getChildren().add(item);
         }
         rootTreeItem.getChildren().add(vcolCategoryItem);
@@ -2321,7 +2930,15 @@ public final class ModifyTableDialog {
         // Virtual Foreign Keys
         vfkCategoryItem = new TreeItem<>(new ModifyNode(NodeType.CATEGORY_VIRTUAL_FKS, "virtual foreign keys", String.valueOf(virtualForeignKeys.size()), null));
         for (VirtualForeignKeyModel vfk : virtualForeignKeys) {
-            String sub = "(" + vfk.localColumn.get() + " -> " + vfk.targetTable.get() + "." + vfk.referencedColumn.get() + ")";
+            String sub;
+            if (!vfk.mappings.isEmpty()) {
+                sub = "(" + String.join(", ", vfk.mappings.stream().map(m -> m.localColumn.get() + " -> " + vfk.targetTable.get() + "." + m.targetColumn.get()).toList()) + ")";
+            } else if (vfk.localColumn.get() != null && !vfk.localColumn.get().isBlank()
+                    && vfk.referencedColumn.get() != null && !vfk.referencedColumn.get().isBlank()) {
+                sub = "(" + vfk.localColumn.get() + " -> " + vfk.targetTable.get() + "." + vfk.referencedColumn.get() + ")";
+            } else {
+                sub = "";
+            }
             TreeItem<ModifyNode> item = new TreeItem<>(new ModifyNode(NodeType.ITEM_VIRTUAL_FK, vfk.name.get(), sub, vfk));
             vfkCategoryItem.getChildren().add(item);
         }
@@ -2352,22 +2969,45 @@ public final class ModifyTableDialog {
                 node.subtitle = c.type.get();
             } else if (node.item instanceof KeyModel k) {
                 node.title = k.name.get();
-                node.subtitle = "(" + String.join(", ", k.columns) + ")";
+                node.subtitle = k.columns.isEmpty() ? "" : "(" + String.join(", ", k.columns) + ")";
             } else if (node.item instanceof ForeignKeyModel fk) {
                 node.title = fk.name.get();
-                node.subtitle = "(" + fk.localColumn.get() + " -> " + fk.targetTable.get() + "." + fk.referencedColumn.get() + ")";
+                if (!fk.mappings.isEmpty()) {
+                    node.subtitle = "(" + String.join(", ", fk.mappings.stream().map(m -> m.localColumn.get() + " -> " + fk.targetTable.get() + "." + m.targetColumn.get()).toList()) + ")";
+                } else if (fk.localColumn.get() != null && !fk.localColumn.get().isBlank()
+                        && fk.referencedColumn.get() != null && !fk.referencedColumn.get().isBlank()) {
+                    node.subtitle = "(" + fk.localColumn.get() + " -> " + fk.targetTable.get() + "." + fk.referencedColumn.get() + ")";
+                } else {
+                    node.subtitle = "";
+                }
             } else if (node.item instanceof IndexModel idx) {
                 node.title = idx.name.get();
-                node.subtitle = "(" + String.join(", ", idx.columns) + ")" + (idx.unique.get() ? " UNIQUE" : "");
+                if (idx.columns.isEmpty()) {
+                    node.subtitle = "(???)";
+                } else {
+                    node.subtitle = "(" + String.join(", ", idx.columns) + ")" + (idx.unique.get() ? " UNIQUE" : "");
+                }
             } else if (node.item instanceof CheckModel chk) {
                 node.title = chk.name.get();
-                node.subtitle = "(" + chk.expression.get() + ")";
+                String expr = chk.expression.get();
+                if (expr == null || expr.isBlank()) {
+                    node.subtitle = "";
+                } else {
+                    node.subtitle = expr.length() > 22 ? "(" + expr.substring(0, 19) + "...)" : "(" + expr + ")";
+                }
             } else if (node.item instanceof VirtualColumnModel vc) {
                 node.title = vc.name.get();
-                node.subtitle = vc.expression.get();
+                node.subtitle = (vc.expression.get() == null || vc.expression.get().isBlank()) ? "unknown" : vc.expression.get();
             } else if (node.item instanceof VirtualForeignKeyModel vfk) {
                 node.title = vfk.name.get();
-                node.subtitle = "(" + vfk.localColumn.get() + " -> " + vfk.targetTable.get() + "." + vfk.referencedColumn.get() + ")";
+                if (!vfk.mappings.isEmpty()) {
+                    node.subtitle = "(" + String.join(", ", vfk.mappings.stream().map(m -> m.localColumn.get() + " -> " + vfk.targetTable.get() + "." + m.targetColumn.get()).toList()) + ")";
+                } else if (vfk.localColumn.get() != null && !vfk.localColumn.get().isBlank()
+                        && vfk.referencedColumn.get() != null && !vfk.referencedColumn.get().isBlank()) {
+                    node.subtitle = "(" + vfk.localColumn.get() + " -> " + vfk.targetTable.get() + "." + vfk.referencedColumn.get() + ")";
+                } else {
+                    node.subtitle = "";
+                }
             }
             treeView.refresh();
         }
@@ -2459,8 +3099,11 @@ public final class ModifyTableDialog {
     private void doDuplicateSelected() {
         TreeItem<ModifyNode> selected = treeView != null ? treeView.getSelectionModel().getSelectedItem() : null;
         if (selected == null || selected.getValue() == null) return;
+        doDuplicateNode(selected.getValue(), selected);
+    }
 
-        ModifyNode node = selected.getValue();
+    private void doDuplicateNode(ModifyNode node, TreeItem<ModifyNode> selected) {
+        if (node == null || node.item == null) return;
         if (node.item instanceof ColumnModel src) {
             String newName = generateDuplicateName(src.name.get());
             ColumnModel dup = new ColumnModel(null, newName, src.type.get(), src.nullable.get(),
@@ -2516,11 +3159,27 @@ public final class ModifyTableDialog {
             dup.onUpdate.set(src.onUpdate.get());
             dup.onDelete.set(src.onDelete.get());
             dup.comment.set(src.comment.get());
+            dup.deferrable.set(src.deferrable.get());
+            dup.initiallyDeferred.set(src.initiallyDeferred.get());
+            dup.definedWithPeriod.set(src.definedWithPeriod.get());
+            dup.notEnforced.set(src.notEnforced.get());
+            dup.notValidated.set(src.notValidated.get());
+            dup.matchType.set(src.matchType.get());
+            dup.mappings.clear();
+            for (ForeignKeyMapping m : src.mappings) {
+                dup.mappings.add(new ForeignKeyMapping(m.localColumn.get(), m.targetColumn.get()));
+            }
             int idx = foreignKeys.indexOf(src);
             if (idx >= 0 && idx < foreignKeys.size()) foreignKeys.add(idx + 1, dup); else foreignKeys.add(dup);
             if (fkCategoryItem != null) {
                 fkCategoryItem.getValue().subtitle = String.valueOf(foreignKeys.size());
-                TreeItem<ModifyNode> newItem = new TreeItem<>(new ModifyNode(NodeType.ITEM_FOREIGN_KEY, dup.name.get(), "(" + dup.localColumn.get() + " -> " + dup.targetTable.get() + "." + dup.referencedColumn.get() + ")", dup));
+                String sub = "";
+                if (!dup.mappings.isEmpty()) {
+                    sub = "(" + String.join(", ", dup.mappings.stream().map(m -> m.localColumn.get() + " -> " + dup.targetTable.get() + "." + m.targetColumn.get()).toList()) + ")";
+                } else {
+                    sub = "(" + dup.localColumn.get() + " -> " + dup.targetTable.get() + "." + dup.referencedColumn.get() + ")";
+                }
+                TreeItem<ModifyNode> newItem = new TreeItem<>(new ModifyNode(NodeType.ITEM_FOREIGN_KEY, dup.name.get(), sub, dup));
                 int treeIdx = fkCategoryItem.getChildren().indexOf(selected);
                 if (treeIdx >= 0) fkCategoryItem.getChildren().add(treeIdx + 1, newItem); else fkCategoryItem.getChildren().add(newItem);
                 if (treeView != null) treeView.getSelectionModel().select(newItem);
@@ -2543,13 +3202,61 @@ public final class ModifyTableDialog {
         } else if (node.item instanceof CheckModel src) {
             String newName = generateDuplicateName(src.name.get());
             CheckModel dup = new CheckModel(null, newName, src.expression.get(), true);
+            dup.noInherit.set(src.noInherit.get());
+            dup.notValidated.set(src.notValidated.get());
+            dup.deferrable.set(src.deferrable.get());
+            dup.initiallyDeferred.set(src.initiallyDeferred.get());
+            dup.notEnforced.set(src.notEnforced.get());
+            dup.comment.set(src.comment.get());
             int idx = checks.indexOf(src);
             if (idx >= 0 && idx < checks.size()) checks.add(idx + 1, dup); else checks.add(dup);
             if (chkCategoryItem != null) {
                 chkCategoryItem.getValue().subtitle = String.valueOf(checks.size());
-                TreeItem<ModifyNode> newItem = new TreeItem<>(new ModifyNode(NodeType.ITEM_CHECK, dup.name.get(), "(" + dup.expression.get() + ")", dup));
+                String expr = dup.expression.get();
+                String sub = (expr != null && expr.length() > 22) ? "(" + expr.substring(0, 19) + "...)" : "(" + (expr != null ? expr : "") + ")";
+                TreeItem<ModifyNode> newItem = new TreeItem<>(new ModifyNode(NodeType.ITEM_CHECK, dup.name.get(), sub, dup));
                 int treeIdx = chkCategoryItem.getChildren().indexOf(selected);
                 if (treeIdx >= 0) chkCategoryItem.getChildren().add(treeIdx + 1, newItem); else chkCategoryItem.getChildren().add(newItem);
+                if (treeView != null) treeView.getSelectionModel().select(newItem);
+            }
+            refreshPreview();
+        } else if (node.item instanceof VirtualColumnModel src) {
+            String newName = generateDuplicateName(src.name.get());
+            VirtualColumnModel dup = new VirtualColumnModel(null, newName, src.expression.get(), true);
+            int idx = virtualColumns.indexOf(src);
+            if (idx >= 0 && idx < virtualColumns.size()) virtualColumns.add(idx + 1, dup); else virtualColumns.add(dup);
+            if (vcolCategoryItem != null) {
+                vcolCategoryItem.getValue().subtitle = String.valueOf(virtualColumns.size());
+                String sub = (dup.expression.get() == null || dup.expression.get().isBlank()) ? "unknown" : dup.expression.get();
+                TreeItem<ModifyNode> newItem = new TreeItem<>(new ModifyNode(NodeType.ITEM_VIRTUAL_COLUMN, dup.name.get(), sub, dup));
+                int treeIdx = vcolCategoryItem.getChildren().indexOf(selected);
+                if (treeIdx >= 0) vcolCategoryItem.getChildren().add(treeIdx + 1, newItem); else vcolCategoryItem.getChildren().add(newItem);
+                if (treeView != null) treeView.getSelectionModel().select(newItem);
+            }
+            refreshPreview();
+        } else if (node.item instanceof VirtualForeignKeyModel src) {
+            String newName = generateDuplicateName(src.name.get());
+            VirtualForeignKeyModel dup = new VirtualForeignKeyModel(null, newName, src.targetTable.get(), src.localColumn.get(), src.referencedColumn.get(), true);
+            dup.mappings.clear();
+            for (ForeignKeyMapping m : src.mappings) {
+                dup.mappings.add(new ForeignKeyMapping(m.localColumn.get(), m.targetColumn.get()));
+            }
+            int idx = virtualForeignKeys.indexOf(src);
+            if (idx >= 0 && idx < virtualForeignKeys.size()) virtualForeignKeys.add(idx + 1, dup); else virtualForeignKeys.add(dup);
+            if (vfkCategoryItem != null) {
+                vfkCategoryItem.getValue().subtitle = String.valueOf(virtualForeignKeys.size());
+                String sub;
+                if (!dup.mappings.isEmpty()) {
+                    sub = "(" + String.join(", ", dup.mappings.stream().map(m -> m.localColumn.get() + " -> " + dup.targetTable.get() + "." + m.targetColumn.get()).toList()) + ")";
+                } else if (dup.localColumn.get() != null && !dup.localColumn.get().isBlank()
+                        && dup.referencedColumn.get() != null && !dup.referencedColumn.get().isBlank()) {
+                    sub = "(" + dup.localColumn.get() + " -> " + dup.targetTable.get() + "." + dup.referencedColumn.get() + ")";
+                } else {
+                    sub = "";
+                }
+                TreeItem<ModifyNode> newItem = new TreeItem<>(new ModifyNode(NodeType.ITEM_VIRTUAL_FK, dup.name.get(), sub, dup));
+                int treeIdx = vfkCategoryItem.getChildren().indexOf(selected);
+                if (treeIdx >= 0) vfkCategoryItem.getChildren().add(treeIdx + 1, newItem); else vfkCategoryItem.getChildren().add(newItem);
                 if (treeView != null) treeView.getSelectionModel().select(newItem);
             }
             refreshPreview();
@@ -2573,7 +3280,7 @@ public final class ModifyTableDialog {
         }
 
         String candidate = stem + "_" + nextNum;
-        while (isColumnNameExists(candidate)) {
+        while (isNameExistsAcrossAll(candidate)) {
             nextNum++;
             candidate = stem + "_" + nextNum;
         }
@@ -2581,7 +3288,18 @@ public final class ModifyTableDialog {
     }
 
     private boolean isColumnNameExists(String name) {
-        return columns.stream().anyMatch(c -> name.equalsIgnoreCase(c.name.get()));
+        return isNameExistsAcrossAll(name);
+    }
+
+    private boolean isNameExistsAcrossAll(String name) {
+        if (columns.stream().anyMatch(c -> name.equalsIgnoreCase(c.name.get()))) return true;
+        if (keys.stream().anyMatch(k -> name.equalsIgnoreCase(k.name.get()))) return true;
+        if (foreignKeys.stream().anyMatch(f -> name.equalsIgnoreCase(f.name.get()))) return true;
+        if (indexes.stream().anyMatch(i -> name.equalsIgnoreCase(i.name.get()))) return true;
+        if (checks.stream().anyMatch(c -> name.equalsIgnoreCase(c.name.get()))) return true;
+        if (virtualColumns.stream().anyMatch(v -> name.equalsIgnoreCase(v.name.get()))) return true;
+        if (virtualForeignKeys.stream().anyMatch(v -> name.equalsIgnoreCase(v.name.get()))) return true;
+        return false;
     }
 
     private void handleCancelWithWarning() {
@@ -2632,14 +3350,160 @@ public final class ModifyTableDialog {
         }
     }
 
+    public String generateNextKeyName(String type) {
+        String tbl = (tableMeta != null && tableMeta.name.get() != null && !tableMeta.name.get().isBlank())
+                ? tableMeta.name.get().toLowerCase()
+                : "table";
+        String suffix = (type != null && type.toUpperCase().contains("PRIMARY")) ? "_pkey" : "_pk";
+        String base = tbl + suffix;
+        boolean hasBase = keys.stream().anyMatch(k -> base.equalsIgnoreCase(k.name.get()));
+        if (!hasBase) {
+            return base;
+        }
+        int maxIndex = 1;
+        Pattern p = Pattern.compile("^" + Pattern.quote(base) + "_(\\d+)$", Pattern.CASE_INSENSITIVE);
+        for (KeyModel k : keys) {
+            Matcher m = p.matcher(k.name.get());
+            if (m.matches()) {
+                try {
+                    int idx = Integer.parseInt(m.group(1));
+                    if (idx > maxIndex) maxIndex = idx;
+                } catch (NumberFormatException ignored) {}
+            }
+        }
+        return base + "_" + (maxIndex + 1);
+    }
+
+    public String generateNextForeignKeyName(String targetTable) {
+        String srcTbl = (tableMeta != null && tableMeta.name.get() != null && !tableMeta.name.get().isBlank())
+                ? tableMeta.name.get().toLowerCase()
+                : "table";
+        String tgtTbl = (targetTable != null && !targetTable.isBlank()) ? targetTable.toLowerCase() : srcTbl;
+        if (tgtTbl.contains(".")) {
+            tgtTbl = tgtTbl.substring(tgtTbl.lastIndexOf('.') + 1);
+        }
+        String base = srcTbl + "_" + tgtTbl + "_fk";
+        boolean hasBase = foreignKeys.stream().anyMatch(f -> base.equalsIgnoreCase(f.name.get()));
+        if (!hasBase) {
+            return base;
+        }
+        int maxIndex = 1;
+        Pattern p = Pattern.compile("^" + Pattern.quote(base) + "_(\\d+)$", Pattern.CASE_INSENSITIVE);
+        for (ForeignKeyModel f : foreignKeys) {
+            Matcher m = p.matcher(f.name.get());
+            if (m.matches()) {
+                try {
+                    int idx = Integer.parseInt(m.group(1));
+                    if (idx > maxIndex) maxIndex = idx;
+                } catch (NumberFormatException ignored) {}
+            }
+        }
+        return base + "_" + (maxIndex + 1);
+    }
+
+    public String generateNextIndexName() {
+        String tbl = (tableMeta != null && tableMeta.name.get() != null && !tableMeta.name.get().isBlank())
+                ? tableMeta.name.get().toLowerCase()
+                : "table";
+        String base = tbl + "__index";
+        boolean hasBase = indexes.stream().anyMatch(i -> base.equalsIgnoreCase(i.name.get()));
+        if (!hasBase) {
+            return base;
+        }
+        int maxIndex = 1;
+        Pattern p = Pattern.compile("^" + Pattern.quote(base) + "_(\\d+)$", Pattern.CASE_INSENSITIVE);
+        for (IndexModel i : indexes) {
+            Matcher m = p.matcher(i.name.get());
+            if (m.matches()) {
+                try {
+                    int idx = Integer.parseInt(m.group(1));
+                    if (idx > maxIndex) maxIndex = idx;
+                } catch (NumberFormatException ignored) {}
+            }
+        }
+        return base + "_" + (maxIndex + 1);
+    }
+
+    public String generateNextCheckName() {
+        String base = "check_name";
+        boolean hasBase = checks.stream().anyMatch(c -> base.equalsIgnoreCase(c.name.get()));
+        if (!hasBase) {
+            return base;
+        }
+        int maxIndex = 1;
+        Pattern p = Pattern.compile("^" + Pattern.quote(base) + "_(\\d+)$", Pattern.CASE_INSENSITIVE);
+        for (CheckModel c : checks) {
+            Matcher m = p.matcher(c.name.get());
+            if (m.matches()) {
+                try {
+                    int idx = Integer.parseInt(m.group(1));
+                    if (idx > maxIndex) maxIndex = idx;
+                } catch (NumberFormatException ignored) {}
+            }
+        }
+        return base + "_" + (maxIndex + 1);
+    }
+
+    public String generateNextVirtualColumnName() {
+        String base = "virtual_column_name";
+        boolean hasBase = virtualColumns.stream().anyMatch(v -> base.equalsIgnoreCase(v.name.get()));
+        if (!hasBase) {
+            return base;
+        }
+        int maxIndex = 1;
+        Pattern p = Pattern.compile("^" + Pattern.quote(base) + "_(\\d+)$", Pattern.CASE_INSENSITIVE);
+        for (VirtualColumnModel v : virtualColumns) {
+            Matcher m = p.matcher(v.name.get());
+            if (m.matches()) {
+                try {
+                    int idx = Integer.parseInt(m.group(1));
+                    if (idx > maxIndex) maxIndex = idx;
+                } catch (NumberFormatException ignored) {}
+            }
+        }
+        return base + "_" + (maxIndex + 1);
+    }
+
+    public String generateNextVirtualForeignKeyName() {
+        String base = "virtual_foreign_key_name";
+        boolean hasBase = virtualForeignKeys.stream().anyMatch(v -> base.equalsIgnoreCase(v.name.get()));
+        if (!hasBase) {
+            return base;
+        }
+        int maxIndex = 1;
+        Pattern p = Pattern.compile("^" + Pattern.quote(base) + "_(\\d+)$", Pattern.CASE_INSENSITIVE);
+        for (VirtualForeignKeyModel v : virtualForeignKeys) {
+            Matcher m = p.matcher(v.name.get());
+            if (m.matches()) {
+                try {
+                    int idx = Integer.parseInt(m.group(1));
+                    if (idx > maxIndex) maxIndex = idx;
+                } catch (NumberFormatException ignored) {}
+            }
+        }
+        return base + "_" + (maxIndex + 1);
+    }
+
+    private static String formatTableRef(String tblRef) {
+        if (tblRef == null || tblRef.isBlank()) return "";
+        if (tblRef.contains(".")) {
+            String[] parts = tblRef.split("\\.");
+            List<String> quoted = new ArrayList<>();
+            for (String p : parts) {
+                quoted.add(DbObject.quote(p));
+            }
+            return String.join(".", quoted);
+        }
+        return DbObject.quote(tblRef);
+    }
+
     private void doAddKey(String type) {
-        String baseName = tableMeta.name.get() + "_" + type.toLowerCase().replace(" ", "_") + "_" + (keys.size() + 1);
-        List<String> defCols = columns.isEmpty() ? List.of() : List.of(columns.get(0).name.get());
-        KeyModel key = new KeyModel(null, baseName, type, defCols, true);
+        String baseName = generateNextKeyName(type);
+        KeyModel key = new KeyModel(null, baseName, type, List.of(), true);
         keys.add(key);
         if (keyCategoryItem != null && keyCategoryItem.getValue() != null) {
             keyCategoryItem.getValue().subtitle = String.valueOf(keys.size());
-            TreeItem<ModifyNode> item = new TreeItem<>(new ModifyNode(NodeType.ITEM_KEY, key.name.get(), "(" + String.join(", ", key.columns) + ")", key));
+            TreeItem<ModifyNode> item = new TreeItem<>(new ModifyNode(NodeType.ITEM_KEY, key.name.get(), "", key));
             keyCategoryItem.getChildren().add(item);
             keyCategoryItem.setExpanded(true);
             if (treeView != null) {
@@ -2650,14 +3514,21 @@ public final class ModifyTableDialog {
     }
 
     private void doAddForeignKey() {
-        String baseName = "fk_" + tableMeta.name.get() + "_" + (foreignKeys.size() + 1);
-        String firstCol = columns.isEmpty() ? "id" : columns.get(0).name.get();
-        String target = availableTables.isEmpty() ? "other_table" : availableTables.get(0);
-        ForeignKeyModel fk = new ForeignKeyModel(null, baseName, target, firstCol, "id", true);
+        String defaultTarget = (table != null && table.qualifiedName() != null && !table.qualifiedName().isBlank())
+                ? table.qualifiedName()
+                : (tableMeta != null && tableMeta.name.get() != null && !tableMeta.name.get().isBlank() ? tableMeta.name.get() : "target_table");
+        if (defaultTarget.isBlank()) {
+            defaultTarget = availableTables.isEmpty() ? "other_table" : availableTables.get(0);
+        }
+        if (!availableTables.contains(defaultTarget)) {
+            availableTables.add(0, defaultTarget);
+        }
+        String baseName = generateNextForeignKeyName(defaultTarget);
+        ForeignKeyModel fk = new ForeignKeyModel(null, baseName, defaultTarget, "", "", true);
         foreignKeys.add(fk);
         if (fkCategoryItem != null && fkCategoryItem.getValue() != null) {
             fkCategoryItem.getValue().subtitle = String.valueOf(foreignKeys.size());
-            TreeItem<ModifyNode> item = new TreeItem<>(new ModifyNode(NodeType.ITEM_FOREIGN_KEY, fk.name.get(), "(" + fk.localColumn.get() + " -> " + fk.targetTable.get() + ".id)", fk));
+            TreeItem<ModifyNode> item = new TreeItem<>(new ModifyNode(NodeType.ITEM_FOREIGN_KEY, fk.name.get(), "", fk));
             fkCategoryItem.getChildren().add(item);
             fkCategoryItem.setExpanded(true);
             if (treeView != null) {
@@ -2668,13 +3539,12 @@ public final class ModifyTableDialog {
     }
 
     private void doAddIndex() {
-        String baseName = "idx_" + tableMeta.name.get() + "_" + (indexes.size() + 1);
-        List<String> defCols = columns.isEmpty() ? List.of() : List.of(columns.get(0).name.get());
-        IndexModel idx = new IndexModel(null, baseName, false, "BTREE", defCols, true);
+        String baseName = generateNextIndexName();
+        IndexModel idx = new IndexModel(null, baseName, false, "btree", List.of(), true);
         indexes.add(idx);
         if (idxCategoryItem != null && idxCategoryItem.getValue() != null) {
             idxCategoryItem.getValue().subtitle = String.valueOf(indexes.size());
-            TreeItem<ModifyNode> item = new TreeItem<>(new ModifyNode(NodeType.ITEM_INDEX, idx.name.get(), "(" + String.join(", ", idx.columns) + ")", idx));
+            TreeItem<ModifyNode> item = new TreeItem<>(new ModifyNode(NodeType.ITEM_INDEX, idx.name.get(), "(???)", idx));
             idxCategoryItem.getChildren().add(item);
             idxCategoryItem.setExpanded(true);
             if (treeView != null) {
@@ -2685,12 +3555,12 @@ public final class ModifyTableDialog {
     }
 
     private void doAddCheck() {
-        String baseName = "chk_" + tableMeta.name.get() + "_" + (checks.size() + 1);
-        CheckModel chk = new CheckModel(null, baseName, "status >= 0", true);
+        String baseName = generateNextCheckName();
+        CheckModel chk = new CheckModel(null, baseName, "", true);
         checks.add(chk);
         if (chkCategoryItem != null && chkCategoryItem.getValue() != null) {
             chkCategoryItem.getValue().subtitle = String.valueOf(checks.size());
-            TreeItem<ModifyNode> item = new TreeItem<>(new ModifyNode(NodeType.ITEM_CHECK, chk.name.get(), "(" + chk.expression.get() + ")", chk));
+            TreeItem<ModifyNode> item = new TreeItem<>(new ModifyNode(NodeType.ITEM_CHECK, chk.name.get(), "", chk));
             chkCategoryItem.getChildren().add(item);
             chkCategoryItem.setExpanded(true);
             if (treeView != null) {
@@ -2701,12 +3571,12 @@ public final class ModifyTableDialog {
     }
 
     private void doAddVirtualColumn() {
-        String baseName = "vcol_" + (virtualColumns.size() + 1);
-        VirtualColumnModel vc = new VirtualColumnModel(baseName, "col1 || ' ' || col2", true);
+        String baseName = generateNextVirtualColumnName();
+        VirtualColumnModel vc = new VirtualColumnModel(null, baseName, "", true);
         virtualColumns.add(vc);
         if (vcolCategoryItem != null && vcolCategoryItem.getValue() != null) {
             vcolCategoryItem.getValue().subtitle = String.valueOf(virtualColumns.size());
-            TreeItem<ModifyNode> item = new TreeItem<>(new ModifyNode(NodeType.ITEM_VIRTUAL_COLUMN, vc.name.get(), vc.expression.get(), vc));
+            TreeItem<ModifyNode> item = new TreeItem<>(new ModifyNode(NodeType.ITEM_VIRTUAL_COLUMN, vc.name.get(), "unknown", vc));
             vcolCategoryItem.getChildren().add(item);
             vcolCategoryItem.setExpanded(true);
             if (treeView != null) {
@@ -2717,14 +3587,20 @@ public final class ModifyTableDialog {
     }
 
     private void doAddVirtualForeignKey() {
-        String baseName = "vfk_" + (virtualForeignKeys.size() + 1);
-        String firstCol = columns.isEmpty() ? "id" : columns.get(0).name.get();
-        String target = availableTables.isEmpty() ? "other_table" : availableTables.get(0);
-        VirtualForeignKeyModel vfk = new VirtualForeignKeyModel(baseName, target, firstCol, "id", true);
+        String baseName = generateNextVirtualForeignKeyName();
+        String defaultTarget = (table != null && table.getName() != null && !table.getName().isBlank())
+                ? table.getName()
+                : (tableMeta != null && tableMeta.name.get() != null && !tableMeta.name.get().isBlank()
+                        ? tableMeta.name.get()
+                        : (!availableTables.isEmpty() ? availableTables.get(0) : "target_table"));
+        if (defaultTarget.contains(".")) {
+            defaultTarget = defaultTarget.substring(defaultTarget.lastIndexOf('.') + 1);
+        }
+        VirtualForeignKeyModel vfk = new VirtualForeignKeyModel(null, baseName, defaultTarget, "", "", true);
         virtualForeignKeys.add(vfk);
         if (vfkCategoryItem != null && vfkCategoryItem.getValue() != null) {
             vfkCategoryItem.getValue().subtitle = String.valueOf(virtualForeignKeys.size());
-            TreeItem<ModifyNode> item = new TreeItem<>(new ModifyNode(NodeType.ITEM_VIRTUAL_FK, vfk.name.get(), "(" + vfk.localColumn.get() + " -> " + vfk.targetTable.get() + ".id)", vfk));
+            TreeItem<ModifyNode> item = new TreeItem<>(new ModifyNode(NodeType.ITEM_VIRTUAL_FK, vfk.name.get(), "", vfk));
             vfkCategoryItem.getChildren().add(item);
             vfkCategoryItem.setExpanded(true);
             if (treeView != null) {
@@ -3033,7 +3909,7 @@ public final class ModifyTableDialog {
         // 6. Keys (Primary Key & Unique Keys)
         for (KeyModel k : keys) {
             if (k.isNew) {
-                if (k.markedForDrop.get() || k.columns.isEmpty()) continue;
+                if (k.markedForDrop.get()) continue;
                 String cols = String.join(", ", k.columns.stream().map(DbObject::quote).toList());
                 StringBuilder ddl = new StringBuilder();
                 ddl.append("ALTER TABLE ").append(currentQualified).append(" ADD CONSTRAINT ")
@@ -3056,13 +3932,38 @@ public final class ModifyTableDialog {
         for (ForeignKeyModel fk : foreignKeys) {
             if (fk.isNew) {
                 if (fk.markedForDrop.get()) continue;
+                String localCols;
+                String refCols;
+                boolean hasCols;
+                if (!fk.mappings.isEmpty()) {
+                    localCols = String.join(", ", fk.mappings.stream().map(m -> DbObject.quote(m.localColumn.get())).toList());
+                    refCols = String.join(", ", fk.mappings.stream().map(m -> DbObject.quote(m.targetColumn.get())).toList());
+                    hasCols = true;
+                } else if (fk.localColumn.get() != null && !fk.localColumn.get().isBlank()
+                        && fk.referencedColumn.get() != null && !fk.referencedColumn.get().isBlank()) {
+                    localCols = DbObject.quote(fk.localColumn.get());
+                    refCols = DbObject.quote(fk.referencedColumn.get());
+                    hasCols = true;
+                } else {
+                    localCols = "";
+                    refCols = "";
+                    hasCols = false;
+                }
                 StringBuilder ddl = new StringBuilder();
                 ddl.append("ALTER TABLE ").append(currentQualified).append(" ADD CONSTRAINT ")
-                        .append(DbObject.quote(fk.name.get())).append(" FOREIGN KEY (").append(DbObject.quote(fk.localColumn.get())).append(") ")
-                        .append("REFERENCES ").append(DbObject.quote(fk.targetTable.get())).append(" (").append(DbObject.quote(fk.referencedColumn.get())).append(") ")
-                        .append("ON UPDATE ").append(fk.onUpdate.get()).append(" ON DELETE ").append(fk.onDelete.get());
+                        .append(DbObject.quote(fk.name.get())).append(" FOREIGN KEY (").append(localCols).append(") ")
+                        .append("REFERENCES ").append(formatTableRef(fk.targetTable.get())).append(" (").append(refCols).append(")");
+                if (hasCols) {
+                    if (fk.matchType.get() != null && !fk.matchType.get().isBlank() && !"SIMPLE".equalsIgnoreCase(fk.matchType.get())) {
+                        ddl.append(" MATCH ").append(fk.matchType.get().toUpperCase());
+                    }
+                    ddl.append(" ON UPDATE ").append(formatActionSql(fk.onUpdate.get())).append(" ON DELETE ").append(formatActionSql(fk.onDelete.get()));
+                }
                 if (fk.deferrable.get()) {
                     ddl.append(fk.initiallyDeferred.get() ? " DEFERRABLE INITIALLY DEFERRED" : " DEFERRABLE INITIALLY IMMEDIATE");
+                }
+                if (fk.notEnforced.get()) {
+                    ddl.append(" NOT ENFORCED");
                 }
                 ddl.append(";");
                 stmts.add(ddl.toString());
@@ -3075,7 +3976,7 @@ public final class ModifyTableDialog {
         // 8. Indexes
         for (IndexModel idx : indexes) {
             if (idx.isNew) {
-                if (idx.markedForDrop.get() || idx.columns.isEmpty()) continue;
+                if (idx.markedForDrop.get()) continue;
                 List<String> colDefs = new ArrayList<>();
                 for (String c : idx.columns) {
                     String colDef = DbObject.quote(c);
@@ -3090,9 +3991,12 @@ public final class ModifyTableDialog {
                 String inclClause = idx.includeColumns.get() != null && !idx.includeColumns.get().isBlank() ? " INCLUDE (" + idx.includeColumns.get() + ")" : "";
                 String whereClause = idx.predicate.get().isBlank() ? "" : " WHERE " + idx.predicate.get();
                 String tsClause = (idx.tablespace.get() == null || idx.tablespace.get().isBlank() || "<default>".equals(idx.tablespace.get())) ? "" : " TABLESPACE " + idx.tablespace.get();
+                String methodClause = (isPostgres && idx.method.get() != null && !idx.method.get().isBlank())
+                        ? " USING " + idx.method.get()
+                        : "";
                 stmts.add("CREATE " + (idx.unique.get() ? "UNIQUE " : "") + "INDEX "
                         + DbObject.quote(idx.name.get()) + " ON " + currentQualified
-                        + (isPostgres ? " USING " + idx.method.get() : "")
+                        + methodClause
                         + " (" + cols + ")" + nullsClause + inclClause + whereClause + tsClause + ";");
             } else if (idx.markedForDrop.get()) {
                 stmts.add(isPostgres
@@ -3104,10 +4008,11 @@ public final class ModifyTableDialog {
         // 9. Checks
         for (CheckModel chk : checks) {
             if (chk.isNew) {
-                if (chk.markedForDrop.get() || chk.expression.get().isBlank()) continue;
+                if (chk.markedForDrop.get()) continue;
+                String expr = chk.expression.get() != null ? chk.expression.get() : "";
                 StringBuilder ddl = new StringBuilder();
                 ddl.append("ALTER TABLE ").append(currentQualified).append(" ADD CONSTRAINT ")
-                        .append(DbObject.quote(chk.name.get())).append(" CHECK (").append(chk.expression.get()).append(")");
+                        .append(DbObject.quote(chk.name.get())).append(" CHECK (").append(expr).append(")");
                 if (chk.noInherit.get()) ddl.append(" NO INHERIT");
                 if (chk.notValidated.get()) ddl.append(" NOT VALID");
                 if (chk.deferrable.get()) {
@@ -3158,17 +4063,30 @@ public final class ModifyTableDialog {
         if (sql == null || sql.isBlank()) return "";
         String trimmed = sql.trim();
 
-        // 1. alter table <target> add constraint <def>; -> alter table <target>\n    add constraint <def>;
-        Pattern pAddConstraint = Pattern.compile("(?i)^ALTER\\s+TABLE\\s+(\\S+)\\s+ADD\\s+CONSTRAINT\\s+(.*);?$");
+        // 1. alter table <target> add constraint <name> <spec>; -> alter table <target>\n    add constraint <name>\n        <spec>;
+        Pattern pAddConstraint = Pattern.compile("(?i)^ALTER\\s+TABLE\\s+(\\S+)\\s+ADD\\s+CONSTRAINT\\s+(\\S+)\\s+(.*);?$");
         Matcher mConstraint = pAddConstraint.matcher(trimmed);
         if (mConstraint.matches()) {
             String tableRef = mConstraint.group(1);
-            String rest = mConstraint.group(2).trim();
+            String cName = mConstraint.group(2);
+            String rest = mConstraint.group(3).trim();
             if (rest.endsWith(";")) rest = rest.substring(0, rest.length() - 1);
-            return "alter table " + tableRef + "\n    add constraint " + rest + ";";
+            return "alter table " + tableRef + "\n    add constraint " + cName + "\n        " + formatConstraintBody(rest) + ";";
         }
 
-        // 2. alter table <target> drop constraint <def>; -> alter table <target>\n    drop constraint <def>;
+        // 2. create [unique] index <name> on <target> ...; -> create [unique] index <name>\n    on <target> ...;
+        Pattern pCreateIndex = Pattern.compile("(?i)^CREATE\\s+(UNIQUE\\s+)?INDEX\\s+(\\S+)\\s+ON\\s+(\\S+)(?:\\s+USING\\s+BTREE)?\\s*(.*);?$");
+        Matcher mIndex = pCreateIndex.matcher(trimmed);
+        if (mIndex.matches()) {
+            String unique = mIndex.group(1) != null ? "unique " : "";
+            String idxName = mIndex.group(2);
+            String tableRef = mIndex.group(3);
+            String rest = mIndex.group(4) != null ? mIndex.group(4).trim() : "";
+            if (rest.endsWith(";")) rest = rest.substring(0, rest.length() - 1);
+            return "create " + unique + "index " + idxName + "\n    on " + tableRef + (rest.isEmpty() ? "" : " " + rest) + ";";
+        }
+
+        // 3. alter table <target> drop constraint <def>; -> alter table <target>\n    drop constraint <def>;
         Pattern pDropConstraint = Pattern.compile("(?i)^ALTER\\s+TABLE\\s+(\\S+)\\s+DROP\\s+CONSTRAINT\\s+(.*);?$");
         Matcher mDropC = pDropConstraint.matcher(trimmed);
         if (mDropC.matches()) {
@@ -3178,7 +4096,7 @@ public final class ModifyTableDialog {
             return "alter table " + tableRef + "\n    drop constraint " + rest + ";";
         }
 
-        // 3. alter table <target> add column <def>; -> alter table <target>\n    add <def>;
+        // 4. alter table <target> add column <def>; -> alter table <target>\n    add <def>;
         Pattern pAddCol = Pattern.compile("(?i)^ALTER\\s+TABLE\\s+(\\S+)\\s+ADD(?:\\s+COLUMN)?\\s+(?!CONSTRAINT\\b)(.*);?$");
         Matcher mAdd = pAddCol.matcher(trimmed);
         if (mAdd.matches()) {
@@ -3188,7 +4106,7 @@ public final class ModifyTableDialog {
             return "alter table " + tableRef + "\n    add " + colDef + ";";
         }
 
-        // 4. alter table <target> drop column <def>; -> alter table <target>\n    drop column <def>;
+        // 5. alter table <target> drop column <def>; -> alter table <target>\n    drop column <def>;
         Pattern pDropCol = Pattern.compile("(?i)^ALTER\\s+TABLE\\s+(\\S+)\\s+DROP(?:\\s+COLUMN)?\\s+(?!CONSTRAINT\\b)(.*);?$");
         Matcher mDrop = pDropCol.matcher(trimmed);
         if (mDrop.matches()) {
@@ -3198,7 +4116,7 @@ public final class ModifyTableDialog {
             return "alter table " + tableRef + "\n    drop column " + colName + ";";
         }
 
-        // 5. alter table <target> alter column <def>; -> alter table <target>\n    alter column <def>;
+        // 6. alter table <target> alter column <def>; -> alter table <target>\n    alter column <def>;
         Pattern pAlterCol = Pattern.compile("(?i)^ALTER\\s+TABLE\\s+(\\S+)\\s+ALTER(?:\\s+COLUMN)?\\s+(.*);?$");
         Matcher mAlter = pAlterCol.matcher(trimmed);
         if (mAlter.matches()) {
@@ -3208,7 +4126,7 @@ public final class ModifyTableDialog {
             return "alter table " + tableRef + "\n    alter column " + rest + ";";
         }
 
-        // 6. alter table <target> rename column <old> to <new>; -> alter table <target>\n    rename column <old> to <new>;
+        // 7. alter table <target> rename column <old> to <new>; -> alter table <target>\n    rename column <old> to <new>;
         Pattern pRenameCol = Pattern.compile("(?i)^ALTER\\s+TABLE\\s+(\\S+)\\s+RENAME(?:\\s+COLUMN)?\\s+(.*);?$");
         Matcher mRename = pRenameCol.matcher(trimmed);
         if (mRename.matches()) {
@@ -3218,7 +4136,7 @@ public final class ModifyTableDialog {
             return "alter table " + tableRef + "\n    rename column " + rest + ";";
         }
 
-        // 7. alter table <target> rename to <new>; -> alter table <target>\n    rename to <new>;
+        // 8. alter table <target> rename to <new>; -> alter table <target>\n    rename to <new>;
         Pattern pRenameTbl = Pattern.compile("(?i)^ALTER\\s+TABLE\\s+(\\S+)\\s+RENAME\\s+TO\\s+(.*);?$");
         Matcher mRenameTbl = pRenameTbl.matcher(trimmed);
         if (mRenameTbl.matches()) {
@@ -3229,6 +4147,18 @@ public final class ModifyTableDialog {
         }
 
         return trimmed;
+    }
+
+    private static String formatConstraintBody(String body) {
+        if (body == null || body.isBlank()) return "";
+        String res = body.trim();
+        String[] keywords = {"FOREIGN KEY", "REFERENCES", "PRIMARY KEY", "UNIQUE", "CHECK",
+                "ON UPDATE", "ON DELETE", "CASCADE", "SET NULL", "SET DEFAULT", "RESTRICT", "NO ACTION",
+                "DEFERRABLE", "INITIALLY DEFERRED", "INITIALLY IMMEDIATE", "NOT ENFORCED", "NO INHERIT", "NOT VALID", "MATCH"};
+        for (String kw : keywords) {
+            res = res.replaceAll("(?i)\\b" + kw.replace(" ", "\\s+") + "\\b", kw.toLowerCase());
+        }
+        return res;
     }
 
     // =========================================================================
@@ -3334,9 +4264,48 @@ public final class ModifyTableDialog {
     public void cancelWithWarning() { handleCancelWithWarning(); }
     public String generateDuplicateNameForTesting(String baseName) { return generateDuplicateName(baseName); }
     public String generateNextColumnNameForTesting() { return generateNextColumnName(); }
+    public String generateNextKeyNameForTesting(String type) { return generateNextKeyName(type); }
+    public String generateNextForeignKeyNameForTesting(String target) { return generateNextForeignKeyName(target); }
+    public String generateNextIndexNameForTesting() { return generateNextIndexName(); }
+    public String generateNextCheckNameForTesting() { return generateNextCheckName(); }
+    public String generateNextVirtualColumnNameForTesting() { return generateNextVirtualColumnName(); }
+    public String generateNextVirtualForeignKeyNameForTesting() { return generateNextVirtualForeignKeyName(); }
     public void selectKeyInTreeForTesting(KeyModel target) { selectKeyInTree(target); }
     public void selectIndexInTreeForTesting(IndexModel target) { selectIndexInTree(target); }
     public void selectCheckInTreeForTesting(CheckModel target) { selectCheckInTree(target); }
     public void selectForeignKeyInTreeForTesting(ForeignKeyModel target) { selectForeignKeyInTree(target); }
     public void selectColumnInTreeForTesting(ColumnModel target) { selectColumnInTree(target); }
+    public void selectVirtualColumnInTreeForTesting(VirtualColumnModel target) { selectVirtualColumnInTree(target); }
+    public void selectVirtualForeignKeyInTreeForTesting(VirtualForeignKeyModel target) { selectVirtualForeignKeyInTree(target); }
+    public void updateCurrentItemInTreeForTesting() { updateCurrentItemInTree(); }
+
+    public void duplicateItemForTesting(Object item) {
+        TreeItem<ModifyNode> treeItem = findTreeItemForTesting(item);
+        if (treeItem != null && treeItem.getValue() != null) {
+            doDuplicateNode(treeItem.getValue(), treeItem);
+        } else if (item != null) {
+            doDuplicateNode(new ModifyNode(NodeType.ITEM_COLUMN, "", "", item), null);
+        }
+    }
+
+    private TreeItem<ModifyNode> findTreeItemForTesting(Object item) {
+        if (item == null) return null;
+        List<TreeItem<ModifyNode>> categories = new ArrayList<>();
+        if (colCategoryItem != null) categories.add(colCategoryItem);
+        if (keyCategoryItem != null) categories.add(keyCategoryItem);
+        if (fkCategoryItem != null) categories.add(fkCategoryItem);
+        if (idxCategoryItem != null) categories.add(idxCategoryItem);
+        if (chkCategoryItem != null) categories.add(chkCategoryItem);
+        if (vcolCategoryItem != null) categories.add(vcolCategoryItem);
+        if (vfkCategoryItem != null) categories.add(vfkCategoryItem);
+
+        for (TreeItem<ModifyNode> cat : categories) {
+            for (TreeItem<ModifyNode> child : cat.getChildren()) {
+                if (child.getValue() != null && child.getValue().item == item) {
+                    return child;
+                }
+            }
+        }
+        return null;
+    }
 }
