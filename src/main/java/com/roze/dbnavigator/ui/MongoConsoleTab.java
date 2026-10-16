@@ -126,6 +126,24 @@ public class MongoConsoleTab extends Tab {
                 + "// Example: use " + (initialDatabase != null ? initialDatabase : "mydb") + ";\n"
                 + "// db.collection.insertOne({ name: \"Ada\", age: 30 });\n\n");
         editor.moveTo(0);
+        editor.selectedTextProperty().addListener((obs, oldSel, newSel) -> {
+            MainWindow mw = MainWindow.getInstance();
+            if (mw != null) {
+                com.roze.dbnavigator.ui.action.ActionManager.getInstance().updateActions(mw);
+            }
+        });
+        editor.undoAvailableProperty().addListener((obs, oldVal, newVal) -> {
+            MainWindow mw = MainWindow.getInstance();
+            if (mw != null) {
+                com.roze.dbnavigator.ui.action.ActionManager.getInstance().updateActions(mw);
+            }
+        });
+        editor.redoAvailableProperty().addListener((obs, oldVal, newVal) -> {
+            MainWindow mw = MainWindow.getInstance();
+            if (mw != null) {
+                com.roze.dbnavigator.ui.action.ActionManager.getInstance().updateActions(mw);
+            }
+        });
         VirtualizedScrollPane<CodeArea> editorScroll = new VirtualizedScrollPane<>(editor);
 
         Button runButton = new Button("Run");

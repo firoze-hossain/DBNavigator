@@ -221,6 +221,18 @@ public class MainWindow {
                 schemaPane.saveTreeState();
             }
         });
+        stage.sceneProperty().addListener((obs, oldScene, newScene) -> {
+            if (newScene != null) {
+                newScene.focusOwnerProperty().addListener((fObs, fOld, fNew) -> {
+                    actionManager.updateActions(this);
+                });
+            }
+        });
+        if (stage.getScene() != null) {
+            stage.getScene().focusOwnerProperty().addListener((fObs, fOld, fNew) -> {
+                actionManager.updateActions(this);
+            });
+        }
         updateWindowTitle();
     }
 
@@ -1348,6 +1360,102 @@ public class MainWindow {
     public boolean hasActiveConsole() {
         Tab t = currentSelectedTab();
         return t instanceof QueryTab || t instanceof MongoConsoleTab;
+    }
+
+    public boolean canUndo() {
+        CodeArea editor = getActiveCodeArea();
+        return editor != null && editor.isUndoAvailable();
+    }
+
+    public boolean canRedo() {
+        CodeArea editor = getActiveCodeArea();
+        return editor != null && editor.isRedoAvailable();
+    }
+
+    public boolean hasEditorSelection() {
+        CodeArea editor = getActiveCodeArea();
+        return editor != null && editor.getSelection().getLength() > 0;
+    }
+
+    public void insertSqlSnippet(String snippet) {
+        CodeArea editor = getActiveCodeArea();
+        if (editor != null && snippet != null && !snippet.isBlank()) {
+            int pos = editor.getCaretPosition();
+            editor.insertText(pos, snippet);
+            editor.moveTo(pos + snippet.length());
+            editor.requestFollowCaret();
+            editor.requestFocus();
+        }
+    }
+
+    public void showPasteFromHistoryDialog() {
+        Clipboard clipboard = Clipboard.getSystemClipboard();
+        String text = clipboard.hasString() ? clipboard.getString() : "";
+        if (text == null || text.isBlank()) {
+            setStatus("Clipboard history is empty");
+            return;
+        }
+        TextInputDialog dialog = (TextInputDialog) DialogTheme.apply(new TextInputDialog(text));
+        dialog.initOwner(stage);
+        dialog.setTitle("Paste from History");
+        dialog.setHeaderText("Choose or edit snippet to paste into active console:");
+        dialog.setContentText("Content:");
+        dialog.showAndWait().ifPresent(chosen -> {
+            CodeArea editor = getActiveCodeArea();
+            if (editor != null) {
+                editor.replaceSelection(chosen);
+            }
+        });
+    }
+
+    public void pasteAsPlainTextCurrentEditor() {
+        Clipboard clipboard = Clipboard.getSystemClipboard();
+        if (clipboard.hasString()) {
+            String str = clipboard.getString();
+            CodeArea editor = getActiveCodeArea();
+            if (editor != null && str != null) {
+                editor.replaceSelection(str);
+            }
+        }
+    }
+
+    public void generateDdlSnippet(String objectType) {
+        String snippet = switch (objectType.toLowerCase().trim()) {
+            case "table" -> "CREATE TABLE table_name (\n    id INT PRIMARY KEY AUTO_INCREMENT,\n    name VARCHAR(255) NOT NULL\n);";
+            case "view" -> "CREATE VIEW view_name AS\nSELECT * FROM table_name;";
+            case "materialized view", "materialized_view" -> "CREATE MATERIALIZED VIEW mview_name AS\nSELECT * FROM table_name;";
+            case "index" -> "CREATE INDEX idx_name ON table_name (column_name);";
+            case "unique key", "unique_key" -> "ALTER TABLE table_name ADD CONSTRAINT uq_name UNIQUE (column_name);";
+            case "primary key", "primary_key" -> "ALTER TABLE table_name ADD CONSTRAINT pk_name PRIMARY KEY (id);";
+            case "foreign key", "foreign_key" -> "ALTER TABLE table_name ADD CONSTRAINT fk_name FOREIGN KEY (ref_id) REFERENCES other_table(id);";
+            case "check constraint", "check_constraint" -> "ALTER TABLE table_name ADD CONSTRAINT chk_name CHECK (column_name > 0);";
+            case "column" -> "ALTER TABLE table_name ADD COLUMN new_column VARCHAR(255);";
+            case "trigger" -> "CREATE TRIGGER trg_name\nBEFORE INSERT ON table_name\nFOR EACH ROW\nBEGIN\n    -- trigger body\nEND;";
+            case "procedure" -> "CREATE PROCEDURE proc_name(IN param1 INT)\nBEGIN\n    -- procedure body\nEND;";
+            case "function" -> "CREATE FUNCTION func_name(param1 INT) RETURNS INT\nBEGIN\n    RETURN param1;\nEND;";
+            case "package" -> "CREATE OR REPLACE PACKAGE pkg_name AS\n    -- package specification\nEND pkg_name;";
+            case "sequence" -> "CREATE SEQUENCE seq_name START WITH 1 INCREMENT BY 1;";
+            case "synonym" -> "CREATE SYNONYM syn_name FOR schema_name.table_name;";
+            case "type" -> "CREATE TYPE type_name AS ENUM ('VAL1', 'VAL2');";
+            case "rule" -> "CREATE RULE rule_name AS ON INSERT TO table_name DO INSTEAD NOTHING;";
+            case "domain" -> "CREATE DOMAIN domain_name AS VARCHAR(50) NOT NULL;";
+            case "user mapping", "user_mapping" -> "CREATE USER MAPPING FOR current_user SERVER server_name OPTIONS (user 'foreign_user');";
+            case "server" -> "CREATE SERVER foreign_server FOREIGN DATA WRAPPER fdw_name OPTIONS (host '127.0.0.1', port '5432');";
+            case "foreign data wrapper", "foreign_data_wrapper", "fdw" -> "CREATE FOREIGN DATA WRAPPER fdw_name HANDLER fdw_handler;";
+            case "event" -> "CREATE EVENT evt_name ON SCHEDULE EVERY 1 DAY DO\nBEGIN\n    -- event body\nEND;";
+            case "aggregate" -> "CREATE AGGREGATE agg_name (sfunc = sfunc_name, stype = stype_name);";
+            case "extension" -> "CREATE EXTENSION IF NOT EXISTS extension_name;";
+            case "operator" -> "CREATE OPERATOR === (\n    FUNCTION = op_function,\n    LEFTARG = int, RIGHTARG = int\n);";
+            case "cast" -> "CREATE CAST (source_type AS target_type) WITH FUNCTION cast_func(source_type);";
+            case "collation" -> "CREATE COLLATION col_name (provider = icu, locale = 'en_US');";
+            case "conversion" -> "CREATE CONVERSION conv_name FOR 'UTF8' TO 'LATIN1' FROM conv_func;";
+            case "language" -> "CREATE PROCEDURAL LANGUAGE lang_name HANDLER handler_func;";
+            case "policy" -> "CREATE POLICY policy_name ON table_name FOR ALL USING (user_id = current_user_id());";
+            case "database link", "database_link" -> "CREATE DATABASE LINK dblink_name CONNECT TO remote_user IDENTIFIED BY 'password' USING 'remote_db';";
+            default -> "-- " + objectType + "\n";
+        };
+        insertSqlSnippet("\n" + snippet + "\n");
+        setStatus("Generated DDL for " + objectType);
     }
 
     public boolean hasActiveQueryTab() {

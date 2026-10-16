@@ -24,21 +24,67 @@ public class ActionGroup extends AnAction {
 
     private final List<AnAction> children = new ArrayList<>();
     private final boolean popup;
+    private java.util.function.Predicate<MainWindow> groupEnabledPredicate;
+    private java.util.function.Predicate<MainWindow> groupVisiblePredicate;
 
-    public ActionGroup(String id, String text, boolean popup, org.kordamp.ikonli.fontawesome5.FontAwesomeSolid icon, String iconColor, int iconSize, String description) {
+    public ActionGroup(String id, String text, boolean popup, org.kordamp.ikonli.fontawesome5.FontAwesomeSolid icon, String iconColor, int iconSize, String description, java.util.function.Predicate<MainWindow> enabledPredicate) {
         super(AnAction.builder(id, text)
                 .icon(icon, iconColor, iconSize)
                 .description(description)
+                .enabledWhen(enabledPredicate)
                 .onAction(ctx -> {}));
         this.popup = popup;
+        this.groupEnabledPredicate = enabledPredicate;
+    }
+
+    public ActionGroup(String id, String text, boolean popup, org.kordamp.ikonli.fontawesome5.FontAwesomeSolid icon, String iconColor, int iconSize, String description) {
+        this(id, text, popup, icon, iconColor, iconSize, description, null);
+    }
+
+    public ActionGroup(String id, String text, boolean popup, java.util.function.Predicate<MainWindow> enabledPredicate) {
+        this(id, text, popup, null, null, 12, null, enabledPredicate);
     }
 
     public ActionGroup(String id, String text, boolean popup) {
-        this(id, text, popup, null, null, 12, null);
+        this(id, text, popup, null, null, 12, null, null);
     }
 
     public ActionGroup(String id, String text) {
-        this(id, text, false, null, null, 12, null);
+        this(id, text, false, null, null, 12, null, null);
+    }
+
+    public ActionGroup enabledWhen(java.util.function.Predicate<MainWindow> predicate) {
+        this.groupEnabledPredicate = predicate;
+        return this;
+    }
+
+    public ActionGroup visibleWhen(java.util.function.Predicate<MainWindow> predicate) {
+        this.groupVisiblePredicate = predicate;
+        return this;
+    }
+
+    @Override
+    public boolean isEnabled(MainWindow ctx) {
+        if (groupEnabledPredicate != null) {
+            try {
+                return groupEnabledPredicate.test(ctx);
+            } catch (Exception e) {
+                return false;
+            }
+        }
+        return super.isEnabled(ctx);
+    }
+
+    @Override
+    public boolean isVisible(MainWindow ctx) {
+        if (groupVisiblePredicate != null) {
+            try {
+                return groupVisiblePredicate.test(ctx);
+            } catch (Exception e) {
+                return false;
+            }
+        }
+        return super.isVisible(ctx);
     }
 
     public boolean isPopup() { return popup; }

@@ -26,6 +26,7 @@ public class AnAction {
     private final KeyCombination accelerator;
     private final Consumer<MainWindow> actionHandler;
     private final Predicate<MainWindow> enabledPredicate;
+    private final Predicate<MainWindow> visiblePredicate;
 
     public AnAction(Builder builder) {
         this.id = builder.id;
@@ -37,6 +38,7 @@ public class AnAction {
         this.accelerator = builder.accelerator;
         this.actionHandler = builder.actionHandler;
         this.enabledPredicate = builder.enabledPredicate;
+        this.visiblePredicate = builder.visiblePredicate;
     }
 
     public String getId() { return id; }
@@ -52,7 +54,16 @@ public class AnAction {
         try {
             return enabledPredicate.test(ctx);
         } catch (Exception e) {
-            return true;
+            return false;
+        }
+    }
+
+    public boolean isVisible(MainWindow ctx) {
+        if (visiblePredicate == null) return true;
+        try {
+            return visiblePredicate.test(ctx);
+        } catch (Exception e) {
+            return false;
         }
     }
 
@@ -73,6 +84,7 @@ public class AnAction {
         }
         item.setOnAction(e -> perform(ctx));
         item.setDisable(!isEnabled(ctx));
+        item.setVisible(isVisible(ctx));
         return item;
     }
 
@@ -113,6 +125,7 @@ public class AnAction {
         private KeyCombination accelerator;
         private Consumer<MainWindow> actionHandler;
         private Predicate<MainWindow> enabledPredicate;
+        private Predicate<MainWindow> visiblePredicate;
 
         public Builder(String id, String text) {
             this.id = id;
@@ -153,6 +166,11 @@ public class AnAction {
 
         public Builder enabledWhen(Predicate<MainWindow> predicate) {
             this.enabledPredicate = predicate;
+            return this;
+        }
+
+        public Builder visibleWhen(Predicate<MainWindow> predicate) {
+            this.visiblePredicate = predicate;
             return this;
         }
 

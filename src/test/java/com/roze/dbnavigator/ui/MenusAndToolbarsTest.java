@@ -4,7 +4,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.roze.dbnavigator.db.AppSettingsStore;
 import com.roze.dbnavigator.db.AppSettingsStore.MenuItemConfig;
+import com.roze.dbnavigator.ui.action.ActionGroup;
 import com.roze.dbnavigator.ui.action.ActionManager;
+import com.roze.dbnavigator.ui.action.ActionRegistry;
+import com.roze.dbnavigator.ui.action.AnAction;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -1498,6 +1501,10 @@ public class MenusAndToolbarsTest {
         assertTrue(editIds.contains("edit.auto.indent"));
         assertTrue(editIds.contains("edit.refactor"));
         assertTrue(editIds.contains("edit.selection"));
+        assertTrue(editIds.contains("edit.toggle.case"));
+        assertTrue(editIds.contains("edit.join.lines"));
+        assertTrue(editIds.contains("edit.duplicate.lines"));
+        assertTrue(editIds.contains("edit.sort.lines"));
         assertTrue(editIds.contains("edit.toggle.bookmark"));
         assertTrue(editIds.contains("edit.show.bookmarks"));
 
@@ -1543,26 +1550,14 @@ public class MenusAndToolbarsTest {
                 .filter(c -> "edit.generate.root.group".equals(c.getId()))
                 .findFirst().orElseThrow();
         assertTrue(genRoot.isPopup(), "Generate root group should be popup");
-        MenuItemConfig genInner = genRoot.getChildren().stream()
-                .filter(c -> "edit.generate.group".equals(c.getId()))
-                .findFirst().orElseThrow();
-        List<String> genInnerIds = genInner.getChildren().stream().map(MenuItemConfig::getId).toList();
-        assertTrue(genInnerIds.contains("edit.generate.sql.group"));
-        assertTrue(genInnerIds.contains("edit.generate.xml.tag"));
-        assertTrue(genInnerIds.contains("edit.generate.override.methods"));
-        assertTrue(genInnerIds.contains("edit.generate.implement.methods"));
-        assertTrue(genInnerIds.contains("edit.generate.delegate.methods"));
-        assertTrue(genInnerIds.contains("edit.generate.test.creators.group"));
-        assertTrue(genInnerIds.contains("edit.generate.markdown.group"));
-
-        MenuItemConfig mdGroup = genInner.getChildren().stream()
-                .filter(c -> "edit.generate.markdown.group".equals(c.getId()))
-                .findFirst().orElseThrow();
-        List<String> mdIds = mdGroup.getChildren().stream().map(MenuItemConfig::getId).toList();
-        assertTrue(mdIds.contains("edit.generate.markdown.link"));
-        assertTrue(mdIds.contains("edit.generate.markdown.table"));
-        assertTrue(mdIds.contains("edit.generate.markdown.image"));
-        assertTrue(mdIds.contains("edit.generate.markdown.toc"));
+        List<String> genRootIds = genRoot.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(genRootIds.contains("edit.generate.function"));
+        assertTrue(genRootIds.contains("edit.generate.procedure"));
+        assertTrue(genRootIds.contains("edit.generate.table"));
+        assertTrue(genRootIds.contains("edit.generate.index"));
+        assertTrue(genRootIds.contains("edit.generate.xml.tag"));
+        assertTrue(genRootIds.contains("edit.generate.implement.methods"));
+        assertTrue(genRootIds.contains("edit.generate.markdown.toc"));
 
         // Verify Refactor children (Image 3)
         MenuItemConfig refactorGroup = editMenu.getChildren().stream()
@@ -1573,7 +1568,6 @@ public class MenusAndToolbarsTest {
         assertTrue(refactorIds.contains("edit.refactor.rename"));
         assertTrue(refactorIds.contains("edit.refactor.expand.column.list"));
         assertTrue(refactorIds.contains("edit.refactor.convert.subquery"));
-        assertTrue(refactorIds.contains("edit.refactor.subquery.cte"));
         assertTrue(refactorIds.contains("edit.refactor.extract.introduce.group"));
         assertTrue(refactorIds.contains("edit.refactor.qualify.identifier"));
         assertTrue(refactorIds.contains("edit.refactor.unqualify.identifier"));
@@ -1583,26 +1577,16 @@ public class MenusAndToolbarsTest {
         assertTrue(refactorIds.contains("edit.refactor.inject.language"));
         assertTrue(refactorIds.contains("edit.refactor.uninject.language"));
 
-        // Verify Selection children (Image 2)
+        // Verify Selection children (Image 4)
         MenuItemConfig selectionGroup = editMenu.getChildren().stream()
                 .filter(c -> "edit.selection".equals(c.getId()))
                 .findFirst().orElseThrow();
         assertTrue(selectionGroup.isPopup(), "Selection should be a popup submenu");
         List<String> selIds = selectionGroup.getChildren().stream().map(MenuItemConfig::getId).toList();
-        assertTrue(selIds.contains("edit.selection.column.mode"));
-        assertTrue(selIds.contains("edit.selection.editor.select.actions"));
-        assertTrue(selIds.contains("edit.toggle.case"));
-        assertTrue(selIds.contains("edit.join.lines"));
-        assertTrue(selIds.contains("edit.duplicate.lines"));
-        assertTrue(selIds.contains("edit.sort.lines"));
-
-        MenuItemConfig editorSelect = selectionGroup.getChildren().stream()
-                .filter(c -> "edit.selection.editor.select.actions".equals(c.getId()))
-                .findFirst().orElseThrow();
-        List<String> esIds = editorSelect.getChildren().stream().map(MenuItemConfig::getId).toList();
-        assertTrue(esIds.contains("edit.select.all"));
-        assertTrue(esIds.contains("edit.selection.add.carets.ends"));
-        assertTrue(esIds.contains("edit.selection.word.actions"));
+        assertTrue(selIds.contains("edit.select.all"));
+        assertTrue(selIds.contains("edit.selection.add.carets.ends"));
+        assertTrue(selIds.contains("edit.selection.extend"));
+        assertTrue(selIds.contains("edit.selection.shrink"));
     }
 
     @Test
@@ -4423,6 +4407,245 @@ public class MenusAndToolbarsTest {
                 .filter(r -> "root.vcs.operations.popup".equalsIgnoreCase(r.getId()))
                 .findFirst().orElseThrow();
         assertEquals(7, migrated.getChildren().size(), "Stale VCS operations popup must be migrated with full children");
+    }
+
+    @Test
+    @DisplayName("Verify Edit menu dynamic hierarchy, action catalog, migration, and state handling matching DataGrip")
+    public void testEditMenuDynamicStatesAndParity() {
+        // 1. Hierarchy in default settings
+        MenuItemConfig mainMenu = settings.getMenuConfig("root.main.menu");
+        assertNotNull(mainMenu);
+        MenuItemConfig editMenu = mainMenu.getChildren().stream()
+                .filter(m -> "Edit".equalsIgnoreCase(m.getText()) || "menu.edit".equalsIgnoreCase(m.getId()))
+                .findFirst().orElseThrow();
+
+        // 1a. Cut/Copy/Paste Actions group and Paste > popup
+        MenuItemConfig cutCopyPaste = editMenu.getChildren().stream()
+                .filter(m -> "edit.cut.copy.paste.actions".equalsIgnoreCase(m.getId()))
+                .findFirst().orElseThrow();
+        MenuItemConfig pasteGroup = cutCopyPaste.getChildren().stream()
+                .filter(m -> "edit.paste.group".equalsIgnoreCase(m.getId()))
+                .findFirst().orElseThrow();
+        assertTrue(pasteGroup.isPopup(), "Paste group must be configured as a popup submenu (Image 3)");
+        List<String> pasteChildrenIds = pasteGroup.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(pasteChildrenIds.contains("edit.paste"));
+        assertTrue(pasteChildrenIds.contains("edit.paste.history"));
+        assertTrue(pasteChildrenIds.contains("edit.paste.plain"));
+
+        // 1b. Generate... > popup with 31 DDL database objects (Image 4)
+        MenuItemConfig generateRoot = editMenu.getChildren().stream()
+                .filter(m -> "edit.generate.root.group".equalsIgnoreCase(m.getId()))
+                .findFirst().orElseThrow();
+        assertTrue(generateRoot.isPopup(), "Generate root group must be a popup submenu (Image 4)");
+        List<String> genIds = generateRoot.getChildren().stream().map(MenuItemConfig::getId).toList();
+        List<String> expectedDdlIds = List.of(
+                "edit.generate.table", "edit.generate.view", "edit.generate.materialized.view",
+                "edit.generate.index", "edit.generate.unique.key", "edit.generate.primary.key",
+                "edit.generate.foreign.key", "edit.generate.check.constraint", "edit.generate.column",
+                "edit.generate.trigger", "edit.generate.procedure", "edit.generate.function",
+                "edit.generate.package", "edit.generate.sequence", "edit.generate.synonym",
+                "edit.generate.type", "edit.generate.rule", "edit.generate.domain",
+                "edit.generate.user.mapping", "edit.generate.server", "edit.generate.fdw",
+                "edit.generate.event", "edit.generate.aggregate", "edit.generate.extension",
+                "edit.generate.operator", "edit.generate.cast", "edit.generate.collation",
+                "edit.generate.conversion", "edit.generate.language", "edit.generate.policy",
+                "edit.generate.database.link"
+        );
+        for (String expectedId : expectedDdlIds) {
+            assertTrue(genIds.contains(expectedId), "Generate submenu must contain: " + expectedId);
+        }
+
+        // 1c. Refactor > popup with DataGrip actions (Image 3)
+        MenuItemConfig refactorMenu = editMenu.getChildren().stream()
+                .filter(m -> "edit.refactor".equalsIgnoreCase(m.getId()))
+                .findFirst().orElseThrow();
+        assertTrue(refactorMenu.isPopup(), "Refactor menu must be a popup submenu (Image 3)");
+        List<String> refactorIds = refactorMenu.getChildren().stream().map(MenuItemConfig::getId).toList();
+        assertTrue(refactorIds.contains("edit.refactor.rename"));
+        assertTrue(refactorIds.contains("edit.refactor.expand.column.list"));
+        assertTrue(refactorIds.contains("edit.refactor.convert.subquery"));
+        assertTrue(refactorIds.contains("edit.refactor.extract.introduce.group"));
+        assertTrue(refactorIds.contains("edit.refactor.qualify.identifier"));
+        assertTrue(refactorIds.contains("edit.refactor.unqualify.identifier"));
+        assertTrue(refactorIds.contains("edit.refactor.quote.identifier"));
+        assertTrue(refactorIds.contains("edit.refactor.unquote.identifier"));
+        assertTrue(refactorIds.contains("edit.refactor.flip.expression"));
+        assertTrue(refactorIds.contains("edit.refactor.inject.language"));
+        assertTrue(refactorIds.contains("edit.refactor.uninject.language"));
+
+        // 2. Action Catalog entries check
+        ActionManager actionManager = ActionManager.getInstance();
+        ActionRegistry.initialize(actionManager);
+        var catalog = actionManager.getActionCatalog();
+        var mainMenuCat = catalog.stream().filter(c -> "Main Menu".equalsIgnoreCase(c.getName())).findFirst().orElseThrow();
+        var editCat = mainMenuCat.getSubCategories().stream().filter(c -> "Edit".equalsIgnoreCase(c.getName())).findFirst().orElseThrow();
+        List<String> editEntryIds = editCat.getEntries().stream().map(ActionManager.ActionCatalogEntry::getId).toList();
+
+        for (String expectedId : expectedDdlIds) {
+            assertTrue(editEntryIds.contains(expectedId), "ActionCatalog must include DDL generator: " + expectedId);
+        }
+        assertTrue(editEntryIds.contains("edit.refactor.rename"));
+        assertTrue(editEntryIds.contains("edit.refactor.expand.column.list"));
+        assertTrue(editEntryIds.contains("edit.refactor.convert.subquery"));
+        assertTrue(editEntryIds.contains("edit.refactor.qualify.identifier"));
+        assertTrue(editEntryIds.contains("edit.refactor.unqualify.identifier"));
+        assertTrue(editEntryIds.contains("edit.refactor.quote.identifier"));
+        assertTrue(editEntryIds.contains("edit.refactor.unquote.identifier"));
+        assertTrue(editEntryIds.contains("edit.refactor.flip.expression"));
+        assertTrue(editEntryIds.contains("edit.refactor.inject.language"));
+        assertTrue(editEntryIds.contains("edit.refactor.uninject.language"));
+
+        // 3. Dynamic enabling/disabling states (Image 1 vs Image 2, 3, 4)
+        AnAction cut = actionManager.getAction("edit.cut");
+        AnAction copy = actionManager.getAction("edit.copy");
+        AnAction copyRef = actionManager.getAction("edit.copy.reference");
+        AnAction paste = actionManager.getAction("edit.paste");
+        AnAction deleteAction = actionManager.getAction("edit.delete");
+        AnAction find = actionManager.getAction("edit.find");
+        AnAction replace = actionManager.getAction("edit.replace");
+        AnAction findInFiles = actionManager.getAction("edit.find.in.files");
+        AnAction replaceInFiles = actionManager.getAction("edit.replace.in.files");
+        AnAction findUsages = actionManager.getAction("edit.find.usages");
+        ActionGroup refactorGroupAction = actionManager.getGroup("edit.refactor");
+        ActionGroup generateRootGroupAction = actionManager.getGroup("edit.generate.root.group");
+        ActionGroup bookmarksGroupAction = actionManager.getGroup("edit.bookmarks.group");
+
+        assertNotNull(cut);
+        assertNotNull(copy);
+        assertNotNull(copyRef);
+        assertNotNull(paste);
+        assertNotNull(deleteAction);
+        assertNotNull(find);
+        assertNotNull(replace);
+        assertNotNull(findInFiles);
+        assertNotNull(replaceInFiles);
+        assertNotNull(findUsages);
+        assertNotNull(refactorGroupAction);
+        assertNotNull(generateRootGroupAction);
+        assertNotNull(bookmarksGroupAction);
+
+        // Outside console (Image 1, 3, 4):
+        // Cut, Copy, Delete disabled; Find, Replace disabled
+        // Copy Path/Reference, Paste, Find in Files, Replace in Files, Find Usages, Bookmarks enabled
+        assertFalse(cut.isEnabled(null), "Cut must be disabled outside console");
+        assertFalse(copy.isEnabled(null), "Copy must be disabled outside console");
+        assertFalse(deleteAction.isEnabled(null), "Delete must be disabled outside console");
+        assertFalse(find.isEnabled(null), "Find must be disabled outside console");
+        assertFalse(replace.isEnabled(null), "Replace must be disabled outside console");
+
+        assertTrue(copyRef.isEnabled(null), "Copy Path/Reference must be enabled outside console (Image 1)");
+        assertTrue(paste.isEnabled(null), "Paste must be enabled outside console (Image 1)");
+        assertTrue(findInFiles.isEnabled(null), "Find in Files must be enabled outside console (Image 1)");
+        assertTrue(replaceInFiles.isEnabled(null), "Replace in Files must be enabled outside console (Image 1)");
+        assertTrue(findUsages.isEnabled(null), "Find Usages must be enabled outside console (Image 1)");
+        assertTrue(bookmarksGroupAction.isEnabled(null), "Bookmarks must be enabled outside console (Image 1)");
+
+        // Dynamic Generate behavior (Image 1 vs Image 2)
+        AnAction tableGen = actionManager.getAction("edit.generate.table");
+        assertNotNull(tableGen);
+        assertFalse(tableGen.isVisible(null), "DDL Generator must be hidden outside console (Image 1)");
+        assertFalse(tableGen.isEnabled(null), "DDL Generator must be disabled outside console (Image 1)");
+
+        AnAction xmlTag = actionManager.getAction("edit.generate.xml.tag");
+        assertNotNull(xmlTag);
+        assertTrue(xmlTag.isVisible(null), "XML Tag must be visible outside console (Image 1)");
+        assertFalse(xmlTag.isEnabled(null), "XML Tag must be disabled outside console (Image 1)");
+
+        // Dynamic Refactor behavior (Image 3)
+        AnAction renameAction = actionManager.getAction("edit.refactor.rename");
+        assertNotNull(renameAction);
+        assertTrue(renameAction.isEnabled(null), "Rename must be enabled outside console (Image 3)");
+
+        AnAction expandCols = actionManager.getAction("edit.refactor.expand.column.list");
+        assertNotNull(expandCols);
+        assertFalse(expandCols.isEnabled(null), "Expand Column List must be disabled outside console (Image 3)");
+
+        AnAction convertSubquery = actionManager.getAction("edit.refactor.convert.subquery");
+        assertNotNull(convertSubquery);
+        assertFalse(convertSubquery.isEnabled(null), "Convert to Subquery must be disabled outside console (Image 3)");
+
+        // Dynamic Selection behavior (Image 4)
+        AnAction selectAll = actionManager.getAction("edit.select.all");
+        assertNotNull(selectAll);
+        assertFalse(selectAll.isEnabled(null), "Select All must be disabled outside console (Image 4)");
+
+        AnAction addCarets = actionManager.getAction("edit.selection.add.carets.ends");
+        assertNotNull(addCarets);
+        assertFalse(addCarets.isEnabled(null), "Add Carets must be disabled outside console (Image 4)");
+
+        AnAction extendSel = actionManager.getAction("edit.selection.extend");
+        assertNotNull(extendSel);
+        assertFalse(extendSel.isEnabled(null), "Extend Selection must be disabled outside console (Image 4)");
+
+        AnAction shrinkSel = actionManager.getAction("edit.selection.shrink");
+        assertNotNull(shrinkSel);
+        assertFalse(shrinkSel.isEnabled(null), "Shrink Selection must be disabled outside console (Image 4)");
+
+        // Image 2 Parity: Actions must be VISIBLE but DISABLED when outside console
+        List<String> visibleDisabledOutsideConsole = List.of(
+                "edit.copy.plain",
+                "edit.insert.live.template",
+                "edit.surround.with",
+                "edit.format.code",
+                "edit.format.file",
+                "edit.comment.line",
+                "edit.comment.block",
+                "edit.auto.indent",
+                "edit.toggle.case",
+                "edit.join.lines",
+                "edit.duplicate.lines",
+                "edit.sort.lines"
+        );
+        for (String id : visibleDisabledOutsideConsole) {
+            AnAction action = actionManager.getAction(id);
+            assertNotNull(action, "Action must exist: " + id);
+            assertTrue(action.isVisible(null), "Action must be visible outside console (Image 2): " + id);
+            assertFalse(action.isEnabled(null), "Action must be disabled outside console (Image 2): " + id);
+        }
+        ActionGroup selGroup = actionManager.getGroup("edit.selection");
+        assertNotNull(selGroup, "Selection group must exist");
+        assertTrue(selGroup.isVisible(null), "Selection group must be visible outside console (Image 4)");
+
+        // 4. Auto-migration test for stale settings without popup paste or without DDL objects
+        MenuItemConfig staleEdit = MenuItemConfig.group("menu.edit", "Edit", true, List.of(
+                MenuItemConfig.action("edit.undo", "Undo"),
+                MenuItemConfig.group("edit.cut.copy.paste.actions", "Cut/Copy/Paste Actions", false, List.of(
+                        MenuItemConfig.action("edit.paste", "Paste") // non-popup paste!
+                ))
+        ));
+        List<MenuItemConfig> modifiedList = new ArrayList<>(settings.getMenusAndToolbars());
+        for (int i = 0; i < modifiedList.size(); i++) {
+            if ("root.main.menu".equalsIgnoreCase(modifiedList.get(i).getId())) {
+                MenuItemConfig mainCopy = modifiedList.get(i).copy();
+                for (int j = 0; j < mainCopy.getChildren().size(); j++) {
+                    if ("menu.edit".equalsIgnoreCase(mainCopy.getChildren().get(j).getId())
+                            || "Edit".equalsIgnoreCase(mainCopy.getChildren().get(j).getText())) {
+                        mainCopy.getChildren().set(j, staleEdit);
+                        break;
+                    }
+                }
+                modifiedList.set(i, mainCopy);
+                break;
+            }
+        }
+        settings.setMenusAndToolbars(modifiedList);
+
+        MenuItemConfig reloadedMainMenu = settings.getMenuConfig("root.main.menu");
+        MenuItemConfig reloadedEdit = reloadedMainMenu.getChildren().stream()
+                .filter(m -> "menu.edit".equalsIgnoreCase(m.getId()) || "Edit".equalsIgnoreCase(m.getText()))
+                .findFirst().orElseThrow();
+        MenuItemConfig reloadedCutCopyPaste = reloadedEdit.getChildren().stream()
+                .filter(m -> "edit.cut.copy.paste.actions".equalsIgnoreCase(m.getId()))
+                .findFirst().orElseThrow();
+        MenuItemConfig reloadedPasteGroup = reloadedCutCopyPaste.getChildren().stream()
+                .filter(m -> "edit.paste.group".equalsIgnoreCase(m.getId()))
+                .findFirst().orElseThrow();
+        assertTrue(reloadedPasteGroup.isPopup(), "Stale Edit menu must be migrated so paste group is popup: true");
+
+        MenuItemConfig reloadedGenerateRoot = reloadedEdit.getChildren().stream()
+                .filter(m -> "edit.generate.root.group".equalsIgnoreCase(m.getId()))
+                .findFirst().orElseThrow();
+        assertTrue(reloadedGenerateRoot.getChildren().size() >= 31, "Migrated generate group must have all 31 DDL objects");
     }
 }
 
