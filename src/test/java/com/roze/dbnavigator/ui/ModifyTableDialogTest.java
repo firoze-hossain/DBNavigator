@@ -576,4 +576,356 @@ public class ModifyTableDialogTest {
         assertDoesNotThrow(() -> dialog.selectCheckInTreeForTesting(chk));
         assertDoesNotThrow(() -> dialog.selectForeignKeyInTreeForTesting(fk));
     }
+
+    @Test
+    @DisplayName("Verify Composite Foreign Key mappings, reordering, match type, not enforced, and DDL")
+    public void testCompositeForeignKeyMappingsAndDdl() {
+        ConnectionProfile profile = createPostgresProfile();
+        DbObject table = createTable("order_items", "public", "store_db");
+
+        ModifyTableDialog dialog = new ModifyTableDialog(null, profile, table, false, false);
+
+        ModifyTableDialog.ForeignKeyModel fk = new ModifyTableDialog.ForeignKeyModel(
+                null, "fk_order_items_composite", "orders", "tenant_id", "tenant_id", true);
+        fk.mappings.add(new ModifyTableDialog.ForeignKeyMapping("order_id", "id"));
+        fk.matchType.set("FULL");
+        fk.onUpdate.set("cascade");
+        fk.onDelete.set("set_null");
+        fk.deferrable.set(true);
+        fk.initiallyDeferred.set(true);
+        fk.notEnforced.set(true);
+
+        assertEquals(2, fk.mappings.size());
+        assertEquals("tenant_id \u2192 tenant_id", fk.mappings.get(0).toString());
+        assertEquals("order_id \u2192 id", fk.mappings.get(1).toString());
+
+        dialog.getForeignKeys().add(fk);
+        dialog.refreshTreeAndPreview();
+
+        List<String> stmts = dialog.buildAlterStatements();
+        assertEquals(1, stmts.size());
+        String ddl = stmts.get(0);
+        assertTrue(ddl.contains("ADD CONSTRAINT fk_order_items_composite FOREIGN KEY (tenant_id, order_id) REFERENCES orders (tenant_id, id)"));
+        assertTrue(ddl.contains("MATCH FULL"));
+        assertTrue(ddl.contains("ON UPDATE CASCADE ON DELETE SET NULL"));
+        assertTrue(ddl.contains("DEFERRABLE INITIALLY DEFERRED"));
+        assertTrue(ddl.contains("NOT ENFORCED;"));
+
+        // Verify tree subtitle shows composite mappings
+        TreeItem<ModifyTableDialog.ModifyNode> fkCategory = dialog.getFkCategoryItem();
+        assertEquals(1, fkCategory.getChildren().size());
+        assertEquals("(tenant_id -> orders.tenant_id, order_id -> orders.id)", fkCategory.getChildren().get(0).getValue().subtitle);
+    }
+
+    @Test
+    @DisplayName("Verify Check Constraint predicate truncation in tree and expand predicate sync")
+    public void testCheckPredicateTreeTruncation() {
+        ConnectionProfile profile = createPostgresProfile();
+        DbObject table = createTable("allergy_type", "public", "clinic_db");
+
+        ModifyTableDialog dialog = new ModifyTableDialog(null, profile, table, false, false);
+
+        // Long predicate matching DataGrip Image 2
+        String longPred = "((title)::text = ANY (ARRAY['Food'::character varying, 'Drug'::character varying]::text[]))";
+        ModifyTableDialog.CheckModel chk = new ModifyTableDialog.CheckModel(
+                null, "allergy_type_title_check", longPred, true);
+        dialog.getChecks().add(chk);
+        dialog.refreshTreeAndPreview();
+
+        TreeItem<ModifyTableDialog.ModifyNode> chkCategory = dialog.getChkCategoryItem();
+        assertEquals(1, chkCategory.getChildren().size());
+        // Subtitle should truncate to 19 chars + "..."
+        assertEquals("(((title)::text = AN...)", chkCategory.getChildren().get(0).getValue().subtitle);
+    }
+
+    @Test
+    @DisplayName("Verify Foreign Key and Check duplication copies enhanced properties and composite mappings")
+    public void testForeignKeyAndCheckDuplication() {
+        ConnectionProfile profile = createPostgresProfile();
+        DbObject table = createTable("order_items", "public", "store_db");
+
+        ModifyTableDialog dialog = new ModifyTableDialog(null, profile, table, false, false);
+        dialog.refreshTreeAndPreview();
+
+        // 1. Add composite FK and duplicate it
+        ModifyTableDialog.ForeignKeyModel fk = new ModifyTableDialog.ForeignKeyModel(
+                null, "fk_order", "orders", "tenant_id", "tenant_id", true);
+        fk.mappings.add(new ModifyTableDialog.ForeignKeyMapping("order_id", "id"));
+        fk.matchType.set("FULL");
+        fk.notEnforced.set(true);
+        dialog.getForeignKeys().add(fk);
+        dialog.refreshTreeAndPreview();
+
+        dialog.duplicateItemForTesting(fk);
+
+        assertEquals(2, dialog.getForeignKeys().size());
+        ModifyTableDialog.ForeignKeyModel dupFk = dialog.getForeignKeys().get(1);
+        assertEquals("fk_order_2", dupFk.name.get());
+        assertEquals("FULL", dupFk.matchType.get());
+        assertTrue(dupFk.notEnforced.get());
+        assertEquals(2, dupFk.mappings.size());
+        assertEquals("tenant_id", dupFk.mappings.get(0).localColumn.get());
+        assertEquals("order_id", dupFk.mappings.get(1).localColumn.get());
+
+        // 2. Add Check and duplicate it
+        ModifyTableDialog.CheckModel chk = new ModifyTableDialog.CheckModel(
+                null, "chk_status", "status in ('A', 'B')", true);
+        chk.noInherit.set(true);
+        chk.notValidated.set(true);
+        dialog.getChecks().add(chk);
+        dialog.refreshTreeAndPreview();
+
+        dialog.duplicateItemForTesting(chk);
+
+        assertEquals(2, dialog.getChecks().size());
+        ModifyTableDialog.CheckModel dupChk = dialog.getChecks().get(1);
+        assertEquals("chk_status_2", dupChk.name.get());
+        assertEquals("status in ('A', 'B')", dupChk.expression.get());
+        assertTrue(dupChk.noInherit.get());
+        assertTrue(dupChk.notValidated.get());
+    }
+
+    @Test
+    @DisplayName("Verify DataGrip Unique Key dynamic add, naming (carts_pk), empty subtitle, and preview")
+    public void testDataGripUniqueKeyDynamicAddAndNaming() {
+        ConnectionProfile profile = createPostgresProfile();
+        DbObject table = createTable("carts", "public", "store_db");
+
+        ModifyTableDialog dialog = new ModifyTableDialog(null, profile, table, false, false);
+        dialog.refreshTreeAndPreview();
+
+        // 1. Add Unique Key
+        dialog.addKey("UNIQUE");
+        assertEquals(1, dialog.getKeys().size());
+        ModifyTableDialog.KeyModel key1 = dialog.getKeys().get(0);
+        assertEquals("carts_pk", key1.name.get());
+        assertTrue(key1.columns.isEmpty());
+
+        // Verify tree item has empty subtitle
+        TreeItem<ModifyTableDialog.ModifyNode> keyCategory = dialog.getKeyCategoryItem();
+        assertEquals(1, keyCategory.getChildren().size());
+        assertEquals("", keyCategory.getChildren().get(0).getValue().subtitle);
+
+        // Verify preview shows empty unique ()
+        String preview1 = dialog.getPreviewText();
+        assertTrue(preview1.contains("alter table public.carts\n    add constraint carts_pk\n        unique ();"),
+                "Preview should match DataGrip Image 1:\n" + preview1);
+
+        // 2. Add second Unique Key -> carts_pk_2
+        assertEquals("carts_pk_2", dialog.generateNextKeyNameForTesting("UNIQUE"));
+        dialog.addKey("UNIQUE");
+        assertEquals(2, dialog.getKeys().size());
+        assertEquals("carts_pk_2", dialog.getKeys().get(1).name.get());
+    }
+
+    @Test
+    @DisplayName("Verify DataGrip Foreign Key dynamic add, naming (carts_carts_fk), empty subtitle, and preview")
+    public void testDataGripForeignKeyDynamicAddAndNaming() {
+        ConnectionProfile profile = createPostgresProfile();
+        DbObject table = createTable("carts", "public", "store_db");
+
+        ModifyTableDialog dialog = new ModifyTableDialog(null, profile, table, false, false);
+        dialog.refreshTreeAndPreview();
+
+        // 1. Add Foreign Key
+        dialog.addForeignKey();
+        assertEquals(1, dialog.getForeignKeys().size());
+        ModifyTableDialog.ForeignKeyModel fk1 = dialog.getForeignKeys().get(0);
+        assertEquals("carts_carts_fk", fk1.name.get());
+        assertEquals("public.carts", fk1.targetTable.get());
+        assertTrue(fk1.mappings.isEmpty());
+
+        // Verify tree item has empty subtitle
+        TreeItem<ModifyTableDialog.ModifyNode> fkCategory = dialog.getFkCategoryItem();
+        assertEquals(1, fkCategory.getChildren().size());
+        assertEquals("", fkCategory.getChildren().get(0).getValue().subtitle);
+
+        // Verify preview shows empty foreign key () references public.carts ()
+        String preview1 = dialog.getPreviewText();
+        assertTrue(preview1.contains("alter table public.carts\n    add constraint carts_carts_fk\n        foreign key () references public.carts ();"),
+                "Preview should match DataGrip Image 3:\n" + preview1);
+
+        // 2. Add second Foreign Key -> carts_carts_fk_2
+        assertEquals("carts_carts_fk_2", dialog.generateNextForeignKeyNameForTesting("public.carts"));
+        dialog.addForeignKey();
+        assertEquals(2, dialog.getForeignKeys().size());
+        assertEquals("carts_carts_fk_2", dialog.getForeignKeys().get(1).name.get());
+    }
+
+    @Test
+    @DisplayName("Verify DataGrip Index dynamic add, naming (carts__index), (???) subtitle, and preview")
+    public void testDataGripIndexDynamicAddAndNaming() {
+        ConnectionProfile profile = createPostgresProfile();
+        DbObject table = createTable("carts", "public", "store_db");
+
+        ModifyTableDialog dialog = new ModifyTableDialog(null, profile, table, false, false);
+        dialog.refreshTreeAndPreview();
+
+        // 1. Add Index
+        dialog.addIndex();
+        assertEquals(1, dialog.getIndexes().size());
+        ModifyTableDialog.IndexModel idx1 = dialog.getIndexes().get(0);
+        assertEquals("carts__index", idx1.name.get());
+        assertTrue(idx1.columns.isEmpty());
+
+        // Verify tree item has (???) subtitle matching DataGrip Image 4
+        TreeItem<ModifyTableDialog.ModifyNode> idxCategory = dialog.getIdxCategoryItem();
+        assertEquals(1, idxCategory.getChildren().size());
+        assertEquals("(???)", idxCategory.getChildren().get(0).getValue().subtitle);
+
+        // Verify preview shows create index carts__index\n    on public.carts ();
+        String preview1 = dialog.getPreviewText();
+        assertTrue(preview1.contains("create index carts__index\n    on public.carts ();"),
+                "Preview should match DataGrip Image 4:\n" + preview1);
+
+        // 2. Add second Index -> carts__index_2
+        assertEquals("carts__index_2", dialog.generateNextIndexNameForTesting());
+        dialog.addIndex();
+        assertEquals(2, dialog.getIndexes().size());
+        assertEquals("carts__index_2", dialog.getIndexes().get(1).name.get());
+    }
+
+    @Test
+    @DisplayName("Verify DataGrip Check dynamic add, naming (check_name), empty subtitle, and preview")
+    public void testDataGripCheckDynamicAddAndNaming() {
+        ConnectionProfile profile = createPostgresProfile();
+        DbObject table = createTable("carts", "public", "store_db");
+
+        ModifyTableDialog dialog = new ModifyTableDialog(null, profile, table, false, false);
+        dialog.refreshTreeAndPreview();
+
+        // 1. Add Check
+        dialog.addCheck();
+        assertEquals(1, dialog.getChecks().size());
+        ModifyTableDialog.CheckModel chk1 = dialog.getChecks().get(0);
+        assertEquals("check_name", chk1.name.get());
+        assertTrue(chk1.expression.get().isEmpty());
+
+        // Verify tree item has empty subtitle matching DataGrip Image 5
+        TreeItem<ModifyTableDialog.ModifyNode> chkCategory = dialog.getChkCategoryItem();
+        assertEquals(1, chkCategory.getChildren().size());
+        assertEquals("", chkCategory.getChildren().get(0).getValue().subtitle);
+
+        // Verify preview shows alter table public.carts\n    add constraint check_name\n        check ();
+        String preview1 = dialog.getPreviewText();
+        assertTrue(preview1.contains("alter table public.carts\n    add constraint check_name\n        check ();"),
+                "Preview should match DataGrip Image 5:\n" + preview1);
+
+        // 2. Add second Check -> check_name_2
+        assertEquals("check_name_2", dialog.generateNextCheckNameForTesting());
+        dialog.addCheck();
+        assertEquals(2, dialog.getChecks().size());
+        assertEquals("check_name_2", dialog.getChecks().get(1).name.get());
+    }
+
+    @Test
+    @DisplayName("Verify DataGrip Virtual Column dynamic add, naming (virtual_column_name), 'unknown' subtitle, expression update, duplication, and preview")
+    public void testDataGripVirtualColumnDynamicAddAndNaming() {
+        ConnectionProfile profile = createPostgresProfile();
+        DbObject table = createTable("carts", "public", "store_db");
+
+        ModifyTableDialog dialog = new ModifyTableDialog(null, profile, table, false, false);
+        dialog.refreshTreeAndPreview();
+
+        // 1. Initial next name
+        assertEquals("virtual_column_name", dialog.generateNextVirtualColumnNameForTesting());
+
+        // 2. Add Virtual Column
+        dialog.addVirtualColumn();
+        assertEquals(1, dialog.getVirtualColumns().size());
+        ModifyTableDialog.VirtualColumnModel vc1 = dialog.getVirtualColumns().get(0);
+        assertEquals("virtual_column_name", vc1.name.get());
+        assertEquals("", vc1.expression.get());
+
+        // Tree subtitle must be "unknown" matching DataGrip Image 2
+        TreeItem<ModifyTableDialog.ModifyNode> vcolCategory = dialog.getVcolCategoryItem();
+        assertEquals(1, vcolCategory.getChildren().size());
+        assertEquals("virtual_column_name", vcolCategory.getChildren().get(0).getValue().title);
+        assertEquals("unknown", vcolCategory.getChildren().get(0).getValue().subtitle);
+
+        // 3. Modifying expression updates tree subtitle
+        vc1.expression.set("col1 || ' ' || col2");
+        dialog.refreshTreeAndPreview();
+        assertEquals("col1 || ' ' || col2", dialog.getVcolCategoryItem().getChildren().get(0).getValue().subtitle);
+
+        // 4. Second Virtual Column -> virtual_column_name_2
+        assertEquals("virtual_column_name_2", dialog.generateNextVirtualColumnNameForTesting());
+        dialog.addVirtualColumn();
+        assertEquals(2, dialog.getVirtualColumns().size());
+        ModifyTableDialog.VirtualColumnModel vc2 = dialog.getVirtualColumns().get(1);
+        assertEquals("virtual_column_name_2", vc2.name.get());
+        assertEquals("", vc2.expression.get());
+        assertEquals(2, dialog.getVcolCategoryItem().getChildren().size());
+        assertEquals("unknown", dialog.getVcolCategoryItem().getChildren().get(1).getValue().subtitle);
+
+        // 5. Duplicate Virtual Column
+        dialog.selectVirtualColumnInTreeForTesting(vc1);
+        dialog.duplicateItemForTesting(vc1);
+        assertEquals(3, dialog.getVirtualColumns().size());
+        ModifyTableDialog.VirtualColumnModel vc3 = dialog.getVirtualColumns().get(1); // inserted after vc1
+        assertEquals("virtual_column_name_3", vc3.name.get());
+        assertEquals("col1 || ' ' || col2", vc3.expression.get());
+
+        // 6. Preview: Virtual columns are client-side metadata, no database DDL emitted
+        String preview = dialog.getPreviewText();
+        assertFalse(preview.contains("virtual_column_name"), "Virtual columns should not emit ALTER TABLE statements");
+    }
+
+    @Test
+    @DisplayName("Verify DataGrip Virtual Foreign Key dynamic add, naming (virtual_foreign_key_name), default target table, empty subtitle, mappings, duplication, and preview")
+    public void testDataGripVirtualForeignKeyDynamicAddAndNaming() {
+        ConnectionProfile profile = createPostgresProfile();
+        DbObject table = createTable("carts", "public", "store_db");
+
+        ModifyTableDialog dialog = new ModifyTableDialog(null, profile, table, false, false);
+        dialog.refreshTreeAndPreview();
+
+        // 1. Initial next name
+        assertEquals("virtual_foreign_key_name", dialog.generateNextVirtualForeignKeyNameForTesting());
+
+        // 2. Add Virtual Foreign Key
+        dialog.addVirtualForeignKey();
+        assertEquals(1, dialog.getVirtualForeignKeys().size());
+        ModifyTableDialog.VirtualForeignKeyModel vfk1 = dialog.getVirtualForeignKeys().get(0);
+        assertEquals("virtual_foreign_key_name", vfk1.name.get());
+        assertEquals("carts", vfk1.targetTable.get(), "Target Table should default to current table name matching DataGrip Image 3");
+        assertTrue(vfk1.mappings.isEmpty(), "Initial column mappings should be empty matching DataGrip Image 3 'No Columns'");
+
+        // Tree subtitle must be empty string until mappings are added
+        assertEquals(1, dialog.getVfkCategoryItem().getChildren().size());
+        assertEquals("virtual_foreign_key_name", dialog.getVfkCategoryItem().getChildren().get(0).getValue().title);
+        assertEquals("", dialog.getVfkCategoryItem().getChildren().get(0).getValue().subtitle);
+
+        // 3. Adding mappings updates tree subtitle
+        vfk1.mappings.add(new ModifyTableDialog.ForeignKeyMapping("cart_id", "id"));
+        dialog.refreshTreeAndPreview();
+        assertEquals("(cart_id -> carts.id)", dialog.getVfkCategoryItem().getChildren().get(0).getValue().subtitle);
+
+        // 4. Second Virtual FK -> virtual_foreign_key_name_2
+        assertEquals("virtual_foreign_key_name_2", dialog.generateNextVirtualForeignKeyNameForTesting());
+        dialog.addVirtualForeignKey();
+        assertEquals(2, dialog.getVirtualForeignKeys().size());
+        ModifyTableDialog.VirtualForeignKeyModel vfk2 = dialog.getVirtualForeignKeys().get(1);
+        assertEquals("virtual_foreign_key_name_2", vfk2.name.get());
+        assertEquals("carts", vfk2.targetTable.get());
+        assertTrue(vfk2.mappings.isEmpty());
+        assertEquals(2, dialog.getVfkCategoryItem().getChildren().size());
+        assertEquals("", dialog.getVfkCategoryItem().getChildren().get(1).getValue().subtitle);
+
+        // 5. Duplicate Virtual Foreign Key
+        dialog.selectVirtualForeignKeyInTreeForTesting(vfk1);
+        dialog.duplicateItemForTesting(vfk1);
+        assertEquals(3, dialog.getVirtualForeignKeys().size());
+        ModifyTableDialog.VirtualForeignKeyModel vfk3 = dialog.getVirtualForeignKeys().get(1); // inserted after vfk1
+        assertEquals("virtual_foreign_key_name_3", vfk3.name.get());
+        assertEquals("carts", vfk3.targetTable.get());
+        assertEquals(1, vfk3.mappings.size());
+        assertEquals("cart_id", vfk3.mappings.get(0).localColumn.get());
+        assertEquals("id", vfk3.mappings.get(0).targetColumn.get());
+
+        // 6. Preview: Virtual foreign keys are client-side metadata, no database DDL emitted
+        String preview = dialog.getPreviewText();
+        assertFalse(preview.contains("virtual_foreign_key_name"), "Virtual FKs should not emit ALTER TABLE statements");
+    }
 }
+
