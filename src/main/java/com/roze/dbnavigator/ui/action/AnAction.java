@@ -27,6 +27,7 @@ public class AnAction {
     private final Consumer<MainWindow> actionHandler;
     private final Predicate<MainWindow> enabledPredicate;
     private final Predicate<MainWindow> visiblePredicate;
+    private final java.util.function.Function<MainWindow, String> dynamicTextFunction;
 
     public AnAction(Builder builder) {
         this.id = builder.id;
@@ -39,10 +40,24 @@ public class AnAction {
         this.actionHandler = builder.actionHandler;
         this.enabledPredicate = builder.enabledPredicate;
         this.visiblePredicate = builder.visiblePredicate;
+        this.dynamicTextFunction = builder.dynamicTextFunction;
     }
 
     public String getId() { return id; }
     public String getText() { return text; }
+    public String getText(MainWindow ctx) {
+        if (dynamicTextFunction != null) {
+            try {
+                return dynamicTextFunction.apply(ctx);
+            } catch (Exception e) {
+                return text;
+            }
+        }
+        return text;
+    }
+    public boolean hasDynamicText() {
+        return dynamicTextFunction != null;
+    }
     public String getDescription() { return description; }
     public FontAwesomeSolid getIcon() { return icon; }
     public String getIconColor() { return iconColor; }
@@ -75,7 +90,7 @@ public class AnAction {
 
     /** Creates a JavaFX MenuItem wired to this action. */
     public MenuItem createMenuItem(MainWindow ctx) {
-        MenuItem item = new MenuItem(text);
+        MenuItem item = new MenuItem(getText(ctx));
         if (icon != null) {
             item.setGraphic(Icons.of(icon, iconColor, iconSize));
         }
@@ -126,10 +141,16 @@ public class AnAction {
         private Consumer<MainWindow> actionHandler;
         private Predicate<MainWindow> enabledPredicate;
         private Predicate<MainWindow> visiblePredicate;
+        private java.util.function.Function<MainWindow, String> dynamicTextFunction;
 
         public Builder(String id, String text) {
             this.id = id;
             this.text = text;
+        }
+
+        public Builder dynamicText(java.util.function.Function<MainWindow, String> dynamicTextFunction) {
+            this.dynamicTextFunction = dynamicTextFunction;
+            return this;
         }
 
         public Builder description(String description) {
