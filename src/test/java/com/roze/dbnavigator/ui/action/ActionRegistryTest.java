@@ -693,7 +693,7 @@ public class ActionRegistryTest {
         assertEquals("Appearance", appGroup.getText());
 
         List<AnAction> items = appGroup.getChildren();
-        assertEquals(16, items.size(), "Appearance must contain modes, toggles, submenus, and 3 separators");
+        assertEquals(17, items.size(), "Appearance must contain modes, toggles, submenus, and 4 separators");
 
         int idx = 0;
         assertEquals("view.appearance.presentation.mode", items.get(idx).getId());
@@ -711,16 +711,21 @@ public class ActionRegistryTest {
         // Separator 1
         assertInstanceOf(ActionSeparator.class, items.get(idx++));
 
+        assertInstanceOf(ToggleAction.class, items.get(idx));
         assertEquals("view.appearance.compact.mode", items.get(idx).getId());
         assertEquals("Compact Mode", ((AnAction) items.get(idx++)).getText());
 
         assertEquals("view.appearance.zoom.ide", items.get(idx).getId());
         assertEquals("Zoom IDE (Current: 100%)…", ((AnAction) items.get(idx++)).getText());
 
+        // Separator 2
+        assertInstanceOf(ActionSeparator.class, items.get(idx++));
+
+        assertInstanceOf(ToggleAction.class, items.get(idx));
         assertEquals("view.appearance.presentation.assistant", items.get(idx).getId());
         assertEquals("Presentation Assistant", ((AnAction) items.get(idx++)).getText());
 
-        // Separator 2
+        // Separator 3
         assertInstanceOf(ActionSeparator.class, items.get(idx++));
 
         assertEquals("view.appearance.mainmenu", items.get(idx).getId());
@@ -733,10 +738,11 @@ public class ActionRegistryTest {
         assertEquals("view.appearance.navbar", items.get(idx).getId());
         assertEquals("Navigation Bar", ((ActionGroup) items.get(idx++)).getText());
 
+        assertInstanceOf(ToggleAction.class, items.get(idx));
         assertEquals("view.appearance.toolwindowbars", items.get(idx).getId());
         assertEquals("Tool Window Bars", ((AnAction) items.get(idx++)).getText());
 
-        // Separator 3
+        // Separator 4
         assertInstanceOf(ActionSeparator.class, items.get(idx++));
 
         assertInstanceOf(ToggleAction.class, items.get(idx));
@@ -762,40 +768,76 @@ public class ActionRegistryTest {
     }
 
     @Test
+    public void testNavigationBarSubmenu() {
+        ActionGroup nbGroup = actionManager.getGroup("view.appearance.navbar");
+        assertNotNull(nbGroup, "view.appearance.navbar should be registered");
+
+        List<AnAction> items = nbGroup.getChildren();
+        assertEquals(5, items.size(), "Navigation Bar must have 3 placement items, 1 separator, and Show Members");
+
+        int idx = 0;
+        assertInstanceOf(ToggleAction.class, items.get(idx));
+        assertEquals("view.appearance.navbar.top", items.get(idx).getId());
+        assertEquals("Top", ((AnAction) items.get(idx++)).getText());
+
+        assertInstanceOf(ToggleAction.class, items.get(idx));
+        assertEquals("view.appearance.navbar.bottom", items.get(idx).getId());
+        assertEquals("In Status Bar", ((AnAction) items.get(idx++)).getText());
+
+        assertInstanceOf(ToggleAction.class, items.get(idx));
+        assertEquals("view.appearance.navbar.hide", items.get(idx).getId());
+        assertEquals("Don't Show", ((AnAction) items.get(idx++)).getText());
+
+        assertInstanceOf(ActionSeparator.class, items.get(idx++));
+
+        assertInstanceOf(ToggleAction.class, items.get(idx));
+        assertEquals("view.appearance.navbar.members", items.get(idx).getId());
+        assertEquals("Show Members", ((AnAction) items.get(idx++)).getText());
+        assertEquals(idx, items.size());
+    }
+
+    @Test
     public void testStatusBarWidgetsSubmenu() {
         ActionGroup sbGroup = actionManager.getGroup("view.appearance.statusbar.widgets");
         assertNotNull(sbGroup, "view.appearance.statusbar.widgets should be registered");
 
         List<AnAction> items = sbGroup.getChildren();
-        assertEquals(20, items.size(), "Status Bar Widgets must have 17 widgets and 3 separators");
+        assertEquals(17, items.size(), "Status Bar Widgets must have exactly 17 widgets matching DataGrip Image 4");
 
         int idx = 0;
-        // Section 1
+        assertEquals("view.widget.status.text", items.get(idx).getId());
         assertEquals("Status Text", ((AnAction) items.get(idx++)).getText());
+        assertEquals("view.widget.fs.sync", items.get(idx).getId());
         assertEquals("File System Sync", ((AnAction) items.get(idx++)).getText());
+        assertEquals("view.widget.remote.wire", items.get(idx).getId());
         assertEquals("Remote Development Wire Stats", ((AnAction) items.get(idx++)).getText());
-        assertInstanceOf(ActionSeparator.class, items.get(idx++));
-
-        // Section 2
+        assertEquals("view.widget.aggregator", items.get(idx).getId());
         assertEquals("Aggregator", ((AnAction) items.get(idx++)).getText());
+        assertEquals("view.widget.grid.pos", items.get(idx).getId());
         assertEquals("Grid Position", ((AnAction) items.get(idx++)).getText());
+        assertEquals("view.widget.line.col", items.get(idx).getId());
         assertEquals("Line:Column Number", ((AnAction) items.get(idx++)).getText());
+        assertEquals("view.widget.lang.services", items.get(idx).getId());
         assertEquals("Language Services", ((AnAction) items.get(idx++)).getText());
+        assertEquals("view.widget.line.sep", items.get(idx).getId());
         assertEquals("Line Separator", ((AnAction) items.get(idx++)).getText());
+        assertEquals("view.widget.file.enc", items.get(idx).getId());
         assertEquals("File Encoding", ((AnAction) items.get(idx++)).getText());
-        assertInstanceOf(ActionSeparator.class, items.get(idx++));
-
-        // Section 3
+        assertEquals("view.widget.power.save", items.get(idx).getId());
         assertEquals("Power Save Mode", ((AnAction) items.get(idx++)).getText());
+        assertEquals("view.widget.editor.sel", items.get(idx).getId());
         assertEquals("Editor Selection Mode", ((AnAction) items.get(idx++)).getText());
+        assertEquals("view.widget.indentation", items.get(idx).getId());
         assertEquals("Indentation", ((AnAction) items.get(idx++)).getText());
+        assertEquals("view.widget.json.schema", items.get(idx).getId());
         assertEquals("JSON Schema", ((AnAction) items.get(idx++)).getText());
+        assertEquals("view.widget.mcp.server", items.get(idx).getId());
         assertEquals("MCP Server", ((AnAction) items.get(idx++)).getText());
+        assertEquals("view.widget.readonly", items.get(idx).getId());
         assertEquals("Read-Only Attribute", ((AnAction) items.get(idx++)).getText());
+        assertEquals("view.widget.notifications", items.get(idx).getId());
         assertEquals("Notifications", ((AnAction) items.get(idx++)).getText());
-        assertInstanceOf(ActionSeparator.class, items.get(idx++));
-
-        // Section 4
+        assertEquals("view.widget.memory", items.get(idx).getId());
         assertEquals("Memory Indicator", ((AnAction) items.get(idx++)).getText());
 
         assertEquals(idx, items.size());
@@ -873,7 +915,7 @@ public class ActionRegistryTest {
         assertEquals("Navigate", navMenu.getText());
 
         List<AnAction> items = navMenu.getChildren();
-        assertEquals(22, items.size(), "Navigate menu must have 16 actions and 6 separators");
+        assertEquals(23, items.size(), "Navigate menu must have 17 actions and 6 separators");
 
         int idx = 0;
 
@@ -908,13 +950,15 @@ public class ActionRegistryTest {
         // Separator 3
         assertInstanceOf(ActionSeparator.class, items.get(idx++));
 
-        // Section 4: Jump to Query Console..., Select In..., Declaration or Usages
+        // Section 4: Jump to Query Console..., Select In..., Declaration or Usages, Go to DDL
         assertEquals("navigate.jump.query.console", items.get(idx).getId());
         assertEquals("Jump to Query Console…", ((AnAction) items.get(idx++)).getText());
         assertEquals("navigate.select.in", items.get(idx).getId());
         assertEquals("Select In…", ((AnAction) items.get(idx++)).getText());
         assertEquals("navigate.declaration.usages", items.get(idx).getId());
         assertEquals("Declaration or Usages", ((AnAction) items.get(idx++)).getText());
+        assertEquals("navigate.goto.ddl", items.get(idx).getId());
+        assertEquals("Go to DDL", ((AnAction) items.get(idx++)).getText());
 
         // Separator 4
         assertInstanceOf(ActionSeparator.class, items.get(idx++));
@@ -1076,7 +1120,7 @@ public class ActionRegistryTest {
         assertNotNull(runMenu, "menu.run group should be registered");
 
         List<AnAction> items = runMenu.getChildren();
-        assertEquals(6, items.size(), "Run menu should have 4 actions and 2 separators");
+        assertEquals(7, items.size(), "Run menu should have 5 actions and 2 separators");
 
         // Section 1: Edit Configurations…
         assertInstanceOf(AnAction.class, items.get(0));
@@ -1086,7 +1130,7 @@ public class ActionRegistryTest {
         // Separator 1
         assertInstanceOf(ActionSeparator.class, items.get(1));
 
-        // Section 2: Compare Data & Compare Schema Structure
+        // Section 2: Compare Data, Compare Schema Structure, Full-Text Search…
         assertInstanceOf(AnAction.class, items.get(2));
         assertEquals("run.compare.data", items.get(2).getId());
         assertEquals("Compare Data", items.get(2).getText());
@@ -1095,13 +1139,17 @@ public class ActionRegistryTest {
         assertEquals("run.compare.schema", items.get(3).getId());
         assertEquals("Compare Schema Structure", items.get(3).getText());
 
-        // Separator 2
-        assertInstanceOf(ActionSeparator.class, items.get(4));
+        assertInstanceOf(AnAction.class, items.get(4));
+        assertEquals("run.fulltext.search", items.get(4).getId());
+        assertEquals("Full-Text Search…", items.get(4).getText());
 
-        // Section 3: Full-Text Search…
-        assertInstanceOf(AnAction.class, items.get(5));
-        assertEquals("run.fulltext.search", items.get(5).getId());
-        assertEquals("Full-Text Search…", items.get(5).getText());
+        // Separator 2
+        assertInstanceOf(ActionSeparator.class, items.get(5));
+
+        // Section 3: Import Data from File(s)…
+        assertInstanceOf(AnAction.class, items.get(6));
+        assertEquals("run.import.data", items.get(6).getId());
+        assertEquals("Import Data from File(s)…", items.get(6).getText());
     }
 
     @Test
@@ -1159,9 +1207,9 @@ public class ActionRegistryTest {
         assertNotNull(vcsMenu, "menu.vcs group should be registered");
 
         List<AnAction> items = vcsMenu.getChildren();
-        assertEquals(9, items.size(), "VCS menu should contain 9 entries (6 actions, 1 submenu group, 2 separators)");
+        assertEquals(8, items.size(), "VCS menu should contain 8 entries (6 actions, 1 submenu group, 1 separator)");
 
-        // Section 1: Integration & Operations Popup
+        // Section 1: Integration, Operations Popup, Patches
         assertInstanceOf(AnAction.class, items.get(0));
         assertEquals("vcs.enable.integration", items.get(0).getId());
         assertEquals("Enable Version Control Integration…", items.get(0).getText());
@@ -1170,34 +1218,30 @@ public class ActionRegistryTest {
         assertEquals("vcs.operations.popup", items.get(1).getId());
         assertEquals("VCS Operations Popup…", items.get(1).getText());
 
-        // Separator 1
-        assertInstanceOf(ActionSeparator.class, items.get(2));
+        assertInstanceOf(AnAction.class, items.get(2));
+        assertEquals("vcs.apply.patch", items.get(2).getId());
+        assertEquals("Apply Patch…", items.get(2).getText());
 
-        // Section 2: Patches
         assertInstanceOf(AnAction.class, items.get(3));
-        assertEquals("vcs.apply.patch", items.get(3).getId());
-        assertEquals("Apply Patch…", items.get(3).getText());
+        assertEquals("vcs.apply.patch.clipboard", items.get(3).getId());
+        assertEquals("Apply Patch from Clipboard…", items.get(3).getText());
 
-        assertInstanceOf(AnAction.class, items.get(4));
-        assertEquals("vcs.apply.patch.clipboard", items.get(4).getId());
-        assertEquals("Apply Patch from Clipboard…", items.get(4).getText());
+        // Separator 1
+        assertInstanceOf(ActionSeparator.class, items.get(4));
 
-        // Separator 2
-        assertInstanceOf(ActionSeparator.class, items.get(5));
+        // Section 2: VCS Checkout, Browse, Init
+        assertInstanceOf(AnAction.class, items.get(5));
+        assertEquals("vcs.get.from.vcs", items.get(5).getId());
+        assertEquals("Get from Version Control…", items.get(5).getText());
 
-        // Section 3: VCS Checkout, Browse, Init
-        assertInstanceOf(AnAction.class, items.get(6));
-        assertEquals("vcs.get.from.vcs", items.get(6).getId());
-        assertEquals("Get from Version Control…", items.get(6).getText());
+        assertInstanceOf(ActionGroup.class, items.get(6));
+        assertEquals("vcs.browse.repository", items.get(6).getId());
+        assertEquals("Browse VCS Repository", items.get(6).getText());
+        assertTrue(((ActionGroup) items.get(6)).isPopup());
 
-        assertInstanceOf(ActionGroup.class, items.get(7));
-        assertEquals("vcs.browse.repository", items.get(7).getId());
-        assertEquals("Browse VCS Repository", items.get(7).getText());
-        assertTrue(((ActionGroup) items.get(7)).isPopup());
-
-        assertInstanceOf(AnAction.class, items.get(8));
-        assertEquals("vcs.create.git.repository", items.get(8).getId());
-        assertEquals("Create Git Repository…", items.get(8).getText());
+        assertInstanceOf(AnAction.class, items.get(7));
+        assertEquals("vcs.create.git.repository", items.get(7).getId());
+        assertEquals("Create Git Repository…", items.get(7).getText());
     }
 
     @Test
@@ -1359,11 +1403,10 @@ public class ActionRegistryTest {
         assertTrue(layouts.isPopup());
 
         List<AnAction> items = layouts.getChildren();
-        assertEquals(4, items.size());
+        assertEquals(3, items.size());
         assertEquals("window.layouts.default", items.get(0).getId());
         assertEquals("window.layouts.custom", items.get(1).getId());
-        assertInstanceOf(ActionSeparator.class, items.get(2));
-        assertEquals("window.layouts.save.as.new", items.get(3).getId());
+        assertEquals("window.layouts.save.as.new", items.get(2).getId());
     }
 
     @Test
@@ -1411,8 +1454,52 @@ public class ActionRegistryTest {
 
         // Child submenus: View Mode, Move to, Resize
         assertNotNull(actionManager.getGroup("window.toolwindow.view.mode"));
-        assertNotNull(actionManager.getGroup("window.toolwindow.move.to"));
-        assertNotNull(actionManager.getGroup("window.toolwindow.resize"));
+        ActionGroup moveTo = actionManager.getGroup("window.toolwindow.move.to");
+        assertNotNull(moveTo);
+        assertEquals(6, moveTo.getChildren().size());
+        assertEquals("window.tw.moveto.left.top", moveTo.getChildren().get(0).getId());
+        assertEquals("window.tw.moveto.left.bottom", moveTo.getChildren().get(1).getId());
+        assertEquals("window.tw.moveto.bottom.left", moveTo.getChildren().get(2).getId());
+        assertEquals("window.tw.moveto.bottom.right", moveTo.getChildren().get(3).getId());
+        assertEquals("window.tw.moveto.right.bottom", moveTo.getChildren().get(4).getId());
+        assertEquals("window.tw.moveto.right.top", moveTo.getChildren().get(5).getId());
+
+        ActionGroup resize = actionManager.getGroup("window.toolwindow.resize");
+        assertNotNull(resize);
+        assertEquals(4, resize.getChildren().size());
+        assertEquals("window.tw.resize.left", resize.getChildren().get(0).getId());
+        assertEquals("window.tw.resize.right", resize.getChildren().get(1).getId());
+        assertEquals("window.tw.resize.top", resize.getChildren().get(2).getId());
+        assertEquals("window.tw.resize.bottom", resize.getChildren().get(3).getId());
+
+        // Stretch to Left: Ctrl+Alt+Shift+Left
+        KeyCodeCombination strLeftAcc = (KeyCodeCombination) resize.getChildren().get(0).getAccelerator();
+        assertEquals(KeyCode.LEFT, strLeftAcc.getCode());
+        assertEquals(KeyCombination.ModifierValue.DOWN, strLeftAcc.getControl());
+        assertEquals(KeyCombination.ModifierValue.DOWN, strLeftAcc.getAlt());
+        assertEquals(KeyCombination.ModifierValue.DOWN, strLeftAcc.getShift());
+
+        // Stretch to Right: Ctrl+Alt+Shift+Right
+        KeyCodeCombination strRightAcc = (KeyCodeCombination) resize.getChildren().get(1).getAccelerator();
+        assertEquals(KeyCode.RIGHT, strRightAcc.getCode());
+        assertEquals(KeyCombination.ModifierValue.DOWN, strRightAcc.getControl());
+        assertEquals(KeyCombination.ModifierValue.DOWN, strRightAcc.getAlt());
+        assertEquals(KeyCombination.ModifierValue.DOWN, strRightAcc.getShift());
+
+        // Stretch to Top: Ctrl+Alt+Shift+Up
+        KeyCodeCombination strTopAcc = (KeyCodeCombination) resize.getChildren().get(2).getAccelerator();
+        assertEquals(KeyCode.UP, strTopAcc.getCode());
+        assertEquals(KeyCombination.ModifierValue.DOWN, strTopAcc.getControl());
+        assertEquals(KeyCombination.ModifierValue.DOWN, strTopAcc.getAlt());
+        assertEquals(KeyCombination.ModifierValue.DOWN, strTopAcc.getShift());
+
+        // Stretch to Bottom: Ctrl+Alt+Shift+Down
+        KeyCodeCombination strBottomAcc = (KeyCodeCombination) resize.getChildren().get(3).getAccelerator();
+        assertEquals(KeyCode.DOWN, strBottomAcc.getCode());
+        assertEquals(KeyCombination.ModifierValue.DOWN, strBottomAcc.getControl());
+        assertEquals(KeyCombination.ModifierValue.DOWN, strBottomAcc.getAlt());
+        assertEquals(KeyCombination.ModifierValue.DOWN, strBottomAcc.getShift());
+
         assertNotNull(actionManager.getAction("window.toolwindow.group.tabs"));
     }
 
@@ -1430,14 +1517,33 @@ public class ActionRegistryTest {
         assertEquals(KeyCode.F4, ctAcc.getCode());
         assertEquals(KeyCombination.ModifierValue.DOWN, ctAcc.getControl());
 
+        // Reopen Closed Tab: Ctrl+Shift+T
+        AnAction reopenTab = actionManager.getAction("window.reopen.tab");
+        assertNotNull(reopenTab);
+        KeyCodeCombination rtAcc = (KeyCodeCombination) reopenTab.getAccelerator();
+        assertEquals(KeyCode.T, rtAcc.getCode());
+        assertEquals(KeyCombination.ModifierValue.DOWN, rtAcc.getControl());
+        assertEquals(KeyCombination.ModifierValue.DOWN, rtAcc.getShift());
+
         // Split with Chooser Navigation submenu
-        ActionGroup splitChooser = actionManager.getGroup("window.editor.split.chooser");
-        assertNotNull(splitChooser);
-        assertEquals(2, splitChooser.getChildren().size());
-        assertEquals("window.split.right", splitChooser.getChildren().get(0).getId());
-        assertEquals("window.split.down", splitChooser.getChildren().get(1).getId());
+        ActionGroup splitChooserNav = actionManager.getGroup("window.editor.split.chooser.navigation");
+        assertNotNull(splitChooserNav);
+        assertEquals(10, splitChooserNav.getChildren().size());
+        assertEquals("window.split.next", splitChooserNav.getChildren().get(0).getId());
+        assertEquals("window.split.prev", splitChooserNav.getChildren().get(1).getId());
+        assertEquals("window.split.exit.chooser", splitChooserNav.getChildren().get(2).getId());
+        assertEquals("window.split.chooser.split", splitChooserNav.getChildren().get(3).getId());
+        assertEquals("window.split.chooser.duplicate", splitChooserNav.getChildren().get(4).getId());
+        assertEquals("window.split.chooser.without.split", splitChooserNav.getChildren().get(5).getId());
+        assertEquals("window.split.switch.up", splitChooserNav.getChildren().get(6).getId());
+        assertEquals("window.split.switch.left", splitChooserNav.getChildren().get(7).getId());
+        assertEquals("window.split.switch.down", splitChooserNav.getChildren().get(8).getId());
+        assertEquals("window.split.switch.right", splitChooserNav.getChildren().get(9).getId());
 
         // Other editor tab actions
+        assertNotNull(actionManager.getAction("window.editor.next.tab"));
+        assertNotNull(actionManager.getAction("window.editor.prev.tab"));
+        assertNotNull(actionManager.getAction("window.editor.keep.tab.open"));
         assertNotNull(actionManager.getAction("window.close.other.tabs"));
         assertNotNull(actionManager.getAction("window.close.all.tabs"));
         assertNotNull(actionManager.getAction("window.close.unmodified.tabs"));
@@ -1445,8 +1551,16 @@ public class ActionRegistryTest {
         assertNotNull(actionManager.getAction("window.close.tabs.left"));
         assertNotNull(actionManager.getAction("window.close.tabs.right"));
         assertNotNull(actionManager.getAction("window.close.all.readonly"));
+        assertNotNull(actionManager.getAction("window.editor.stretch.top"));
+        assertNotNull(actionManager.getAction("window.editor.stretch.left"));
+        assertNotNull(actionManager.getAction("window.editor.stretch.bottom"));
+        assertNotNull(actionManager.getAction("window.editor.stretch.right"));
+        assertNotNull(actionManager.getAction("window.editor.change.splitter.orientation"));
+        assertNotNull(actionManager.getAction("window.editor.maximize.splits"));
         assertNotNull(actionManager.getAction("window.editor.unsplit"));
         assertNotNull(actionManager.getAction("window.unsplit.all"));
+        assertNotNull(actionManager.getAction("window.editor.goto.next.splitter"));
+        assertNotNull(actionManager.getAction("window.editor.goto.prev.splitter"));
         assertNotNull(actionManager.getAction("window.editor.configure.tabs"));
     }
 

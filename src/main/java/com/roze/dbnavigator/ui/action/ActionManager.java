@@ -187,6 +187,9 @@ public class ActionManager {
 
         ActionGroup regGroup = getGroup(groupConfig.getId());
         if (regGroup != null) {
+            if (regGroup.hasDynamicText()) {
+                menu.setText(regGroup.getText(ctx));
+            }
             menu.setDisable(!regGroup.isEnabled(ctx));
             boundMenuItems.add(new BoundItem(new WeakReference<>(menu), regGroup));
         }
@@ -255,7 +258,7 @@ public class ActionManager {
         MenuItem item;
         if (action != null) {
             item = action.createMenuItem(ctx);
-            if (config.getText() != null && !config.getText().isBlank()) {
+            if (!action.hasDynamicText() && config.getText() != null && !config.getText().isBlank()) {
                 item.setText(config.getText());
             }
             boundMenuItems.add(new BoundItem(new WeakReference<>(item), action));
@@ -1676,6 +1679,9 @@ public class ActionManager {
             if (item == null) return true;
             item.setDisable(!b.action().isEnabled(ctx));
             item.setVisible(b.action().isVisible(ctx));
+            if (b.action().hasDynamicText()) {
+                item.setText(b.action().getText(ctx));
+            }
             if (item instanceof CheckMenuItem checkItem && b.action() instanceof ToggleAction toggle) {
                 checkItem.setSelected(toggle.isSelected(ctx));
             }

@@ -102,7 +102,10 @@ public class MainWindow {
     public enum NavigationBarPlacement {
         TOP, BOTTOM, DONT_SHOW
     }
-    private NavigationBarPlacement navigationBarPlacement = NavigationBarPlacement.TOP;
+    private NavigationBarPlacement navigationBarPlacement = NavigationBarPlacement.BOTTOM;
+    private boolean showMembersInNavBar = true;
+    private final Map<String, Node> statusBarWidgetNodes = new HashMap<>();
+    private Node navBarStatusNode;
 
     private final Map<String, Boolean> statusBarWidgets = new HashMap<>(Map.ofEntries(
             Map.entry("statusText", false),
@@ -1973,6 +1976,16 @@ public class MainWindow {
     private HBox buildStatusBar() {
         statusLabel.getStyleClass().add("status-text");
 
+        // Navigation Bar Breadcrumb in Status Bar (Image 3)
+        Label navBarBreadcrumb = new Label("Database Consoles > postgres@localhost > console");
+        navBarBreadcrumb.getStyleClass().add("nav-bar-breadcrumb");
+        HBox navBarBox = new HBox(6, Icons.of(FontAwesomeSolid.TERMINAL, "#868a91", 10), navBarBreadcrumb);
+        navBarBox.setAlignment(Pos.CENTER_LEFT);
+        boolean showNavInBar = (navigationBarPlacement == NavigationBarPlacement.BOTTOM);
+        navBarBox.setVisible(showNavInBar);
+        navBarBox.setManaged(showNavInBar);
+        this.navBarStatusNode = navBarBox;
+
         taskBreadcrumbLabel.getStyleClass().add("task-breadcrumb");
         taskNameLabel.getStyleClass().add("task-name");
         taskProgressBar.setProgress(ProgressBar.INDETERMINATE_PROGRESS);
@@ -1982,8 +1995,8 @@ public class MainWindow {
         Button bell = new Button();
         bell.setGraphic(Icons.of(FontAwesomeSolid.BELL, "#a9b7c6", 12));
         bell.getStyleClass().add("task-cancel-button");
-        bell.setTooltip(new Tooltip("Show Run panel"));
-        bell.setOnAction(e -> showRunPanel());
+        bell.setTooltip(new Tooltip("Notifications"));
+        bell.setOnAction(e -> showNotificationsToolWindow());
 
         taskIndicator.setSpacing(8);
         taskIndicator.setAlignment(Pos.CENTER_LEFT);
@@ -1994,13 +2007,73 @@ public class MainWindow {
         taskIndicator.setManaged(false);
         taskIndicator.setOnMouseClicked(e -> showRunPanel());
 
+        // Status Bar Widgets (Image 4)
+        Label fsSyncLabel = new Label("FS Sync");
+        Label remoteWireLabel = new Label("Wire Stats");
+        Label aggregatorLabel = new Label("Aggregator");
+        Label gridPosLabel = new Label("1:1 [Grid]");
+        Label lineColLabel = new Label("1:1");
+        Label langServicesLabel = new Label("SQL");
+        Label lineSepLabel = new Label("LF");
+        Label fileEncLabel = new Label("UTF-8");
+        Label powerSaveLabel = new Label("Power Save");
+        Label editorSelLabel = new Label("INS");
+        Label indentationLabel = new Label("4 spaces");
+        Label jsonSchemaLabel = new Label("JSON");
+        Label mcpServerLabel = new Label("MCP");
+        Button readOnlyBtn = new Button();
+        readOnlyBtn.setGraphic(Icons.of(FontAwesomeSolid.LOCK, "#868a91", 11));
+        readOnlyBtn.getStyleClass().add("task-cancel-button");
+        readOnlyBtn.setTooltip(new Tooltip("Read-only attribute"));
+        Label memoryLabel = new Label("128M / 512M");
+
+        statusBarWidgetNodes.put("statusText", statusLabel);
+        statusBarWidgetNodes.put("fsSync", fsSyncLabel);
+        statusBarWidgetNodes.put("remoteWire", remoteWireLabel);
+        statusBarWidgetNodes.put("aggregator", aggregatorLabel);
+        statusBarWidgetNodes.put("gridPos", gridPosLabel);
+        statusBarWidgetNodes.put("lineCol", lineColLabel);
+        statusBarWidgetNodes.put("langServices", langServicesLabel);
+        statusBarWidgetNodes.put("lineSep", lineSepLabel);
+        statusBarWidgetNodes.put("fileEnc", fileEncLabel);
+        statusBarWidgetNodes.put("powerSave", powerSaveLabel);
+        statusBarWidgetNodes.put("editorSel", editorSelLabel);
+        statusBarWidgetNodes.put("indentation", indentationLabel);
+        statusBarWidgetNodes.put("jsonSchema", jsonSchemaLabel);
+        statusBarWidgetNodes.put("mcpServer", mcpServerLabel);
+        statusBarWidgetNodes.put("readOnly", readOnlyBtn);
+        statusBarWidgetNodes.put("notifications", bell);
+        statusBarWidgetNodes.put("memory", memoryLabel);
+
+        for (Map.Entry<String, Node> entry : statusBarWidgetNodes.entrySet()) {
+            boolean active = isStatusBarWidgetActive(entry.getKey());
+            entry.getValue().setVisible(active);
+            entry.getValue().setManaged(active);
+            if (entry.getValue() instanceof Label lbl && !entry.getKey().equals("statusText")) {
+                lbl.getStyleClass().add("status-widget-label");
+            }
+        }
+
+        HBox widgetsBox = new HBox(12,
+                fsSyncLabel, remoteWireLabel, aggregatorLabel, gridPosLabel,
+                lineColLabel, langServicesLabel, lineSepLabel, fileEncLabel,
+                powerSaveLabel, editorSelLabel, indentationLabel, jsonSchemaLabel,
+                mcpServerLabel, readOnlyBtn, bell, memoryLabel);
+        widgetsBox.setAlignment(Pos.CENTER_RIGHT);
+
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
         statusLabel.setMinWidth(0);
         statusLabel.setTextOverrun(OverrunStyle.ELLIPSIS);
 
-        HBox bar = new HBox(statusLabel, spacer, taskIndicator);
+        HBox leftBox = new HBox(10, navBarBox, statusLabel);
+        leftBox.setAlignment(Pos.CENTER_LEFT);
+
+        HBox rightBox = new HBox(12, widgetsBox, taskIndicator);
+        rightBox.setAlignment(Pos.CENTER_RIGHT);
+
+        HBox bar = new HBox(leftBox, spacer, rightBox);
         bar.setPadding(new Insets(5, 12, 5, 12));
         bar.getStyleClass().add("app-status-bar");
         bar.setMinHeight(Region.USE_PREF_SIZE);
@@ -2819,6 +2892,7 @@ public class MainWindow {
         com.roze.dbnavigator.db.AppSettingsStore.save(settings);
         applyEditorFontToOpenConsoles();
         setStatus(presentationMode ? "Entered Presentation Mode" : "Exited Presentation Mode");
+        ActionManager.getInstance().updateActions(this);
     }
 
     public boolean isPresentationMode() { return presentationMode; }
@@ -2835,6 +2909,7 @@ public class MainWindow {
             setStatusBarVisible(true);
         }
         setStatus(distractionFreeMode ? "Entered Distraction Free Mode" : "Exited Distraction Free Mode");
+        ActionManager.getInstance().updateActions(this);
     }
 
     public boolean isDistractionFreeMode() { return distractionFreeMode; }
@@ -2842,6 +2917,7 @@ public class MainWindow {
     public void toggleFullScreen() {
         stage.setFullScreen(!stage.isFullScreen());
         setStatus(stage.isFullScreen() ? "Full Screen enabled" : "Full Screen exited");
+        ActionManager.getInstance().updateActions(this);
     }
 
     public boolean isFullScreen() { return stage.isFullScreen(); }
@@ -2859,6 +2935,7 @@ public class MainWindow {
             setStatusBarVisible(true);
         }
         setStatus(zenMode ? "Entered Zen Mode" : "Exited Zen Mode");
+        ActionManager.getInstance().updateActions(this);
     }
 
     public boolean isZenMode() { return zenMode; }
@@ -2867,6 +2944,7 @@ public class MainWindow {
         compactMode = !compactMode;
         root.pseudoClassStateChanged(javafx.css.PseudoClass.getPseudoClass("compact"), compactMode);
         setStatus(compactMode ? "Compact Mode enabled" : "Compact Mode disabled");
+        ActionManager.getInstance().updateActions(this);
     }
 
     public boolean isCompactMode() { return compactMode; }
@@ -2882,6 +2960,7 @@ public class MainWindow {
             try {
                 currentIdeZoom = Integer.parseInt(val.replace("%", "").trim());
                 setStatus("IDE Zoom set to " + currentIdeZoom + "%");
+                ActionManager.getInstance().updateActions(this);
             } catch (Exception ignored) {}
         });
     }
@@ -2891,6 +2970,7 @@ public class MainWindow {
     public void togglePresentationAssistant() {
         presentationAssistant = !presentationAssistant;
         setStatus(presentationAssistant ? "Presentation Assistant enabled" : "Presentation Assistant disabled");
+        ActionManager.getInstance().updateActions(this);
     }
 
     public boolean isPresentationAssistant() { return presentationAssistant; }
@@ -2904,6 +2984,7 @@ public class MainWindow {
             headerMiddleBar.setVisible(visible);
             headerMiddleBar.setManaged(visible);
             setStatus("Toolbar " + (visible ? "shown" : "hidden"));
+            ActionManager.getInstance().updateActions(this);
         }
     }
 
@@ -2912,6 +2993,7 @@ public class MainWindow {
     public void setToolWindowBarsVisible(boolean visible) {
         this.toolWindowBarsVisible = visible;
         setStatus("Tool Window Bars " + (visible ? "shown" : "hidden"));
+        ActionManager.getInstance().updateActions(this);
     }
 
     public boolean isStatusBarVisible() {
@@ -2921,6 +3003,7 @@ public class MainWindow {
     public void setStatusBarVisible(boolean visible) {
         root.setBottom(visible ? statusBarNode : null);
         setStatus("Status Bar " + (visible ? "shown" : "hidden"));
+        ActionManager.getInstance().updateActions(this);
     }
 
     public MainMenuPlacement getMainMenuPlacement() { return mainMenuPlacement; }
@@ -2928,13 +3011,28 @@ public class MainWindow {
     public void setMainMenuPlacement(MainMenuPlacement placement) {
         this.mainMenuPlacement = placement;
         setStatus("Main Menu: " + placement);
+        ActionManager.getInstance().updateActions(this);
     }
 
     public NavigationBarPlacement getNavigationBarPlacement() { return navigationBarPlacement; }
 
     public void setNavigationBarPlacement(NavigationBarPlacement placement) {
         this.navigationBarPlacement = placement;
+        if (navBarStatusNode != null) {
+            boolean inStatusBar = (placement == NavigationBarPlacement.BOTTOM);
+            navBarStatusNode.setVisible(inStatusBar);
+            navBarStatusNode.setManaged(inStatusBar);
+        }
         setStatus("Navigation Bar: " + placement);
+        ActionManager.getInstance().updateActions(this);
+    }
+
+    public boolean isShowMembersInNavBar() { return showMembersInNavBar; }
+
+    public void setShowMembersInNavBar(boolean show) {
+        this.showMembersInNavBar = show;
+        setStatus("Show Members in Navigation Bar: " + (show ? "shown" : "hidden"));
+        ActionManager.getInstance().updateActions(this);
     }
 
     public boolean isStatusBarWidgetActive(String id) {
@@ -2943,7 +3041,13 @@ public class MainWindow {
 
     public void setStatusBarWidgetActive(String id, boolean active) {
         statusBarWidgets.put(id, active);
+        Node node = statusBarWidgetNodes.get(id);
+        if (node != null) {
+            node.setVisible(active);
+            node.setManaged(active);
+        }
         setStatus("Status Bar Widget '" + id + "': " + (active ? "visible" : "hidden"));
+        ActionManager.getInstance().updateActions(this);
     }
 
     // =========================================================================
@@ -3372,16 +3476,209 @@ public class MainWindow {
     }
 
     // =========================================================================
-    // WINDOW MENU BACKING METHODS
+    // WINDOW MENU BACKING METHODS & ENUMS
     // =========================================================================
+    public enum ToolWindowViewMode {
+        DOCK_PINNED("Dock Pinned"),
+        DOCK_UNPINNED("Dock Unpinned"),
+        UNDOCK("Undock"),
+        FLOAT("Float"),
+        WINDOW("Window");
+
+        private final String displayName;
+
+        ToolWindowViewMode(String displayName) {
+            this.displayName = displayName;
+        }
+
+        public String getDisplayName() {
+            return displayName;
+        }
+    }
+
+    private ToolWindowViewMode activeToolWindowViewMode = ToolWindowViewMode.DOCK_PINNED;
+
+    public ToolWindowViewMode getActiveToolWindowViewMode() {
+        return activeToolWindowViewMode;
+    }
+
+    public void setActiveToolWindowViewMode(ToolWindowViewMode mode) {
+        this.activeToolWindowViewMode = mode != null ? mode : ToolWindowViewMode.DOCK_PINNED;
+        setStatus("Tool Window View Mode: " + activeToolWindowViewMode.getDisplayName());
+        ActionManager.getInstance().updateActions(this);
+    }
+
+    public enum WindowLayoutPreset {
+        DEFAULT("Default"),
+        CUSTOM("Custom");
+
+        private final String displayName;
+
+        WindowLayoutPreset(String displayName) {
+            this.displayName = displayName;
+        }
+
+        public String getDisplayName() {
+            return displayName;
+        }
+    }
+
+    private WindowLayoutPreset activeWindowLayout = WindowLayoutPreset.CUSTOM;
+
+    public WindowLayoutPreset getActiveWindowLayout() {
+        return activeWindowLayout;
+    }
+
+    public void setActiveWindowLayout(WindowLayoutPreset layout) {
+        this.activeWindowLayout = layout != null ? layout : WindowLayoutPreset.DEFAULT;
+        setStatus("Layout: " + activeWindowLayout.getDisplayName());
+        ActionManager.getInstance().updateActions(this);
+    }
+
+    public enum ToolWindowDockPosition {
+        LEFT_TOP("Left Top"),
+        LEFT_BOTTOM("Left Bottom"),
+        BOTTOM_LEFT("Bottom Left"),
+        BOTTOM_RIGHT("Bottom Right"),
+        RIGHT_BOTTOM("Right Bottom"),
+        RIGHT_TOP("Right Top");
+
+        private final String displayName;
+
+        ToolWindowDockPosition(String displayName) {
+            this.displayName = displayName;
+        }
+
+        public String getDisplayName() {
+            return displayName;
+        }
+    }
+
+    private ToolWindowDockPosition activeToolWindowDockPosition = ToolWindowDockPosition.LEFT_TOP;
+
+    public ToolWindowDockPosition getActiveToolWindowDockPosition() {
+        return activeToolWindowDockPosition;
+    }
+
+    public void setActiveToolWindowDockPosition(ToolWindowDockPosition pos) {
+        this.activeToolWindowDockPosition = pos != null ? pos : ToolWindowDockPosition.LEFT_TOP;
+        applyToolWindowDockPosition(this.activeToolWindowDockPosition);
+        setStatus("Tool Window Dock Position: " + activeToolWindowDockPosition.getDisplayName());
+        ActionManager.getInstance().updateActions(this);
+    }
+
+    public void applyToolWindowDockPosition(ToolWindowDockPosition pos) {
+        if (schemaPane == null || centerSplit == null) return;
+        switch (pos) {
+            case LEFT_TOP, LEFT_BOTTOM -> {
+                centerSplit.setOrientation(Orientation.HORIZONTAL);
+                if (!centerSplit.getItems().contains(schemaPane)) {
+                    centerSplit.getItems().add(0, schemaPane);
+                } else if (centerSplit.getItems().indexOf(schemaPane) != 0) {
+                    centerSplit.getItems().remove(schemaPane);
+                    centerSplit.getItems().add(0, schemaPane);
+                }
+                centerSplit.setDividerPositions(0.22);
+            }
+            case RIGHT_TOP, RIGHT_BOTTOM -> {
+                centerSplit.setOrientation(Orientation.HORIZONTAL);
+                if (centerSplit.getItems().contains(schemaPane)) {
+                    centerSplit.getItems().remove(schemaPane);
+                }
+                centerSplit.getItems().add(schemaPane);
+                centerSplit.setDividerPositions(0.78);
+            }
+            case BOTTOM_LEFT, BOTTOM_RIGHT -> {
+                centerSplit.setOrientation(Orientation.VERTICAL);
+                if (centerSplit.getItems().contains(schemaPane)) {
+                    centerSplit.getItems().remove(schemaPane);
+                }
+                centerSplit.getItems().add(schemaPane);
+                centerSplit.setDividerPositions(0.70);
+            }
+        }
+    }
+
+    public String getCurrentProjectName() {
+        return currentProject != null ? currentProject.getName() : "default";
+    }
+
+    public static boolean hasMultipleProjectWindows() {
+        return false;
+    }
+
+    public void goToDdl() {
+        goToSelectedDdl();
+    }
+
+    public void showRunConfigurationsDialog() {
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle("Run/Debug Configurations");
+        dialog.setHeaderText("Database Run/Debug Configurations");
+        dialog.initOwner(stage);
+        DialogTheme.apply(dialog);
+
+        VBox content = new VBox(10);
+        content.setPadding(new Insets(15));
+        content.setPrefWidth(550);
+
+        ConnectionProfile activeP = getActiveOrSelectedProfile();
+        ListView<String> configList = new ListView<>();
+        configList.getItems().addAll(
+                "Query Console: " + (activeP != null ? activeP.getName() : "Local DB"),
+                "Migration Script: Schema Update",
+                "Full-Text Search: Global Index",
+                "Data Export / Dump Script"
+        );
+        configList.getSelectionModel().selectFirst();
+
+        content.getChildren().addAll(new Label("Configurations:"), configList);
+        dialog.getDialogPane().setContent(content);
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+        dialog.showAndWait();
+        setStatus("Run/Debug Configurations");
+    }
+
+    public void showImportDataDialog() {
+        ConnectionProfile profile = getActiveOrSelectedProfile();
+        DbObject table = null;
+        if (schemaPane != null) {
+            DbObject sel = schemaPane.getSelectedDbObject();
+            if (sel != null && (sel.getKind() == DbObject.Kind.TABLE || sel.getKind() == DbObject.Kind.VIEW)) {
+                table = sel;
+            }
+        }
+        if (profile == null) {
+            List<ConnectionProfile> profiles = ConnectionStore.load();
+            profile = profiles.isEmpty() ? null : profiles.get(0);
+        }
+        if (profile != null && table != null) {
+            ImportDataDialog.show(this, profile, table);
+            setStatus("Opened Import Data dialog for: " + table.getName());
+        } else {
+            FileChooser chooser = new FileChooser();
+            chooser.setTitle("Import Data from File(s)");
+            chooser.getExtensionFilters().addAll(
+                    new FileChooser.ExtensionFilter("CSV / TSV Files (*.csv, *.tsv, *.txt)", "*.csv", "*.tsv", "*.txt"),
+                    new FileChooser.ExtensionFilter("All Files", "*.*")
+            );
+            File file = chooser.showOpenDialog(stage);
+            if (file != null) {
+                setStatus("Selected file to import: " + file.getName());
+            }
+        }
+    }
+
     public void applyDefaultLayout() {
         centerSplit.getItems().setAll(schemaPane, tabPane);
         centerSplit.setDividerPositions(0.22);
         activeTabPane = tabPane;
+        setActiveWindowLayout(WindowLayoutPreset.DEFAULT);
         setStatus("Applied Default Layout");
     }
 
     public void applyCustomLayout() {
+        setActiveWindowLayout(WindowLayoutPreset.CUSTOM);
         setStatus("Applied Custom Layout");
     }
 
@@ -3391,10 +3688,14 @@ public class MainWindow {
         dialog.setHeaderText("Enter layout name:");
         dialog.initOwner(stage);
         DialogTheme.apply(dialog);
-        dialog.showAndWait().ifPresent(name -> setStatus("Saved new layout: " + name));
+        dialog.showAndWait().ifPresent(name -> {
+            setActiveWindowLayout(WindowLayoutPreset.CUSTOM);
+            setStatus("Saved new layout: " + name);
+        });
     }
 
     public void saveChangesIntoCurrentLayout() {
+        setActiveWindowLayout(WindowLayoutPreset.CUSTOM);
         setStatus("Saved changes into current layout");
     }
 
@@ -3434,6 +3735,71 @@ public class MainWindow {
             hideRunPanel();
         }
         setStatus("Hid bottom tool windows");
+    }
+
+    public boolean hasBottomToolWindow() {
+        Tab current = currentSelectedTab();
+        return runPanelVisible || (current instanceof QueryTab qt && qt.isDataPanelVisible());
+    }
+
+    public boolean canStretchToolWindowLeft() {
+        return isDatabaseExplorerVisible() && (activeToolWindowDockPosition == ToolWindowDockPosition.LEFT_TOP || activeToolWindowDockPosition == ToolWindowDockPosition.LEFT_BOTTOM);
+    }
+
+    public boolean canStretchToolWindowRight() {
+        return isDatabaseExplorerVisible() && (activeToolWindowDockPosition == ToolWindowDockPosition.RIGHT_TOP || activeToolWindowDockPosition == ToolWindowDockPosition.RIGHT_BOTTOM);
+    }
+
+    public boolean canStretchToolWindowTop() {
+        return hasBottomToolWindow() || (isDatabaseExplorerVisible() && (activeToolWindowDockPosition == ToolWindowDockPosition.BOTTOM_LEFT || activeToolWindowDockPosition == ToolWindowDockPosition.BOTTOM_RIGHT));
+    }
+
+    public boolean canStretchToolWindowBottom() {
+        return hasBottomToolWindow();
+    }
+
+    public void stretchToolWindowLeft() {
+        if (centerSplit != null && centerSplit.getDividerPositions().length > 0) {
+            double current = centerSplit.getDividerPositions()[0];
+            centerSplit.setDividerPositions(Math.min(0.75, current + 0.05));
+            setStatus("Stretched tool window to left");
+        }
+    }
+
+    public void stretchToolWindowRight() {
+        if (centerSplit != null && centerSplit.getDividerPositions().length > 0) {
+            double current = centerSplit.getDividerPositions()[0];
+            centerSplit.setDividerPositions(Math.max(0.10, current - 0.05));
+            setStatus("Stretched tool window to right");
+        }
+    }
+
+    public void stretchToolWindowTop() {
+        if (verticalSplit != null && verticalSplit.getDividerPositions().length > 0) {
+            double current = verticalSplit.getDividerPositions()[0];
+            verticalSplit.setDividerPositions(Math.max(0.20, current - 0.05));
+            setStatus("Stretched tool window to top");
+        }
+    }
+
+    public void stretchToolWindowBottom() {
+        if (verticalSplit != null && verticalSplit.getDividerPositions().length > 0) {
+            double current = verticalSplit.getDividerPositions()[0];
+            verticalSplit.setDividerPositions(Math.min(0.85, current + 0.05));
+            setStatus("Stretched tool window to bottom");
+        }
+    }
+
+    public boolean hasEditorSplits() {
+        return editorTabPanes().size() > 1;
+    }
+
+    public boolean hasClosedTabs() {
+        return hasClosedTabToReopen();
+    }
+
+    public void showConfigureEditorTabsDialog() {
+        SettingsDialog.show(this, "Editor Tabs");
     }
 
     public void hideAllToolWindows() {
@@ -3478,6 +3844,17 @@ public class MainWindow {
             hideRunPanel();
         }
         setStatus("Closed active tool window tab");
+    }
+
+    public void closeOtherToolWindowTabs() {
+        setStatus("Closed other tool window tabs");
+    }
+
+    public void closeAllToolWindowTabs() {
+        if (runPanelVisible) {
+            hideRunPanel();
+        }
+        setStatus("Closed all tool window tabs");
     }
 
     public void toggleGroupToolWindowTabs() {
@@ -3605,12 +3982,37 @@ public class MainWindow {
         }
     }
 
+    private final List<String> activeNotifications = new ArrayList<>();
+
+    public boolean hasActiveNotifications() {
+        return !activeNotifications.isEmpty();
+    }
+
+    public void addNotification(String message) {
+        if (message != null) {
+            activeNotifications.add(message);
+            ActionManager.getInstance().updateActions(this);
+        }
+    }
+
     public void closeFirstNotification() {
-        setStatus("Closed first notification");
+        if (!activeNotifications.isEmpty()) {
+            activeNotifications.remove(0);
+            setStatus("Closed first notification");
+            ActionManager.getInstance().updateActions(this);
+        } else {
+            setStatus("No active notifications to close");
+        }
     }
 
     public void closeAllNotifications() {
-        setStatus("Closed all notifications");
+        if (!activeNotifications.isEmpty()) {
+            activeNotifications.clear();
+            setStatus("Closed all notifications");
+            ActionManager.getInstance().updateActions(this);
+        } else {
+            setStatus("No active notifications to close");
+        }
     }
 
     public void showProcesses() {
@@ -3618,8 +4020,20 @@ public class MainWindow {
         setStatus("Showing background processes");
     }
 
+    private boolean autoShowProcesses = true;
+
+    public boolean isAutoShowProcesses() {
+        return autoShowProcesses;
+    }
+
+    public void setAutoShowProcesses(boolean autoShow) {
+        this.autoShowProcesses = autoShow;
+        setStatus("Auto show processes: " + (autoShowProcesses ? "Enabled" : "Disabled"));
+        ActionManager.getInstance().updateActions(this);
+    }
+
     public void toggleAutoShowProcesses() {
-        setStatus("Toggled auto-show processes");
+        setAutoShowProcesses(!this.autoShowProcesses);
     }
 
     public void nextProjectWindow() {

@@ -105,6 +105,29 @@ public class ActionGroup extends AnAction {
     }
 
     private java.util.function.BiConsumer<Menu, MainWindow> onMenuShowing;
+    private java.util.function.Function<MainWindow, String> groupDynamicTextFunction;
+
+    public ActionGroup dynamicText(java.util.function.Function<MainWindow, String> dynamicTextFunction) {
+        this.groupDynamicTextFunction = dynamicTextFunction;
+        return this;
+    }
+
+    @Override
+    public boolean hasDynamicText() {
+        return groupDynamicTextFunction != null || super.hasDynamicText();
+    }
+
+    @Override
+    public String getText(MainWindow ctx) {
+        if (groupDynamicTextFunction != null) {
+            try {
+                return groupDynamicTextFunction.apply(ctx);
+            } catch (Exception e) {
+                return getText();
+            }
+        }
+        return super.getText(ctx);
+    }
 
     public ActionGroup setOnMenuShowing(java.util.function.BiConsumer<Menu, MainWindow> onMenuShowing) {
         this.onMenuShowing = onMenuShowing;
@@ -121,7 +144,7 @@ public class ActionGroup extends AnAction {
 
     /** Creates a JavaFX Menu containing all children. */
     public Menu createMenu(MainWindow ctx) {
-        Menu menu = new Menu(getText());
+        Menu menu = new Menu(getText(ctx));
         if (getIcon() != null) {
             menu.setGraphic(Icons.of(getIcon(), "#a9b7c6", 11));
         }

@@ -1033,74 +1033,94 @@ public final class AppSettingsStore {
             mainMenuChildren.add(MenuItemConfig.group("menu.edit", "Edit", true, editMenu));
 
             // -------------------------------------------------------------
-            // Main Menu > View (Exact match to DataGrip Images 4, 5)
+            // Main Menu > View (Exact match to DataGrip Images 1, 2, 3, 4)
             // -------------------------------------------------------------
             List<MenuItemConfig> toolWindows = new ArrayList<>();
-            toolWindows.add(MenuItemConfig.action("middle.database", "Database Explorer", "DATABASE"));
-            toolWindows.add(MenuItemConfig.action("view.tool.files", "Files", "FOLDER"));
-            toolWindows.add(MenuItemConfig.action("view.tool.terminal", "Terminal", "TERMINAL"));
-            toolWindows.add(MenuItemConfig.action("file.new.console", "Query Console", "TERMINAL"));
+            toolWindows.add(MenuItemConfig.action("view.toolwindow.commit", "Commit", "CHECK"));
+            toolWindows.add(MenuItemConfig.action("view.toolwindow.database", "Database Explorer", "DATABASE"));
+            toolWindows.add(MenuItemConfig.action("view.toolwindow.files", "Files", "FOLDER"));
+            toolWindows.add(MenuItemConfig.action("view.toolwindow.find", "Find", "SEARCH"));
+            toolWindows.add(MenuItemConfig.action("view.toggle.run", "Run", "PLAY"));
+            toolWindows.add(MenuItemConfig.action("view.toolwindow.debug", "Debug", "BUG"));
+            toolWindows.add(MenuItemConfig.action("view.toolwindow.problems", "Problems", "EXCLAMATION_TRIANGLE"));
+            toolWindows.add(MenuItemConfig.action("view.toolwindow.structure", "Structure", "SITEMAP"));
+            toolWindows.add(MenuItemConfig.action("view.toolwindow.services", "Services", "CUBES"));
+            toolWindows.add(MenuItemConfig.action("view.toolwindow.vcs", "Version Control", "CODE_BRANCH"));
+            toolWindows.add(MenuItemConfig.action("view.toolwindow.ai", "AI Assistant", "ROBOT"));
+            toolWindows.add(MenuItemConfig.separator());
+            toolWindows.add(MenuItemConfig.action("view.toolwindow.backup.sync", "Backup and Sync History", "HISTORY"));
+            toolWindows.add(MenuItemConfig.action("view.toolwindow.bookmarks", "Bookmarks", "BOOKMARK"));
+            toolWindows.add(MenuItemConfig.action("view.toolwindow.coverage", "Coverage", "SHIELD_ALT"));
+            toolWindows.add(MenuItemConfig.action("view.toolwindow.dbchanges", "Database Changes", "DATABASE"));
+            toolWindows.add(MenuItemConfig.action("view.toolwindow.hierarchy", "Hierarchy", "SITEMAP"));
+            toolWindows.add(MenuItemConfig.action("view.toolwindow.learn", "Learn", "GRADUATION_CAP"));
+            toolWindows.add(MenuItemConfig.action("view.toolwindow.notifications", "Notifications", "BELL"));
+            toolWindows.add(MenuItemConfig.action("view.toolwindow.terminal", "Terminal", "TERMINAL"));
+            toolWindows.add(MenuItemConfig.action("view.toolwindow.todo", "TODO", "TASKS"));
 
-            // Image 4: Appearance > ToggleFullScreenGroup
-            List<MenuItemConfig> fullScreenGroupChildren = new ArrayList<>();
-            fullScreenGroupChildren.add(MenuItemConfig.separator());
-            fullScreenGroupChildren.add(MenuItemConfig.action("view.toggle.presentation.mode", "Toggle Presentation Mode"));
-            fullScreenGroupChildren.add(MenuItemConfig.action("view.toggle.distraction.free.mode", "Toggle Distraction Free Mode"));
-            fullScreenGroupChildren.add(MenuItemConfig.action("view.toggle.fullscreen.mode", "Toggle Full Screen Mode"));
-            fullScreenGroupChildren.add(MenuItemConfig.action("view.toggle.zen.mode", "Toggle Zen Mode"));
-            fullScreenGroupChildren.add(MenuItemConfig.separator());
-            fullScreenGroupChildren.add(MenuItemConfig.action("view.compact.mode", "Compact Mode"));
+            // Image 2: Main Menu Placement Submenu
+            List<MenuItemConfig> mainMenuPlacementChildren = new ArrayList<>();
+            mainMenuPlacementChildren.add(MenuItemConfig.action("view.appearance.mainmenu.hamburger", "Hide under Hamburger Button"));
+            mainMenuPlacementChildren.add(MenuItemConfig.action("view.appearance.mainmenu.merge", "Merge with Main Toolbar"));
+            mainMenuPlacementChildren.add(MenuItemConfig.action("view.appearance.mainmenu.above", "Show above Main Toolbar"));
 
-            // Image 5: Appearance > UIToggleActions > ViewToolbarActionsGroup
-            List<MenuItemConfig> statusBarWidgetChildren = new ArrayList<>();
-            statusBarWidgetChildren.add(MenuItemConfig.action("view.status.bar.widget.status.text", "Status Text"));
-
+            // Image 3: Navigation Bar Submenu
             List<MenuItemConfig> navBarGroupChildren = new ArrayList<>();
+            navBarGroupChildren.add(MenuItemConfig.action("view.appearance.navbar.top", "Top"));
+            navBarGroupChildren.add(MenuItemConfig.action("view.appearance.navbar.bottom", "In Status Bar"));
+            navBarGroupChildren.add(MenuItemConfig.action("view.appearance.navbar.hide", "Don't Show"));
+            navBarGroupChildren.add(MenuItemConfig.separator());
+            navBarGroupChildren.add(MenuItemConfig.action("view.appearance.navbar.members", "Show Members"));
 
-            List<MenuItemConfig> viewToolbarActionsChildren = new ArrayList<>();
-            viewToolbarActionsChildren.add(MenuItemConfig.action("view.toolbar.actions.toolbar", "Toolbar"));
-            viewToolbarActionsChildren.add(MenuItemConfig.action("view.toolbar.actions.navbar", "Navigation Bar"));
-            viewToolbarActionsChildren.add(MenuItemConfig.group("view.toolbar.actions.navbar.group", "Navigation Bar", true, navBarGroupChildren));
-            viewToolbarActionsChildren.add(MenuItemConfig.action("view.toggle.tool.window.bars", "Tool Window Bars"));
-            viewToolbarActionsChildren.add(MenuItemConfig.action("view.toggle.status.bar", "Status Bar"));
-            viewToolbarActionsChildren.add(MenuItemConfig.group("view.status.bar.widgets", "Status Bar Widgets", true, statusBarWidgetChildren));
-            viewToolbarActionsChildren.add(MenuItemConfig.action("view.toggle.members.in.nav.bar", "Members in Navigation Bar"));
+            // Image 4: Status Bar Widgets Submenu
+            List<MenuItemConfig> statusBarWidgetChildren = new ArrayList<>();
+            statusBarWidgetChildren.add(MenuItemConfig.action("view.widget.status.text", "Status Text"));
+            statusBarWidgetChildren.add(MenuItemConfig.action("view.widget.fs.sync", "File System Sync"));
+            statusBarWidgetChildren.add(MenuItemConfig.action("view.widget.remote.wire", "Remote Development Wire Stats"));
+            statusBarWidgetChildren.add(MenuItemConfig.action("view.widget.aggregator", "Aggregator"));
+            statusBarWidgetChildren.add(MenuItemConfig.action("view.widget.grid.pos", "Grid Position"));
+            statusBarWidgetChildren.add(MenuItemConfig.action("view.widget.line.col", "Line:Column Number"));
+            statusBarWidgetChildren.add(MenuItemConfig.action("view.widget.lang.services", "Language Services"));
+            statusBarWidgetChildren.add(MenuItemConfig.action("view.widget.line.sep", "Line Separator"));
+            statusBarWidgetChildren.add(MenuItemConfig.action("view.widget.file.enc", "File Encoding"));
+            statusBarWidgetChildren.add(MenuItemConfig.action("view.widget.power.save", "Power Save Mode"));
+            statusBarWidgetChildren.add(MenuItemConfig.action("view.widget.editor.sel", "Editor Selection Mode"));
+            statusBarWidgetChildren.add(MenuItemConfig.action("view.widget.indentation", "Indentation"));
+            statusBarWidgetChildren.add(MenuItemConfig.action("view.widget.json.schema", "JSON Schema"));
+            statusBarWidgetChildren.add(MenuItemConfig.action("view.widget.mcp.server", "MCP Server"));
+            statusBarWidgetChildren.add(MenuItemConfig.action("view.widget.readonly", "Read-Only Attribute"));
+            statusBarWidgetChildren.add(MenuItemConfig.action("view.widget.notifications", "Notifications"));
+            statusBarWidgetChildren.add(MenuItemConfig.action("view.widget.memory", "Memory Indicator"));
 
-            List<MenuItemConfig> uiToggleActionsChildren = new ArrayList<>();
-            uiToggleActionsChildren.add(MenuItemConfig.separator());
-            uiToggleActionsChildren.add(MenuItemConfig.action("view.toggle.presentation.assistant", "Presentation Assistant"));
-            uiToggleActionsChildren.add(MenuItemConfig.separator());
-            uiToggleActionsChildren.add(MenuItemConfig.action("view.toggle.main.menu", "Main Menu"));
-            uiToggleActionsChildren.add(MenuItemConfig.action("view.toggle.main.menu.separate", "Main Menu"));
-            uiToggleActionsChildren.add(MenuItemConfig.action("view.toggle.toolbar", "Toolbar"));
-            uiToggleActionsChildren.add(MenuItemConfig.action("view.toggle.toolbar.classic", "Toolbar Classic"));
-            uiToggleActionsChildren.add(MenuItemConfig.action("view.toggle.navigation.bar", "Navigation Bar"));
-            uiToggleActionsChildren.add(MenuItemConfig.group("view.toolbar.actions.group", "ViewToolbarActionsGroup", false, viewToolbarActionsChildren));
-            uiToggleActionsChildren.add(MenuItemConfig.separator());
-
+            // Image 2: Appearance Submenu
             List<MenuItemConfig> appearanceChildren = new ArrayList<>();
-            appearanceChildren.add(MenuItemConfig.group("view.toggle.fullscreen.group", "ToggleFullScreenGroup", false, fullScreenGroupChildren));
-            appearanceChildren.add(MenuItemConfig.action("view.zoom.ide", "Zoom IDE"));
-            appearanceChildren.add(MenuItemConfig.group("view.ui.toggle.actions", "UIToggleActions", false, uiToggleActionsChildren));
+            appearanceChildren.add(MenuItemConfig.action("view.appearance.presentation.mode", "Enter Presentation Mode"));
+            appearanceChildren.add(MenuItemConfig.action("view.appearance.distraction.free", "Enter Distraction Free Mode"));
+            appearanceChildren.add(MenuItemConfig.action("view.appearance.full.screen", "Enter Full Screen"));
+            appearanceChildren.add(MenuItemConfig.action("view.appearance.zen.mode", "Enter Zen Mode"));
             appearanceChildren.add(MenuItemConfig.separator());
+            appearanceChildren.add(MenuItemConfig.action("view.appearance.compact.mode", "Compact Mode"));
+            appearanceChildren.add(MenuItemConfig.action("view.appearance.zoom.ide", "Zoom IDE\u2026"));
+            appearanceChildren.add(MenuItemConfig.separator());
+            appearanceChildren.add(MenuItemConfig.action("view.appearance.presentation.assistant", "Presentation Assistant"));
+            appearanceChildren.add(MenuItemConfig.separator());
+            appearanceChildren.add(MenuItemConfig.group("view.appearance.mainmenu", "Main Menu", true, mainMenuPlacementChildren));
+            appearanceChildren.add(MenuItemConfig.action("view.appearance.toolbar", "Toolbar"));
+            appearanceChildren.add(MenuItemConfig.group("view.appearance.navbar", "Navigation Bar", true, navBarGroupChildren));
+            appearanceChildren.add(MenuItemConfig.action("view.appearance.toolwindowbars", "Tool Window Bars"));
+            appearanceChildren.add(MenuItemConfig.separator());
+            appearanceChildren.add(MenuItemConfig.action("view.appearance.statusbar", "Status Bar"));
+            appearanceChildren.add(MenuItemConfig.group("view.appearance.statusbar.widgets", "Status Bar Widgets", true, statusBarWidgetChildren));
 
-            // Image 5: View Recent Actions Group
-            List<MenuItemConfig> viewRecentActionsChildren = new ArrayList<>();
-            viewRecentActionsChildren.add(MenuItemConfig.action("view.recent.files", "Recent Files"));
-            viewRecentActionsChildren.add(MenuItemConfig.action("view.recent.toggle.changed.only", "Toggle Changed Only Files"));
-            viewRecentActionsChildren.add(MenuItemConfig.action("view.recent.iterate.files", "Iterate Recent Files"));
-            viewRecentActionsChildren.add(MenuItemConfig.action("view.recently.changed.files", "Recently Changed Files"));
-            viewRecentActionsChildren.add(MenuItemConfig.action("view.recent.locations", "Recent Locations"));
-            viewRecentActionsChildren.add(MenuItemConfig.action("view.recent.toggle.changed.only.second", "Toggle Changed Only Files"));
-            viewRecentActionsChildren.add(MenuItemConfig.action("view.recent.iterate.files.second", "Iterate Recent Files"));
-            viewRecentActionsChildren.add(MenuItemConfig.action("view.recent.files.second", "Recent Files"));
-            viewRecentActionsChildren.add(MenuItemConfig.action("view.recently.changed.files.second", "Recently Changed Files"));
-            viewRecentActionsChildren.add(MenuItemConfig.action("view.recent.changes", "Recent Changes"));
-
+            // Image 1: Main View Menu
             List<MenuItemConfig> viewMenu = new ArrayList<>();
-            viewMenu.add(MenuItemConfig.group("view.tool.windows", "Tool Windows", true, toolWindows));
+            viewMenu.add(MenuItemConfig.group("view.toolwindows", "Tool Windows", true, toolWindows));
             viewMenu.add(MenuItemConfig.group("view.appearance", "Appearance", true, appearanceChildren));
-            viewMenu.add(MenuItemConfig.group("view.recent.actions.group", "View Recent Actions Group", false, viewRecentActionsChildren));
+            viewMenu.add(MenuItemConfig.separator());
+            viewMenu.add(MenuItemConfig.action("view.recent.locations", "Recent Locations"));
+            viewMenu.add(MenuItemConfig.action("view.recent.files", "Recent Files"));
+            viewMenu.add(MenuItemConfig.action("view.recent.changed.files", "Recently Changed Files"));
+            viewMenu.add(MenuItemConfig.action("view.recent.changes", "Recent Changes"));
             viewMenu.add(MenuItemConfig.separator());
             viewMenu.add(MenuItemConfig.action("view.font.increase", "Increase Font Size in All Editors"));
             viewMenu.add(MenuItemConfig.action("view.font.decrease", "Decrease Font Size in All Editors"));
@@ -1178,32 +1198,31 @@ public final class AppSettingsStore {
             dbeGotoChildren.add(MenuItemConfig.action("nav.dbe.prev.statement", "Previous Statement"));
             dbeGotoChildren.add(MenuItemConfig.separator());
 
-            // Full Navigate Menu assembling Images 1-3
+            // Full Navigate Menu (Exact match to DataGrip Image 1)
             List<MenuItemConfig> navMenu = new ArrayList<>();
             navMenu.add(MenuItemConfig.action("nav.back", "Back", "ARROW_LEFT"));
             navMenu.add(MenuItemConfig.action("nav.forward", "Forward", "ARROW_RIGHT"));
             navMenu.add(MenuItemConfig.separator());
             navMenu.add(MenuItemConfig.action("header.search", "Search Everywhere", "SEARCH"));
+            navMenu.add(MenuItemConfig.action("nav.goto.database.object", "Database Object\u2026"));
+            navMenu.add(MenuItemConfig.action("nav.goto.file", "File\u2026"));
+            navMenu.add(MenuItemConfig.action("nav.goto.symbol", "Code\u2026"));
+            navMenu.add(MenuItemConfig.action("nav.goto.text", "Text\u2026"));
             navMenu.add(MenuItemConfig.separator());
-            navMenu.add(MenuItemConfig.group("nav.goto.by.name.group", "Goto by Name Actions", false, gotoByNameChildren));
-            navMenu.add(MenuItemConfig.action("nav.goto.row", "Row\u2026"));
-            navMenu.add(MenuItemConfig.action("nav.open.file.uri", "Open File URI", "FOLDER"));
-            navMenu.add(MenuItemConfig.action("nav.open.url", "Open URL", "GLOBE"));
-            navMenu.add(MenuItemConfig.action("nav.related.rows", "Related Rows", "TABLE"));
-            navMenu.add(MenuItemConfig.action("nav.goto.line.column", "Go to Line:Column\u2026"));
+            navMenu.add(MenuItemConfig.action("navigate.show.diagram", "Show Diagram\u2026", "PROJECT_DIAGRAM"));
             navMenu.add(MenuItemConfig.separator());
-            navMenu.add(MenuItemConfig.group("nav.goto.error.bookmark.group", "Goto Error/Bookmark Actions", false, gotoErrorChildren));
-            navMenu.add(MenuItemConfig.group("nav.goto.edit.point.group", "GoToEditPointGroup", false, gotoEditPointChildren));
-            navMenu.add(MenuItemConfig.action("nav.last.edit.location", "Last Edit Location"));
-            navMenu.add(MenuItemConfig.action("nav.next.edit.location", "Next Edit Location"));
+            navMenu.add(MenuItemConfig.action("navigate.jump.query.console", "Jump to Query Console\u2026", "TERMINAL"));
+            navMenu.add(MenuItemConfig.action("nav.select.in", "Select In\u2026"));
+            navMenu.add(MenuItemConfig.action("nav.goto.declaration", "Declaration or Usages"));
+            navMenu.add(MenuItemConfig.action("nav.goto.ddl", "Go to DDL", "FILE_ALT"));
             navMenu.add(MenuItemConfig.separator());
-            navMenu.add(MenuItemConfig.group("nav.navigate.in.file.group", "Navigate in File", false, navInFileChildren));
-            navMenu.add(MenuItemConfig.group("nav.goto.by.reference.group", "Goto by Reference Actions", false, gotoByRefChildren));
+            navMenu.add(MenuItemConfig.action("navigate.scroll.from.editor", "Scroll from Editor", "CROSSHAIRS"));
             navMenu.add(MenuItemConfig.separator());
-            navMenu.add(MenuItemConfig.action("nav.prev.occurrence", "Previous Occurrence", "ARROW_UP"));
-            navMenu.add(MenuItemConfig.action("nav.next.occurrence", "Next Occurrence", "ARROW_DOWN"));
+            navMenu.add(MenuItemConfig.action("nav.jump.to.nav.bar", "Jump to Navigation Bar"));
+            navMenu.add(MenuItemConfig.action("nav.file.path", "File Path"));
             navMenu.add(MenuItemConfig.separator());
-            navMenu.add(MenuItemConfig.group("nav.dbe.goto.menu.ex", "DBE.GoToMenuEx", false, dbeGotoChildren));
+            navMenu.add(MenuItemConfig.action("nav.next.statement", "Next Statement"));
+            navMenu.add(MenuItemConfig.action("nav.prev.statement", "Previous Statement"));
             mainMenuChildren.add(MenuItemConfig.group("menu.navigate", "Navigate", true, navMenu));
 
             // -------------------------------------------------------------
@@ -1462,22 +1481,15 @@ public final class AppSettingsStore {
             profilerActionsChildren.add(MenuItemConfig.action("run.attach.profiler.to.process", "Attach Profiler to Process\u2026"));
             profilerActionsChildren.add(MenuItemConfig.action("run.open.profiler.snapshot", "Open Profiler Snapshot"));
 
-            // Full Run Menu assembling Images 1-4
+            // Full Run Menu (Exact match to DataGrip Image 2)
             List<MenuItemConfig> runMenu = new ArrayList<>();
-            runMenu.add(MenuItemConfig.group("run.run.debug.group", "Run/Debug", false, runDebugChildren));
-            runMenu.add(MenuItemConfig.separator());
-            runMenu.add(MenuItemConfig.action("run.run.ellipsis", "Run\u2026", "PLAY"));
-            runMenu.add(MenuItemConfig.action("run.debug.ellipsis", "Debug\u2026", "BUG"));
-            runMenu.add(MenuItemConfig.group("run.xdebugger.attach.group", "XDebugger.AttachGroup", false, attachGroupChildren));
             runMenu.add(MenuItemConfig.action("run.edit.configurations", "Edit Configurations\u2026"));
-            runMenu.add(MenuItemConfig.action("run.manage.targets", "Manage Targets\u2026"));
             runMenu.add(MenuItemConfig.separator());
-            runMenu.add(MenuItemConfig.action("run.stop", "Stop", "STOP"));
-            runMenu.add(MenuItemConfig.action("run.stop.background.processes", "Stop Background Processes\u2026"));
-            runMenu.add(MenuItemConfig.action("run.show.running.list", "Show Running List"));
-            runMenu.add(MenuItemConfig.group("run.debugger.actions.group", "Debugger Actions", false, debuggerActionsChildren));
-            runMenu.add(MenuItemConfig.group("run.test.group", "RunTestGroup", false, runTestGroupChildren));
-            runMenu.add(MenuItemConfig.group("run.profiler.actions.group", "ProfilerActions", false, profilerActionsChildren));
+            runMenu.add(MenuItemConfig.action("run.compare.data", "Compare Data", "EXCHANGE_ALT"));
+            runMenu.add(MenuItemConfig.action("run.compare.schema", "Compare Schema Structure", "EXCHANGE_ALT"));
+            runMenu.add(MenuItemConfig.action("run.fulltext.search", "Full-Text Search\u2026", "SEARCH"));
+            runMenu.add(MenuItemConfig.separator());
+            runMenu.add(MenuItemConfig.action("run.import.data", "Import Data from File(s)\u2026", "FILE_IMPORT"));
             mainMenuChildren.add(MenuItemConfig.group("menu.run", "Run", true, runMenu));
 
             // Tools Menu (Image 1)
@@ -1666,24 +1678,51 @@ public final class AppSettingsStore {
             gitMainMenuChildren.add(MenuItemConfig.action("git.abort.revert", "Abort Revert"));
             gitMainMenuChildren.add(MenuItemConfig.action("git.abort.cherry.pick", "Abort Cherry-Pick"));
 
-            // Git top-level menu assembling Images 1-4
-            List<MenuItemConfig> gitMenu = new ArrayList<>();
-            gitMenu.add(MenuItemConfig.group("vcs.main.menu", "Vcs.MainMenu", false, vcsMainMenuChildren));
-            gitMenu.add(MenuItemConfig.group("git.main.menu", "Git.MainMenu", false, gitMainMenuChildren));
-            mainMenuChildren.add(MenuItemConfig.group("menu.vcs", "Git", true, gitMenu));
+            // VCS top-level menu (Exact match to DataGrip Image 3)
+            List<MenuItemConfig> browseVcsChildren = new ArrayList<>();
+            browseVcsChildren.add(MenuItemConfig.action("vcs.show.git.log", "Show Git Repository Log\u2026"));
+
+            List<MenuItemConfig> vcsMenu = new ArrayList<>();
+            vcsMenu.add(MenuItemConfig.action("vcs.enable.integration", "Enable Version Control Integration\u2026"));
+            vcsMenu.add(MenuItemConfig.action("vcs.operations.popup", "VCS Operations Popup\u2026"));
+            vcsMenu.add(MenuItemConfig.action("vcs.apply.patch", "Apply Patch\u2026"));
+            vcsMenu.add(MenuItemConfig.action("vcs.apply.patch.clipboard", "Apply Patch from Clipboard\u2026"));
+            vcsMenu.add(MenuItemConfig.separator());
+            vcsMenu.add(MenuItemConfig.action("vcs.get.from.vcs", "Get from Version Control\u2026"));
+            vcsMenu.add(MenuItemConfig.group("vcs.browse.repository", "Browse VCS Repository", true, browseVcsChildren));
+            vcsMenu.add(MenuItemConfig.action("vcs.create.git.repository", "Create Git Repository\u2026"));
+            mainMenuChildren.add(MenuItemConfig.group("menu.vcs", "VCS", true, vcsMenu));
 
             // -------------------------------------------------------------
-            // Main Menu > Window (Exact match to DataGrip Images 1-5)
+            // Main Menu > Window (Exact match to DataGrip Images 4 & 5)
             // -------------------------------------------------------------
-            // Image 2: Tool Window Layouts (Group)
+            // Image 4: Tool Window Layouts (Group)
+            List<MenuItemConfig> customLayoutChildren = new ArrayList<>();
+            customLayoutChildren.add(MenuItemConfig.action("window.layouts.custom.apply", "Apply"));
+            customLayoutChildren.add(MenuItemConfig.action("window.layouts.custom.save", "Save Changes into Current Layout"));
+            customLayoutChildren.add(MenuItemConfig.action("window.layouts.custom.restore", "Restore Current Layout"));
+
             List<MenuItemConfig> toolWindowLayoutsChildren = new ArrayList<>();
             toolWindowLayoutsChildren.add(MenuItemConfig.action("window.layouts.default", "Default"));
-            toolWindowLayoutsChildren.add(MenuItemConfig.separator());
-            toolWindowLayoutsChildren.add(MenuItemConfig.action("window.layouts.list", "Tool Window Layout List"));
-            toolWindowLayoutsChildren.add(MenuItemConfig.separator());
-            toolWindowLayoutsChildren.add(MenuItemConfig.action("window.layouts.restore.current", "Restore Current Layout"));
-            toolWindowLayoutsChildren.add(MenuItemConfig.action("window.layouts.save.changes.current", "Save Changes in Current Layout"));
+            toolWindowLayoutsChildren.add(MenuItemConfig.group("window.layouts.custom", "\u2713 Custom", true, customLayoutChildren));
             toolWindowLayoutsChildren.add(MenuItemConfig.action("window.layouts.save.as.new", "Save Current Layout as New\u2026"));
+
+            // Image 5: Active Tool Window > View Mode (Group)
+            List<MenuItemConfig> twViewModeChildren = new ArrayList<>();
+            twViewModeChildren.add(MenuItemConfig.action("window.tw.viewmode.dock.pinned", "\u2713 Dock Pinned"));
+            twViewModeChildren.add(MenuItemConfig.action("window.tw.viewmode.dock.unpinned", "Dock Unpinned"));
+            twViewModeChildren.add(MenuItemConfig.action("window.tw.viewmode.undock", "Undock"));
+            twViewModeChildren.add(MenuItemConfig.action("window.tw.viewmode.float", "Float"));
+            twViewModeChildren.add(MenuItemConfig.action("window.tw.viewmode.window", "Window"));
+
+            // Image 5: Active Tool Window > Move to (Group)
+            List<MenuItemConfig> twMoveToChildren = new ArrayList<>();
+            twMoveToChildren.add(MenuItemConfig.action("window.tw.moveto.left.top", "Left Top"));
+            twMoveToChildren.add(MenuItemConfig.action("window.tw.moveto.left.bottom", "Left Bottom"));
+            twMoveToChildren.add(MenuItemConfig.action("window.tw.moveto.bottom.left", "Bottom Left"));
+            twMoveToChildren.add(MenuItemConfig.action("window.tw.moveto.bottom.right", "Bottom Right"));
+            twMoveToChildren.add(MenuItemConfig.action("window.tw.moveto.right.bottom", "Right Bottom"));
+            twMoveToChildren.add(MenuItemConfig.action("window.tw.moveto.right.top", "Right Top"));
 
             // Image 3: Active Tool Window > Resize (Group)
             List<MenuItemConfig> twResizeChildren = new ArrayList<>();
@@ -1692,35 +1731,25 @@ public final class AppSettingsStore {
             twResizeChildren.add(MenuItemConfig.action("window.tw.resize.top", "Stretch to Top"));
             twResizeChildren.add(MenuItemConfig.action("window.tw.resize.bottom", "Stretch to Bottom"));
 
-            // Image 3: Active Tool Window (Group)
+            // Image 5: Active Tool Window (Group)
             List<MenuItemConfig> activeToolWindowChildren = new ArrayList<>();
             activeToolWindowChildren.add(MenuItemConfig.action("window.toolwindow.hide.active", "Hide Active Tool Window"));
             activeToolWindowChildren.add(MenuItemConfig.action("window.toolwindow.hide.side", "Hide Side Tool Windows"));
-            activeToolWindowChildren.add(MenuItemConfig.action("window.toolwindow.hide.all", "Hide All Tool Windows"));
-            activeToolWindowChildren.add(MenuItemConfig.action("window.toolwindow.open.as.editor.tab", "Open as Editor Tab", "EXTERNAL_LINK_ALT"));
-            activeToolWindowChildren.add(MenuItemConfig.action("window.toolwindow.pin.tab", "Pin Active Tool Window Tab"));
-            activeToolWindowChildren.add(MenuItemConfig.action("window.toolwindow.close.active.tab", "Close Active Tab"));
+            activeToolWindowChildren.add(MenuItemConfig.action("window.toolwindow.hide.bottom", "Hide Bottom Tool Windows"));
+            activeToolWindowChildren.add(MenuItemConfig.action("window.toolwindow.hide.all", "Hide All Windows"));
             activeToolWindowChildren.add(MenuItemConfig.action("window.toolwindow.jump.last", "Jump to Last Tool Window"));
             activeToolWindowChildren.add(MenuItemConfig.action("window.toolwindow.maximize", "Maximize Tool Window"));
-            activeToolWindowChildren.add(MenuItemConfig.action("window.toolwindow.dock", "Dock"));
             activeToolWindowChildren.add(MenuItemConfig.separator());
-            activeToolWindowChildren.add(MenuItemConfig.action("window.toolwindow.view.mode", "View Mode"));
-            activeToolWindowChildren.add(MenuItemConfig.action("window.toolwindow.move.to", "Move to"));
+            activeToolWindowChildren.add(MenuItemConfig.action("window.toolwindow.next.tab", "Select Next Tab"));
+            activeToolWindowChildren.add(MenuItemConfig.action("window.toolwindow.prev.tab", "Select Previous Tab"));
+            activeToolWindowChildren.add(MenuItemConfig.action("window.toolwindow.close.active.tab", "Close Active Tab"));
+            activeToolWindowChildren.add(MenuItemConfig.action("window.toolwindow.close.other.tabs", "Close Other Tabs"));
+            activeToolWindowChildren.add(MenuItemConfig.action("window.toolwindow.close.all.tabs", "Close All Tabs"));
+            activeToolWindowChildren.add(MenuItemConfig.separator());
+            activeToolWindowChildren.add(MenuItemConfig.group("window.toolwindow.view.mode", "View Mode", true, twViewModeChildren));
+            activeToolWindowChildren.add(MenuItemConfig.group("window.toolwindow.move.to", "Move to", true, twMoveToChildren));
             activeToolWindowChildren.add(MenuItemConfig.action("window.toolwindow.group.tabs", "Group Tabs"));
-            activeToolWindowChildren.add(MenuItemConfig.action("window.toolwindow.show.list.of.tabs", "Show List of Tabs"));
             activeToolWindowChildren.add(MenuItemConfig.group("window.toolwindow.resize", "Resize", true, twResizeChildren));
-
-            // Image 4: Editor Tabs > Editor Close Actions (Group)
-            List<MenuItemConfig> editorCloseActionsChildren = new ArrayList<>();
-            editorCloseActionsChildren.add(MenuItemConfig.action("window.close.tab", "Close Tab"));
-            editorCloseActionsChildren.add(MenuItemConfig.action("window.close.other.tabs", "Close Other Tabs"));
-            editorCloseActionsChildren.add(MenuItemConfig.action("window.close.all.tabs", "Close All Tabs"));
-            editorCloseActionsChildren.add(MenuItemConfig.action("window.close.unmodified.tabs", "Close Unmodified Tabs"));
-            editorCloseActionsChildren.add(MenuItemConfig.action("window.close.all.but.pinned", "Close All but Pinned"));
-            editorCloseActionsChildren.add(MenuItemConfig.action("window.close.tabs.left", "Close Tabs to the Left"));
-            editorCloseActionsChildren.add(MenuItemConfig.action("window.close.tabs.right", "Close Tabs to the Right"));
-            editorCloseActionsChildren.add(MenuItemConfig.action("window.close.all.readonly", "Close All Read-Only Tabs"));
-            editorCloseActionsChildren.add(MenuItemConfig.action("window.editor.open.as.editor.tab", "Open as Editor Tab", "EXTERNAL_LINK_ALT"));
 
             // Image 5: Editor Tabs > Split with Chooser Navigation (Group)
             List<MenuItemConfig> splitChooserNavChildren = new ArrayList<>();
@@ -1735,22 +1764,22 @@ public final class AppSettingsStore {
             splitChooserNavChildren.add(MenuItemConfig.action("window.split.switch.down", "Use down Split or Switch Down"));
             splitChooserNavChildren.add(MenuItemConfig.action("window.split.switch.right", "Use Right Split or Switch Right"));
 
-            // Images 4 & 5: Editor Tabs (Group)
+            // Image 3: Editor Tabs (Group) - Exact match to DataGrip
             List<MenuItemConfig> editorTabsChildren = new ArrayList<>();
             editorTabsChildren.add(MenuItemConfig.action("window.editor.next.tab", "Select Next Tab"));
             editorTabsChildren.add(MenuItemConfig.action("window.editor.prev.tab", "Select Previous Tab"));
-            editorTabsChildren.add(MenuItemConfig.action("window.editor.pin.tab", "Pin Active Tab"));
             editorTabsChildren.add(MenuItemConfig.action("window.editor.keep.tab.open", "Keep Tab Open"));
-            editorTabsChildren.add(MenuItemConfig.action("window.editor.show.hidden.tabs", "Show Hidden Tabs"));
             editorTabsChildren.add(MenuItemConfig.separator());
-            editorTabsChildren.add(MenuItemConfig.group("window.editor.close.actions", "Editor Close Actions", true, editorCloseActionsChildren));
+            editorTabsChildren.add(MenuItemConfig.action("window.close.tab", "Close Tab"));
+            editorTabsChildren.add(MenuItemConfig.action("window.close.other.tabs", "Close Other Tabs"));
+            editorTabsChildren.add(MenuItemConfig.action("window.close.all.tabs", "Close All Tabs"));
+            editorTabsChildren.add(MenuItemConfig.action("window.close.unmodified.tabs", "Close Unmodified Tabs"));
+            editorTabsChildren.add(MenuItemConfig.action("window.close.all.but.pinned", "Close All but Pinned"));
+            editorTabsChildren.add(MenuItemConfig.action("window.close.tabs.left", "Close Tabs to the Left"));
+            editorTabsChildren.add(MenuItemConfig.action("window.close.tabs.right", "Close Tabs to the Right"));
+            editorTabsChildren.add(MenuItemConfig.action("window.close.all.readonly", "Close All Read-Only"));
             editorTabsChildren.add(MenuItemConfig.separator());
             editorTabsChildren.add(MenuItemConfig.action("window.reopen.tab", "Reopen Closed Tab"));
-            editorTabsChildren.add(MenuItemConfig.action("window.split.right", "Split Right", "COLUMNS"));
-            editorTabsChildren.add(MenuItemConfig.action("window.split.and.move.right", "Split and Move Right"));
-            editorTabsChildren.add(MenuItemConfig.action("window.split.down", "Split Down", "COLUMNS"));
-            editorTabsChildren.add(MenuItemConfig.action("window.split.and.move.down", "Split and Move Down"));
-            editorTabsChildren.add(MenuItemConfig.action("window.split.chooser.open", "Open in Split with Chooser\u2026"));
             editorTabsChildren.add(MenuItemConfig.group("window.editor.split.chooser.navigation", "Split with Chooser Navigation", true, splitChooserNavChildren));
             editorTabsChildren.add(MenuItemConfig.action("window.editor.stretch.top", "Stretch Editor to Top"));
             editorTabsChildren.add(MenuItemConfig.action("window.editor.stretch.left", "Stretch Editor to Left"));
@@ -1760,8 +1789,8 @@ public final class AppSettingsStore {
             editorTabsChildren.add(MenuItemConfig.action("window.editor.maximize.splits", "Maximize Editor/Normalize Splits"));
             editorTabsChildren.add(MenuItemConfig.action("window.editor.unsplit", "Unsplit"));
             editorTabsChildren.add(MenuItemConfig.action("window.unsplit.all", "Unsplit All"));
-            editorTabsChildren.add(MenuItemConfig.action("window.editor.goto.next.splitter", "Goto Next Splitter"));
-            editorTabsChildren.add(MenuItemConfig.action("window.editor.goto.prev.splitter", "Goto Previous Splitter"));
+            editorTabsChildren.add(MenuItemConfig.action("window.editor.goto.next.splitter", "Go to Next Splitter"));
+            editorTabsChildren.add(MenuItemConfig.action("window.editor.goto.prev.splitter", "Go to Previous Splitter"));
             editorTabsChildren.add(MenuItemConfig.separator());
             editorTabsChildren.add(MenuItemConfig.action("window.editor.configure.tabs", "Configure Editor Tabs\u2026"));
 
@@ -1782,18 +1811,18 @@ public final class AppSettingsStore {
             openProjectWindowsChildren.add(MenuItemConfig.action("window.project.merge.all", "Merge All Project Windows"));
             openProjectWindowsChildren.add(MenuItemConfig.separator());
 
-            // Image 1: Window Top-Level Menu
+            // Image 4: Window Top-Level Menu
             List<MenuItemConfig> winMenu = new ArrayList<>();
-            winMenu.add(MenuItemConfig.action("window.minimize", "Minimize"));
-            winMenu.add(MenuItemConfig.action("window.zoom", "Zoom"));
-            winMenu.add(MenuItemConfig.group("window.layouts", "Tool Window Layouts", true, toolWindowLayoutsChildren));
-            winMenu.add(MenuItemConfig.separator());
+            winMenu.add(MenuItemConfig.group("window.layouts", "Layouts", true, toolWindowLayoutsChildren));
             winMenu.add(MenuItemConfig.group("window.active.tool.window", "Active Tool Window", true, activeToolWindowChildren));
             winMenu.add(MenuItemConfig.group("window.editor.tabs", "Editor Tabs", true, editorTabsChildren));
             winMenu.add(MenuItemConfig.group("window.notifications", "Notifications", true, notificationsChildren));
-            winMenu.add(MenuItemConfig.group("window.background.tasks", "Background Tasks", true, backgroundTasksChildren));
+            winMenu.add(MenuItemConfig.group("window.processes", "Processes", true, backgroundTasksChildren));
             winMenu.add(MenuItemConfig.separator());
-            winMenu.add(MenuItemConfig.group("window.open.project.windows", "Open Project Windows", true, openProjectWindowsChildren));
+            winMenu.add(MenuItemConfig.action("window.next.project", "Next Project Window"));
+            winMenu.add(MenuItemConfig.action("window.prev.project", "Previous Project Window"));
+            winMenu.add(MenuItemConfig.separator());
+            winMenu.add(MenuItemConfig.action("window.project.active", "\u2713 default"));
             mainMenuChildren.add(MenuItemConfig.group("menu.window", "Window", true, winMenu));
 
             // Help Menu (Matching DataGrip Images 1-4)
@@ -4218,11 +4247,22 @@ public final class AppSettingsStore {
                                 needsMigration = true;
                             }
                         }
-                        if (viewMenu != null && viewMenu.getChildren().stream().noneMatch(c -> "view.recent.actions.group".equalsIgnoreCase(c.getId()))) {
-                            needsMigration = true;
+                        if (viewMenu != null) {
+                            boolean hasToolWindowsGroup = viewMenu.getChildren().stream().anyMatch(c -> "view.toolwindows".equalsIgnoreCase(c.getId()));
+                            boolean hasOldRecentGroup = viewMenu.getChildren().stream().anyMatch(c -> "view.recent.actions.group".equalsIgnoreCase(c.getId()));
+                            MenuItemConfig appMenu = viewMenu.getChildren().stream().filter(c -> "view.appearance".equalsIgnoreCase(c.getId())).findFirst().orElse(null);
+                            boolean hasMainMenuPlacement = appMenu != null && appMenu.getChildren().stream().anyMatch(c -> "view.appearance.mainmenu".equalsIgnoreCase(c.getId()));
+                            boolean hasNavBarPlacement = appMenu != null && appMenu.getChildren().stream().anyMatch(c -> "view.appearance.navbar".equalsIgnoreCase(c.getId()));
+                            if (!hasToolWindowsGroup || hasOldRecentGroup || !hasMainMenuPlacement || !hasNavBarPlacement) {
+                                needsMigration = true;
+                            }
                         }
-                        if (navMenu != null && navMenu.getChildren().stream().noneMatch(c -> "nav.goto.by.name.group".equalsIgnoreCase(c.getId()))) {
-                            needsMigration = true;
+                        if (navMenu != null) {
+                            boolean hasOldGotoGroup = navMenu.getChildren().stream().anyMatch(c -> "nav.goto.by.name.group".equalsIgnoreCase(c.getId()));
+                            boolean hasGoToDdl = navMenu.getChildren().stream().anyMatch(c -> "nav.goto.ddl".equalsIgnoreCase(c.getId()) || "navigate.goto.ddl".equalsIgnoreCase(c.getId()));
+                            if (hasOldGotoGroup || !hasGoToDdl) {
+                                needsMigration = true;
+                            }
                         }
                         if (codeMenu != null) {
                             boolean hasExpandedInspect = codeMenu.getChildren().stream()
@@ -4238,8 +4278,12 @@ public final class AppSettingsStore {
                         if (refactorMenu != null && refactorMenu.getChildren().stream().noneMatch(c -> "refactor.this".equalsIgnoreCase(c.getId()))) {
                             needsMigration = true;
                         }
-                        if (runMenu != null && runMenu.getChildren().stream().noneMatch(c -> "run.run.debug.group".equalsIgnoreCase(c.getId()))) {
-                            needsMigration = true;
+                        if (runMenu != null) {
+                            boolean hasOldRunDebug = runMenu.getChildren().stream().anyMatch(c -> "run.run.debug.group".equalsIgnoreCase(c.getId()));
+                            boolean hasCompareData = runMenu.getChildren().stream().anyMatch(c -> "run.compare.data".equalsIgnoreCase(c.getId()));
+                            if (hasOldRunDebug || !hasCompareData) {
+                                needsMigration = true;
+                            }
                         }
                         if (!root.getChildren().isEmpty()) {
                             if (fileMenu != null && toolsMenu == null) {
@@ -4249,20 +4293,20 @@ public final class AppSettingsStore {
                                 needsMigration = true;
                             }
                             if (vcsMenu != null) {
-                                boolean hasVcsMain = vcsMenu.getChildren().stream().anyMatch(c -> "vcs.main.menu".equalsIgnoreCase(c.getId()));
-                                boolean hasExpandedGitMain = vcsMenu.getChildren().stream()
-                                        .filter(c -> "git.main.menu".equalsIgnoreCase(c.getId()))
-                                        .anyMatch(g -> !g.getChildren().isEmpty());
-                                if (!hasVcsMain || !hasExpandedGitMain) {
+                                boolean hasOldVcsMain = vcsMenu.getChildren().stream().anyMatch(c -> "vcs.main.menu".equalsIgnoreCase(c.getId()));
+                                boolean hasBrowseRepo = vcsMenu.getChildren().stream().anyMatch(c -> "vcs.browse.repository".equalsIgnoreCase(c.getId()));
+                                boolean isVcsTitle = "VCS".equalsIgnoreCase(vcsMenu.getText());
+                                if (hasOldVcsMain || !hasBrowseRepo || !isVcsTitle) {
                                     needsMigration = true;
                                 }
                             }
                             if (windowMenu != null) {
-                                boolean hasOpenProj = windowMenu.getChildren().stream().anyMatch(c -> "window.open.project.windows".equalsIgnoreCase(c.getId()));
-                                boolean hasEditorTabsGroup = windowMenu.getChildren().stream()
-                                        .filter(c -> "window.editor.tabs".equalsIgnoreCase(c.getId()))
-                                        .anyMatch(g -> g.getChildren().size() > 5);
-                                if (!hasOpenProj || !hasEditorTabsGroup) {
+                                boolean hasOldOpenProj = windowMenu.getChildren().stream().anyMatch(c -> "window.open.project.windows".equalsIgnoreCase(c.getId()));
+                                boolean hasOldMinimize = windowMenu.getChildren().stream().anyMatch(c -> "window.minimize".equalsIgnoreCase(c.getId()));
+                                boolean hasActiveProject = windowMenu.getChildren().stream().anyMatch(c -> "window.project.active".equalsIgnoreCase(c.getId()));
+                                MenuItemConfig edTabs = windowMenu.getChildren().stream().filter(c -> "window.editor.tabs".equalsIgnoreCase(c.getId())).findFirst().orElse(null);
+                                boolean hasCloseActionsSubmenu = edTabs != null && edTabs.getChildren().stream().anyMatch(c -> "window.editor.close.actions".equalsIgnoreCase(c.getId()));
+                                if (hasOldOpenProj || hasOldMinimize || !hasActiveProject || hasCloseActionsSubmenu) {
                                     needsMigration = true;
                                 }
                             }
