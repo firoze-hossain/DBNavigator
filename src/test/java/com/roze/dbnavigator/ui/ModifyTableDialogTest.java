@@ -425,4 +425,155 @@ public class ModifyTableDialogTest {
         ModifyTableDialog.setDontAskAgainOnCancel(false);
         assertFalse(ModifyTableDialog.isDontAskAgainOnCancel());
     }
+
+    @Test
+    @DisplayName("Verify KeyModel enhanced properties, primary/type sync, and DDL generation")
+    public void testEnhancedKeyPropertiesAndDdl() {
+        ConnectionProfile profile = createPostgresProfile();
+        DbObject table = createTable("allergy_type", "public", "clinic_db");
+
+        ModifyTableDialog dialog = new ModifyTableDialog(null, profile, table, false, false);
+
+        ModifyTableDialog.KeyModel key = new ModifyTableDialog.KeyModel(
+                null, "allergy_type_pkey", "PRIMARY KEY", List.of("id"), true);
+        assertTrue(key.primary.get(), "Primary property should be true for PRIMARY KEY type");
+
+        // Test primary <-> type sync
+        key.primary.set(false);
+        assertEquals("UNIQUE", key.type.get());
+        key.type.set("PRIMARY KEY");
+        assertTrue(key.primary.get());
+
+        // Test flags
+        key.deferrable.set(true);
+        key.initiallyDeferred.set(true);
+        key.notEnforced.set(true);
+        key.definedWithPeriod.set(true);
+        key.notValidated.set(true);
+        key.excludeOperator.set("=");
+        assertEquals("=", key.excludeOperator.get());
+
+        dialog.getKeys().add(key);
+        List<String> stmts = dialog.buildAlterStatements();
+        assertEquals(1, stmts.size());
+        String ddl = stmts.get(0);
+        assertTrue(ddl.contains("ADD CONSTRAINT allergy_type_pkey PRIMARY KEY (id)"));
+        assertTrue(ddl.contains("DEFERRABLE INITIALLY DEFERRED"));
+        assertTrue(ddl.contains("NOT ENFORCED;"));
+    }
+
+    @Test
+    @DisplayName("Verify IndexModel enhanced properties, order per column, nulls not distinct, include cols, tablespace, and DDL")
+    public void testEnhancedIndexPropertiesAndDdl() {
+        ConnectionProfile profile = createPostgresProfile();
+        DbObject table = createTable("allergy_type", "public", "clinic_db");
+
+        ModifyTableDialog dialog = new ModifyTableDialog(null, profile, table, false, false);
+
+        ModifyTableDialog.IndexModel idx = new ModifyTableDialog.IndexModel(
+                null, "idx_allergy_name", true, "btree", List.of("name", "code"), true);
+        idx.nullsNotDistinct.set(true);
+        idx.includeColumns.set("created_at");
+        idx.tablespace.set("fast_ssd");
+        idx.predicate.set("active = true");
+
+        // Column properties
+        idx.getOrderProperty("name").set("DESC NULLS LAST");
+        idx.getCollationProperty("name").set("en_US");
+        idx.getOpClassProperty("name").set("varchar_ops");
+        assertEquals("DESC NULLS LAST", idx.getOrderProperty("name").get());
+        assertEquals("en_US", idx.getCollationProperty("name").get());
+        assertEquals("varchar_ops", idx.getOpClassProperty("name").get());
+
+        dialog.getIndexes().add(idx);
+        List<String> stmts = dialog.buildAlterStatements();
+        assertEquals(1, stmts.size());
+        String ddl = stmts.get(0);
+        assertTrue(ddl.contains("CREATE UNIQUE INDEX idx_allergy_name ON public.allergy_type USING btree (name DESC NULLS LAST, code)"));
+        assertTrue(ddl.contains("NULLS NOT DISTINCT"));
+        assertTrue(ddl.contains("INCLUDE (created_at)"));
+        assertTrue(ddl.contains("WHERE active = true"));
+        assertTrue(ddl.contains("TABLESPACE fast_ssd;"));
+    }
+
+    @Test
+    @DisplayName("Verify CheckModel enhanced properties (no inherit, not valid, deferrable, not enforced) and DDL")
+    public void testEnhancedCheckPropertiesAndDdl() {
+        ConnectionProfile profile = createPostgresProfile();
+        DbObject table = createTable("allergy_type", "public", "clinic_db");
+
+        ModifyTableDialog dialog = new ModifyTableDialog(null, profile, table, false, false);
+
+        ModifyTableDialog.CheckModel chk = new ModifyTableDialog.CheckModel(
+                null, "chk_code_valid", "length(code) >= 2", true);
+        chk.noInherit.set(true);
+        chk.notValidated.set(true);
+        chk.deferrable.set(true);
+        chk.initiallyDeferred.set(true);
+        chk.notEnforced.set(true);
+
+        dialog.getChecks().add(chk);
+        List<String> stmts = dialog.buildAlterStatements();
+        assertEquals(1, stmts.size());
+        String ddl = stmts.get(0);
+        assertTrue(ddl.contains("ADD CONSTRAINT chk_code_valid CHECK (length(code) >= 2)"));
+        assertTrue(ddl.contains("NO INHERIT"));
+        assertTrue(ddl.contains("NOT VALID"));
+        assertTrue(ddl.contains("DEFERRABLE INITIALLY DEFERRED"));
+        assertTrue(ddl.contains("NOT ENFORCED;"));
+    }
+
+    @Test
+    @DisplayName("Verify ForeignKeyModel enhanced properties (deferrable, initially deferred) and DDL")
+    public void testEnhancedForeignKeyPropertiesAndDdl() {
+        ConnectionProfile profile = createPostgresProfile();
+        DbObject table = createTable("patient_allergies", "public", "clinic_db");
+
+        ModifyTableDialog dialog = new ModifyTableDialog(null, profile, table, false, false);
+
+        ModifyTableDialog.ForeignKeyModel fk = new ModifyTableDialog.ForeignKeyModel(
+                null, "fk_patient_allergy_type", "allergy_type", "type_id", "id", true);
+        fk.deferrable.set(true);
+        fk.initiallyDeferred.set(true);
+
+        dialog.getForeignKeys().add(fk);
+        List<String> stmts = dialog.buildAlterStatements();
+        assertEquals(1, stmts.size());
+        String ddl = stmts.get(0);
+        assertTrue(ddl.contains("ADD CONSTRAINT fk_patient_allergy_type FOREIGN KEY (type_id) REFERENCES allergy_type (id)"));
+        assertTrue(ddl.contains("DEFERRABLE INITIALLY DEFERRED;"));
+    }
+
+    @Test
+    @DisplayName("Verify Master Tree node selection delegates for keys, indexes, checks, and foreign keys")
+    public void testMasterTreeNodeSelectionDelegates() {
+        ConnectionProfile profile = createPostgresProfile();
+        DbObject table = createTable("allergy_type", "public", "clinic_db");
+
+        ModifyTableDialog dialog = new ModifyTableDialog(null, profile, table, false, false);
+
+        ModifyTableDialog.ColumnModel col = new ModifyTableDialog.ColumnModel("id", "id", "bigint", false, null, true, true, false);
+        dialog.getColumns().add(col);
+
+        ModifyTableDialog.KeyModel key = new ModifyTableDialog.KeyModel("pk_test", "pk_test", "PRIMARY KEY", List.of("id"), false);
+        dialog.getKeys().add(key);
+
+        ModifyTableDialog.IndexModel idx = new ModifyTableDialog.IndexModel("idx_test", "idx_test", false, "btree", List.of("id"), false);
+        dialog.getIndexes().add(idx);
+
+        ModifyTableDialog.CheckModel chk = new ModifyTableDialog.CheckModel("chk_test", "chk_test", "id > 0", false);
+        dialog.getChecks().add(chk);
+
+        ModifyTableDialog.ForeignKeyModel fk = new ModifyTableDialog.ForeignKeyModel("fk_test", "fk_test", "other", "id", "id", false);
+        dialog.getForeignKeys().add(fk);
+
+        dialog.refreshTreeAndPreview();
+
+        // Exercise tree selection delegates
+        assertDoesNotThrow(() -> dialog.selectColumnInTreeForTesting(col));
+        assertDoesNotThrow(() -> dialog.selectKeyInTreeForTesting(key));
+        assertDoesNotThrow(() -> dialog.selectIndexInTreeForTesting(idx));
+        assertDoesNotThrow(() -> dialog.selectCheckInTreeForTesting(chk));
+        assertDoesNotThrow(() -> dialog.selectForeignKeyInTreeForTesting(fk));
+    }
 }
