@@ -131,11 +131,21 @@ public final class ModifyTableDialog {
         public final SimpleStringProperty comment = new SimpleStringProperty("");
         public final boolean isNew;
         public final SimpleBooleanProperty markedForDrop = new SimpleBooleanProperty(false);
+        public final SimpleBooleanProperty primary = new SimpleBooleanProperty(true);
+        public final SimpleBooleanProperty initiallyDeferred = new SimpleBooleanProperty(false);
+        public final SimpleBooleanProperty deferrable = new SimpleBooleanProperty(false);
+        public final SimpleBooleanProperty notEnforced = new SimpleBooleanProperty(false);
+        public final SimpleBooleanProperty definedWithPeriod = new SimpleBooleanProperty(false);
+        public final SimpleBooleanProperty notValidated = new SimpleBooleanProperty(false);
+        public final SimpleStringProperty excludeOperator = new SimpleStringProperty("");
 
         public KeyModel(String originalName, String name, String type, List<String> columns, boolean isNew) {
             this.originalName = originalName;
             this.name = new SimpleStringProperty(name != null ? name : "");
             this.type = new SimpleStringProperty(type != null ? type : "PRIMARY KEY");
+            this.primary.set("PRIMARY KEY".equalsIgnoreCase(this.type.get()));
+            this.primary.addListener((o, ov, nv) -> this.type.set(nv ? "PRIMARY KEY" : "UNIQUE"));
+            this.type.addListener((o, ov, nv) -> this.primary.set("PRIMARY KEY".equalsIgnoreCase(nv)));
             if (columns != null) this.columns.addAll(columns);
             this.isNew = isNew;
         }
@@ -152,6 +162,8 @@ public final class ModifyTableDialog {
         public final SimpleStringProperty comment = new SimpleStringProperty("");
         public final boolean isNew;
         public final SimpleBooleanProperty markedForDrop = new SimpleBooleanProperty(false);
+        public final SimpleBooleanProperty deferrable = new SimpleBooleanProperty(false);
+        public final SimpleBooleanProperty initiallyDeferred = new SimpleBooleanProperty(false);
 
         public ForeignKeyModel(String originalName, String name, String targetTable,
                                String localColumn, String referencedColumn, boolean isNew) {
@@ -175,6 +187,13 @@ public final class ModifyTableDialog {
         public final SimpleStringProperty predicate = new SimpleStringProperty("");
         public final boolean isNew;
         public final SimpleBooleanProperty markedForDrop = new SimpleBooleanProperty(false);
+        public final SimpleStringProperty comment = new SimpleStringProperty("");
+        public final SimpleBooleanProperty nullsNotDistinct = new SimpleBooleanProperty(false);
+        public final SimpleStringProperty includeColumns = new SimpleStringProperty("");
+        public final SimpleStringProperty tablespace = new SimpleStringProperty("");
+        public final Map<String, SimpleStringProperty> columnOrders = new LinkedHashMap<>();
+        public final Map<String, SimpleStringProperty> columnCollations = new LinkedHashMap<>();
+        public final Map<String, SimpleStringProperty> columnOpClasses = new LinkedHashMap<>();
 
         public IndexModel(String originalName, String name, boolean unique, String method, List<String> columns, boolean isNew) {
             this.originalName = originalName;
@@ -184,6 +203,16 @@ public final class ModifyTableDialog {
             if (columns != null) this.columns.addAll(columns);
             this.isNew = isNew;
         }
+
+        public SimpleStringProperty getOrderProperty(String col) {
+            return columnOrders.computeIfAbsent(col, k -> new SimpleStringProperty("NONE"));
+        }
+        public SimpleStringProperty getCollationProperty(String col) {
+            return columnCollations.computeIfAbsent(col, k -> new SimpleStringProperty(""));
+        }
+        public SimpleStringProperty getOpClassProperty(String col) {
+            return columnOpClasses.computeIfAbsent(col, k -> new SimpleStringProperty(""));
+        }
     }
 
     public static class CheckModel {
@@ -192,6 +221,12 @@ public final class ModifyTableDialog {
         public final SimpleStringProperty expression;
         public final boolean isNew;
         public final SimpleBooleanProperty markedForDrop = new SimpleBooleanProperty(false);
+        public final SimpleStringProperty comment = new SimpleStringProperty("");
+        public final SimpleBooleanProperty deferrable = new SimpleBooleanProperty(false);
+        public final SimpleBooleanProperty initiallyDeferred = new SimpleBooleanProperty(false);
+        public final SimpleBooleanProperty noInherit = new SimpleBooleanProperty(false);
+        public final SimpleBooleanProperty notEnforced = new SimpleBooleanProperty(false);
+        public final SimpleBooleanProperty notValidated = new SimpleBooleanProperty(false);
 
         public CheckModel(String originalName, String name, String expression, boolean isNew) {
             this.originalName = originalName;
@@ -799,10 +834,13 @@ public final class ModifyTableDialog {
 
         dynamicFormPane.getChildren().clear();
         switch (node.type) {
-            case TABLE_ROOT, CATEGORY_KEYS, CATEGORY_FOREIGN_KEYS,
-                 CATEGORY_INDEXES, CATEGORY_CHECKS, CATEGORY_VIRTUAL_COLUMNS, CATEGORY_VIRTUAL_FKS ->
+            case TABLE_ROOT, CATEGORY_VIRTUAL_COLUMNS, CATEGORY_VIRTUAL_FKS ->
                     dynamicFormPane.getChildren().add(buildTableForm());
             case CATEGORY_COLUMNS -> dynamicFormPane.getChildren().add(buildColumnsCategoryView());
+            case CATEGORY_KEYS -> dynamicFormPane.getChildren().add(buildKeysCategoryView());
+            case CATEGORY_FOREIGN_KEYS -> dynamicFormPane.getChildren().add(buildForeignKeysCategoryView());
+            case CATEGORY_INDEXES -> dynamicFormPane.getChildren().add(buildIndexesCategoryView());
+            case CATEGORY_CHECKS -> dynamicFormPane.getChildren().add(buildChecksCategoryView());
             case ITEM_COLUMN -> dynamicFormPane.getChildren().add(buildColumnForm((ColumnModel) node.item));
             case ITEM_KEY -> dynamicFormPane.getChildren().add(buildKeyForm((KeyModel) node.item));
             case ITEM_FOREIGN_KEY -> dynamicFormPane.getChildren().add(buildForeignKeyForm((ForeignKeyModel) node.item));
@@ -1052,13 +1090,18 @@ public final class ModifyTableDialog {
         return box;
     }
 
-    private <T> TableColumn<ColumnModel, T> createGridColumn(String title, double width,
-            javafx.util.Callback<TableColumn.CellDataFeatures<ColumnModel, T>, ObservableValue<T>> cellValueFactory) {
-        TableColumn<ColumnModel, T> col = new TableColumn<>(title);
+    private <S, T> TableColumn<S, T> createGridColumnGeneric(String title, double width,
+            javafx.util.Callback<TableColumn.CellDataFeatures<S, T>, ObservableValue<T>> cellValueFactory) {
+        TableColumn<S, T> col = new TableColumn<>(title);
         col.setGraphic(Icons.of(FontAwesomeSolid.FILTER, "#6f7680", 9));
         col.setCellValueFactory(cellValueFactory);
         col.setPrefWidth(width);
         return col;
+    }
+
+    private <T> TableColumn<ColumnModel, T> createGridColumn(String title, double width,
+            javafx.util.Callback<TableColumn.CellDataFeatures<ColumnModel, T>, ObservableValue<T>> cellValueFactory) {
+        return createGridColumnGeneric(title, width, cellValueFactory);
     }
 
     private void selectColumnInTree(ColumnModel target) {
@@ -1069,6 +1112,271 @@ public final class ModifyTableDialog {
                 break;
             }
         }
+    }
+
+    private Node buildKeysCategoryView() {
+        TableView<KeyModel> grid = new TableView<>();
+        grid.getStyleClass().add("modify-columns-grid");
+        grid.setItems(keys);
+        VBox.setVgrow(grid, Priority.ALWAYS);
+
+        // 1. #
+        TableColumn<KeyModel, Integer> numCol = new TableColumn<>("#");
+        numCol.setCellValueFactory(d -> new ReadOnlyObjectWrapper<>(keys.indexOf(d.getValue()) + 1));
+        numCol.setPrefWidth(38);
+        numCol.setStyle("-fx-alignment: CENTER-RIGHT; -fx-text-fill: #868a91;");
+
+        // 2. Name
+        TableColumn<KeyModel, String> nameCol = createGridColumnGeneric("Name", 160, d -> d.getValue().name);
+        // 3. Comment
+        TableColumn<KeyModel, String> commentCol = createGridColumnGeneric("Comment", 120, d -> d.getValue().comment);
+        // 4. Primary
+        TableColumn<KeyModel, String> primCol = createGridColumnGeneric("Primary", 90,
+                d -> new ReadOnlyStringWrapper(String.valueOf(d.getValue().primary.get())));
+        // 5. Deferrable
+        TableColumn<KeyModel, String> defCol = createGridColumnGeneric("Deferrable", 100,
+                d -> new ReadOnlyStringWrapper(String.valueOf(d.getValue().deferrable.get())));
+        // 6. Defined With Period
+        TableColumn<KeyModel, String> periodCol = createGridColumnGeneric("Defined With Period", 140,
+                d -> new ReadOnlyStringWrapper(String.valueOf(d.getValue().definedWithPeriod.get())));
+
+        grid.getColumns().addAll(numCol, nameCol, commentCol, primCol, defCol, periodCol);
+
+        grid.setRowFactory(tv -> {
+            TableRow<KeyModel> row = new TableRow<>();
+            row.setOnMouseClicked(event -> {
+                if (event.getClickCount() == 2 && !row.isEmpty()) {
+                    selectKeyInTree(row.getItem());
+                }
+            });
+            return row;
+        });
+
+        VBox box = new VBox(grid);
+        VBox.setVgrow(box, Priority.ALWAYS);
+        return box;
+    }
+
+    private void selectKeyInTree(KeyModel target) {
+        if (keyCategoryItem == null || target == null || treeView == null) return;
+        for (TreeItem<ModifyNode> child : keyCategoryItem.getChildren()) {
+            if (child.getValue() != null && child.getValue().item == target) {
+                treeView.getSelectionModel().select(child);
+                break;
+            }
+        }
+    }
+
+    private Node buildIndexesCategoryView() {
+        TableView<IndexModel> grid = new TableView<>();
+        grid.getStyleClass().add("modify-columns-grid");
+        grid.setItems(indexes);
+        VBox.setVgrow(grid, Priority.ALWAYS);
+
+        // 1. #
+        TableColumn<IndexModel, Integer> numCol = new TableColumn<>("#");
+        numCol.setCellValueFactory(d -> new ReadOnlyObjectWrapper<>(indexes.indexOf(d.getValue()) + 1));
+        numCol.setPrefWidth(38);
+        numCol.setStyle("-fx-alignment: CENTER-RIGHT; -fx-text-fill: #868a91;");
+
+        // 2. Name
+        TableColumn<IndexModel, String> nameCol = createGridColumnGeneric("Name", 160, d -> d.getValue().name);
+        // 3. Comment
+        TableColumn<IndexModel, String> commentCol = createGridColumnGeneric("Comment", 120, d -> d.getValue().comment);
+        // 4. Unique
+        TableColumn<IndexModel, String> uniqueCol = createGridColumnGeneric("Unique", 90,
+                d -> new ReadOnlyStringWrapper(String.valueOf(d.getValue().unique.get())));
+        // 5. Nulls Not Dis..
+        TableColumn<IndexModel, String> nullsCol = createGridColumnGeneric("Nulls Not Dis..", 110,
+                d -> new ReadOnlyStringWrapper(String.valueOf(d.getValue().nullsNotDistinct.get())));
+        // 6. Condition
+        TableColumn<IndexModel, String> condCol = createGridColumnGeneric("Condition", 130, d -> d.getValue().predicate);
+        // 7. Include Colum..
+        TableColumn<IndexModel, String> inclCol = createGridColumnGeneric("Include Colum..", 120, d -> d.getValue().includeColumns);
+
+        grid.getColumns().addAll(numCol, nameCol, commentCol, uniqueCol, nullsCol, condCol, inclCol);
+
+        grid.setRowFactory(tv -> {
+            TableRow<IndexModel> row = new TableRow<>();
+            row.setOnMouseClicked(event -> {
+                if (event.getClickCount() == 2 && !row.isEmpty()) {
+                    selectIndexInTree(row.getItem());
+                }
+            });
+            return row;
+        });
+
+        VBox box = new VBox(grid);
+        VBox.setVgrow(box, Priority.ALWAYS);
+        return box;
+    }
+
+    private void selectIndexInTree(IndexModel target) {
+        if (idxCategoryItem == null || target == null || treeView == null) return;
+        for (TreeItem<ModifyNode> child : idxCategoryItem.getChildren()) {
+            if (child.getValue() != null && child.getValue().item == target) {
+                treeView.getSelectionModel().select(child);
+                break;
+            }
+        }
+    }
+
+    private Node buildChecksCategoryView() {
+        TableView<CheckModel> grid = new TableView<>();
+        grid.getStyleClass().add("modify-columns-grid");
+        grid.setItems(checks);
+        VBox.setVgrow(grid, Priority.ALWAYS);
+
+        // 1. #
+        TableColumn<CheckModel, Integer> numCol = new TableColumn<>("#");
+        numCol.setCellValueFactory(d -> new ReadOnlyObjectWrapper<>(checks.indexOf(d.getValue()) + 1));
+        numCol.setPrefWidth(38);
+        numCol.setStyle("-fx-alignment: CENTER-RIGHT; -fx-text-fill: #868a91;");
+
+        // 2. Name
+        TableColumn<CheckModel, String> nameCol = createGridColumnGeneric("Name", 150, d -> d.getValue().name);
+        // 3. Comment
+        TableColumn<CheckModel, String> commentCol = createGridColumnGeneric("Comment", 110, d -> d.getValue().comment);
+        // 4. Deferrable
+        TableColumn<CheckModel, String> defCol = createGridColumnGeneric("Deferrable", 90,
+                d -> new ReadOnlyStringWrapper(String.valueOf(d.getValue().deferrable.get())));
+        // 5. Initially..
+        TableColumn<CheckModel, String> initCol = createGridColumnGeneric("Initially..", 90,
+                d -> new ReadOnlyStringWrapper(String.valueOf(d.getValue().initiallyDeferred.get())));
+        // 6. No Inherit
+        TableColumn<CheckModel, String> noInhCol = createGridColumnGeneric("No Inherit", 90,
+                d -> new ReadOnlyStringWrapper(String.valueOf(d.getValue().noInherit.get())));
+        // 7. Not Enfor..
+        TableColumn<CheckModel, String> notEnfCol = createGridColumnGeneric("Not Enfor..", 90,
+                d -> new ReadOnlyStringWrapper(String.valueOf(d.getValue().notEnforced.get())));
+        // 8. Not Valid..
+        TableColumn<CheckModel, String> notValCol = createGridColumnGeneric("Not Valid..", 90,
+                d -> new ReadOnlyStringWrapper(String.valueOf(d.getValue().notValidated.get())));
+        // 9. Pre.. (Expression/Predicate)
+        TableColumn<CheckModel, String> preCol = createGridColumnGeneric("Pre..", 160, d -> d.getValue().expression);
+
+        grid.getColumns().addAll(numCol, nameCol, commentCol, defCol, initCol, noInhCol, notEnfCol, notValCol, preCol);
+
+        grid.setRowFactory(tv -> {
+            TableRow<CheckModel> row = new TableRow<>();
+            row.setOnMouseClicked(event -> {
+                if (event.getClickCount() == 2 && !row.isEmpty()) {
+                    selectCheckInTree(row.getItem());
+                }
+            });
+            return row;
+        });
+
+        VBox box = new VBox(grid);
+        VBox.setVgrow(box, Priority.ALWAYS);
+        return box;
+    }
+
+    private void selectCheckInTree(CheckModel target) {
+        if (chkCategoryItem == null || target == null || treeView == null) return;
+        for (TreeItem<ModifyNode> child : chkCategoryItem.getChildren()) {
+            if (child.getValue() != null && child.getValue().item == target) {
+                treeView.getSelectionModel().select(child);
+                break;
+            }
+        }
+    }
+
+    private Node buildForeignKeysCategoryView() {
+        TableView<ForeignKeyModel> grid = new TableView<>();
+        grid.getStyleClass().add("modify-columns-grid");
+        grid.setItems(foreignKeys);
+        VBox.setVgrow(grid, Priority.ALWAYS);
+
+        // 1. #
+        TableColumn<ForeignKeyModel, Integer> numCol = new TableColumn<>("#");
+        numCol.setCellValueFactory(d -> new ReadOnlyObjectWrapper<>(foreignKeys.indexOf(d.getValue()) + 1));
+        numCol.setPrefWidth(38);
+        numCol.setStyle("-fx-alignment: CENTER-RIGHT; -fx-text-fill: #868a91;");
+
+        // 2. Name
+        TableColumn<ForeignKeyModel, String> nameCol = createGridColumnGeneric("Name", 150, d -> d.getValue().name);
+        // 3. Comment
+        TableColumn<ForeignKeyModel, String> commentCol = createGridColumnGeneric("Comment", 110, d -> d.getValue().comment);
+        // 4. Target Table
+        TableColumn<ForeignKeyModel, String> targetCol = createGridColumnGeneric("Target Table", 140, d -> d.getValue().targetTable);
+        // 5. Local Column
+        TableColumn<ForeignKeyModel, String> localCol = createGridColumnGeneric("Local Column", 120, d -> d.getValue().localColumn);
+        // 6. Referenced Column
+        TableColumn<ForeignKeyModel, String> refCol = createGridColumnGeneric("Referenced Column", 130, d -> d.getValue().referencedColumn);
+        // 7. On Update
+        TableColumn<ForeignKeyModel, String> onUpdCol = createGridColumnGeneric("On Update", 100, d -> d.getValue().onUpdate);
+        // 8. On Delete
+        TableColumn<ForeignKeyModel, String> onDelCol = createGridColumnGeneric("On Delete", 100, d -> d.getValue().onDelete);
+
+        grid.getColumns().addAll(numCol, nameCol, commentCol, targetCol, localCol, refCol, onUpdCol, onDelCol);
+
+        grid.setRowFactory(tv -> {
+            TableRow<ForeignKeyModel> row = new TableRow<>();
+            row.setOnMouseClicked(event -> {
+                if (event.getClickCount() == 2 && !row.isEmpty()) {
+                    selectForeignKeyInTree(row.getItem());
+                }
+            });
+            return row;
+        });
+
+        VBox box = new VBox(grid);
+        VBox.setVgrow(box, Priority.ALWAYS);
+        return box;
+    }
+
+    private void selectForeignKeyInTree(ForeignKeyModel target) {
+        if (fkCategoryItem == null || target == null || treeView == null) return;
+        for (TreeItem<ModifyNode> child : fkCategoryItem.getChildren()) {
+            if (child.getValue() != null && child.getValue().item == target) {
+                treeView.getSelectionModel().select(child);
+                break;
+            }
+        }
+    }
+
+    private HBox createNameFieldWithReset(SimpleStringProperty nameProp, String originalName) {
+        TextField nameField = new TextField(nameProp.get());
+        nameField.textProperty().bindBidirectional(nameProp);
+        nameField.textProperty().addListener((o, ov, nv) -> {
+            updateCurrentItemInTree();
+            refreshPreview();
+        });
+        Button nameMoreBtn = new Button("…");
+        nameMoreBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: #868a91; -fx-cursor: hand;");
+        nameMoreBtn.setOnAction(e -> {
+            if (originalName != null) {
+                nameField.setText(originalName);
+            }
+        });
+        HBox nameBox = new HBox(4, nameField, nameMoreBtn);
+        HBox.setHgrow(nameField, Priority.ALWAYS);
+        return nameBox;
+    }
+
+    private HBox createCommentFieldWithExpand(SimpleStringProperty commentProp) {
+        TextField commField = new TextField(commentProp.get());
+        commField.textProperty().bindBidirectional(commentProp);
+        commField.textProperty().addListener((o, ov, nv) -> refreshPreview());
+        Button expandCommBtn = new Button("\u2922");
+        expandCommBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: #868a91; -fx-cursor: hand;");
+        expandCommBtn.setOnAction(e -> {
+            Dialog<String> d = new Dialog<>();
+            d.setTitle("Comment");
+            d.initOwner(stage);
+            TextArea ta = new TextArea(commentProp.get());
+            ta.setPrefRowCount(5);
+            ta.setWrapText(true);
+            d.getDialogPane().setContent(ta);
+            d.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+            DialogTheme.apply(d);
+            d.setResultConverter(btn -> btn == ButtonType.OK ? ta.getText() : null);
+            d.showAndWait().ifPresent(commentProp::set);
+        });
+        HBox commBox = new HBox(4, commField, expandCommBtn);
+        HBox.setHgrow(commField, Priority.ALWAYS);
+        return commBox;
     }
 
     private ScrollPane buildColumnForm(ColumnModel col) {
@@ -1259,56 +1567,162 @@ public final class ModifyTableDialog {
 
         int row = 0;
 
-        // Name
-        Label nameLbl = createFormLabel("Name");
-        TextField nameField = new TextField(key.name.get());
-        nameField.textProperty().bindBidirectional(key.name);
-        nameField.textProperty().addListener((o, ov, nv) -> {
+        // 1. Name with "…" reset button
+        grid.add(createFormLabel("Name"), 0, row);
+        grid.add(createNameFieldWithReset(key.name, key.originalName), 1, row++);
+
+        // 2. Comment with "⤢" expand button
+        grid.add(createFormLabel("Comment"), 0, row);
+        grid.add(createCommentFieldWithExpand(key.comment), 1, row++);
+
+        // 3. Checkboxes arranged in 3 columns, 2 rows matching Image 4:
+        CheckBox primCheck = new CheckBox("Primary");
+        primCheck.selectedProperty().bindBidirectional(key.primary);
+        primCheck.selectedProperty().addListener((o, ov, nv) -> {
             updateCurrentItemInTree();
             refreshPreview();
         });
-        grid.add(nameLbl, 0, row);
-        grid.add(nameField, 1, row++);
 
-        // Type
-        Label typeLbl = createFormLabel("Type");
-        ComboBox<String> typeCombo = new ComboBox<>(FXCollections.observableArrayList("PRIMARY KEY", "UNIQUE"));
-        typeCombo.setValue(key.type.get());
-        typeCombo.valueProperty().addListener((o, ov, nv) -> {
-            key.type.set(nv != null ? nv : "PRIMARY KEY");
-            updateCurrentItemInTree();
-            refreshPreview();
-        });
-        grid.add(typeLbl, 0, row);
-        grid.add(typeCombo, 1, row++);
+        CheckBox initDefCheck = new CheckBox("Initially Deferred");
+        initDefCheck.selectedProperty().bindBidirectional(key.initiallyDeferred);
+        initDefCheck.selectedProperty().addListener((o, ov, nv) -> refreshPreview());
 
-        // Columns CheckBox list
+        CheckBox deferrableCheck = new CheckBox("Deferrable");
+        deferrableCheck.selectedProperty().bindBidirectional(key.deferrable);
+        deferrableCheck.selectedProperty().addListener((o, ov, nv) -> refreshPreview());
+
+        CheckBox notEnfCheck = new CheckBox("Not Enforced");
+        notEnfCheck.selectedProperty().bindBidirectional(key.notEnforced);
+        notEnfCheck.selectedProperty().addListener((o, ov, nv) -> refreshPreview());
+
+        CheckBox defPeriodCheck = new CheckBox("Defined With Period");
+        defPeriodCheck.selectedProperty().bindBidirectional(key.definedWithPeriod);
+        defPeriodCheck.selectedProperty().addListener((o, ov, nv) -> refreshPreview());
+
+        CheckBox notValCheck = new CheckBox("Not Validated");
+        notValCheck.selectedProperty().bindBidirectional(key.notValidated);
+        notValCheck.selectedProperty().addListener((o, ov, nv) -> refreshPreview());
+
+        GridPane checkGrid = new GridPane();
+        checkGrid.setHgap(20);
+        checkGrid.setVgap(8);
+        checkGrid.add(primCheck, 0, 0);
+        checkGrid.add(notEnfCheck, 0, 1);
+        checkGrid.add(initDefCheck, 1, 0);
+        checkGrid.add(defPeriodCheck, 1, 1);
+        checkGrid.add(deferrableCheck, 2, 0);
+        checkGrid.add(notValCheck, 2, 1);
+
+        grid.add(new Label(""), 0, row);
+        grid.add(checkGrid, 1, row++);
+
+        // 4. Columns section matching DataGrip Image 4:
         Label colsLbl = createFormLabel("Columns");
-        VBox colsBox = new VBox(6);
-        for (ColumnModel c : columns) {
-            CheckBox cb = new CheckBox(c.name.get());
-            cb.setSelected(key.columns.contains(c.name.get()));
-            cb.selectedProperty().addListener((o, ov, nv) -> {
-                if (nv) {
-                    if (!key.columns.contains(c.name.get())) key.columns.add(c.name.get());
-                } else {
-                    key.columns.remove(c.name.get());
-                }
+
+        Button addColBtn = createToolButton(FontAwesomeSolid.PLUS, "#57965c", "Add Column");
+        Button remColBtn = createToolButton(FontAwesomeSolid.MINUS, "#cc6666", "Remove Column");
+        Button upColBtn = createToolButton(FontAwesomeSolid.ARROW_UP, "#a9b7c6", "Move Up");
+        Button downColBtn = createToolButton(FontAwesomeSolid.ARROW_DOWN, "#a9b7c6", "Move Down");
+
+        HBox miniToolbar = new HBox(3, addColBtn, remColBtn, upColBtn, downColBtn);
+        miniToolbar.setAlignment(Pos.CENTER_LEFT);
+        miniToolbar.setPadding(new Insets(0, 0, 4, 0));
+
+        ListView<String> colsListView = new ListView<>(key.columns);
+        colsListView.setPrefHeight(130);
+        colsListView.setPrefWidth(160);
+
+        VBox leftColsBox = new VBox(miniToolbar, colsListView);
+
+        // Right side editor
+        GridPane rightColPropGrid = new GridPane();
+        rightColPropGrid.setHgap(10);
+        rightColPropGrid.setVgap(8);
+        rightColPropGrid.setPadding(new Insets(0, 0, 0, 10));
+
+        ObservableList<String> tableColNames = FXCollections.observableArrayList(
+                columns.stream().map(c -> c.name.get()).toList()
+        );
+        ComboBox<String> colNameCombo = new ComboBox<>(tableColNames);
+        colNameCombo.setMaxWidth(Double.MAX_VALUE);
+
+        TextField excludeOpField = new TextField(key.excludeOperator.get());
+        excludeOpField.textProperty().bindBidirectional(key.excludeOperator);
+        excludeOpField.textProperty().addListener((o, ov, nv) -> refreshPreview());
+
+        rightColPropGrid.add(createFormLabel("Column Name"), 0, 0);
+        rightColPropGrid.add(colNameCombo, 1, 0);
+        rightColPropGrid.add(createFormLabel("Exclude operator"), 0, 1);
+        rightColPropGrid.add(excludeOpField, 1, 1);
+
+        final boolean[] updatingCombo = {false};
+        colsListView.getSelectionModel().selectedItemProperty().addListener((o, ov, nv) -> {
+            updatingCombo[0] = true;
+            colNameCombo.setValue(nv);
+            updatingCombo[0] = false;
+        });
+
+        colNameCombo.valueProperty().addListener((o, ov, nv) -> {
+            if (updatingCombo[0] || nv == null) return;
+            int selIdx = colsListView.getSelectionModel().getSelectedIndex();
+            if (selIdx >= 0 && selIdx < key.columns.size()) {
+                key.columns.set(selIdx, nv);
                 updateCurrentItemInTree();
                 refreshPreview();
-            });
-            colsBox.getChildren().add(cb);
-        }
-        grid.add(colsLbl, 0, row);
-        grid.add(colsBox, 1, row++);
+            }
+        });
 
-        // Comment
-        Label commLbl = createFormLabel("Comment");
-        TextField commField = new TextField(key.comment.get());
-        commField.textProperty().bindBidirectional(key.comment);
-        commField.textProperty().addListener((o, ov, nv) -> refreshPreview());
-        grid.add(commLbl, 0, row);
-        grid.add(commField, 1, row++);
+        addColBtn.setOnAction(e -> {
+            String candidate = tableColNames.stream()
+                    .filter(cn -> !key.columns.contains(cn))
+                    .findFirst()
+                    .orElse(tableColNames.isEmpty() ? "col" : tableColNames.get(0));
+            key.columns.add(candidate);
+            colsListView.getSelectionModel().select(key.columns.size() - 1);
+            updateCurrentItemInTree();
+            refreshPreview();
+        });
+
+        remColBtn.setOnAction(e -> {
+            int selIdx = colsListView.getSelectionModel().getSelectedIndex();
+            if (selIdx >= 0 && selIdx < key.columns.size()) {
+                key.columns.remove(selIdx);
+                updateCurrentItemInTree();
+                refreshPreview();
+            }
+        });
+
+        upColBtn.setOnAction(e -> {
+            int selIdx = colsListView.getSelectionModel().getSelectedIndex();
+            if (selIdx > 0) {
+                String item = key.columns.remove(selIdx);
+                key.columns.add(selIdx - 1, item);
+                colsListView.getSelectionModel().select(selIdx - 1);
+                updateCurrentItemInTree();
+                refreshPreview();
+            }
+        });
+
+        downColBtn.setOnAction(e -> {
+            int selIdx = colsListView.getSelectionModel().getSelectedIndex();
+            if (selIdx >= 0 && selIdx < key.columns.size() - 1) {
+                String item = key.columns.remove(selIdx);
+                key.columns.add(selIdx + 1, item);
+                colsListView.getSelectionModel().select(selIdx + 1);
+                updateCurrentItemInTree();
+                refreshPreview();
+            }
+        });
+
+        if (!key.columns.isEmpty()) {
+            colsListView.getSelectionModel().select(0);
+        }
+
+        HBox columnsSplitBox = new HBox(8, leftColsBox, rightColPropGrid);
+        HBox.setHgrow(rightColPropGrid, Priority.ALWAYS);
+
+        grid.add(colsLbl, 0, row);
+        grid.add(columnsSplitBox, 1, row++);
 
         ScrollPane scroll = new ScrollPane(grid);
         scroll.setFitToWidth(true);
@@ -1331,16 +1745,28 @@ public final class ModifyTableDialog {
 
         int row = 0;
 
-        Label nameLbl = createFormLabel("Name");
-        TextField nameField = new TextField(fk.name.get());
-        nameField.textProperty().bindBidirectional(fk.name);
-        nameField.textProperty().addListener((o, ov, nv) -> {
-            updateCurrentItemInTree();
-            refreshPreview();
-        });
-        grid.add(nameLbl, 0, row);
-        grid.add(nameField, 1, row++);
+        // 1. Name with "…" reset button
+        grid.add(createFormLabel("Name"), 0, row);
+        grid.add(createNameFieldWithReset(fk.name, fk.originalName), 1, row++);
 
+        // 2. Comment with "⤢" expand button
+        grid.add(createFormLabel("Comment"), 0, row);
+        grid.add(createCommentFieldWithExpand(fk.comment), 1, row++);
+
+        // 3. Deferrable & Initially Deferred
+        CheckBox defCheck = new CheckBox("Deferrable");
+        defCheck.selectedProperty().bindBidirectional(fk.deferrable);
+        defCheck.selectedProperty().addListener((o, ov, nv) -> refreshPreview());
+
+        CheckBox initDefCheck = new CheckBox("Initially Deferred");
+        initDefCheck.selectedProperty().bindBidirectional(fk.initiallyDeferred);
+        initDefCheck.selectedProperty().addListener((o, ov, nv) -> refreshPreview());
+
+        HBox checkRow = new HBox(20, defCheck, initDefCheck);
+        grid.add(new Label(""), 0, row);
+        grid.add(checkRow, 1, row++);
+
+        // 4. Target Table
         Label targetLbl = createFormLabel("Target Table");
         ComboBox<String> targetCombo = new ComboBox<>(availableTables);
         targetCombo.setEditable(true);
@@ -1350,9 +1776,11 @@ public final class ModifyTableDialog {
             updateCurrentItemInTree();
             refreshPreview();
         });
+        targetCombo.setMaxWidth(Double.MAX_VALUE);
         grid.add(targetLbl, 0, row);
         grid.add(targetCombo, 1, row++);
 
+        // 5. Local Column
         Label localColLbl = createFormLabel("Local Column");
         ObservableList<String> colNames = FXCollections.observableArrayList(columns.stream().map(c -> c.name.get()).toList());
         ComboBox<String> localColCombo = new ComboBox<>(colNames);
@@ -1362,9 +1790,11 @@ public final class ModifyTableDialog {
             updateCurrentItemInTree();
             refreshPreview();
         });
+        localColCombo.setMaxWidth(Double.MAX_VALUE);
         grid.add(localColLbl, 0, row);
         grid.add(localColCombo, 1, row++);
 
+        // 6. Referenced Column
         Label refColLbl = createFormLabel("Referenced Column");
         TextField refColField = new TextField(fk.referencedColumn.get());
         refColField.textProperty().bindBidirectional(fk.referencedColumn);
@@ -1375,6 +1805,7 @@ public final class ModifyTableDialog {
         grid.add(refColLbl, 0, row);
         grid.add(refColField, 1, row++);
 
+        // 7. On Update
         Label onUpdLbl = createFormLabel("On Update");
         ComboBox<String> onUpdCombo = new ComboBox<>(FXCollections.observableArrayList("NO ACTION", "CASCADE", "SET NULL", "SET DEFAULT", "RESTRICT"));
         onUpdCombo.setValue(fk.onUpdate.get());
@@ -1382,9 +1813,11 @@ public final class ModifyTableDialog {
             fk.onUpdate.set(nv != null ? nv : "NO ACTION");
             refreshPreview();
         });
+        onUpdCombo.setMaxWidth(Double.MAX_VALUE);
         grid.add(onUpdLbl, 0, row);
         grid.add(onUpdCombo, 1, row++);
 
+        // 8. On Delete
         Label onDelLbl = createFormLabel("On Delete");
         ComboBox<String> onDelCombo = new ComboBox<>(FXCollections.observableArrayList("NO ACTION", "CASCADE", "SET NULL", "SET DEFAULT", "RESTRICT"));
         onDelCombo.setValue(fk.onDelete.get());
@@ -1392,6 +1825,7 @@ public final class ModifyTableDialog {
             fk.onDelete.set(nv != null ? nv : "NO ACTION");
             refreshPreview();
         });
+        onDelCombo.setMaxWidth(Double.MAX_VALUE);
         grid.add(onDelLbl, 0, row);
         grid.add(onDelCombo, 1, row++);
 
@@ -1416,60 +1850,232 @@ public final class ModifyTableDialog {
 
         int row = 0;
 
-        Label nameLbl = createFormLabel("Name");
-        TextField nameField = new TextField(idx.name.get());
-        nameField.textProperty().bindBidirectional(idx.name);
-        nameField.textProperty().addListener((o, ov, nv) -> {
-            updateCurrentItemInTree();
-            refreshPreview();
-        });
-        grid.add(nameLbl, 0, row);
-        grid.add(nameField, 1, row++);
+        // 1. Name with "…" reset button
+        grid.add(createFormLabel("Name"), 0, row);
+        grid.add(createNameFieldWithReset(idx.name, idx.originalName), 1, row++);
 
+        // 2. Comment with "⤢" expand button
+        grid.add(createFormLabel("Comment"), 0, row);
+        grid.add(createCommentFieldWithExpand(idx.comment), 1, row++);
+
+        // 3. Unique & Nulls Not Distinct CheckBoxes matching Image 5
         CheckBox uniqueCheck = new CheckBox("Unique");
         uniqueCheck.selectedProperty().bindBidirectional(idx.unique);
         uniqueCheck.selectedProperty().addListener((o, ov, nv) -> {
             updateCurrentItemInTree();
             refreshPreview();
         });
-        grid.add(createFormLabel("Unique"), 0, row);
-        grid.add(uniqueCheck, 1, row++);
 
-        Label methodLbl = createFormLabel("Method");
-        ComboBox<String> methodCombo = new ComboBox<>(FXCollections.observableArrayList("BTREE", "HASH", "GIN", "GIST", "BRIN"));
-        methodCombo.setValue(idx.method.get());
-        methodCombo.valueProperty().addListener((o, ov, nv) -> {
-            idx.method.set(nv != null ? nv : "BTREE");
-            refreshPreview();
-        });
-        grid.add(methodLbl, 0, row);
-        grid.add(methodCombo, 1, row++);
+        CheckBox nullsNotDistinctCheck = new CheckBox("Nulls Not Distinct");
+        nullsNotDistinctCheck.selectedProperty().bindBidirectional(idx.nullsNotDistinct);
+        nullsNotDistinctCheck.selectedProperty().addListener((o, ov, nv) -> refreshPreview());
 
+        HBox checkRow = new HBox(20, uniqueCheck, nullsNotDistinctCheck);
+        grid.add(new Label(""), 0, row);
+        grid.add(checkRow, 1, row++);
+
+        // 4. Columns section matching Image 5:
         Label colsLbl = createFormLabel("Columns");
-        VBox colsBox = new VBox(6);
-        for (ColumnModel c : columns) {
-            CheckBox cb = new CheckBox(c.name.get());
-            cb.setSelected(idx.columns.contains(c.name.get()));
-            cb.selectedProperty().addListener((o, ov, nv) -> {
-                if (nv) {
-                    if (!idx.columns.contains(c.name.get())) idx.columns.add(c.name.get());
-                } else {
-                    idx.columns.remove(c.name.get());
-                }
+
+        Button addColBtn = createToolButton(FontAwesomeSolid.PLUS, "#57965c", "Add Column");
+        Button remColBtn = createToolButton(FontAwesomeSolid.MINUS, "#cc6666", "Remove Column");
+        Button upColBtn = createToolButton(FontAwesomeSolid.ARROW_UP, "#a9b7c6", "Move Up");
+        Button downColBtn = createToolButton(FontAwesomeSolid.ARROW_DOWN, "#a9b7c6", "Move Down");
+
+        HBox miniToolbar = new HBox(3, addColBtn, remColBtn, upColBtn, downColBtn);
+        miniToolbar.setAlignment(Pos.CENTER_LEFT);
+        miniToolbar.setPadding(new Insets(0, 0, 4, 0));
+
+        ListView<String> colsListView = new ListView<>(idx.columns);
+        colsListView.setPrefHeight(150);
+        colsListView.setPrefWidth(160);
+
+        VBox leftColsBox = new VBox(miniToolbar, colsListView);
+
+        GridPane rightColPropGrid = new GridPane();
+        rightColPropGrid.setHgap(10);
+        rightColPropGrid.setVgap(8);
+        rightColPropGrid.setPadding(new Insets(0, 0, 0, 10));
+
+        ObservableList<String> tableColNames = FXCollections.observableArrayList(
+                columns.stream().map(c -> c.name.get()).toList()
+        );
+        ComboBox<String> colNameCombo = new ComboBox<>(tableColNames);
+        colNameCombo.setMaxWidth(Double.MAX_VALUE);
+
+        ObservableList<String> orderOptions = FXCollections.observableArrayList(
+                "NONE", "ASC", "DESC", "ASC NULLS FIRST", "ASC NULLS LAST", "DESC NULLS FIRST", "DESC NULLS LAST"
+        );
+        ComboBox<String> orderCombo = new ComboBox<>(orderOptions);
+        orderCombo.setMaxWidth(Double.MAX_VALUE);
+
+        TextField collationField = new TextField();
+        TextField opClassField = new TextField();
+
+        rightColPropGrid.add(createFormLabel("Column Name"), 0, 0);
+        rightColPropGrid.add(colNameCombo, 1, 0);
+        rightColPropGrid.add(createFormLabel("Order"), 0, 1);
+        rightColPropGrid.add(orderCombo, 1, 1);
+        rightColPropGrid.add(createFormLabel("Collation"), 0, 2);
+        rightColPropGrid.add(collationField, 1, 2);
+        rightColPropGrid.add(createFormLabel("Operator Class"), 0, 3);
+        rightColPropGrid.add(opClassField, 1, 3);
+
+        final boolean[] updatingRightForm = {false};
+        Runnable updateRightPaneForSelectedCol = () -> {
+            String selCol = colsListView.getSelectionModel().getSelectedItem();
+            updatingRightForm[0] = true;
+            if (selCol != null) {
+                colNameCombo.setDisable(false);
+                orderCombo.setDisable(false);
+                collationField.setDisable(false);
+                opClassField.setDisable(false);
+
+                colNameCombo.setValue(selCol);
+                orderCombo.setValue(idx.getOrderProperty(selCol).get());
+                collationField.setText(idx.getCollationProperty(selCol).get());
+                opClassField.setText(idx.getOpClassProperty(selCol).get());
+            } else {
+                colNameCombo.setDisable(true);
+                orderCombo.setDisable(true);
+                collationField.setDisable(true);
+                opClassField.setDisable(true);
+            }
+            updatingRightForm[0] = false;
+        };
+
+        colsListView.getSelectionModel().selectedItemProperty().addListener((o, ov, nv) -> updateRightPaneForSelectedCol.run());
+
+        colNameCombo.valueProperty().addListener((o, ov, nv) -> {
+            if (updatingRightForm[0] || nv == null) return;
+            int selIdx = colsListView.getSelectionModel().getSelectedIndex();
+            if (selIdx >= 0 && selIdx < idx.columns.size()) {
+                idx.columns.set(selIdx, nv);
                 updateCurrentItemInTree();
                 refreshPreview();
-            });
-            colsBox.getChildren().add(cb);
-        }
-        grid.add(colsLbl, 0, row);
-        grid.add(colsBox, 1, row++);
+            }
+        });
 
-        Label predLbl = createFormLabel("Where (Predicate)");
+        orderCombo.valueProperty().addListener((o, ov, nv) -> {
+            if (updatingRightForm[0] || nv == null) return;
+            String selCol = colsListView.getSelectionModel().getSelectedItem();
+            if (selCol != null) {
+                idx.getOrderProperty(selCol).set(nv);
+                refreshPreview();
+            }
+        });
+
+        collationField.textProperty().addListener((o, ov, nv) -> {
+            if (updatingRightForm[0]) return;
+            String selCol = colsListView.getSelectionModel().getSelectedItem();
+            if (selCol != null) {
+                idx.getCollationProperty(selCol).set(nv != null ? nv : "");
+                refreshPreview();
+            }
+        });
+
+        opClassField.textProperty().addListener((o, ov, nv) -> {
+            if (updatingRightForm[0]) return;
+            String selCol = colsListView.getSelectionModel().getSelectedItem();
+            if (selCol != null) {
+                idx.getOpClassProperty(selCol).set(nv != null ? nv : "");
+                refreshPreview();
+            }
+        });
+
+        addColBtn.setOnAction(e -> {
+            String candidate = tableColNames.stream()
+                    .filter(cn -> !idx.columns.contains(cn))
+                    .findFirst()
+                    .orElse(tableColNames.isEmpty() ? "col" : tableColNames.get(0));
+            idx.columns.add(candidate);
+            colsListView.getSelectionModel().select(idx.columns.size() - 1);
+            updateCurrentItemInTree();
+            refreshPreview();
+        });
+
+        remColBtn.setOnAction(e -> {
+            int selIdx = colsListView.getSelectionModel().getSelectedIndex();
+            if (selIdx >= 0 && selIdx < idx.columns.size()) {
+                idx.columns.remove(selIdx);
+                updateCurrentItemInTree();
+                refreshPreview();
+            }
+        });
+
+        upColBtn.setOnAction(e -> {
+            int selIdx = colsListView.getSelectionModel().getSelectedIndex();
+            if (selIdx > 0) {
+                String item = idx.columns.remove(selIdx);
+                idx.columns.add(selIdx - 1, item);
+                colsListView.getSelectionModel().select(selIdx - 1);
+                updateCurrentItemInTree();
+                refreshPreview();
+            }
+        });
+
+        downColBtn.setOnAction(e -> {
+            int selIdx = colsListView.getSelectionModel().getSelectedIndex();
+            if (selIdx >= 0 && selIdx < idx.columns.size() - 1) {
+                String item = idx.columns.remove(selIdx);
+                idx.columns.add(selIdx + 1, item);
+                colsListView.getSelectionModel().select(selIdx + 1);
+                updateCurrentItemInTree();
+                refreshPreview();
+            }
+        });
+
+        if (!idx.columns.isEmpty()) {
+            colsListView.getSelectionModel().select(0);
+        } else {
+            updateRightPaneForSelectedCol.run();
+        }
+
+        HBox columnsSplitBox = new HBox(8, leftColsBox, rightColPropGrid);
+        HBox.setHgrow(rightColPropGrid, Priority.ALWAYS);
+
+        grid.add(colsLbl, 0, row);
+        grid.add(columnsSplitBox, 1, row++);
+
+        // 5. Condition (Predicate)
+        Label predLbl = createFormLabel("Condition");
         TextField predField = new TextField(idx.predicate.get());
         predField.textProperty().bindBidirectional(idx.predicate);
         predField.textProperty().addListener((o, ov, nv) -> refreshPreview());
         grid.add(predLbl, 0, row);
         grid.add(predField, 1, row++);
+
+        // 6. Include Columns
+        Label inclLbl = createFormLabel("Include Columns");
+        TextField inclField = new TextField(idx.includeColumns.get());
+        inclField.textProperty().bindBidirectional(idx.includeColumns);
+        inclField.textProperty().addListener((o, ov, nv) -> refreshPreview());
+        grid.add(inclLbl, 0, row);
+        grid.add(inclField, 1, row++);
+
+        // 7. Access Method
+        Label methodLbl = createFormLabel("Access Method");
+        ComboBox<String> methodCombo = new ComboBox<>(FXCollections.observableArrayList("btree", "hash", "gin", "gist", "brin", "spgist"));
+        methodCombo.setValue(idx.method.get() != null ? idx.method.get().toLowerCase() : "btree");
+        methodCombo.valueProperty().addListener((o, ov, nv) -> {
+            idx.method.set(nv != null ? nv : "btree");
+            refreshPreview();
+        });
+        methodCombo.setMaxWidth(Double.MAX_VALUE);
+        grid.add(methodLbl, 0, row);
+        grid.add(methodCombo, 1, row++);
+
+        // 8. Tablespace
+        Label tsLbl = createFormLabel("Tablespace");
+        ComboBox<String> tsCombo = new ComboBox<>(FXCollections.observableArrayList("<default>", "pg_default", "pg_global"));
+        tsCombo.setValue(idx.tablespace.get() != null && !idx.tablespace.get().isBlank() ? idx.tablespace.get() : "<default>");
+        tsCombo.valueProperty().addListener((o, ov, nv) -> {
+            idx.tablespace.set(nv != null ? nv : "<default>");
+            refreshPreview();
+        });
+        tsCombo.setMaxWidth(Double.MAX_VALUE);
+        grid.add(tsLbl, 0, row);
+        grid.add(tsCombo, 1, row++);
 
         ScrollPane scroll = new ScrollPane(grid);
         scroll.setFitToWidth(true);
@@ -1492,19 +2098,52 @@ public final class ModifyTableDialog {
 
         int row = 0;
 
-        Label nameLbl = createFormLabel("Name");
-        TextField nameField = new TextField(chk.name.get());
-        nameField.textProperty().bindBidirectional(chk.name);
-        nameField.textProperty().addListener((o, ov, nv) -> {
-            updateCurrentItemInTree();
-            refreshPreview();
-        });
-        grid.add(nameLbl, 0, row);
-        grid.add(nameField, 1, row++);
+        // 1. Name with "…" reset button
+        grid.add(createFormLabel("Name"), 0, row);
+        grid.add(createNameFieldWithReset(chk.name, chk.originalName), 1, row++);
 
+        // 2. Comment with "⤢" expand button
+        grid.add(createFormLabel("Comment"), 0, row);
+        grid.add(createCommentFieldWithExpand(chk.comment), 1, row++);
+
+        // 3. Checkboxes matching Image 3:
+        CheckBox defCheck = new CheckBox("Deferrable");
+        defCheck.selectedProperty().bindBidirectional(chk.deferrable);
+        defCheck.selectedProperty().addListener((o, ov, nv) -> refreshPreview());
+
+        CheckBox initDefCheck = new CheckBox("Initially Deferred");
+        initDefCheck.selectedProperty().bindBidirectional(chk.initiallyDeferred);
+        initDefCheck.selectedProperty().addListener((o, ov, nv) -> refreshPreview());
+
+        CheckBox noInhCheck = new CheckBox("No Inherit");
+        noInhCheck.selectedProperty().bindBidirectional(chk.noInherit);
+        noInhCheck.selectedProperty().addListener((o, ov, nv) -> refreshPreview());
+
+        CheckBox notEnfCheck = new CheckBox("Not Enforced");
+        notEnfCheck.selectedProperty().bindBidirectional(chk.notEnforced);
+        notEnfCheck.selectedProperty().addListener((o, ov, nv) -> refreshPreview());
+
+        CheckBox notValCheck = new CheckBox("Not Validated");
+        notValCheck.selectedProperty().bindBidirectional(chk.notValidated);
+        notValCheck.selectedProperty().addListener((o, ov, nv) -> refreshPreview());
+
+        GridPane checkGrid = new GridPane();
+        checkGrid.setHgap(20);
+        checkGrid.setVgap(8);
+        checkGrid.add(defCheck, 0, 0);
+        checkGrid.add(notEnfCheck, 0, 1);
+        checkGrid.add(initDefCheck, 1, 0);
+        checkGrid.add(notValCheck, 1, 1);
+        checkGrid.add(noInhCheck, 2, 0);
+
+        grid.add(new Label(""), 0, row);
+        grid.add(checkGrid, 1, row++);
+
+        // 4. Expression
         Label exprLbl = createFormLabel("Expression");
         TextArea exprArea = new TextArea(chk.expression.get());
-        exprArea.setPrefRowCount(3);
+        exprArea.setPrefRowCount(4);
+        exprArea.setWrapText(true);
         exprArea.textProperty().bindBidirectional(chk.expression);
         exprArea.textProperty().addListener((o, ov, nv) -> {
             updateCurrentItemInTree();
@@ -2396,8 +3035,17 @@ public final class ModifyTableDialog {
             if (k.isNew) {
                 if (k.markedForDrop.get() || k.columns.isEmpty()) continue;
                 String cols = String.join(", ", k.columns.stream().map(DbObject::quote).toList());
-                stmts.add("ALTER TABLE " + currentQualified + " ADD CONSTRAINT "
-                        + DbObject.quote(k.name.get()) + " " + k.type.get() + " (" + cols + ");");
+                StringBuilder ddl = new StringBuilder();
+                ddl.append("ALTER TABLE ").append(currentQualified).append(" ADD CONSTRAINT ")
+                        .append(DbObject.quote(k.name.get())).append(" ").append(k.type.get()).append(" (").append(cols).append(")");
+                if (k.deferrable.get()) {
+                    ddl.append(k.initiallyDeferred.get() ? " DEFERRABLE INITIALLY DEFERRED" : " DEFERRABLE INITIALLY IMMEDIATE");
+                }
+                if (k.notEnforced.get()) {
+                    ddl.append(" NOT ENFORCED");
+                }
+                ddl.append(";");
+                stmts.add(ddl.toString());
             } else if (k.markedForDrop.get()) {
                 stmts.add("ALTER TABLE " + currentQualified + " DROP CONSTRAINT "
                         + DbObject.quote(k.originalName) + ";");
@@ -2408,10 +3056,16 @@ public final class ModifyTableDialog {
         for (ForeignKeyModel fk : foreignKeys) {
             if (fk.isNew) {
                 if (fk.markedForDrop.get()) continue;
-                stmts.add("ALTER TABLE " + currentQualified + " ADD CONSTRAINT "
-                        + DbObject.quote(fk.name.get()) + " FOREIGN KEY (" + DbObject.quote(fk.localColumn.get()) + ") "
-                        + "REFERENCES " + DbObject.quote(fk.targetTable.get()) + " (" + DbObject.quote(fk.referencedColumn.get()) + ") "
-                        + "ON UPDATE " + fk.onUpdate.get() + " ON DELETE " + fk.onDelete.get() + ";");
+                StringBuilder ddl = new StringBuilder();
+                ddl.append("ALTER TABLE ").append(currentQualified).append(" ADD CONSTRAINT ")
+                        .append(DbObject.quote(fk.name.get())).append(" FOREIGN KEY (").append(DbObject.quote(fk.localColumn.get())).append(") ")
+                        .append("REFERENCES ").append(DbObject.quote(fk.targetTable.get())).append(" (").append(DbObject.quote(fk.referencedColumn.get())).append(") ")
+                        .append("ON UPDATE ").append(fk.onUpdate.get()).append(" ON DELETE ").append(fk.onDelete.get());
+                if (fk.deferrable.get()) {
+                    ddl.append(fk.initiallyDeferred.get() ? " DEFERRABLE INITIALLY DEFERRED" : " DEFERRABLE INITIALLY IMMEDIATE");
+                }
+                ddl.append(";");
+                stmts.add(ddl.toString());
             } else if (fk.markedForDrop.get()) {
                 stmts.add("ALTER TABLE " + currentQualified + " DROP CONSTRAINT "
                         + DbObject.quote(fk.originalName) + ";");
@@ -2422,12 +3076,24 @@ public final class ModifyTableDialog {
         for (IndexModel idx : indexes) {
             if (idx.isNew) {
                 if (idx.markedForDrop.get() || idx.columns.isEmpty()) continue;
-                String cols = String.join(", ", idx.columns.stream().map(DbObject::quote).toList());
+                List<String> colDefs = new ArrayList<>();
+                for (String c : idx.columns) {
+                    String colDef = DbObject.quote(c);
+                    String order = idx.columnOrders.containsKey(c) ? idx.columnOrders.get(c).get() : "NONE";
+                    if (order != null && !order.isBlank() && !"NONE".equalsIgnoreCase(order)) {
+                        colDef += " " + order;
+                    }
+                    colDefs.add(colDef);
+                }
+                String cols = String.join(", ", colDefs);
+                String nullsClause = idx.nullsNotDistinct.get() ? " NULLS NOT DISTINCT" : "";
+                String inclClause = idx.includeColumns.get() != null && !idx.includeColumns.get().isBlank() ? " INCLUDE (" + idx.includeColumns.get() + ")" : "";
                 String whereClause = idx.predicate.get().isBlank() ? "" : " WHERE " + idx.predicate.get();
+                String tsClause = (idx.tablespace.get() == null || idx.tablespace.get().isBlank() || "<default>".equals(idx.tablespace.get())) ? "" : " TABLESPACE " + idx.tablespace.get();
                 stmts.add("CREATE " + (idx.unique.get() ? "UNIQUE " : "") + "INDEX "
                         + DbObject.quote(idx.name.get()) + " ON " + currentQualified
                         + (isPostgres ? " USING " + idx.method.get() : "")
-                        + " (" + cols + ")" + whereClause + ";");
+                        + " (" + cols + ")" + nullsClause + inclClause + whereClause + tsClause + ";");
             } else if (idx.markedForDrop.get()) {
                 stmts.add(isPostgres
                         ? "DROP INDEX " + DbObject.quote(idx.originalName) + ";"
@@ -2439,8 +3105,17 @@ public final class ModifyTableDialog {
         for (CheckModel chk : checks) {
             if (chk.isNew) {
                 if (chk.markedForDrop.get() || chk.expression.get().isBlank()) continue;
-                stmts.add("ALTER TABLE " + currentQualified + " ADD CONSTRAINT "
-                        + DbObject.quote(chk.name.get()) + " CHECK (" + chk.expression.get() + ");");
+                StringBuilder ddl = new StringBuilder();
+                ddl.append("ALTER TABLE ").append(currentQualified).append(" ADD CONSTRAINT ")
+                        .append(DbObject.quote(chk.name.get())).append(" CHECK (").append(chk.expression.get()).append(")");
+                if (chk.noInherit.get()) ddl.append(" NO INHERIT");
+                if (chk.notValidated.get()) ddl.append(" NOT VALID");
+                if (chk.deferrable.get()) {
+                    ddl.append(chk.initiallyDeferred.get() ? " DEFERRABLE INITIALLY DEFERRED" : " DEFERRABLE INITIALLY IMMEDIATE");
+                }
+                if (chk.notEnforced.get()) ddl.append(" NOT ENFORCED");
+                ddl.append(";");
+                stmts.add(ddl.toString());
             } else if (chk.markedForDrop.get()) {
                 stmts.add("ALTER TABLE " + currentQualified + " DROP CONSTRAINT "
                         + DbObject.quote(chk.originalName) + ";");
@@ -2659,4 +3334,9 @@ public final class ModifyTableDialog {
     public void cancelWithWarning() { handleCancelWithWarning(); }
     public String generateDuplicateNameForTesting(String baseName) { return generateDuplicateName(baseName); }
     public String generateNextColumnNameForTesting() { return generateNextColumnName(); }
+    public void selectKeyInTreeForTesting(KeyModel target) { selectKeyInTree(target); }
+    public void selectIndexInTreeForTesting(IndexModel target) { selectIndexInTree(target); }
+    public void selectCheckInTreeForTesting(CheckModel target) { selectCheckInTree(target); }
+    public void selectForeignKeyInTreeForTesting(ForeignKeyModel target) { selectForeignKeyInTree(target); }
+    public void selectColumnInTreeForTesting(ColumnModel target) { selectColumnInTree(target); }
 }
