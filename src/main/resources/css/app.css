@@ -962,6 +962,23 @@
 
 /* ---------- Modify Table dialog ---------- */
 .table-row-cell:selected { -fx-background-color: #2e436e; }
+.modify-dialog { -fx-background-color: -bg-darkest; }
+.modify-toolbar { -fx-background-color: -bg-dark; -fx-padding: 4 8 4 8; -fx-border-color: -border; -fx-border-width: 0 0 1 0; }
+.modify-tree { -fx-background-color: -bg-darkest; -fx-border-color: -border; -fx-border-width: 0 1 0 0; }
+.modify-pill { -fx-background-color: #2b2d30; -fx-border-color: #3e4246; -fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 3 10 3 10; }
+.modify-form-scroll { -fx-background-color: -bg-darkest; -fx-background: -bg-darkest; }
+.modify-preview-header { -fx-background-color: #2b2d30; -fx-border-color: #3e4246; -fx-border-width: 1 0 1 0; -fx-padding: 3 8 3 8; }
+.modify-preview-text { -fx-font-family: "JetBrains Mono", "Fira Code", monospace; -fx-font-size: 12px; -fx-control-inner-background: #1e1f22; }
+.modify-ok-btn { -fx-background-color: #3574f0; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 4; -fx-padding: 4 16 4 16; }
+.modify-ok-btn:hover { -fx-background-color: #3068d8; }
+.modify-dropped-item { -fx-strikethrough: true; -fx-text-fill: #6f7680; }
+.modify-new-item { -fx-text-fill: #57965c; -fx-font-weight: bold; }
+.modify-columns-grid { -fx-background-color: transparent; -fx-border-color: transparent; }
+.modify-columns-grid .column-header-background { -fx-background-color: #2b2d30; -fx-border-color: #3e4246; -fx-border-width: 0 0 1 0; }
+.modify-columns-grid .column-header { -fx-background-color: transparent; -fx-border-color: #3e4246; -fx-border-width: 0 1 0 0; -fx-padding: 4 6 4 6; }
+.modify-columns-grid .table-row-cell { -fx-background-color: #1e1f22; -fx-border-color: #2b2d30; -fx-border-width: 0 0 1 0; -fx-cell-size: 26px; }
+.modify-columns-grid .table-row-cell:odd { -fx-background-color: #232529; }
+.modify-columns-grid .table-row-cell:selected { -fx-background-color: #2e436e; }
 
 /* ---------- current-statement highlight (multi-statement consoles) ---------- */
 .current-statement-line {
