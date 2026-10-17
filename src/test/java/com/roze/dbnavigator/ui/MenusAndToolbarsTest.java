@@ -80,10 +80,10 @@ public class MenusAndToolbarsTest {
         assertTrue(topMenus.contains("Edit"));
         assertTrue(topMenus.contains("View"));
         assertTrue(topMenus.contains("Navigate"));
-        assertTrue(topMenus.contains("Code"));
-        assertTrue(topMenus.contains("Refactor"));
+        assertFalse(topMenus.contains("Code"));
+        assertFalse(topMenus.contains("Refactor"));
         assertTrue(topMenus.contains("Run"));
-        assertTrue(topMenus.contains("Tools"));
+        assertFalse(topMenus.contains("Tools"));
         assertTrue(topMenus.contains("Git") || topMenus.contains("VCS"));
         assertTrue(topMenus.contains("Window"));
         assertTrue(topMenus.contains("Help"));
@@ -151,8 +151,8 @@ public class MenusAndToolbarsTest {
         List<String> centerActions = centerGroup.getChildren().stream()
                 .map(MenuItemConfig::getText)
                 .toList();
-        assertTrue(centerActions.contains("Single Tool Window Bar"));
-        assertTrue(centerActions.stream().anyMatch(t -> t.contains("File Name Widget")));
+        assertFalse(centerActions.contains("Single Tool Window Bar"));
+        assertFalse(centerActions.stream().anyMatch(t -> t != null && t.contains("File Name Widget")));
 
         // Right
         MenuItemConfig rightGroup = toolbar.getChildren().stream()
@@ -1733,188 +1733,23 @@ public class MenusAndToolbarsTest {
     }
 
     @Test
-    @DisplayName("Verify Code Menu and Build completeness matching DataGrip Images 4-5")
-    public void testCodeMenuCompletenessMatchingDataGrip() {
+    @DisplayName("Verify Code Menu is removed from Main Menu per user specification")
+    public void testCodeMenuRemovedFromMainMenu() {
         MenuItemConfig mainMenu = settings.getMenuConfig("root.main.menu");
-
-        // Verify Build exists on Main Menu (Image 4)
-        MenuItemConfig buildItem = mainMenu.getChildren().stream()
-                .filter(m -> "Build".equals(m.getText()) || "main.menu.build".equals(m.getId()))
-                .findFirst()
-                .orElse(null);
-        assertNotNull(buildItem, "Build should exist on Main Menu between Refactor and Run");
-
-        // Verify Code Menu
-        MenuItemConfig codeMenu = mainMenu.getChildren().stream()
-                .filter(m -> "Code".equals(m.getText()) || "menu.code".equals(m.getId()))
-                .findFirst()
-                .orElseThrow();
-
-        List<String> codeIds = codeMenu.getChildren().stream().map(MenuItemConfig::getId).toList();
-        assertTrue(codeIds.contains("code.override.methods"), "Should contain Override Methods...");
-        assertTrue(codeIds.contains("code.implement.methods"), "Should contain Implement Methods...");
-        assertTrue(codeIds.contains("code.generate"), "Should contain Generate...");
-        assertTrue(codeIds.contains("code.completion.group"), "Should contain Code Completion group");
-        assertTrue(codeIds.contains("code.inspect.group"), "Should contain InspectCodeInCodeMenuGroup");
-        assertTrue(codeIds.contains("code.insert.live.template"), "Should contain Insert Live Template...");
-        assertTrue(codeIds.contains("code.save.live.template"), "Should contain Save as Live Template...");
-        assertTrue(codeIds.contains("code.surround.with"), "Should contain Surround With...");
-        assertTrue(codeIds.contains("code.unwrap.remove"), "Should contain Unwrap/Remove...");
-        assertTrue(codeIds.contains("code.folding.group"), "Should contain Folding group");
-        assertTrue(codeIds.contains("code.comment.actions.group"), "Should contain Comment Actions group");
-        assertTrue(codeIds.contains("code.formatting.actions.group"), "Should contain Code Formatting Actions group");
-        assertTrue(codeIds.contains("code.move.statement.down"), "Should contain Move Statement Down");
-        assertTrue(codeIds.contains("code.move.statement.up"), "Should contain Move Statement Up");
-        assertTrue(codeIds.contains("code.move.element.left"), "Should contain Move Element Left");
-        assertTrue(codeIds.contains("code.move.element.right"), "Should contain Move Element Right");
-        assertTrue(codeIds.contains("code.move.line.down"), "Should contain Move Line Down");
-        assertTrue(codeIds.contains("code.move.line.up"), "Should contain Move Line Up");
-
-        // Verify Code Completion submenu (Image 5)
-        MenuItemConfig completionGroup = codeMenu.getChildren().stream()
-                .filter(c -> "code.completion.group".equals(c.getId()))
-                .findFirst().orElseThrow();
-        assertTrue(completionGroup.isPopup(), "Code Completion should be popup submenu");
-        List<String> compIds = completionGroup.getChildren().stream().map(MenuItemConfig::getId).toList();
-        assertTrue(compIds.contains("code.completion.basic"));
-        assertTrue(compIds.contains("code.completion.type.matching"));
-        assertTrue(compIds.contains("code.completion.complete.statement"));
-        assertTrue(compIds.contains("code.completion.cyclic.expand.word"));
-        assertTrue(compIds.contains("code.completion.cyclic.expand.word.backward"));
-        assertTrue(compIds.contains("code.completion.call.inline"));
-        assertTrue(compIds.contains("code.completion.insert.inline.proposal"));
-        assertTrue(compIds.contains("code.completion.insert.inline.word"));
-        assertTrue(compIds.contains("code.completion.insert.inline.line"));
-
-        // Verify InspectCodeInCodeMenuGroup (Image 1)
-        MenuItemConfig inspect = codeMenu.getChildren().stream()
-                .filter(c -> "code.inspect.group".equals(c.getId()))
-                .findFirst().orElseThrow();
-        assertFalse(inspect.isPopup(), "InspectCodeInCodeMenuGroup is non-popup group");
-        MenuItemConfig inspectActions = inspect.getChildren().stream()
-                .filter(c -> "code.inspect.actions.group".equals(c.getId()))
-                .findFirst().orElseThrow();
-        List<String> inspectActionIds = inspectActions.getChildren().stream().map(MenuItemConfig::getId).toList();
-        assertTrue(inspectActionIds.contains("code.inspect.code"));
-        assertTrue(inspectActionIds.contains("code.cleanup"));
-
-        MenuItemConfig analyzeCode = inspect.getChildren().stream()
-                .filter(c -> "code.analyze.code.group".equals(c.getId()))
-                .findFirst().orElseThrow();
-        MenuItemConfig analyzeActions = analyzeCode.getChildren().stream()
-                .filter(c -> "code.analyze.actions.group".equals(c.getId()))
-                .findFirst().orElseThrow();
-        List<String> analyzeActionIds = analyzeActions.getChildren().stream().map(MenuItemConfig::getId).toList();
-        assertTrue(analyzeActionIds.contains("code.silent.cleanup"));
-        assertTrue(analyzeActionIds.contains("code.run.inspection.by.name"));
-        assertTrue(analyzeActionIds.contains("code.configure.analysis"));
-        assertTrue(analyzeActionIds.contains("code.view.offline.results"));
-        assertTrue(analyzeActionIds.contains("code.analyze.dataflow.to.here"));
-        assertTrue(analyzeActionIds.contains("code.analyze.dataflow.from.here"));
-        assertTrue(analyzeCode.getChildren().stream().anyMatch(c -> "code.analyze.platform.menu".equals(c.getId())));
-
-        // Verify Folding submenu (Image 2)
-        MenuItemConfig folding = codeMenu.getChildren().stream()
-                .filter(c -> "code.folding.group".equals(c.getId()))
-                .findFirst().orElseThrow();
-        assertTrue(folding.isPopup(), "Folding should be a popup submenu");
-        List<String> foldChildIds = folding.getChildren().stream().map(MenuItemConfig::getId).toList();
-        assertTrue(foldChildIds.contains("code.folding.expand"));
-        assertTrue(foldChildIds.contains("code.folding.expand.recursively"));
-        assertTrue(foldChildIds.contains("code.folding.expand.all"));
-        assertTrue(foldChildIds.contains("code.folding.collapse"));
-        assertTrue(foldChildIds.contains("code.folding.collapse.recursively"));
-        assertTrue(foldChildIds.contains("code.folding.collapse.all"));
-        assertTrue(foldChildIds.contains("code.folding.toggle"));
-        assertTrue(foldChildIds.contains("code.folding.fold.selection"));
-        assertTrue(foldChildIds.contains("code.folding.fold.block"));
-
-        MenuItemConfig expandToLevel = folding.getChildren().stream()
-                .filter(c -> "code.folding.expand.to.level.group".equals(c.getId()))
-                .findFirst().orElseThrow();
-        assertEquals(5, expandToLevel.getChildren().size());
-        assertTrue(expandToLevel.getChildren().stream().allMatch(c -> c.getId().startsWith("code.folding.expand.level.")));
-
-        MenuItemConfig expandAllToLevel = folding.getChildren().stream()
-                .filter(c -> "code.folding.expand.all.to.level.group".equals(c.getId()))
-                .findFirst().orElseThrow();
-        assertEquals(5, expandAllToLevel.getChildren().size());
-        assertTrue(expandAllToLevel.getChildren().stream().allMatch(c -> c.getId().startsWith("code.folding.expand.all.level.")));
-
-        MenuItemConfig langFolding = folding.getChildren().stream()
-                .filter(c -> "code.folding.language.specific.group".equals(c.getId()))
-                .findFirst().orElseThrow();
-        List<String> langFoldIds = langFolding.getChildren().stream().map(MenuItemConfig::getId).toList();
-        assertTrue(langFoldIds.contains("code.folding.expand.doc.comments"));
-        assertTrue(langFoldIds.contains("code.folding.collapse.doc.comments"));
-
-        // Verify Comment Actions (Image 3)
-        MenuItemConfig comments = codeMenu.getChildren().stream()
-                .filter(c -> "code.comment.actions.group".equals(c.getId()))
-                .findFirst().orElseThrow();
-        assertFalse(comments.isPopup(), "Comment Actions is non-popup group");
-        List<String> commentIds = comments.getChildren().stream().map(MenuItemConfig::getId).toList();
-        assertTrue(commentIds.contains("code.comment.line"));
-        assertTrue(commentIds.contains("code.comment.block"));
-
-        // Verify Code Formatting Actions (Image 3)
-        MenuItemConfig formatting = codeMenu.getChildren().stream()
-                .filter(c -> "code.formatting.actions.group".equals(c.getId()))
-                .findFirst().orElseThrow();
-        assertFalse(formatting.isPopup(), "Code Formatting Actions is non-popup group");
-        List<String> formatIds = formatting.getChildren().stream().map(MenuItemConfig::getId).toList();
-        assertTrue(formatIds.contains("code.reformat"));
-        assertTrue(formatIds.contains("code.reformat.json"));
-        assertTrue(formatIds.contains("code.reformat.file"));
-        assertTrue(formatIds.contains("code.auto.indent"));
-        assertTrue(formatIds.contains("code.optimize.imports"));
-        assertTrue(formatIds.contains("code.rearrange.code"));
+        assertNotNull(mainMenu);
+        assertFalse(mainMenu.getChildren().stream()
+                .anyMatch(m -> "Code".equalsIgnoreCase(m.getText()) || "menu.code".equalsIgnoreCase(m.getId())),
+                "Code menu must not be present in Main Menu");
     }
 
     @Test
-    @DisplayName("Verify Refactor Menu completeness matching DataGrip Images 4-5")
-    public void testRefactorMenuCompletenessMatchingDataGrip() {
+    @DisplayName("Verify Refactor Menu is removed from Main Menu per user specification")
+    public void testRefactorMenuRemovedFromMainMenu() {
         MenuItemConfig mainMenu = settings.getMenuConfig("root.main.menu");
-        MenuItemConfig refactorMenu = mainMenu.getChildren().stream()
-                .filter(m -> "Refactor".equals(m.getText()) || "menu.refactor".equals(m.getId()))
-                .findFirst()
-                .orElseThrow();
-        assertTrue(refactorMenu.isPopup(), "Refactor should be a popup menu");
-
-        List<String> refactorIds = refactorMenu.getChildren().stream().map(MenuItemConfig::getId).toList();
-        assertTrue(refactorIds.contains("refactor.this"), "Should contain Refactor This...");
-        assertTrue(refactorIds.contains("refactor.rename"), "Should contain Rename...");
-        assertTrue(refactorIds.contains("refactor.change.signature"), "Should contain Change Signature...");
-        assertTrue(refactorIds.contains("refactor.modify.object"), "Should contain Modify Object...");
-        assertTrue(refactorIds.contains("refactor.extract.introduce.group"), "Should contain Extract/Introduce popup submenu");
-        assertTrue(refactorIds.contains("refactor.inline"), "Should contain Inline...");
-        assertTrue(refactorIds.contains("refactor.move"), "Should contain Move...");
-        assertTrue(refactorIds.contains("refactor.copy"), "Should contain Copy...");
-        assertTrue(refactorIds.contains("refactor.safe.delete"), "Should contain Safe Delete...");
-        assertTrue(refactorIds.contains("refactor.pull.members.up"), "Should contain Pull Members Up...");
-        assertTrue(refactorIds.contains("refactor.push.members.down"), "Should contain Push Members Down...");
-        assertTrue(refactorIds.contains("refactor.invert.boolean"), "Should contain Invert Boolean...");
-
-        // Verify Extract/Introduce submenu (Image 5)
-        MenuItemConfig extractIntro = refactorMenu.getChildren().stream()
-                .filter(c -> "refactor.extract.introduce.group".equals(c.getId()))
-                .findFirst().orElseThrow();
-        assertTrue(extractIntro.isPopup(), "Extract/Introduce should be popup submenu");
-        List<String> extractIds = extractIntro.getChildren().stream().map(MenuItemConfig::getId).toList();
-        assertTrue(extractIds.contains("refactor.introduce.variable"));
-        assertTrue(extractIds.contains("refactor.extract.routine"));
-        assertTrue(extractIds.contains("refactor.table.alias"));
-        assertTrue(extractIds.contains("refactor.introduce.constant"));
-        assertTrue(extractIds.contains("refactor.introduce.field"));
-        assertTrue(extractIds.contains("refactor.introduce.parameter"));
-        assertTrue(extractIds.contains("refactor.introduce.parameter.object"));
-        assertTrue(extractIds.contains("refactor.extract.method"));
-        assertTrue(extractIds.contains("refactor.extract.delegate"));
-        assertTrue(extractIds.contains("refactor.include.file"));
-        assertTrue(extractIds.contains("refactor.extract.interface"));
-        assertTrue(extractIds.contains("refactor.extract.superclass"));
-        assertTrue(extractIds.contains("refactor.extract.module"));
-        assertTrue(extractIds.contains("refactor.subquery.cte"));
+        assertNotNull(mainMenu);
+        assertFalse(mainMenu.getChildren().stream()
+                .anyMatch(m -> "Refactor".equalsIgnoreCase(m.getText()) || "menu.refactor".equalsIgnoreCase(m.getId())),
+                "Refactor menu must not be present in Main Menu");
     }
 
     @Test
@@ -2037,49 +1872,76 @@ public class MenusAndToolbarsTest {
     }
 
     @Test
-    @DisplayName("Verify Tools Menu completeness matching DataGrip Image 1")
-    public void testToolsMenuCompletenessMatchingDataGrip() {
+    @DisplayName("Verify Tools Menu is removed from Main Menu per user specification")
+    public void testToolsMenuRemovedFromMainMenu() {
         MenuItemConfig mainMenu = settings.getMenuConfig("root.main.menu");
-        MenuItemConfig toolsMenu = mainMenu.getChildren().stream()
-                .filter(m -> "Tools".equals(m.getText()) || "menu.tools".equals(m.getId()))
-                .findFirst()
-                .orElseThrow();
-        assertTrue(toolsMenu.isPopup(), "Tools should be a popup menu");
+        assertNotNull(mainMenu);
+        assertFalse(mainMenu.getChildren().stream()
+                .anyMatch(m -> "Tools".equalsIgnoreCase(m.getText()) || "menu.tools".equalsIgnoreCase(m.getId())),
+                "Tools menu must not be present in Main Menu");
+    }
 
-        List<String> toolsIds = toolsMenu.getChildren().stream().map(MenuItemConfig::getId).toList();
-        assertTrue(toolsIds.contains("tools.psi.viewer.actions"), "Should contain Dev.PsiViewerActions");
-        assertTrue(toolsIds.contains("tools.basic.group"), "Should contain Tools Basic Group");
-        assertTrue(toolsIds.contains("tools.create.command.line.launcher"), "Should contain Create Command Line Launcher...");
-        assertTrue(toolsIds.contains("tools.create.desktop.entry"), "Should contain Create Desktop Entry...");
-        assertTrue(toolsIds.contains("tools.other.menu"), "Should contain OtherMenu");
-        assertTrue(toolsIds.contains("tools.services"), "Should contain Services");
-        assertTrue(toolsIds.contains("tools.xml.actions"), "Should contain XML Actions");
-        assertTrue(toolsIds.contains("tools.markdown"), "Should contain Markdown");
-        assertTrue(toolsIds.contains("tools.external.tools"), "Should contain External Tools");
+    @Test
+    @DisplayName("Verify getMainMenuBarGroups excludes Code, Refactor, and Tools menus")
+    public void testMainMenuBarGroupsExcludesCodeRefactorTools() {
+        ActionManager manager = ActionManager.getInstance();
+        ActionRegistry.initialize(manager);
+        List<ActionGroup> groups = ActionRegistry.getMainMenuBarGroups(manager);
+        List<String> groupIds = groups.stream().map(ActionGroup::getId).toList();
+        assertFalse(groupIds.contains("menu.code"));
+        assertFalse(groupIds.contains("menu.refactor"));
+        assertFalse(groupIds.contains("menu.tools"));
+        assertTrue(groupIds.contains("menu.file"));
+        assertTrue(groupIds.contains("menu.edit"));
+        assertTrue(groupIds.contains("menu.view"));
+        assertTrue(groupIds.contains("menu.navigate"));
+        assertTrue(groupIds.contains("menu.run"));
+        assertTrue(groupIds.contains("menu.vcs"));
+        assertTrue(groupIds.contains("menu.window"));
+        assertTrue(groupIds.contains("menu.help"));
+    }
 
-        // Dev.PsiViewerActions
-        MenuItemConfig psiViewer = toolsMenu.getChildren().stream()
-                .filter(c -> "tools.psi.viewer.actions".equals(c.getId()))
+    @Test
+    @DisplayName("Verify stale settings containing Code, Refactor, Tools or toolbar icons are stripped upon loading")
+    public void testStaleCodeRefactorToolsAndToolbarIconsMigrated() {
+        AppSettingsStore.Settings staleSettings = new AppSettingsStore.Settings();
+        MenuItemConfig staleMenu = MenuItemConfig.group("root.main.menu", "Main Menu", List.of(
+                MenuItemConfig.group("menu.file", "File", true, List.of()),
+                MenuItemConfig.group("menu.code", "Code", true, List.of()),
+                MenuItemConfig.group("menu.refactor", "Refactor", true, List.of()),
+                MenuItemConfig.group("menu.tools", "Tools", true, List.of())
+        ));
+        MenuItemConfig staleToolbar = MenuItemConfig.group("root.main.toolbar", "Main Toolbar", List.of(
+                MenuItemConfig.group("toolbar.left", "Left", List.of()),
+                MenuItemConfig.group("toolbar.center", "Center", List.of(
+                        MenuItemConfig.action("toolbar.single.tool.window.bar", "Single Tool Window Bar", "DESKTOP"),
+                        MenuItemConfig.action("toolbar.file.name.widget", "File Name Widget", "FILE_ALT")
+                )),
+                MenuItemConfig.group("toolbar.right", "Right", List.of())
+        ));
+        List<MenuItemConfig> modified = new ArrayList<>(staleSettings.getMenusAndToolbars());
+        for (int i = 0; i < modified.size(); i++) {
+            if ("root.main.menu".equalsIgnoreCase(modified.get(i).getId())) {
+                modified.set(i, staleMenu);
+            } else if ("root.main.toolbar".equalsIgnoreCase(modified.get(i).getId())) {
+                modified.set(i, staleToolbar);
+            }
+        }
+        staleSettings.setMenusAndToolbars(modified);
+
+        MenuItemConfig reloadedMainMenu = staleSettings.getMenuConfig("root.main.menu");
+        assertNotNull(reloadedMainMenu);
+        assertFalse(reloadedMainMenu.getChildren().stream().anyMatch(c -> "menu.code".equalsIgnoreCase(c.getId())));
+        assertFalse(reloadedMainMenu.getChildren().stream().anyMatch(c -> "menu.refactor".equalsIgnoreCase(c.getId())));
+        assertFalse(reloadedMainMenu.getChildren().stream().anyMatch(c -> "menu.tools".equalsIgnoreCase(c.getId())));
+
+        MenuItemConfig reloadedToolbar = staleSettings.getMenuConfig("root.main.toolbar");
+        assertNotNull(reloadedToolbar);
+        MenuItemConfig centerGroup = reloadedToolbar.getChildren().stream()
+                .filter(c -> "toolbar.center".equalsIgnoreCase(c.getId()))
                 .findFirst().orElseThrow();
-        List<String> psiIds = psiViewer.getChildren().stream().map(MenuItemConfig::getId).toList();
-        assertTrue(psiIds.contains("tools.view.psi.structure"));
-        assertTrue(psiIds.contains("tools.view.psi.structure.current.file"));
-
-        // XML Actions
-        MenuItemConfig xmlActions = toolsMenu.getChildren().stream()
-                .filter(c -> "tools.xml.actions".equals(c.getId()))
-                .findFirst().orElseThrow();
-        List<String> xmlIds = xmlActions.getChildren().stream().map(MenuItemConfig::getId).toList();
-        assertTrue(xmlIds.contains("tools.convert.schema"));
-
-        // Markdown
-        MenuItemConfig markdown = toolsMenu.getChildren().stream()
-                .filter(c -> "tools.markdown".equals(c.getId()))
-                .findFirst().orElseThrow();
-        List<String> mdIds = markdown.getChildren().stream().map(MenuItemConfig::getId).toList();
-        assertTrue(mdIds.contains("tools.markdown.import.word"));
-        assertTrue(mdIds.contains("tools.markdown.export.file.to"));
-        assertTrue(mdIds.contains("tools.markdown.configure.pandoc"));
+        assertFalse(centerGroup.getChildren().stream().anyMatch(c -> "toolbar.single.tool.window.bar".equalsIgnoreCase(c.getId())));
+        assertFalse(centerGroup.getChildren().stream().anyMatch(c -> "toolbar.file.name.widget".equalsIgnoreCase(c.getId())));
     }
 
     @Test

@@ -6441,10 +6441,7 @@ public final class ActionRegistry {
                 manager.getGroup("menu.edit"),
                 manager.getGroup("menu.view"),
                 manager.getGroup("menu.navigate"),
-                manager.getGroup("menu.code"),
-                manager.getGroup("menu.refactor"),
                 manager.getGroup("menu.run"),
-                manager.getGroup("menu.tools"),
                 manager.getGroup("menu.vcs"),
                 manager.getGroup("menu.window"),
                 manager.getGroup("menu.help")
