@@ -7647,6 +7647,520 @@ public class SchemaTreePaneToolbarTest {
         assertNotNull(drop);
         assertTrue(drop.isDisable());
     }
+
+    private ConnectionProfile createStratosDbProfile() {
+        ConnectionProfile p = new ConnectionProfile();
+        p.setId("stratos-test-1");
+        p.setName("stratos@localhost");
+        p.setType(ConnectionProfile.DatabaseType.STRATOSDB);
+        p.setHost("localhost");
+        p.setPort(6582);
+        p.setDatabase("stratos_db");
+        p.setUsername("admin");
+        p.setPassword("secret");
+        p.setSavePassword(true);
+        return p;
+    }
+
+    @Test
+    public void testStratosConnectionContextMenu() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = createStratosDbProfile();
+        DbObject connObj = new DbObject(profile.getName(), Kind.CONNECTION);
+        ContextMenu menu = pane.buildConnectionMenu(null, connObj, profile);
+        assertNotNull(menu);
+
+        // 1. Properties
+        assertNotNull(findItem(menu, "Properties"));
+
+        // 2. New >
+        Menu newMenu = findMenu(menu, "New");
+        assertNotNull(newMenu);
+        assertTrue(menuHasItem(newMenu, "Query Console"));
+        assertTrue(menuHasItem(newMenu, "Query File"));
+        assertTrue(menuHasItem(newMenu, "Database"));
+        assertTrue(menuHasItem(newMenu, "Virtual View"));
+        assertTrue(menuHasItem(newMenu, "Data Source"));
+        assertTrue(menuHasItem(newMenu, "Driver"));
+
+        // 3. Copy/Paste >
+        Menu cp = findMenu(menu, "Copy/Paste");
+        assertNotNull(cp);
+        assertFalse(cp.isDisable());
+        assertTrue(menuHasItem(cp, "Copy"));
+        assertTrue(menuHasItem(cp, "Copy Path/Reference"));
+
+        // 4. Refresh (Ctrl+F5)
+        MenuItem refresh = findItem(menu, "Refresh");
+        assertNotNull(refresh);
+        assertEquals(KeyCode.F5, ((KeyCodeCombination) refresh.getAccelerator()).getCode());
+
+        // 5. Activate / Deactivate
+        assertNotNull(findItem(menu, "Activate"));
+
+        // 6. Rename… (enabled)
+        MenuItem rename = findItem(menu, "Rename");
+        assertNotNull(rename);
+        assertFalse(rename.isDisable());
+        assertEquals(KeyCode.F6, ((KeyCodeCombination) rename.getAccelerator()).getCode());
+
+        // 7. Move >
+        assertNotNull(findMenu(menu, "Move"));
+
+        // 8. Quick Documentation
+        MenuItem quickDoc = findItem(menu, "Quick Documentation");
+        assertNotNull(quickDoc);
+        assertEquals(KeyCode.Q, ((KeyCodeCombination) quickDoc.getAccelerator()).getCode());
+
+        // 9. Compare Schema Structure (disabled)
+        MenuItem compare = findItem(menu, "Compare Schema Structure");
+        assertNotNull(compare);
+        assertTrue(compare.isDisable());
+
+        // 10. Navigation >
+        assertNotNull(findMenu(menu, "Navigation"));
+
+        // 11. Introspection Level >
+        Menu intro = findMenu(menu, "Introspection Level");
+        assertNotNull(intro);
+        assertTrue(menuHasItem(intro, "Auto"));
+        assertTrue(menuHasItem(intro, "High"));
+        assertTrue(menuHasItem(intro, "Medium"));
+        assertTrue(menuHasItem(intro, "Low"));
+
+        // 10. SQL Scripts >
+        Menu sqlScripts = findMenu(menu, "SQL Scripts");
+        assertNotNull(sqlScripts);
+        assertTrue(menuHasItem(sqlScripts, "Open Query Console"));
+        assertTrue(menuHasItem(sqlScripts, "Run SQL Script"));
+
+        // 11. Object Actions >
+        Menu objActions = findMenu(menu, "Object Actions");
+        assertNotNull(objActions);
+        assertTrue(menuHasItem(objActions, "Show / Hide Databases"));
+        assertTrue(menuHasItem(objActions, "Forget Saved Passwords"));
+
+        // 12. Tools >
+        Menu tools = findMenu(menu, "Tools");
+        assertNotNull(tools);
+        assertTrue(menuHasItem(tools, "Manage Databases"));
+        assertTrue(menuHasItem(tools, "Verify Connection"));
+
+        // 13. Import/Export >
+        Menu impExp = findMenu(menu, "Import/Export");
+        assertNotNull(impExp);
+        assertTrue(menuHasItem(impExp, "Dump with stratosdump"));
+        assertTrue(menuHasItem(impExp, "Restore"));
+
+        // 14. Diagrams >
+        Menu diagrams = findMenu(menu, "Diagrams");
+        assertNotNull(diagrams);
+        assertTrue(menuHasItem(diagrams, "Show Visualization"));
+
+        // 15. DDL Mapping >
+        Menu ddlMap = findMenu(menu, "DDL Mapping");
+        assertNotNull(ddlMap);
+        assertTrue(menuHasItem(ddlMap, "Edit DDL Mapping"));
+
+        // 16. Diagnostics >
+        Menu diag = findMenu(menu, "Diagnostics");
+        assertNotNull(diag);
+        assertTrue(menuHasItem(diag, "Diagnostic Refresh"));
+
+        // 17. Remove Data Source...
+        MenuItem remove = findItem(menu, "Remove Data Source");
+        assertNotNull(remove);
+        assertEquals(KeyCode.DELETE, ((KeyCodeCombination) remove.getAccelerator()).getCode());
+    }
+
+    @Test
+    public void testStratosDatabaseContextMenu() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = createStratosDbProfile();
+        DbObject dbObj = new DbObject("stratos_db", Kind.DATABASE, "stratos_db", null);
+        ContextMenu menu = pane.buildMenuForTest(dbObj, profile);
+        assertNotNull(menu);
+
+        // 1. New >
+        Menu newMenu = findMenu(menu, "New");
+        assertNotNull(newMenu);
+        assertTrue(menuHasItem(newMenu, "Query Console"));
+        assertTrue(menuHasItem(newMenu, "Query File"));
+        assertTrue(menuHasItem(newMenu, "Table"));
+        assertTrue(menuHasItem(newMenu, "View"));
+        assertTrue(menuHasItem(newMenu, "Virtual View"));
+
+        // 2. Modify Database... (Ctrl+F6)
+        MenuItem modifyDb = findItem(menu, "Modify Database");
+        assertNotNull(modifyDb);
+        assertEquals(KeyCode.F6, ((KeyCodeCombination) modifyDb.getAccelerator()).getCode());
+
+        // 3. Copy/Paste >
+        Menu cp = findMenu(menu, "Copy/Paste");
+        assertNotNull(cp);
+        assertFalse(cp.isDisable());
+
+        // 4. Refresh (Ctrl+F5)
+        MenuItem refresh = findItem(menu, "Refresh");
+        assertNotNull(refresh);
+        assertEquals(KeyCode.F5, ((KeyCodeCombination) refresh.getAccelerator()).getCode());
+
+        // 5. Rename... (disabled)
+        MenuItem rename = findItem(menu, "Rename");
+        assertNotNull(rename);
+        assertTrue(rename.isDisable());
+
+        // 6. Quick Documentation (Ctrl+Q)
+        MenuItem quickDoc = findItem(menu, "Quick Documentation");
+        assertNotNull(quickDoc);
+        assertEquals(KeyCode.Q, ((KeyCodeCombination) quickDoc.getAccelerator()).getCode());
+
+        // 7. Navigation >
+        Menu nav = findMenu(menu, "Navigation");
+        assertNotNull(nav);
+        assertTrue(menuHasItem(nav, "Go to DDL"));
+        assertTrue(menuHasItem(nav, "Jump to Query Console"));
+        assertTrue(menuHasItem(nav, "Select in Database Explorer"));
+
+        // 8. Introspection Level >
+        Menu intro = findMenu(menu, "Introspection Level");
+        assertNotNull(intro);
+
+        // 9. SQL Scripts >
+        Menu sqlScripts = findMenu(menu, "SQL Scripts");
+        assertNotNull(sqlScripts);
+        assertTrue(menuHasItem(sqlScripts, "Open Query Console"));
+        assertTrue(menuHasItem(sqlScripts, "Run SQL Script"));
+        assertTrue(menuHasItem(sqlScripts, "Generate DDL to Query Console"));
+
+        // 10. Object Actions >
+        Menu objActions = findMenu(menu, "Object Actions");
+        assertNotNull(objActions);
+        assertTrue(menuHasItem(objActions, "Show / Hide Databases"));
+        assertTrue(menuHasItem(objActions, "Forget Saved Passwords"));
+
+        // 11. Tools >
+        Menu tools = findMenu(menu, "Tools");
+        assertNotNull(tools);
+        assertTrue(menuHasItem(tools, "Manage Databases"));
+        assertTrue(menuHasItem(tools, "Verify Connection"));
+
+        // 12. Import/Export >
+        Menu impExp = findMenu(menu, "Import/Export");
+        assertNotNull(impExp);
+        assertTrue(menuHasItem(impExp, "Dump with stratosdump"));
+        assertTrue(menuHasItem(impExp, "Restore"));
+
+        // 13. Diagrams >
+        Menu diagrams = findMenu(menu, "Diagrams");
+        assertNotNull(diagrams);
+        assertTrue(menuHasItem(diagrams, "Show Diagram"));
+
+        // 14. Diagnostics >
+        Menu diag = findMenu(menu, "Diagnostics");
+        assertNotNull(diag);
+        assertTrue(menuHasItem(diag, "Diagnostic Refresh"));
+
+        // 15. Drop… (Delete)
+        MenuItem drop = findItem(menu, "Drop");
+        assertNotNull(drop);
+        assertFalse(drop.isDisable());
+        assertEquals(KeyCode.DELETE, ((KeyCodeCombination) drop.getAccelerator()).getCode());
+    }
+
+    @Test
+    public void testStratosTablesFolderContextMenu() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = createStratosDbProfile();
+        DbObject folder = new DbObject("tables", Kind.TABLES_FOLDER, "stratos_db", null);
+        ContextMenu menu = pane.buildMenuForTest(folder, profile);
+        assertNotNull(menu);
+
+        // 1. + New >
+        Menu newMenu = findMenu(menu, "New");
+        assertNotNull(newMenu);
+        assertTrue(menuHasItem(newMenu, "Table"));
+        assertTrue(menuHasItem(newMenu, "View"));
+        assertTrue(menuHasItem(newMenu, "Virtual View"));
+
+        // 2. Modify is null
+        assertNull(findItem(menu, "Modify"));
+
+        // 3. Copy/Paste > (disabled)
+        Menu cp = findMenu(menu, "Copy/Paste");
+        assertNotNull(cp);
+        assertTrue(cp.isDisable());
+
+        // 4. Refresh (Ctrl+F5)
+        MenuItem refresh = findItem(menu, "Refresh");
+        assertNotNull(refresh);
+        assertEquals(KeyCode.F5, ((KeyCodeCombination) refresh.getAccelerator()).getCode());
+
+        // 5. Rename… (disabled)
+        MenuItem rename = findItem(menu, "Rename");
+        assertNotNull(rename);
+        assertTrue(rename.isDisable());
+
+        // 6. Open the List (F4)
+        MenuItem openList = findItem(menu, "Open the List");
+        assertNotNull(openList);
+        assertEquals(KeyCode.F4, ((KeyCodeCombination) openList.getAccelerator()).getCode());
+
+        // 7. Quick Documentation (disabled)
+        MenuItem quickDoc = findItem(menu, "Quick Documentation");
+        assertNotNull(quickDoc);
+        assertTrue(quickDoc.isDisable());
+
+        // 8. Compare Schema Structure (disabled)
+        MenuItem compare = findItem(menu, "Compare Schema Structure");
+        assertNotNull(compare);
+        assertTrue(compare.isDisable());
+
+        // 9. Introspection Level >
+        Menu intro = findMenu(menu, "Introspection Level");
+        assertNotNull(intro);
+
+        // 10. SQL Scripts >
+        Menu sqlScripts = findMenu(menu, "SQL Scripts");
+        assertNotNull(sqlScripts);
+        assertTrue(menuHasItem(sqlScripts, "Open Query Console"));
+        assertTrue(menuHasItem(sqlScripts, "Run SQL Script"));
+        assertTrue(menuHasItem(sqlScripts, "Generate DDL to Query Console"));
+
+        // 11. Object Actions >
+        Menu objActions = findMenu(menu, "Object Actions");
+        assertNotNull(objActions);
+        assertTrue(menuHasItem(objActions, "Show / Hide Databases"));
+        assertTrue(menuHasItem(objActions, "Forget Saved Passwords"));
+
+        // 12. Tools >
+        Menu tools = findMenu(menu, "Tools");
+        assertNotNull(tools);
+        assertTrue(menuHasItem(tools, "Manage Databases"));
+        assertTrue(menuHasItem(tools, "Verify Connection"));
+
+        // 13. Import/Export >
+        Menu impExp = findMenu(menu, "Import/Export");
+        assertNotNull(impExp);
+        assertTrue(menuHasItem(impExp, "Dump with stratosdump"));
+        assertTrue(menuHasItem(impExp, "Restore"));
+
+        // 14. Diagrams >
+        Menu diagrams = findMenu(menu, "Diagrams");
+        assertNotNull(diagrams);
+        assertTrue(menuHasItem(diagrams, "Show Diagram"));
+
+        // 15. Diagnostics >
+        Menu diag = findMenu(menu, "Diagnostics");
+        assertNotNull(diag);
+        assertTrue(menuHasItem(diag, "Diagnostic Refresh"));
+
+        // 16. Drop… (disabled)
+        MenuItem drop = findItem(menu, "Drop");
+        assertNotNull(drop);
+        assertTrue(drop.isDisable());
+    }
+
+    @Test
+    public void testStratosTableContextMenu() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = createStratosDbProfile();
+        DbObject table = new DbObject("orders", Kind.TABLE, "stratos_db", null);
+        ContextMenu menu = pane.buildMenuForTest(table, profile);
+        assertNotNull(menu);
+
+        // 1. + New >
+        Menu newMenu = findMenu(menu, "New");
+        assertNotNull(newMenu);
+        assertTrue(menuHasItem(newMenu, "Column"));
+        assertTrue(menuHasItem(newMenu, "Index"));
+        assertTrue(menuHasItem(newMenu, "Table"));
+        assertTrue(menuHasItem(newMenu, "View"));
+        assertTrue(menuHasItem(newMenu, "Virtual View"));
+
+        // 2. Modify Table… (Ctrl+F6)
+        MenuItem modifyTable = findItem(menu, "Modify Table");
+        assertNotNull(modifyTable);
+        assertEquals(KeyCode.F6, ((KeyCodeCombination) modifyTable.getAccelerator()).getCode());
+
+        // 3. Copy/Paste >
+        Menu cp = findMenu(menu, "Copy/Paste");
+        assertNotNull(cp);
+        assertFalse(cp.isDisable());
+
+        // 4. Edit Data (F4)
+        MenuItem editData = findItem(menu, "Edit Data");
+        assertNotNull(editData);
+        assertEquals(KeyCode.F4, ((KeyCodeCombination) editData.getAccelerator()).getCode());
+
+        // 5. Refresh (Ctrl+F5)
+        MenuItem refresh = findItem(menu, "Refresh");
+        assertNotNull(refresh);
+        assertEquals(KeyCode.F5, ((KeyCodeCombination) refresh.getAccelerator()).getCode());
+
+        // 6. Rename… (Shift+F6)
+        MenuItem rename = findItem(menu, "Rename");
+        assertNotNull(rename);
+        assertFalse(rename.isDisable());
+        assertEquals(KeyCode.F6, ((KeyCodeCombination) rename.getAccelerator()).getCode());
+
+        // 7. Quick Documentation (Ctrl+Q)
+        MenuItem quickDoc = findItem(menu, "Quick Documentation");
+        assertNotNull(quickDoc);
+        assertEquals(KeyCode.Q, ((KeyCodeCombination) quickDoc.getAccelerator()).getCode());
+
+        // 8. Compare Schema Structure With… (Ctrl+D, disabled)
+        MenuItem compare = findItem(menu, "Compare Schema Structure With");
+        assertNotNull(compare);
+        assertTrue(compare.isDisable());
+
+        // 9. Navigation >
+        Menu nav = findMenu(menu, "Navigation");
+        assertNotNull(nav);
+        assertTrue(menuHasItem(nav, "Go to DDL"));
+        assertTrue(menuHasItem(nav, "Jump to Query Console"));
+        assertTrue(menuHasItem(nav, "Select in Database Explorer"));
+
+        // 10. Find Usages (Alt+Shift+7, disabled)
+        MenuItem findUsages = findItem(menu, "Find Usages");
+        assertNotNull(findUsages);
+        assertTrue(findUsages.isDisable());
+
+        // 11. Introspection Level >
+        Menu intro = findMenu(menu, "Introspection Level");
+        assertNotNull(intro);
+
+        // 12. SQL Scripts >
+        Menu sqlScripts = findMenu(menu, "SQL Scripts");
+        assertNotNull(sqlScripts);
+        assertTrue(menuHasItem(sqlScripts, "Open Query Console"));
+        assertTrue(menuHasItem(sqlScripts, "Run SQL Script"));
+        assertTrue(menuHasItem(sqlScripts, "Generate DDL to Query Console"));
+        assertTrue(menuHasItem(sqlScripts, "New Query: SELECT *"));
+        assertTrue(menuHasItem(sqlScripts, "New Query: COUNT(*)"));
+
+        // 13. Object Actions >
+        Menu objActions = findMenu(menu, "Object Actions");
+        assertNotNull(objActions);
+        assertTrue(menuHasItem(objActions, "Show / Hide Databases"));
+        assertTrue(menuHasItem(objActions, "Forget Saved Passwords"));
+
+        // 14. Tools >
+        Menu tools = findMenu(menu, "Tools");
+        assertNotNull(tools);
+        assertTrue(menuHasItem(tools, "Manage Databases"));
+        assertTrue(menuHasItem(tools, "Verify Connection"));
+
+        // 15. Import/Export >
+        Menu impExp = findMenu(menu, "Import/Export");
+        assertNotNull(impExp);
+        assertTrue(menuHasItem(impExp, "Export Data to File"));
+        assertTrue(menuHasItem(impExp, "Import Data from File(s)"));
+        assertTrue(menuHasItem(impExp, "Dump with stratosdump"));
+        assertTrue(menuHasItem(impExp, "Restore"));
+
+        // 16. Diagrams >
+        Menu diagrams = findMenu(menu, "Diagrams");
+        assertNotNull(diagrams);
+        assertTrue(menuHasItem(diagrams, "Show Diagram"));
+
+        // 17. Diagnostics >
+        Menu diag = findMenu(menu, "Diagnostics");
+        assertNotNull(diag);
+        assertTrue(menuHasItem(diag, "Diagnostic Refresh"));
+
+        // 18. Drop… (Delete)
+        MenuItem drop = findItem(menu, "Drop");
+        assertNotNull(drop);
+        assertFalse(drop.isDisable());
+        assertEquals(KeyCode.DELETE, ((KeyCodeCombination) drop.getAccelerator()).getCode());
+    }
+
+    @Test
+    public void testStratosViewContextMenu() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = createStratosDbProfile();
+        DbObject view = new DbObject("active_orders", Kind.VIEW, "stratos_db", null);
+        ContextMenu menu = pane.buildMenuForTest(view, profile);
+        assertNotNull(menu);
+
+        // Modify View…
+        MenuItem modifyView = findItem(menu, "Modify View");
+        assertNotNull(modifyView);
+        assertEquals(KeyCode.F6, ((KeyCodeCombination) modifyView.getAccelerator()).getCode());
+
+        // Edit Data
+        MenuItem editData = findItem(menu, "Edit Data");
+        assertNotNull(editData);
+
+        // Drop… (enabled)
+        MenuItem drop = findItem(menu, "Drop");
+        assertNotNull(drop);
+        assertFalse(drop.isDisable());
+    }
+
+    @Test
+    public void testStratosSubItemsContextMenu() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = createStratosDbProfile();
+
+        // Column
+        DbObject col = new DbObject("amount", Kind.COLUMN, "stratos_db", null);
+        col.setTableName("orders");
+        ContextMenu colMenu = pane.buildMenuForTest(col, profile);
+        assertNotNull(colMenu);
+        MenuItem modCol = findItem(colMenu, "Modify Column");
+        assertNotNull(modCol);
+        MenuItem dropCol = findItem(colMenu, "Drop");
+        assertNotNull(dropCol);
+        assertFalse(dropCol.isDisable());
+
+        // Key
+        DbObject key = new DbObject("pk_orders", Kind.KEY, "stratos_db", null);
+        key.setTableName("orders");
+        ContextMenu keyMenu = pane.buildMenuForTest(key, profile);
+        assertNotNull(keyMenu);
+        MenuItem modKey = findItem(keyMenu, "Modify Key");
+        assertNotNull(modKey);
+        MenuItem dropKey = findItem(keyMenu, "Drop");
+        assertNotNull(dropKey);
+        assertFalse(dropKey.isDisable());
+
+        // Index
+        DbObject idx = new DbObject("idx_customer", Kind.INDEX, "stratos_db", null);
+        idx.setTableName("orders");
+        ContextMenu idxMenu = pane.buildMenuForTest(idx, profile);
+        assertNotNull(idxMenu);
+        MenuItem dropIdx = findItem(idxMenu, "Drop");
+        assertNotNull(dropIdx);
+        assertFalse(dropIdx.isDisable());
+    }
+
+    @Test
+    public void testStratosRoutineAndVirtualViewContextMenu() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = createStratosDbProfile();
+
+        // Procedure
+        DbObject proc = new DbObject("calculate_tax", Kind.PROCEDURE, "stratos_db", null);
+        ContextMenu procMenu = pane.buildMenuForTest(proc, profile);
+        assertNotNull(procMenu);
+        MenuItem runProc = findItem(procMenu, "Run Procedure");
+        assertNotNull(runProc);
+        MenuItem dropProc = findItem(procMenu, "Drop");
+        assertNotNull(dropProc);
+        assertFalse(dropProc.isDisable());
+
+        // Virtual View
+        DbObject vv = new DbObject("order_summary", Kind.VIRTUAL_VIEW, "stratos_db", null);
+        ContextMenu vvMenu = pane.buildMenuForTest(vv, profile);
+        assertNotNull(vvMenu);
+        MenuItem modVv = findItem(vvMenu, "Modify Virtual View");
+        assertNotNull(modVv);
+        MenuItem dropVv = findItem(vvMenu, "Drop");
+        assertNotNull(dropVv);
+        assertFalse(dropVv.isDisable());
+    }
 }
 
 

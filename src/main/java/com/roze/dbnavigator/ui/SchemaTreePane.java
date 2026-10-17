@@ -1209,12 +1209,17 @@ public class SchemaTreePane extends VBox {
                 serverPrincipal.setOnAction(e -> CreateUserDialog.show(mainWindow, profile));
                 newMenu.getItems().addAll(new SeparatorMenuItem(), newDb, serverPrincipal);
             }
+            case STRATOSDB -> {
+                MenuItem newDb = new MenuItem("Database…");
+                newDb.setOnAction(e -> CreateDatabaseDialog.show(mainWindow, profile));
+                newMenu.getItems().addAll(new SeparatorMenuItem(), newDb);
+            }
             case ORACLE -> {
                 // Oracle has neither Database, Schema, User nor Role in root New menu.
                 // It goes directly to Virtual View.
             }
             default -> {
-                // SQLite, MongoDB, StratosDB: do not expose Database/Schema/User/Role creation in New
+                // SQLite, MongoDB: do not expose Database/Schema/User/Role creation in New
             }
         }
 
@@ -1355,12 +1360,25 @@ public class SchemaTreePane extends VBox {
             case MONGODB -> "Dump with mongodump…";
             case SQLSERVER -> "Export Database with bcp…";
             case ORACLE -> "Export with expdp…";
+            case STRATOSDB -> "Dump with stratosdump…";
             default -> "Dump Database…";
         };
         MenuItem dumpItem = new MenuItem(dumpName);
-        dumpItem.setOnAction(e -> mainWindow.setStatus(dumpName.replace("…", "")));
+        dumpItem.setOnAction(e -> {
+            if (profile.getType() == ConnectionProfile.DatabaseType.STRATOSDB) {
+                StratosDumpService.dumpDatabase(mainWindow, profile, profile.getDatabase() != null ? profile.getDatabase() : "stratos");
+            } else {
+                mainWindow.setStatus(dumpName.replace("…", ""));
+            }
+        });
         MenuItem restoreItem = new MenuItem("Restore…");
-        restoreItem.setOnAction(e -> mainWindow.setStatus("Restore database"));
+        restoreItem.setOnAction(e -> {
+            if (profile.getType() == ConnectionProfile.DatabaseType.STRATOSDB) {
+                StratosDumpService.restoreDatabase(mainWindow, profile, profile.getDatabase() != null ? profile.getDatabase() : "stratos");
+            } else {
+                mainWindow.setStatus("Restore database");
+            }
+        });
         importExport.getItems().addAll(dumpItem, restoreItem);
 
         // 16. Diagrams >
@@ -2394,6 +2412,35 @@ public class SchemaTreePane extends VBox {
                 }
                 newMenu.getItems().addAll(new SeparatorMenuItem(), tableItem, viewItem);
             }
+            case STRATOSDB -> {
+                MenuItem tableItem = new MenuItem("Table", Icons.of(FontAwesomeSolid.TABLE, "#4a88c7", 12));
+                tableItem.setOnAction(e -> {
+                    if (mainWindow != null) mainWindow.openQueryTab(profile, targetCatalog,
+                            "CREATE TABLE new_table (\n    id INT PRIMARY KEY AUTO_INCREMENT\n);\n");
+                });
+                MenuItem viewItem = new MenuItem("View", Icons.of(FontAwesomeSolid.EYE, "#57965c", 12));
+                viewItem.setOnAction(e -> {
+                    if (mainWindow != null) mainWindow.openQueryTab(profile, targetCatalog,
+                            "CREATE VIEW new_view AS\nSELECT 1;\n");
+                });
+                if (isTable) {
+                    DbObject parentTable = resolveParentTableFor(item, obj);
+                    String tblName = parentTable != null ? parentTable.getName()
+                            : (obj.getTableName() != null ? obj.getTableName() : obj.getName());
+                    MenuItem colItem = new MenuItem("Column", Icons.of(FontAwesomeSolid.COLUMNS, "#868a91", 11));
+                    colItem.setOnAction(e -> {
+                        if (mainWindow != null) mainWindow.openQueryTab(profile, targetCatalog,
+                                "ALTER TABLE \"" + tblName + "\" ADD COLUMN new_column VARCHAR(255);\n");
+                    });
+                    MenuItem idxItem = new MenuItem("Index", Icons.of(FontAwesomeSolid.BOLT, "#e0a44c", 11));
+                    idxItem.setOnAction(e -> {
+                        if (mainWindow != null) mainWindow.openQueryTab(profile, targetCatalog,
+                                "CREATE INDEX idx_" + tblName + "_col ON \"" + tblName + "\" (column_name);\n");
+                    });
+                    newMenu.getItems().addAll(new SeparatorMenuItem(), colItem, idxItem);
+                }
+                newMenu.getItems().addAll(new SeparatorMenuItem(), tableItem, viewItem);
+            }
             case SQLSERVER -> {
                 MenuItem tableItem = new MenuItem("Table", Icons.of(FontAwesomeSolid.TABLE, "#4a88c7", 12));
                 tableItem.setOnAction(e -> {
@@ -2659,7 +2706,7 @@ public class SchemaTreePane extends VBox {
             modifyUser.setAccelerator(new KeyCodeCombination(KeyCode.F6, KeyCombination.CONTROL_DOWN));
             modifyUser.setOnAction(e -> CreateUserDialog.show(mainWindow, profile));
             menu.getItems().add(modifyUser);
-        } else if ((type == ConnectionProfile.DatabaseType.MYSQL || type == ConnectionProfile.DatabaseType.MARIADB)
+        } else if ((type == ConnectionProfile.DatabaseType.MYSQL || type == ConnectionProfile.DatabaseType.MARIADB || type == ConnectionProfile.DatabaseType.STRATOSDB)
                 && (kind == Kind.KEYS_FOLDER || kind == Kind.KEY)) {
             MenuItem modifyKey = new MenuItem("Modify Key…");
             modifyKey.setAccelerator(new KeyCodeCombination(KeyCode.F6, KeyCombination.CONTROL_DOWN));
@@ -2667,7 +2714,7 @@ public class SchemaTreePane extends VBox {
                 if (mainWindow != null) mainWindow.setStatus("Modify Key on " + obj.getName());
             });
             menu.getItems().add(modifyKey);
-        } else if ((type == ConnectionProfile.DatabaseType.MYSQL || type == ConnectionProfile.DatabaseType.MARIADB || type == ConnectionProfile.DatabaseType.ORACLE)
+        } else if ((type == ConnectionProfile.DatabaseType.MYSQL || type == ConnectionProfile.DatabaseType.MARIADB || type == ConnectionProfile.DatabaseType.ORACLE || type == ConnectionProfile.DatabaseType.STRATOSDB)
                 && kind == Kind.COLUMN) {
             MenuItem modifyCol = new MenuItem("Modify Column…");
             modifyCol.setAccelerator(new KeyCodeCombination(KeyCode.F6, KeyCombination.CONTROL_DOWN));
@@ -2825,11 +2872,12 @@ public class SchemaTreePane extends VBox {
             menu.getItems().addAll(findUsages, new SeparatorMenuItem());
         }
 
-        // Introspection Level > (MySQL, MariaDB, SQL Server, Oracle)
+        // Introspection Level > (MySQL, MariaDB, SQL Server, Oracle, StratosDB)
         boolean hasIntrospectionLevel = (type == ConnectionProfile.DatabaseType.MYSQL
                 || type == ConnectionProfile.DatabaseType.MARIADB
                 || type == ConnectionProfile.DatabaseType.SQLSERVER
-                || type == ConnectionProfile.DatabaseType.ORACLE);
+                || type == ConnectionProfile.DatabaseType.ORACLE
+                || type == ConnectionProfile.DatabaseType.STRATOSDB);
         if (hasIntrospectionLevel) {
             Menu introMenu = new Menu("Introspection Level");
             ToggleGroup introGroup = new ToggleGroup();
@@ -2967,12 +3015,15 @@ public class SchemaTreePane extends VBox {
                     case SQLITE -> "Export SQLite Database…";
                     case SQLSERVER -> "Export Database with bcp…";
                     case ORACLE -> "Export with expdp…";
+                    case STRATOSDB -> "Dump with stratosdump…";
                     default -> "Dump Database…";
                 };
                 MenuItem dumpItem = new MenuItem(dumpName);
                 dumpItem.setOnAction(e -> {
                     if (type == ConnectionProfile.DatabaseType.MYSQL || type == ConnectionProfile.DatabaseType.MARIADB) {
                         MySqlDumpDialog.show(mainWindow, profile, targetCatalog);
+                    } else if (type == ConnectionProfile.DatabaseType.STRATOSDB) {
+                        StratosDumpService.dumpDatabase(mainWindow, profile, targetCatalog != null ? targetCatalog : profile.getDatabase());
                     } else {
                         if (mainWindow != null) mainWindow.setStatus(dumpName.replace("…", ""));
                     }
@@ -2981,6 +3032,8 @@ public class SchemaTreePane extends VBox {
                 restoreItem.setOnAction(e -> {
                     if (type == ConnectionProfile.DatabaseType.MYSQL || type == ConnectionProfile.DatabaseType.MARIADB) {
                         MySqlRestoreDialog.show(mainWindow, profile, targetCatalog);
+                    } else if (type == ConnectionProfile.DatabaseType.STRATOSDB) {
+                        StratosDumpService.restoreDatabase(mainWindow, profile, targetCatalog != null ? targetCatalog : profile.getDatabase());
                     } else {
                         if (mainWindow != null) mainWindow.setStatus("Restore database");
                     }
@@ -3042,6 +3095,12 @@ public class SchemaTreePane extends VBox {
                     MenuItem restoreMysql = new MenuItem("Restore with 'mysql'…");
                     restoreMysql.setOnAction(e -> MySqlRestoreDialog.show(mainWindow, profile, targetCatalog));
                     importExport.getItems().addAll(new SeparatorMenuItem(), exportMysqldump, restoreMysql);
+                } else if (type == ConnectionProfile.DatabaseType.STRATOSDB) {
+                    MenuItem exportStratos = new MenuItem("Dump with stratosdump…");
+                    exportStratos.setOnAction(e -> StratosDumpService.dumpDatabase(mainWindow, profile, targetCatalog != null ? targetCatalog : profile.getDatabase()));
+                    MenuItem restoreStratos = new MenuItem("Restore…");
+                    restoreStratos.setOnAction(e -> StratosDumpService.restoreDatabase(mainWindow, profile, targetCatalog != null ? targetCatalog : profile.getDatabase()));
+                    importExport.getItems().addAll(new SeparatorMenuItem(), exportStratos, restoreStratos);
                 }
             }
             menu.getItems().add(importExport);
@@ -3233,6 +3292,19 @@ public class SchemaTreePane extends VBox {
             case ORACLE -> {
                 // Oracle schema + New > goes directly to Virtual View & Data Source templates
             }
+            case STRATOSDB -> {
+                MenuItem newTable = new MenuItem("Table");
+                newTable.setOnAction(e -> {
+                    if (mainWindow != null) mainWindow.openQueryTab(profile, obj.getName(),
+                            "CREATE TABLE new_table (\n    id INT PRIMARY KEY AUTO_INCREMENT\n);\n");
+                });
+                MenuItem newView = new MenuItem("View");
+                newView.setOnAction(e -> {
+                    if (mainWindow != null) mainWindow.openQueryTab(profile, obj.getName(),
+                            "CREATE VIEW new_view AS\nSELECT 1;\n");
+                });
+                newMenu.getItems().addAll(new SeparatorMenuItem(), newTable, newView);
+            }
             default -> {}
         }
 
@@ -3416,6 +3488,7 @@ public class SchemaTreePane extends VBox {
             case MONGODB -> "Dump with mongodump…";
             case SQLSERVER -> "Export Database with bcp…";
             case ORACLE -> "Export with expdp…";
+            case STRATOSDB -> "Dump with stratosdump…";
             default -> "Dump Database…";
         };
         MenuItem dumpItem = new MenuItem(dumpName);
@@ -3425,6 +3498,8 @@ public class SchemaTreePane extends VBox {
             } else if (profile.getType() == ConnectionProfile.DatabaseType.MYSQL
                     || profile.getType() == ConnectionProfile.DatabaseType.MARIADB) {
                 MySqlDumpDialog.show(mainWindow, profile, targetDatabase);
+            } else if (profile.getType() == ConnectionProfile.DatabaseType.STRATOSDB) {
+                StratosDumpService.dumpDatabase(mainWindow, profile, targetDatabase);
             } else {
                 if (mainWindow != null) mainWindow.setStatus(dumpName.replace("…", ""));
             }
@@ -3436,6 +3511,8 @@ public class SchemaTreePane extends VBox {
             } else if (profile.getType() == ConnectionProfile.DatabaseType.MYSQL
                     || profile.getType() == ConnectionProfile.DatabaseType.MARIADB) {
                 MySqlRestoreDialog.show(mainWindow, profile, targetDatabase);
+            } else if (profile.getType() == ConnectionProfile.DatabaseType.STRATOSDB) {
+                StratosDumpService.restoreDatabase(mainWindow, profile, targetDatabase);
             } else {
                 if (mainWindow != null) mainWindow.setStatus("Restore database");
             }
@@ -3596,7 +3673,8 @@ public class SchemaTreePane extends VBox {
                     || profile.getType() == ConnectionProfile.DatabaseType.MONGODB
                     || profile.getType() == ConnectionProfile.DatabaseType.SQLITE
                     || profile.getType() == ConnectionProfile.DatabaseType.SQLSERVER
-                    || profile.getType() == ConnectionProfile.DatabaseType.ORACLE) {
+                    || profile.getType() == ConnectionProfile.DatabaseType.ORACLE
+                    || profile.getType() == ConnectionProfile.DatabaseType.STRATOSDB) {
                 ContextMenu engineMenu = buildEngineMenu(getTreeItem(), obj, profile);
                 if (engineMenu != null) {
                     return engineMenu;
@@ -4133,10 +4211,16 @@ public class SchemaTreePane extends VBox {
             if (trimmed.isEmpty() || trimmed.equals(obj.getName())) return;
             AppExecutor.run(() -> {
                 try {
-                    String schema = (obj.getSchema() != null && !obj.getSchema().isBlank()) ? obj.getSchema() : "public";
-                    String sql = "ALTER TABLE \"" + schema.replace("\"", "\"\"") + "\".\""
-                            + obj.getName().replace("\"", "\"\"") + "\" RENAME TO \""
-                            + trimmed.replace("\"", "\"\"") + "\"";
+                    String sql;
+                    if (profile.getType() == ConnectionProfile.DatabaseType.STRATOSDB) {
+                        sql = "ALTER TABLE \"" + obj.getName().replace("\"", "\"\"") + "\" RENAME TO \""
+                                + trimmed.replace("\"", "\"\"") + "\"";
+                    } else {
+                        String schema = (obj.getSchema() != null && !obj.getSchema().isBlank()) ? obj.getSchema() : "public";
+                        sql = "ALTER TABLE \"" + schema.replace("\"", "\"\"") + "\".\""
+                                + obj.getName().replace("\"", "\"\"") + "\" RENAME TO \""
+                                + trimmed.replace("\"", "\"\"") + "\"";
+                    }
                     try (java.sql.Connection conn = ClientRegistry.jdbc(profile, obj.getCatalog()).getConnection();
                          java.sql.Statement stmt = conn.createStatement()) {
                         stmt.execute(sql);
@@ -4216,31 +4300,42 @@ public class SchemaTreePane extends VBox {
     }
 
     private void confirmAndDeleteTable(ConnectionProfile profile, DbObject obj) {
+        String kindLabel = (obj.getKind() == Kind.VIEW) ? "view" : "table";
+        String capKindLabel = Character.toUpperCase(kindLabel.charAt(0)) + kindLabel.substring(1);
         Alert warn = (Alert) DialogTheme.apply(new Alert(Alert.AlertType.WARNING,
-                "This permanently deletes table \"" + obj.getName() + "\". This cannot be undone.",
+                "This permanently deletes " + kindLabel + " \"" + obj.getName() + "\". This cannot be undone.",
                 ButtonType.YES, ButtonType.NO));
-        warn.setTitle("Drop Table");
-        warn.setHeaderText("Drop table \"" + obj.getName() + "\"?");
+        warn.setTitle("Drop " + capKindLabel);
+        warn.setHeaderText("Drop " + kindLabel + " \"" + obj.getName() + "\"?");
         warn.initOwner(getScene() == null ? null : getScene().getWindow());
         if (warn.showAndWait().orElse(ButtonType.NO) != ButtonType.YES) return;
 
         AppExecutor.run(() -> {
             try {
-                String schema = (obj.getSchema() != null && !obj.getSchema().isBlank()) ? obj.getSchema() : "public";
-                String sql = "DROP TABLE \"" + schema.replace("\"", "\"\"") + "\".\""
-                        + obj.getName().replace("\"", "\"\"") + "\" CASCADE";
+                String sql;
+                if (profile.getType() == ConnectionProfile.DatabaseType.STRATOSDB) {
+                    if (obj.getKind() == Kind.VIEW) {
+                        sql = "DROP VIEW \"" + obj.getName().replace("\"", "\"\"") + "\"";
+                    } else {
+                        sql = "DROP TABLE \"" + obj.getName().replace("\"", "\"\"") + "\"";
+                    }
+                } else {
+                    String schema = (obj.getSchema() != null && !obj.getSchema().isBlank()) ? obj.getSchema() : "public";
+                    sql = "DROP TABLE \"" + schema.replace("\"", "\"\"") + "\".\""
+                            + obj.getName().replace("\"", "\"\"") + "\" CASCADE";
+                }
                 try (java.sql.Connection conn = ClientRegistry.jdbc(profile, obj.getCatalog()).getConnection();
                      java.sql.Statement stmt = conn.createStatement()) {
                     stmt.execute(sql);
                 }
                 Platform.runLater(() -> {
-                    mainWindow.setStatus("Dropped table " + obj.getName());
+                    mainWindow.setStatus("Dropped " + kindLabel + " " + obj.getName());
                     reload();
                 });
             } catch (Exception ex) {
                 String msg = ex.getMessage() == null ? ex.toString() : ex.getMessage();
                 Platform.runLater(() -> DialogTheme.apply(new Alert(Alert.AlertType.ERROR,
-                        "Could not drop table " + obj.getName() + ": " + msg)).showAndWait());
+                        "Could not drop " + kindLabel + " " + obj.getName() + ": " + msg)).showAndWait());
             }
         });
     }
@@ -4337,6 +4432,9 @@ public class SchemaTreePane extends VBox {
                             : "DROP DATAFILE '" + obj.getName() + "'";
                     case COLUMN -> {
                         String tbl = obj.getTableName() != null ? obj.getTableName() : "table_name";
+                        if (profile.getType() == ConnectionProfile.DatabaseType.STRATOSDB) {
+                            yield "ALTER TABLE \"" + tbl.replace("\"", "\"\"") + "\" DROP COLUMN \"" + obj.getName().replace("\"", "\"\"") + "\"";
+                        }
                         if (profile.getType() == ConnectionProfile.DatabaseType.MYSQL || profile.getType() == ConnectionProfile.DatabaseType.MARIADB) {
                             String cat = obj.getCatalog() != null ? obj.getCatalog() : (obj.getSchema() != null ? obj.getSchema() : "");
                             if (!cat.isEmpty()) {
@@ -4358,18 +4456,30 @@ public class SchemaTreePane extends VBox {
                     }
                     case KEY, FOREIGN_KEY -> {
                         String tbl = obj.getTableName() != null ? obj.getTableName() : "table_name";
+                        if (profile.getType() == ConnectionProfile.DatabaseType.STRATOSDB) {
+                            yield "ALTER TABLE \"" + tbl.replace("\"", "\"\"") + "\" DROP CONSTRAINT \"" + obj.getName().replace("\"", "\"\"") + "\"";
+                        }
                         String sch = obj.getSchema() != null ? obj.getSchema() : "public";
                         yield "ALTER TABLE \"" + sch.replace("\"", "\"\"") + "\".\"" + tbl.replace("\"", "\"\"") + "\" DROP CONSTRAINT \"" + obj.getName().replace("\"", "\"\"") + "\" CASCADE";
                     }
                     case INDEX -> {
+                        if (profile.getType() == ConnectionProfile.DatabaseType.STRATOSDB) {
+                            yield "DROP INDEX \"" + obj.getName().replace("\"", "\"\"") + "\"";
+                        }
                         String sch = obj.getSchema() != null ? obj.getSchema() : "public";
                         yield "DROP INDEX \"" + sch.replace("\"", "\"\"") + "\".\"" + obj.getName().replace("\"", "\"\"") + "\" CASCADE";
                     }
                     case PROCEDURE -> {
+                        if (profile.getType() == ConnectionProfile.DatabaseType.STRATOSDB) {
+                            yield "DROP PROCEDURE \"" + obj.getName().replace("\"", "\"\"") + "\"";
+                        }
                         String sch = obj.getSchema() != null ? obj.getSchema() : "public";
                         yield "DROP PROCEDURE \"" + sch.replace("\"", "\"\"") + "\".\"" + obj.getName().replace("\"", "\"\"") + "\"";
                     }
                     case FUNCTION -> {
+                        if (profile.getType() == ConnectionProfile.DatabaseType.STRATOSDB) {
+                            yield "DROP FUNCTION \"" + obj.getName().replace("\"", "\"\"") + "\"";
+                        }
                         String sch = obj.getSchema() != null ? obj.getSchema() : "public";
                         yield "DROP FUNCTION \"" + sch.replace("\"", "\"\"") + "\".\"" + obj.getName().replace("\"", "\"\"") + "\"";
                     }
