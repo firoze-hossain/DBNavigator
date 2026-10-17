@@ -27,6 +27,7 @@ public final class DatabaseAdminService {
         switch (profile.getType()) {
             case POSTGRESQL -> dropPostgresDatabase(profile, databaseName);
             case SQLSERVER -> dropSqlServerDatabase(profile, databaseName);
+            case STRATOSDB -> dropStratosDatabase(profile, databaseName);
             default -> dropGenericDatabase(profile, databaseName);
         }
     }
@@ -67,6 +68,14 @@ public final class DatabaseAdminService {
         try (Connection conn = ClientRegistry.jdbc(profile, null).getConnection();
              Statement stmt = conn.createStatement()) {
             stmt.execute("DROP DATABASE " + quoteBacktick(databaseName));
+        }
+    }
+
+    private static void dropStratosDatabase(ConnectionProfile profile, String databaseName) throws Exception {
+        ClientRegistry.disconnectCatalog(profile, databaseName);
+        try (Connection conn = ClientRegistry.jdbc(profile, null).getConnection();
+             Statement stmt = conn.createStatement()) {
+            stmt.execute("DROP DATABASE " + databaseName);
         }
     }
 
