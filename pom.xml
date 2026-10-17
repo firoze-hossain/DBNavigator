@@ -17,8 +17,14 @@
         <javafx.version>23.0.2</javafx.version>
     </properties>
 
-    <!-- JitPack repository for StratosDB and other GitHub-hosted libraries -->
     <repositories>
+        <repository>
+            <id>central</id>
+            <url>https://repo.maven.apache.org/maven2</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
         <repository>
             <id>jitpack.io</id>
             <url>https://jitpack.io</url>
@@ -79,7 +85,7 @@
         <dependency>
             <groupId>com.github.firoze-hossain.stratosdb</groupId>
             <artifactId>stratosdb-jdbc</artifactId>
-            <version>1.0.8</version>
+            <version>v1.0.9</version>
         </dependency>
         <dependency>
             <groupId>org.xerial</groupId>
