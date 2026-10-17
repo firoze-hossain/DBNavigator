@@ -1225,171 +1225,7 @@ public final class AppSettingsStore {
             navMenu.add(MenuItemConfig.action("nav.prev.statement", "Previous Statement"));
             mainMenuChildren.add(MenuItemConfig.group("menu.navigate", "Navigate", true, navMenu));
 
-            // -------------------------------------------------------------
-            // Main Menu > Code (Exact match to DataGrip Images 4, 5)
-            // -------------------------------------------------------------
-            // Image 5: Code Completion (Submenu popup)
-            List<MenuItemConfig> codeCompletionChildren = new ArrayList<>();
-            codeCompletionChildren.add(MenuItemConfig.action("code.completion.basic", "Basic"));
-            codeCompletionChildren.add(MenuItemConfig.action("code.completion.type.matching", "Type-Matching"));
-            codeCompletionChildren.add(MenuItemConfig.separator());
-            codeCompletionChildren.add(MenuItemConfig.action("code.completion.complete.statement", "Complete Current Statement"));
-            codeCompletionChildren.add(MenuItemConfig.separator());
-            codeCompletionChildren.add(MenuItemConfig.action("code.completion.cyclic.expand.word", "Cyclic Expand Word"));
-            codeCompletionChildren.add(MenuItemConfig.action("code.completion.cyclic.expand.word.backward", "Cyclic Expand Word (Backward)"));
-            codeCompletionChildren.add(MenuItemConfig.separator());
-            codeCompletionChildren.add(MenuItemConfig.action("code.completion.call.inline", "Call Inline Completion"));
-            codeCompletionChildren.add(MenuItemConfig.action("code.completion.insert.inline.proposal", "Insert Inline Proposal"));
-            codeCompletionChildren.add(MenuItemConfig.action("code.completion.insert.inline.word", "Insert Inline Proposal's Word"));
-            codeCompletionChildren.add(MenuItemConfig.action("code.completion.insert.inline.line", "Insert Inline Proposal's Line"));
 
-            // Image 1: InspectCodeInCodeMenuGroup
-            List<MenuItemConfig> inspectCodeActionsChildren = new ArrayList<>();
-            inspectCodeActionsChildren.add(MenuItemConfig.action("code.inspect.code", "Inspect Code\u2026"));
-            inspectCodeActionsChildren.add(MenuItemConfig.action("code.cleanup", "Code Cleanup\u2026"));
-
-            List<MenuItemConfig> analyzeActionsChildren = new ArrayList<>();
-            analyzeActionsChildren.add(MenuItemConfig.action("code.silent.cleanup", "Silent Code Cleanup"));
-            analyzeActionsChildren.add(MenuItemConfig.action("code.run.inspection.by.name", "Run Inspection by Name\u2026"));
-            analyzeActionsChildren.add(MenuItemConfig.action("code.configure.analysis", "Configure Current File Analysis\u2026"));
-            analyzeActionsChildren.add(MenuItemConfig.action("code.view.offline.results", "View Offline Inspection Results\u2026"));
-            analyzeActionsChildren.add(MenuItemConfig.separator());
-            analyzeActionsChildren.add(MenuItemConfig.action("code.analyze.dataflow.to.here", "Analyze Data Flow to Here\u2026"));
-            analyzeActionsChildren.add(MenuItemConfig.action("code.analyze.dataflow.from.here", "Analyze Data Flow from Here\u2026"));
-
-            List<MenuItemConfig> analyzeCodeChildren = new ArrayList<>();
-            analyzeCodeChildren.add(MenuItemConfig.group("code.analyze.actions.group", "AnalyzeActions", false, analyzeActionsChildren));
-            analyzeCodeChildren.add(MenuItemConfig.action("code.analyze.platform.menu", "AnalyzePlatformMenu"));
-
-            List<MenuItemConfig> inspectCodeChildren = new ArrayList<>();
-            inspectCodeChildren.add(MenuItemConfig.separator());
-            inspectCodeChildren.add(MenuItemConfig.group("code.inspect.actions.group", "Inspect Code Actions", false, inspectCodeActionsChildren));
-            inspectCodeChildren.add(MenuItemConfig.group("code.analyze.code.group", "Analyze Code", false, analyzeCodeChildren));
-
-            // Image 2: Folding (Popup submenu)
-            List<MenuItemConfig> expandToLevelChildren = new ArrayList<>();
-            expandToLevelChildren.add(MenuItemConfig.action("code.folding.expand.level.1", "1"));
-            expandToLevelChildren.add(MenuItemConfig.action("code.folding.expand.level.2", "2"));
-            expandToLevelChildren.add(MenuItemConfig.action("code.folding.expand.level.3", "3"));
-            expandToLevelChildren.add(MenuItemConfig.action("code.folding.expand.level.4", "4"));
-            expandToLevelChildren.add(MenuItemConfig.action("code.folding.expand.level.5", "5"));
-
-            List<MenuItemConfig> expandAllToLevelChildren = new ArrayList<>();
-            expandAllToLevelChildren.add(MenuItemConfig.action("code.folding.expand.all.level.1", "1"));
-            expandAllToLevelChildren.add(MenuItemConfig.action("code.folding.expand.all.level.2", "2"));
-            expandAllToLevelChildren.add(MenuItemConfig.action("code.folding.expand.all.level.3", "3"));
-            expandAllToLevelChildren.add(MenuItemConfig.action("code.folding.expand.all.level.4", "4"));
-            expandAllToLevelChildren.add(MenuItemConfig.action("code.folding.expand.all.level.5", "5"));
-
-            List<MenuItemConfig> langFoldingChildren = new ArrayList<>();
-            langFoldingChildren.add(MenuItemConfig.action("code.folding.expand.doc.comments", "Expand Doc Comments"));
-            langFoldingChildren.add(MenuItemConfig.action("code.folding.collapse.doc.comments", "Collapse Doc Comments"));
-
-            List<MenuItemConfig> foldingChildren = new ArrayList<>();
-            foldingChildren.add(MenuItemConfig.action("code.folding.expand", "Expand"));
-            foldingChildren.add(MenuItemConfig.action("code.folding.expand.recursively", "Expand Recursively"));
-            foldingChildren.add(MenuItemConfig.action("code.folding.expand.all", "Expand All"));
-            foldingChildren.add(MenuItemConfig.separator());
-            foldingChildren.add(MenuItemConfig.action("code.folding.collapse", "Collapse"));
-            foldingChildren.add(MenuItemConfig.action("code.folding.collapse.recursively", "Collapse Recursively"));
-            foldingChildren.add(MenuItemConfig.action("code.folding.collapse.all", "Collapse All"));
-            foldingChildren.add(MenuItemConfig.separator());
-            foldingChildren.add(MenuItemConfig.group("code.folding.expand.to.level.group", "Expand to Level", false, expandToLevelChildren));
-            foldingChildren.add(MenuItemConfig.group("code.folding.expand.all.to.level.group", "Expand All to Level", false, expandAllToLevelChildren));
-            foldingChildren.add(MenuItemConfig.separator());
-            foldingChildren.add(MenuItemConfig.group("code.folding.language.specific.group", "LanguageSpecificFoldingGroup", false, langFoldingChildren));
-            foldingChildren.add(MenuItemConfig.separator());
-            foldingChildren.add(MenuItemConfig.action("code.folding.toggle", "Toggle Folding"));
-            foldingChildren.add(MenuItemConfig.separator());
-            foldingChildren.add(MenuItemConfig.action("code.folding.fold.selection", "Fold Selection / Remove region"));
-            foldingChildren.add(MenuItemConfig.action("code.folding.fold.block", "Fold Code Block"));
-
-            // Image 3: Comment Actions
-            List<MenuItemConfig> commentActionsChildren = new ArrayList<>();
-            commentActionsChildren.add(MenuItemConfig.action("code.comment.line", "// Comment with Line Comment"));
-            commentActionsChildren.add(MenuItemConfig.action("code.comment.block", "Comment with Block Comment"));
-
-            // Image 3: Code Formatting Actions
-            List<MenuItemConfig> codeFormattingChildren = new ArrayList<>();
-            codeFormattingChildren.add(MenuItemConfig.action("code.reformat", "Reformat Code", "INDENT"));
-            codeFormattingChildren.add(MenuItemConfig.action("code.reformat.json", "Reformat JSON"));
-            codeFormattingChildren.add(MenuItemConfig.action("code.reformat.file", "Reformat File\u2026"));
-            codeFormattingChildren.add(MenuItemConfig.action("code.auto.indent", "Auto-Indent Lines"));
-            codeFormattingChildren.add(MenuItemConfig.action("code.optimize.imports", "Optimize Imports"));
-            codeFormattingChildren.add(MenuItemConfig.action("code.rearrange.code", "Rearrange Code"));
-
-            // Full Code Menu assembling Images 1-5
-            List<MenuItemConfig> codeMenu = new ArrayList<>();
-            codeMenu.add(MenuItemConfig.action("code.override.methods", "Override Methods\u2026"));
-            codeMenu.add(MenuItemConfig.action("code.implement.methods", "Implement Methods\u2026"));
-            codeMenu.add(MenuItemConfig.action("code.generate", "Generate\u2026"));
-            codeMenu.add(MenuItemConfig.separator());
-            codeMenu.add(MenuItemConfig.group("code.completion.group", "Code Completion", true, codeCompletionChildren));
-            codeMenu.add(MenuItemConfig.group("code.inspect.group", "InspectCodeInCodeMenuGroup", false, inspectCodeChildren));
-            codeMenu.add(MenuItemConfig.separator());
-            codeMenu.add(MenuItemConfig.action("code.insert.live.template", "Insert Live Template\u2026"));
-            codeMenu.add(MenuItemConfig.action("code.save.live.template", "Save as Live Template\u2026"));
-            codeMenu.add(MenuItemConfig.separator());
-            codeMenu.add(MenuItemConfig.action("code.surround.with", "Surround With\u2026"));
-            codeMenu.add(MenuItemConfig.action("code.unwrap.remove", "Unwrap/Remove\u2026"));
-            codeMenu.add(MenuItemConfig.separator());
-            codeMenu.add(MenuItemConfig.group("code.folding.group", "Folding", true, foldingChildren));
-            codeMenu.add(MenuItemConfig.separator());
-            codeMenu.add(MenuItemConfig.group("code.comment.actions.group", "Comment Actions", false, commentActionsChildren));
-            codeMenu.add(MenuItemConfig.group("code.formatting.actions.group", "Code Formatting Actions", false, codeFormattingChildren));
-            codeMenu.add(MenuItemConfig.separator());
-            codeMenu.add(MenuItemConfig.action("code.move.statement.down", "Move Statement Down"));
-            codeMenu.add(MenuItemConfig.action("code.move.statement.up", "Move Statement Up"));
-            codeMenu.add(MenuItemConfig.action("code.move.element.left", "Move Element Left"));
-            codeMenu.add(MenuItemConfig.action("code.move.element.right", "Move Element Right"));
-            codeMenu.add(MenuItemConfig.action("code.move.line.down", "Move Line Down"));
-            codeMenu.add(MenuItemConfig.action("code.move.line.up", "Move Line Up"));
-            codeMenu.add(MenuItemConfig.separator());
-            codeMenu.add(MenuItemConfig.separator());
-            mainMenuChildren.add(MenuItemConfig.group("menu.code", "Code", true, codeMenu));
-
-            // -------------------------------------------------------------
-            // Main Menu > Refactor (Exact match to DataGrip Images 4, 5)
-            // -------------------------------------------------------------
-            List<MenuItemConfig> refactorExtractIntroduceChildren = new ArrayList<>();
-            refactorExtractIntroduceChildren.add(MenuItemConfig.action("refactor.introduce.variable", "Introduce Variable\u2026"));
-            refactorExtractIntroduceChildren.add(MenuItemConfig.action("refactor.extract.routine", "Extract Routine\u2026"));
-            refactorExtractIntroduceChildren.add(MenuItemConfig.action("refactor.table.alias", "Table alias\u2026"));
-            refactorExtractIntroduceChildren.add(MenuItemConfig.action("refactor.introduce.constant", "Introduce Constant\u2026"));
-            refactorExtractIntroduceChildren.add(MenuItemConfig.action("refactor.introduce.field", "Introduce Field\u2026"));
-            refactorExtractIntroduceChildren.add(MenuItemConfig.action("refactor.introduce.parameter", "Introduce Parameter\u2026"));
-            refactorExtractIntroduceChildren.add(MenuItemConfig.separator());
-            refactorExtractIntroduceChildren.add(MenuItemConfig.action("refactor.introduce.parameter.object", "Introduce Parameter Object\u2026"));
-            refactorExtractIntroduceChildren.add(MenuItemConfig.separator());
-            refactorExtractIntroduceChildren.add(MenuItemConfig.action("refactor.extract.method", "Extract Method\u2026"));
-            refactorExtractIntroduceChildren.add(MenuItemConfig.separator());
-            refactorExtractIntroduceChildren.add(MenuItemConfig.action("refactor.extract.delegate", "Extract Delegate\u2026"));
-            refactorExtractIntroduceChildren.add(MenuItemConfig.action("refactor.include.file", "Include File\u2026"));
-            refactorExtractIntroduceChildren.add(MenuItemConfig.action("refactor.extract.interface", "Extract Interface\u2026"));
-            refactorExtractIntroduceChildren.add(MenuItemConfig.action("refactor.extract.superclass", "Extract Superclass\u2026"));
-            refactorExtractIntroduceChildren.add(MenuItemConfig.action("refactor.extract.module", "Extract Module\u2026"));
-            refactorExtractIntroduceChildren.add(MenuItemConfig.action("refactor.subquery.cte", "Subquery as CTE"));
-
-            List<MenuItemConfig> refactorMenu = new ArrayList<>();
-            refactorMenu.add(MenuItemConfig.action("refactor.this", "Refactor This\u2026"));
-            refactorMenu.add(MenuItemConfig.action("refactor.rename", "Rename\u2026"));
-            refactorMenu.add(MenuItemConfig.action("refactor.change.signature", "Change Signature\u2026"));
-            refactorMenu.add(MenuItemConfig.action("refactor.modify.object", "Modify Object\u2026"));
-            refactorMenu.add(MenuItemConfig.separator());
-            refactorMenu.add(MenuItemConfig.group("refactor.extract.introduce.group", "Extract/Introduce", true, refactorExtractIntroduceChildren));
-            refactorMenu.add(MenuItemConfig.action("refactor.inline", "Inline\u2026"));
-            refactorMenu.add(MenuItemConfig.separator());
-            refactorMenu.add(MenuItemConfig.action("refactor.move", "Move\u2026"));
-            refactorMenu.add(MenuItemConfig.action("refactor.copy", "Copy\u2026"));
-            refactorMenu.add(MenuItemConfig.action("refactor.safe.delete", "Safe Delete\u2026"));
-            refactorMenu.add(MenuItemConfig.separator());
-            refactorMenu.add(MenuItemConfig.action("refactor.pull.members.up", "Pull Members Up\u2026"));
-            refactorMenu.add(MenuItemConfig.action("refactor.push.members.down", "Push Members Down\u2026"));
-            refactorMenu.add(MenuItemConfig.action("refactor.invert.boolean", "Invert Boolean\u2026"));
-            mainMenuChildren.add(MenuItemConfig.group("menu.refactor", "Refactor", true, refactorMenu));
-
-            // Build (Image 4)
-            mainMenuChildren.add(MenuItemConfig.action("main.menu.build", "Build"));
 
             // -------------------------------------------------------------
             // Main Menu > Run (Exact match to DataGrip Images 1-4)
@@ -1492,33 +1328,6 @@ public final class AppSettingsStore {
             runMenu.add(MenuItemConfig.action("run.import.data", "Import Data from File(s)\u2026", "FILE_IMPORT"));
             mainMenuChildren.add(MenuItemConfig.group("menu.run", "Run", true, runMenu));
 
-            // Tools Menu (Image 1)
-            List<MenuItemConfig> psiViewerChildren = new ArrayList<>();
-            psiViewerChildren.add(MenuItemConfig.separator());
-            psiViewerChildren.add(MenuItemConfig.action("tools.view.psi.structure", "View PSI Structure\u2026"));
-            psiViewerChildren.add(MenuItemConfig.action("tools.view.psi.structure.current.file", "View PSI Structure of Current File\u2026"));
-            psiViewerChildren.add(MenuItemConfig.separator());
-
-            List<MenuItemConfig> xmlActionsChildren = new ArrayList<>();
-            xmlActionsChildren.add(MenuItemConfig.action("tools.convert.schema", "Convert Schema\u2026"));
-
-            List<MenuItemConfig> toolsMarkdownChildren = new ArrayList<>();
-            toolsMarkdownChildren.add(MenuItemConfig.action("tools.markdown.import.word", "Import Word Document\u2026"));
-            toolsMarkdownChildren.add(MenuItemConfig.action("tools.markdown.export.file.to", "Export Markdown File To\u2026"));
-            toolsMarkdownChildren.add(MenuItemConfig.action("tools.markdown.configure.pandoc", "Configure Pandoc\u2026"));
-
-            List<MenuItemConfig> toolsMenu = new ArrayList<>();
-            toolsMenu.add(MenuItemConfig.group("tools.psi.viewer.actions", "Dev.PsiViewerActions", false, psiViewerChildren));
-            toolsMenu.add(MenuItemConfig.group("tools.basic.group", "Tools Basic Group", false, List.of()));
-            toolsMenu.add(MenuItemConfig.action("tools.create.command.line.launcher", "Create Command Line Launcher\u2026"));
-            toolsMenu.add(MenuItemConfig.action("tools.create.desktop.entry", "Create Desktop Entry\u2026"));
-            toolsMenu.add(MenuItemConfig.separator());
-            toolsMenu.add(MenuItemConfig.group("tools.other.menu", "OtherMenu", false, List.of()));
-            toolsMenu.add(MenuItemConfig.action("tools.services", "Services"));
-            toolsMenu.add(MenuItemConfig.group("tools.xml.actions", "XML Actions", true, xmlActionsChildren));
-            toolsMenu.add(MenuItemConfig.group("tools.markdown", "Markdown", true, toolsMarkdownChildren));
-            toolsMenu.add(MenuItemConfig.group("tools.external.tools", "External Tools", true, List.of()));
-            mainMenuChildren.add(MenuItemConfig.group("menu.tools", "Tools", true, toolsMenu));
 
             // Git Menu (Images 2-5)
             // Image 4: Git.FileActions
@@ -1921,8 +1730,6 @@ public final class AppSettingsStore {
             tbLeft.add(MenuItemConfig.group("toolbar.general.actions.group", "General Actions", false, genActions));
 
             List<MenuItemConfig> tbCenter = new ArrayList<>();
-            tbCenter.add(MenuItemConfig.action("toolbar.single.tool.window.bar", "Single Tool Window Bar", "DESKTOP"));
-            tbCenter.add(MenuItemConfig.action("toolbar.file.name.widget", "File Name Widget (when editor tabs are hidden or \"Always show full path\" is enabled)", "FILE_ALT"));
 
             List<MenuItemConfig> tbRight = new ArrayList<>();
             tbRight.add(MenuItemConfig.group("toolbar.execution.targets.group", "ExecutionTargetsToolbarGroup", true, "FOLDER", new ArrayList<>()));
@@ -4114,17 +3921,8 @@ public final class AppSettingsStore {
                         MenuItemConfig navMenu = root.getChildren().stream()
                                 .filter(c -> "menu.navigate".equalsIgnoreCase(c.getId()) || "Navigate".equalsIgnoreCase(c.getText()))
                                 .findFirst().orElse(null);
-                        MenuItemConfig codeMenu = root.getChildren().stream()
-                                .filter(c -> "menu.code".equalsIgnoreCase(c.getId()) || "Code".equalsIgnoreCase(c.getText()))
-                                .findFirst().orElse(null);
-                        MenuItemConfig refactorMenu = root.getChildren().stream()
-                                .filter(c -> "menu.refactor".equalsIgnoreCase(c.getId()) || "Refactor".equalsIgnoreCase(c.getText()))
-                                .findFirst().orElse(null);
                         MenuItemConfig runMenu = root.getChildren().stream()
                                 .filter(c -> "menu.run".equalsIgnoreCase(c.getId()) || "Run".equalsIgnoreCase(c.getText()))
-                                .findFirst().orElse(null);
-                        MenuItemConfig toolsMenu = root.getChildren().stream()
-                                .filter(c -> "menu.tools".equalsIgnoreCase(c.getId()) || "Tools".equalsIgnoreCase(c.getText()))
                                 .findFirst().orElse(null);
                         MenuItemConfig vcsMenu = root.getChildren().stream()
                                 .filter(c -> "menu.vcs".equalsIgnoreCase(c.getId()) || "Git".equalsIgnoreCase(c.getText()) || "VCS".equalsIgnoreCase(c.getText()))
@@ -4234,20 +4032,7 @@ public final class AppSettingsStore {
                                 needsMigration = true;
                             }
                         }
-                        if (codeMenu != null) {
-                            boolean hasExpandedInspect = codeMenu.getChildren().stream()
-                                    .filter(c -> "code.inspect.group".equalsIgnoreCase(c.getId()))
-                                    .anyMatch(g -> !g.getChildren().isEmpty());
-                            boolean hasExpandedFormatting = codeMenu.getChildren().stream()
-                                    .filter(c -> "code.formatting.actions.group".equalsIgnoreCase(c.getId()))
-                                    .anyMatch(g -> !g.getChildren().isEmpty());
-                            if (!hasExpandedInspect || !hasExpandedFormatting) {
-                                needsMigration = true;
-                            }
-                        }
-                        if (refactorMenu != null && refactorMenu.getChildren().stream().noneMatch(c -> "refactor.this".equalsIgnoreCase(c.getId()))) {
-                            needsMigration = true;
-                        }
+
                         if (runMenu != null) {
                             boolean hasOldRunDebug = runMenu.getChildren().stream().anyMatch(c -> "run.run.debug.group".equalsIgnoreCase(c.getId()));
                             boolean hasCompareData = runMenu.getChildren().stream().anyMatch(c -> "run.compare.data".equalsIgnoreCase(c.getId()));
@@ -4256,12 +4041,6 @@ public final class AppSettingsStore {
                             }
                         }
                         if (!root.getChildren().isEmpty()) {
-                            if (fileMenu != null && toolsMenu == null) {
-                                needsMigration = true;
-                            }
-                            if (toolsMenu != null && toolsMenu.getChildren().stream().noneMatch(c -> "tools.psi.viewer.actions".equalsIgnoreCase(c.getId()))) {
-                                needsMigration = true;
-                            }
                             if (vcsMenu != null) {
                                 boolean hasOldVcsMain = vcsMenu.getChildren().stream().anyMatch(c -> "vcs.main.menu".equalsIgnoreCase(c.getId()));
                                 boolean hasBrowseRepo = vcsMenu.getChildren().stream().anyMatch(c -> "vcs.browse.repository".equalsIgnoreCase(c.getId()));
@@ -4304,15 +4083,30 @@ public final class AppSettingsStore {
                                 }
                             }
                         }
+                        menusAndToolbars.get(i).getChildren().removeIf(c ->
+                                "menu.code".equalsIgnoreCase(c.getId()) || "Code".equalsIgnoreCase(c.getText()) ||
+                                "menu.refactor".equalsIgnoreCase(c.getId()) || "Refactor".equalsIgnoreCase(c.getText()) ||
+                                "menu.tools".equalsIgnoreCase(c.getId()) || "Tools".equalsIgnoreCase(c.getText()) ||
+                                "main.menu.build".equalsIgnoreCase(c.getId()) || "Build".equalsIgnoreCase(c.getText())
+                        );
                     } else if ("root.main.toolbar".equalsIgnoreCase(root.getId())) {
-                        boolean needsTbMigration = root.getChildren().stream()
-                                .noneMatch(c -> c.getChildren().stream().anyMatch(sub -> "toolbar.single.tool.window.bar".equalsIgnoreCase(sub.getId()) || "Single Tool Window Bar".equalsIgnoreCase(sub.getText())));
-                        if (needsTbMigration) {
+                        boolean hasLeft = root.getChildren().stream().anyMatch(c -> "toolbar.left".equalsIgnoreCase(c.getId()));
+                        boolean hasRight = root.getChildren().stream().anyMatch(c -> "toolbar.right".equalsIgnoreCase(c.getId()));
+                        if (!hasLeft || !hasRight) {
                             for (MenuItemConfig defRoot : defaultMenusAndToolbars()) {
                                 if ("root.main.toolbar".equalsIgnoreCase(defRoot.getId())) {
                                     menusAndToolbars.set(i, defRoot.copy());
                                     break;
                                 }
+                            }
+                        }
+                        for (MenuItemConfig childGroup : menusAndToolbars.get(i).getChildren()) {
+                            if (childGroup.getChildren() != null) {
+                                childGroup.getChildren().removeIf(sub ->
+                                        "toolbar.single.tool.window.bar".equalsIgnoreCase(sub.getId()) ||
+                                        "Single Tool Window Bar".equalsIgnoreCase(sub.getText()) ||
+                                        "toolbar.file.name.widget".equalsIgnoreCase(sub.getId()) ||
+                                        (sub.getText() != null && sub.getText().startsWith("File Name Widget")));
                             }
                         }
                     } else if ("root.editor.popup".equalsIgnoreCase(root.getId())) {
