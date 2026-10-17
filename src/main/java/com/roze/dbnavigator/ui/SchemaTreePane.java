@@ -2162,7 +2162,14 @@ public class SchemaTreePane extends VBox {
         boolean isServerObjectsFolder = (kind == Kind.SERVER_OBJECTS
                 || kind == Kind.TABLESPACES_FOLDER
                 || kind == Kind.USERS_FOLDER
-                || kind == Kind.COLLATIONS_FOLDER);
+                || kind == Kind.COLLATIONS_FOLDER
+                || kind == Kind.DATABASE_OBJECTS
+                || kind == Kind.ASSEMBLIES_FOLDER
+                || kind == Kind.FILEGROUPS_FOLDER
+                || kind == Kind.DATABASE_PRINCIPALS_FOLDER
+                || kind == Kind.LINKED_SERVERS_FOLDER
+                || kind == Kind.SERVER_PRINCIPALS_FOLDER
+                || kind == Kind.ROLES_FOLDER);
         boolean isVirtualViewsFolder = (kind == Kind.VIRTUAL_VIEWS_FOLDER);
 
         if (isServerObjectsFolder) {
@@ -2412,6 +2419,15 @@ public class SchemaTreePane extends VBox {
                 MenuItem serverPrincipal = new MenuItem("Server Principal", Icons.of(FontAwesomeSolid.USER, "#868a91", 11));
                 serverPrincipal.setOnAction(e -> CreateUserDialog.show(mainWindow, profile));
 
+                if (kind == Kind.FILEGROUP) {
+                    MenuItem vvItem = new MenuItem("Virtual View", Icons.of(FontAwesomeSolid.TABLE, "#c77dbb", 12));
+                    vvItem.setOnAction(e -> showVirtualViewInfo(profile, targetCatalog));
+                    newMenu.getItems().addAll(new SeparatorMenuItem(), schemaItem, dbPrincipal, dbItem, serverPrincipal);
+                    newMenu.getItems().addAll(new SeparatorMenuItem(), vvItem);
+                    appendCommonNewDataSourceItems(newMenu, profile, false);
+                    return newMenu;
+                }
+
                 if (isTable) {
                     DbObject parentTable = resolveParentTableFor(item, obj);
                     String tblName = parentTable != null ? parentTable.getName()
@@ -2545,12 +2561,23 @@ public class SchemaTreePane extends VBox {
         boolean isServerObjectsFolder = (kind == Kind.SERVER_OBJECTS
                 || kind == Kind.TABLESPACES_FOLDER
                 || kind == Kind.USERS_FOLDER
-                || kind == Kind.COLLATIONS_FOLDER);
+                || kind == Kind.COLLATIONS_FOLDER
+                || kind == Kind.DATABASE_OBJECTS
+                || kind == Kind.ASSEMBLIES_FOLDER
+                || kind == Kind.FILEGROUPS_FOLDER
+                || kind == Kind.DATABASE_PRINCIPALS_FOLDER
+                || kind == Kind.LINKED_SERVERS_FOLDER
+                || kind == Kind.SERVER_PRINCIPALS_FOLDER
+                || kind == Kind.ROLES_FOLDER);
         boolean isVirtualViewsFolder = (kind == Kind.VIRTUAL_VIEWS_FOLDER);
         boolean isVirtualViewItem = (kind == Kind.VIRTUAL_VIEW);
         boolean isCollationItem = (kind == Kind.COLLATION);
         boolean isUserItem = (kind == Kind.USER);
         boolean isRoutineItem = (kind == Kind.PROCEDURE || kind == Kind.FUNCTION);
+        boolean isFilegroupItem = (kind == Kind.FILEGROUP);
+        boolean isSqlServerServerObjectItem = (type == ConnectionProfile.DatabaseType.SQLSERVER
+                && (kind == Kind.SERVER_PRINCIPAL || kind == Kind.LINKED_SERVER
+                    || kind == Kind.ASSEMBLY || kind == Kind.DATABASE_PRINCIPAL || kind == Kind.FILEGROUP));
 
         boolean isMongoFolder = (type == ConnectionProfile.DatabaseType.MONGODB
                 && (kind == Kind.FIELDS_FOLDER || kind == Kind.INDEXES_FOLDER));
@@ -2585,7 +2612,8 @@ public class SchemaTreePane extends VBox {
 
         if (!isCategoryFolder && !isTable && !isCollection && !isSequence && !isRoutineItem
                 && !isMongoSubItem && !isOracleServerObjectItem && !isTableSubItem
-                && !isVirtualViewItem && !isCollationItem && !isUserItem) {
+                && !isVirtualViewItem && !isCollationItem && !isUserItem
+                && !isSqlServerServerObjectItem) {
             return null;
         }
 
@@ -2723,7 +2751,7 @@ public class SchemaTreePane extends VBox {
             menu.getItems().add(new SeparatorMenuItem());
         } else {
             // Table, Collection, Sequence, Routine, Mongo Sub-item, or Oracle Server Object item
-            if (!isRoutineItem && !isOracleServerObjectItem && !isCollationItem && !isUserItem) {
+            if (!isRoutineItem && !isOracleServerObjectItem && !isCollationItem && !isUserItem && !isSqlServerServerObjectItem) {
                 MenuItem editData = new MenuItem("Edit Data");
                 editData.setGraphic(Icons.of(FontAwesomeSolid.TABLE, "#4a88c7", 12));
                 editData.setAccelerator(new KeyCodeCombination(KeyCode.F4));
@@ -2752,7 +2780,7 @@ public class SchemaTreePane extends VBox {
 
             MenuItem rename = new MenuItem("Rename…");
             rename.setAccelerator(new KeyCodeCombination(KeyCode.F6, KeyCombination.SHIFT_DOWN));
-            if (isMongoSubItem || isOracleServerObjectItem || isTableSubItem || isVirtualViewItem || isCollationItem || isUserItem) {
+            if (isMongoSubItem || isOracleServerObjectItem || isTableSubItem || isVirtualViewItem || isCollationItem || isUserItem || isSqlServerServerObjectItem) {
                 rename.setDisable(true);
             } else if (isRoutineItem) {
                 rename.setOnAction(e -> renameRoutine(profile, obj));
@@ -2872,8 +2900,10 @@ public class SchemaTreePane extends VBox {
                 && (isMongoFolder || isMongoSubItem));
         boolean isMySqlSubFolder = (type == ConnectionProfile.DatabaseType.MYSQL
                 || type == ConnectionProfile.DatabaseType.MARIADB) && isTableSubFolder;
+        boolean isSqlServerPrincipalsFolder = (type == ConnectionProfile.DatabaseType.SQLSERVER
+                && (kind == Kind.SERVER_PRINCIPALS_FOLDER || kind == Kind.DATABASE_PRINCIPALS_FOLDER));
         boolean includeObjActions = (kind != Kind.SEQUENCES_FOLDER && kind != Kind.SEQUENCE)
-                && !isServerObjectsFolder && !isVirtualViewsFolder && !isMongoSubNode
+                && (!isServerObjectsFolder || isSqlServerPrincipalsFolder) && !isVirtualViewsFolder && !isMongoSubNode
                 && !isOracleServerObjectItem
                 && !isVirtualViewItem
                 && !isCollationItem
@@ -3050,9 +3080,9 @@ public class SchemaTreePane extends VBox {
         // Drop… (Delete)
         MenuItem drop = new MenuItem("Drop…");
         drop.setAccelerator(new KeyCodeCombination(KeyCode.DELETE));
-        if (isCategoryFolder || isMongoSubItem || isCollationItem) {
+        if (isCategoryFolder || isMongoSubItem || isCollationItem || isFilegroupItem) {
             drop.setDisable(true);
-        } else if (isOracleServerObjectItem || isTableSubItem || isVirtualViewItem || isUserItem) {
+        } else if (isOracleServerObjectItem || isTableSubItem || isVirtualViewItem || isUserItem || isSqlServerServerObjectItem) {
             drop.setOnAction(e -> confirmAndDropGenericObject(profile, obj));
         } else if (isCollection) {
             drop.setOnAction(e -> confirmAndDropCollection(profile, obj));

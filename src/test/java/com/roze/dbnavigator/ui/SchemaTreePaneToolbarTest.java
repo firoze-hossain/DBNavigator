@@ -7208,6 +7208,445 @@ public class SchemaTreePaneToolbarTest {
         assertFalse(drop.isDisable());
         assertEquals(KeyCode.DELETE, ((KeyCodeCombination) drop.getAccelerator()).getCode());
     }
+
+    @Test
+    public void testSqlServerDatabaseObjectsFolderContextMenuImage1() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = new ConnectionProfile();
+        profile.setId("mssql-test-img1");
+        profile.setName("mssql@localhost [3]");
+        profile.setType(ConnectionProfile.DatabaseType.SQLSERVER);
+        profile.setDatabase("CompanyDB");
+
+        DbObject dbObjectsFolder = new DbObject("Database Objects", Kind.DATABASE_OBJECTS, "CompanyDB", null);
+        ContextMenu menu = pane.buildMenuForTest(dbObjectsFolder, profile);
+        assertNotNull(menu);
+
+        // 1. + New > contains Query Console, Query File..., Data Source items, Driver; no Table/View/Schema
+        Menu newMenu = findMenu(menu, "New");
+        assertNotNull(newMenu);
+        assertTrue(menuHasItem(newMenu, "Query Console"));
+        assertTrue(menuHasItem(newMenu, "Query File"));
+        assertTrue(menuHasItem(newMenu, "Data Source"));
+        assertTrue(menuHasItem(newMenu, "Driver"));
+        assertFalse(menuHasItem(newMenu, "Table"));
+        assertFalse(menuHasItem(newMenu, "View"));
+        assertFalse(menuHasItem(newMenu, "Schema"));
+
+        // 2. No Modify item
+        assertNull(findItem(menu, "Modify"));
+
+        // 3. Copy/Paste > (disabled)
+        Menu cp = findMenu(menu, "Copy/Paste");
+        assertNotNull(cp);
+        assertTrue(cp.isDisable());
+
+        // 4. Refresh (Ctrl+F5)
+        MenuItem refresh = findItem(menu, "Refresh");
+        assertNotNull(refresh);
+        assertEquals(KeyCode.F5, ((KeyCodeCombination) refresh.getAccelerator()).getCode());
+
+        // 5. Rename… (disabled)
+        MenuItem rename = findItem(menu, "Rename");
+        assertNotNull(rename);
+        assertTrue(rename.isDisable());
+
+        // 6. Open the List (F4, enabled)
+        MenuItem openList = findItem(menu, "Open the List");
+        assertNotNull(openList);
+        assertFalse(openList.isDisable());
+        assertEquals(KeyCode.F4, ((KeyCodeCombination) openList.getAccelerator()).getCode());
+
+        // 7. Quick Documentation (disabled)
+        MenuItem quickDoc = findItem(menu, "Quick Documentation");
+        assertNotNull(quickDoc);
+        assertTrue(quickDoc.isDisable());
+
+        // 8. Compare Schema Structure (disabled)
+        MenuItem compare = findItem(menu, "Compare Schema Structure");
+        assertNotNull(compare);
+        assertTrue(compare.isDisable());
+
+        // 9. Introspection Level >
+        assertNotNull(findMenu(menu, "Introspection Level"));
+
+        // 10. SQL Scripts >
+        assertNotNull(findMenu(menu, "SQL Scripts"));
+
+        // 11. Object Actions > is OMITTED
+        assertNull(findMenu(menu, "Object Actions"));
+
+        // 12. Tools >
+        assertNotNull(findMenu(menu, "Tools"));
+
+        // 13. Import/Export > is OMITTED
+        assertNull(findMenu(menu, "Import/Export"));
+
+        // 14. Diagrams >
+        assertNotNull(findMenu(menu, "Diagrams"));
+
+        // 15. Diagnostics >
+        assertNotNull(findMenu(menu, "Diagnostics"));
+
+        // 16. Drop… (disabled)
+        MenuItem drop = findItem(menu, "Drop");
+        assertNotNull(drop);
+        assertTrue(drop.isDisable());
+    }
+
+    @Test
+    public void testSqlServerAssembliesFolderContextMenuImage2() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = new ConnectionProfile();
+        profile.setId("mssql-test-img2");
+        profile.setName("mssql@localhost [3]");
+        profile.setType(ConnectionProfile.DatabaseType.SQLSERVER);
+        profile.setDatabase("CompanyDB");
+
+        DbObject assembliesFolder = new DbObject("assemblies", Kind.ASSEMBLIES_FOLDER, "CompanyDB", null);
+        ContextMenu menu = pane.buildMenuForTest(assembliesFolder, profile);
+        assertNotNull(menu);
+
+        // 1. + New >
+        Menu newMenu = findMenu(menu, "New");
+        assertNotNull(newMenu);
+        assertTrue(menuHasItem(newMenu, "Query Console"));
+        assertTrue(menuHasItem(newMenu, "Query File"));
+        assertTrue(menuHasItem(newMenu, "Data Source"));
+        assertTrue(menuHasItem(newMenu, "Driver"));
+        assertFalse(menuHasItem(newMenu, "Table"));
+        assertFalse(menuHasItem(newMenu, "View"));
+
+        // 2. No Modify item
+        assertNull(findItem(menu, "Modify"));
+
+        // 3. Copy/Paste > (disabled)
+        Menu cp = findMenu(menu, "Copy/Paste");
+        assertNotNull(cp);
+        assertTrue(cp.isDisable());
+
+        // 4. Refresh (Ctrl+F5)
+        MenuItem refresh = findItem(menu, "Refresh");
+        assertNotNull(refresh);
+        assertEquals(KeyCode.F5, ((KeyCodeCombination) refresh.getAccelerator()).getCode());
+
+        // 5. Rename… (disabled)
+        MenuItem rename = findItem(menu, "Rename");
+        assertNotNull(rename);
+        assertTrue(rename.isDisable());
+
+        // 6. Open the List (F4, enabled)
+        MenuItem openList = findItem(menu, "Open the List");
+        assertNotNull(openList);
+        assertFalse(openList.isDisable());
+        assertEquals(KeyCode.F4, ((KeyCodeCombination) openList.getAccelerator()).getCode());
+
+        // 7. Quick Documentation (disabled)
+        MenuItem quickDoc = findItem(menu, "Quick Documentation");
+        assertNotNull(quickDoc);
+        assertTrue(quickDoc.isDisable());
+
+        // 8. Compare Schema Structure (disabled)
+        MenuItem compare = findItem(menu, "Compare Schema Structure");
+        assertNotNull(compare);
+        assertTrue(compare.isDisable());
+
+        // 9. Introspection Level >
+        assertNotNull(findMenu(menu, "Introspection Level"));
+
+        // 10. SQL Scripts >
+        assertNotNull(findMenu(menu, "SQL Scripts"));
+
+        // 11. Object Actions > is OMITTED
+        assertNull(findMenu(menu, "Object Actions"));
+
+        // 12. Tools >
+        assertNotNull(findMenu(menu, "Tools"));
+
+        // 13. Import/Export > is OMITTED
+        assertNull(findMenu(menu, "Import/Export"));
+
+        // 14. Diagrams >
+        assertNotNull(findMenu(menu, "Diagrams"));
+
+        // 15. Diagnostics >
+        assertNotNull(findMenu(menu, "Diagnostics"));
+
+        // 16. Drop… (disabled)
+        MenuItem drop = findItem(menu, "Drop");
+        assertNotNull(drop);
+        assertTrue(drop.isDisable());
+    }
+
+    @Test
+    public void testSqlServerFilegroupItemContextMenuImage3() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = new ConnectionProfile();
+        profile.setId("mssql-test-img3");
+        profile.setName("mssql@localhost [3]");
+        profile.setType(ConnectionProfile.DatabaseType.SQLSERVER);
+        profile.setDatabase("CompanyDB");
+
+        DbObject filegroupObj = new DbObject("PRIMARY", Kind.FILEGROUP, "CompanyDB", null);
+        ContextMenu menu = pane.buildMenuForTest(filegroupObj, profile);
+        assertNotNull(menu);
+
+        // 1. + New > has Query Console, Query File..., Schema, Database Principal, Database, Server Principal, Virtual View, Data Source, Driver
+        Menu newMenu = findMenu(menu, "New");
+        assertNotNull(newMenu);
+        assertTrue(menuHasItem(newMenu, "Query Console"));
+        assertTrue(menuHasItem(newMenu, "Query File"));
+        assertTrue(menuHasItem(newMenu, "Schema"));
+        assertTrue(menuHasItem(newMenu, "Database Principal"));
+        assertTrue(menuHasItem(newMenu, "Database"));
+        assertTrue(menuHasItem(newMenu, "Server Principal"));
+        assertTrue(menuHasItem(newMenu, "Virtual View"));
+        assertTrue(menuHasItem(newMenu, "Data Source"));
+        assertTrue(menuHasItem(newMenu, "Driver"));
+        assertFalse(menuHasItem(newMenu, "Table"));
+        assertFalse(menuHasItem(newMenu, "View"));
+        assertFalse(menuHasItem(newMenu, "Sequence"));
+
+        // 2. NO Edit Data on filegroups
+        assertNull(findItem(menu, "Edit Data"));
+
+        // 3. No Modify item
+        assertNull(findItem(menu, "Modify"));
+
+        // 4. Copy/Paste > (ENABLED!)
+        Menu cp = findMenu(menu, "Copy/Paste");
+        assertNotNull(cp);
+        assertFalse(cp.isDisable());
+
+        // 5. Refresh (Ctrl+F5)
+        MenuItem refresh = findItem(menu, "Refresh");
+        assertNotNull(refresh);
+        assertEquals(KeyCode.F5, ((KeyCodeCombination) refresh.getAccelerator()).getCode());
+
+        // 6. Rename… (disabled)
+        MenuItem rename = findItem(menu, "Rename");
+        assertNotNull(rename);
+        assertTrue(rename.isDisable());
+
+        // 7. Quick Documentation (Ctrl+Q, enabled!)
+        MenuItem quickDoc = findItem(menu, "Quick Documentation");
+        assertNotNull(quickDoc);
+        assertFalse(quickDoc.isDisable());
+        assertEquals(KeyCode.Q, ((KeyCodeCombination) quickDoc.getAccelerator()).getCode());
+
+        // 8. Compare Schema Structure With… (disabled)
+        MenuItem compare = findItem(menu, "Compare Schema Structure");
+        assertNotNull(compare);
+        assertTrue(compare.isDisable());
+
+        // 9. Navigation >
+        Menu nav = findMenu(menu, "Navigation");
+        assertNotNull(nav);
+        assertTrue(menuHasItem(nav, "Go to DDL"));
+        assertTrue(menuHasItem(nav, "Jump to Query Console"));
+        assertTrue(menuHasItem(nav, "Select in Database Explorer"));
+
+        // 10. Find Usages (disabled)
+        MenuItem findUsages = findItem(menu, "Find Usages");
+        assertNotNull(findUsages);
+        assertTrue(findUsages.isDisable());
+
+        // 11. Introspection Level >
+        assertNotNull(findMenu(menu, "Introspection Level"));
+
+        // 12. SQL Scripts >
+        assertNotNull(findMenu(menu, "SQL Scripts"));
+
+        // 13. Object Actions > (PRESENT!)
+        Menu objActions = findMenu(menu, "Object Actions");
+        assertNotNull(objActions);
+        assertTrue(menuHasItem(objActions, "Show / Hide Schemas"));
+        assertTrue(menuHasItem(objActions, "Forget Saved Passwords"));
+
+        // 14. Tools >
+        assertNotNull(findMenu(menu, "Tools"));
+
+        // 15. Import/Export > (PRESENT!)
+        assertNotNull(findMenu(menu, "Import/Export"));
+
+        // 16. Diagrams >
+        assertNotNull(findMenu(menu, "Diagrams"));
+
+        // 17. Diagnostics >
+        assertNotNull(findMenu(menu, "Diagnostics"));
+
+        // 18. Drop… (disabled!)
+        MenuItem drop = findItem(menu, "Drop");
+        assertNotNull(drop);
+        assertTrue(drop.isDisable());
+    }
+
+    @Test
+    public void testSqlServerLinkedServersFolderContextMenuImage4() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = new ConnectionProfile();
+        profile.setId("mssql-test-img4");
+        profile.setName("mssql@localhost [3]");
+        profile.setType(ConnectionProfile.DatabaseType.SQLSERVER);
+        profile.setDatabase("CompanyDB");
+
+        DbObject linkedServersFolder = new DbObject("linked servers", Kind.LINKED_SERVERS_FOLDER, "CompanyDB", null);
+        ContextMenu menu = pane.buildMenuForTest(linkedServersFolder, profile);
+        assertNotNull(menu);
+
+        // 1. + New >
+        Menu newMenu = findMenu(menu, "New");
+        assertNotNull(newMenu);
+        assertTrue(menuHasItem(newMenu, "Query Console"));
+        assertTrue(menuHasItem(newMenu, "Query File"));
+        assertTrue(menuHasItem(newMenu, "Data Source"));
+        assertTrue(menuHasItem(newMenu, "Driver"));
+
+        // 2. No Modify item
+        assertNull(findItem(menu, "Modify"));
+
+        // 3. Copy/Paste > (disabled)
+        Menu cp = findMenu(menu, "Copy/Paste");
+        assertNotNull(cp);
+        assertTrue(cp.isDisable());
+
+        // 4. Refresh (Ctrl+F5)
+        MenuItem refresh = findItem(menu, "Refresh");
+        assertNotNull(refresh);
+        assertEquals(KeyCode.F5, ((KeyCodeCombination) refresh.getAccelerator()).getCode());
+
+        // 5. Rename… (disabled)
+        MenuItem rename = findItem(menu, "Rename");
+        assertNotNull(rename);
+        assertTrue(rename.isDisable());
+
+        // 6. Open the List (F4, enabled)
+        MenuItem openList = findItem(menu, "Open the List");
+        assertNotNull(openList);
+        assertFalse(openList.isDisable());
+        assertEquals(KeyCode.F4, ((KeyCodeCombination) openList.getAccelerator()).getCode());
+
+        // 7. Quick Documentation (disabled)
+        MenuItem quickDoc = findItem(menu, "Quick Documentation");
+        assertNotNull(quickDoc);
+        assertTrue(quickDoc.isDisable());
+
+        // 8. Compare Schema Structure (disabled)
+        MenuItem compare = findItem(menu, "Compare Schema Structure");
+        assertNotNull(compare);
+        assertTrue(compare.isDisable());
+
+        // 9. Introspection Level >
+        assertNotNull(findMenu(menu, "Introspection Level"));
+
+        // 10. SQL Scripts >
+        assertNotNull(findMenu(menu, "SQL Scripts"));
+
+        // 11. Object Actions > is OMITTED
+        assertNull(findMenu(menu, "Object Actions"));
+
+        // 12. Tools >
+        assertNotNull(findMenu(menu, "Tools"));
+
+        // 13. Import/Export > is OMITTED
+        assertNull(findMenu(menu, "Import/Export"));
+
+        // 14. Diagrams >
+        assertNotNull(findMenu(menu, "Diagrams"));
+
+        // 15. Diagnostics >
+        assertNotNull(findMenu(menu, "Diagnostics"));
+
+        // 16. Drop… (disabled)
+        MenuItem drop = findItem(menu, "Drop");
+        assertNotNull(drop);
+        assertTrue(drop.isDisable());
+    }
+
+    @Test
+    public void testSqlServerServerPrincipalsFolderContextMenuImage5() {
+        SchemaTreePane pane = new SchemaTreePane(null);
+        ConnectionProfile profile = new ConnectionProfile();
+        profile.setId("mssql-test-img5");
+        profile.setName("mssql@localhost [3]");
+        profile.setType(ConnectionProfile.DatabaseType.SQLSERVER);
+        profile.setDatabase("CompanyDB");
+
+        DbObject serverPrincipalsFolder = new DbObject("server principals", Kind.SERVER_PRINCIPALS_FOLDER, "CompanyDB", null);
+        ContextMenu menu = pane.buildMenuForTest(serverPrincipalsFolder, profile);
+        assertNotNull(menu);
+
+        // 1. + New >
+        Menu newMenu = findMenu(menu, "New");
+        assertNotNull(newMenu);
+        assertTrue(menuHasItem(newMenu, "Query Console"));
+        assertTrue(menuHasItem(newMenu, "Query File"));
+        assertTrue(menuHasItem(newMenu, "Data Source"));
+        assertTrue(menuHasItem(newMenu, "Driver"));
+
+        // 2. No Modify item
+        assertNull(findItem(menu, "Modify"));
+
+        // 3. Copy/Paste > (disabled)
+        Menu cp = findMenu(menu, "Copy/Paste");
+        assertNotNull(cp);
+        assertTrue(cp.isDisable());
+
+        // 4. Refresh (Ctrl+F5)
+        MenuItem refresh = findItem(menu, "Refresh");
+        assertNotNull(refresh);
+        assertEquals(KeyCode.F5, ((KeyCodeCombination) refresh.getAccelerator()).getCode());
+
+        // 5. Rename… (disabled)
+        MenuItem rename = findItem(menu, "Rename");
+        assertNotNull(rename);
+        assertTrue(rename.isDisable());
+
+        // 6. Open the List (F4, enabled)
+        MenuItem openList = findItem(menu, "Open the List");
+        assertNotNull(openList);
+        assertFalse(openList.isDisable());
+        assertEquals(KeyCode.F4, ((KeyCodeCombination) openList.getAccelerator()).getCode());
+
+        // 7. Quick Documentation (disabled)
+        MenuItem quickDoc = findItem(menu, "Quick Documentation");
+        assertNotNull(quickDoc);
+        assertTrue(quickDoc.isDisable());
+
+        // 8. Compare Schema Structure (disabled)
+        MenuItem compare = findItem(menu, "Compare Schema Structure");
+        assertNotNull(compare);
+        assertTrue(compare.isDisable());
+
+        // 9. Introspection Level >
+        assertNotNull(findMenu(menu, "Introspection Level"));
+
+        // 10. SQL Scripts >
+        assertNotNull(findMenu(menu, "SQL Scripts"));
+
+        // 11. Object Actions > is PRESENT!
+        Menu objActions = findMenu(menu, "Object Actions");
+        assertNotNull(objActions);
+        assertTrue(menuHasItem(objActions, "Show / Hide Schemas"));
+        assertTrue(menuHasItem(objActions, "Forget Saved Passwords"));
+
+        // 12. Tools >
+        assertNotNull(findMenu(menu, "Tools"));
+
+        // 13. Import/Export > is OMITTED!
+        assertNull(findMenu(menu, "Import/Export"));
+
+        // 14. Diagrams >
+        assertNotNull(findMenu(menu, "Diagrams"));
+
+        // 15. Diagnostics >
+        assertNotNull(findMenu(menu, "Diagnostics"));
+
+        // 16. Drop… (disabled)
+        MenuItem drop = findItem(menu, "Drop");
+        assertNotNull(drop);
+        assertTrue(drop.isDisable());
+    }
 }
 
 
