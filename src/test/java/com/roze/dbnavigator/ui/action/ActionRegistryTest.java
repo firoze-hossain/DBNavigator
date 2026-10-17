@@ -1617,8 +1617,8 @@ public class ActionRegistryTest {
         assertNotNull(helpMenu, "menu.help group should be registered");
 
         List<AnAction> items = helpMenu.getChildren();
-        // 9 sections: 2 + 1 + 3 + 1 + 3 + 3 + 6 + 4 + 2 = 25 items + 8 separators = 33 entries
-        assertEquals(33, items.size(), "Help menu should contain 33 entries (25 actions/submenus and 8 separators)");
+        // 8 sections: 2 + 1 + 2 + 5 + 3 + 5 + 5 + 3 = 26 items + 7 separators = 33 entries matching DataGrip screenshot
+        assertEquals(33, items.size(), "Help menu should contain 33 entries (26 actions/submenus and 7 separators)");
 
         int idx = 0;
 
@@ -1635,71 +1635,64 @@ public class ActionRegistryTest {
         // Separator 2
         assertInstanceOf(ActionSeparator.class, items.get(idx++));
 
-        // Section 3: Tip of the Day, My Productivity, Learn IDE Features
+        // Section 3: Tip of the Day & My Productivity
         assertEquals("help.tip.of.the.day", items.get(idx++).getId());
         assertEquals("help.my.productivity", items.get(idx++).getId());
-        assertEquals("help.learn.features", items.get(idx++).getId());
 
         // Separator 3
         assertInstanceOf(ActionSeparator.class, items.get(idx++));
 
-        // Section 4: What's New
+        // Section 4: Learn IDE Features, What's New, Getting Started, YouTube, Shortcuts PDF
+        assertEquals("help.learn.features", items.get(idx++).getId());
         assertEquals("help.whats.new", items.get(idx++).getId());
-
-        // Separator 4
-        assertInstanceOf(ActionSeparator.class, items.get(idx++));
-
-        // Section 5: Getting Started, YouTube, Shortcuts PDF
         assertEquals("help.getting.started", items.get(idx++).getId());
         assertEquals("help.youtube", items.get(idx++).getId());
         assertEquals("help.shortcuts.pdf", items.get(idx++).getId());
 
-        // Separator 5
+        // Separator 4
         assertInstanceOf(ActionSeparator.class, items.get(idx++));
 
-        // Section 6: Support, Bug Report, Feedback
+        // Section 5: Support, Bug Report, Feedback
         assertEquals("help.contact.support", items.get(idx++).getId());
         assertEquals("help.bug.report", items.get(idx++).getId());
         assertEquals("help.submit.feedback", items.get(idx++).getId());
 
-        // Separator 6
+        // Separator 5
         assertInstanceOf(ActionSeparator.class, items.get(idx++));
 
-        // Section 7: Logs, Profiling, Snapshot, Diagnostic Tools
+        // Section 6: Logs, Profiling, Memory Snapshot
         assertEquals("help.show.log.in.files", items.get(idx++).getId());
         assertEquals("help.show.sql.log.in.files", items.get(idx++).getId());
         assertEquals("help.collect.logs", items.get(idx++).getId());
         assertEquals("help.cpu.profiling", items.get(idx++).getId());
         assertEquals("help.capture.memory.snapshot", items.get(idx++).getId());
-        assertEquals("help.diagnostic.tools", items.get(idx++).getId());
 
-        // Separator 7
+        // Separator 6
         assertInstanceOf(ActionSeparator.class, items.get(idx++));
 
-        // Section 8: Memory & VM Options
+        // Section 7: Diagnostic Tools, Memory & VM Options, Delete Leftover Dirs
+        assertEquals("help.diagnostic.tools", items.get(idx++).getId());
         assertEquals("help.change.memory.settings", items.get(idx++).getId());
         assertEquals("help.custom.properties", items.get(idx++).getId());
         assertEquals("help.custom.vm.options", items.get(idx++).getId());
         assertEquals("help.delete.leftover.dirs", items.get(idx++).getId());
 
-        // Separator 8
+        // Separator 7
         assertInstanceOf(ActionSeparator.class, items.get(idx++));
 
-        // Section 9: Updates & About (Register... excluded)
+        // Section 8: Register, Updates & About
+        assertEquals("help.registration.register", items.get(idx++).getId());
         assertEquals("help.updates", items.get(idx++).getId());
         assertEquals("help.about", items.get(idx++).getId());
     }
 
     @Test
-    public void testRegisterOptionExcluded() {
-        assertNull(actionManager.getAction("help.register"), "Register option must be excluded");
+    public void testRegisterOptionIncluded() {
+        assertNotNull(actionManager.getAction("help.registration.register"), "Register option must be registered");
         ActionGroup helpMenu = actionManager.getGroup("menu.help");
-        for (AnAction action : helpMenu.getChildren()) {
-            if (!(action instanceof ActionSeparator)) {
-                assertFalse(action.getText().toLowerCase().contains("register"),
-                        "Help menu should not contain 'Register' option: " + action.getText());
-            }
-        }
+        boolean hasRegister = helpMenu.getChildren().stream()
+                .anyMatch(a -> a.getId() != null && (a.getId().equals("help.registration.register") || a.getId().equals("help.register")));
+        assertTrue(hasRegister, "Help menu should contain 'Register…' option matching DataGrip screenshot");
     }
 
     @Test
@@ -1709,17 +1702,27 @@ public class ActionRegistryTest {
         assertTrue(diagnosticTools.isPopup());
 
         List<AnAction> children = diagnosticTools.getChildren();
-        assertEquals(9, children.size(), "Diagnostic Tools should contain 9 items");
+        // 9 items + 4 separators = 13 entries matching screenshot
+        assertEquals(13, children.size(), "Diagnostic Tools should contain 13 entries (9 items and 4 separators)");
 
-        assertEquals("help.diagnostic.activity.monitor", children.get(0).getId());
-        assertEquals("help.diagnostic.dump.threads", children.get(1).getId());
-        assertEquals("help.diagnostic.debug.log.settings", children.get(2).getId());
-        assertEquals("help.diagnostic.special.files", children.get(3).getId());
-        assertEquals("help.diagnostic.start.cpu.profiling", children.get(4).getId());
-        assertEquals("help.diagnostic.start.async.profiler", children.get(5).getId());
-        assertEquals("help.diagnostic.capture.memory.snapshot", children.get(6).getId());
-        assertEquals("help.diagnostic.profile.indexing", children.get(7).getId());
-        assertEquals("help.diagnostic.open.indexing.diagnostics", children.get(8).getId());
+        int idx = 0;
+        assertEquals("help.diagnostic.activity.monitor", children.get(idx++).getId());
+        assertEquals("help.diagnostic.dump.threads", children.get(idx++).getId());
+        assertInstanceOf(ActionSeparator.class, children.get(idx++));
+
+        assertEquals("help.diagnostic.debug.log.settings", children.get(idx++).getId());
+        assertEquals("help.diagnostic.special.files", children.get(idx++).getId());
+        assertInstanceOf(ActionSeparator.class, children.get(idx++));
+
+        assertEquals("help.diagnostic.start.cpu.profiling", children.get(idx++).getId());
+        assertEquals("help.diagnostic.start.async.profiler", children.get(idx++).getId());
+        assertInstanceOf(ActionSeparator.class, children.get(idx++));
+
+        assertEquals("help.diagnostic.capture.memory.snapshot", children.get(idx++).getId());
+        assertInstanceOf(ActionSeparator.class, children.get(idx++));
+
+        assertEquals("help.diagnostic.profile.indexing", children.get(idx++).getId());
+        assertEquals("help.diagnostic.open.indexing.diagnostics", children.get(idx++).getId());
     }
 
     @Test
