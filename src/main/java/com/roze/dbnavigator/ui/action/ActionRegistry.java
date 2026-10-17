@@ -3948,7 +3948,7 @@ public final class ActionRegistry {
                 .add(activeProjectWindow);
 
         // =========================================================================
-        // 8. HELP ACTIONS (Matching DataGrip - Register... excluded per user instruction)
+        // 8. HELP ACTIONS (Matching DataGrip Screenshot media_1792201470120_4031c5c3)
         // =========================================================================
         // Section 1: Welcome & Find Action
         AnAction welcomeAction = AnAction.builder("help.welcome", "Welcome")
@@ -3968,7 +3968,7 @@ public final class ActionRegistry {
                 .onAction(MainWindow::showOnlineHelp)
                 .build();
 
-        // Section 3: Tip of the Day, My Productivity, Learn IDE Features
+        // Section 3: Tip of the Day & My Productivity
         AnAction tipOfDay = AnAction.builder("help.tip.of.the.day", "Tip of the Day")
                 .onAction(MainWindow::showTipOfTheDayDialog)
                 .build();
@@ -3977,17 +3977,16 @@ public final class ActionRegistry {
                 .onAction(MainWindow::showProductivityGuideDialog)
                 .build();
 
+        // Section 4: Learn IDE Features, What's New, Getting Started, YouTube, Shortcuts PDF
         AnAction learnFeatures = AnAction.builder("help.learn.features", "Learn IDE Features")
                 .icon(FontAwesomeSolid.GRADUATION_CAP, "#a9b7c6", 11)
                 .onAction(MainWindow::showLearnIdeFeaturesDialog)
                 .build();
 
-        // Section 4: What's New
-        AnAction whatsNew = AnAction.builder("help.whats.new", "What's New in DBNavigator")
+        AnAction whatsNew = AnAction.builder("help.whats.new", "What's New in DataGrip")
                 .onAction(MainWindow::showWhatsNewDialog)
                 .build();
 
-        // Section 5: Getting Started, YouTube, Shortcuts PDF
         AnAction gettingStarted = AnAction.builder("help.getting.started", "Getting Started")
                 .onAction(MainWindow::showGettingStartedDialog)
                 .build();
@@ -4000,7 +3999,7 @@ public final class ActionRegistry {
                 .onAction(MainWindow::showKeyboardShortcutsPdf)
                 .build();
 
-        // Section 6: Support, Bug Report, Feedback
+        // Section 5: Support, Bug Report, Feedback
         AnAction contactSupport = AnAction.builder("help.contact.support", "Contact Support…")
                 .onAction(MainWindow::showContactSupportDialog)
                 .build();
@@ -4013,7 +4012,7 @@ public final class ActionRegistry {
                 .onAction(MainWindow::showSubmitFeedbackDialog)
                 .build();
 
-        // Section 7: Logs, Profiling, Memory Snapshot, Diagnostic Tools >
+        // Section 6: Logs, Profiling, Memory Snapshot
         AnAction showLogInFiles = AnAction.builder("help.show.log.in.files", "Show Log in Files")
                 .onAction(MainWindow::showLogInFiles)
                 .build();
@@ -4027,6 +4026,7 @@ public final class ActionRegistry {
                 .build();
 
         AnAction cpuProfiling = AnAction.builder("help.cpu.profiling", "Start CPU Usage Profiling")
+                .dynamicText(ctx -> (ctx != null && ctx.isCpuProfilingActive()) ? "Stop CPU Usage Profiling" : "Start CPU Usage Profiling")
                 .onAction(MainWindow::startCpuProfiling)
                 .build();
 
@@ -4035,31 +4035,40 @@ public final class ActionRegistry {
                 .onAction(MainWindow::captureMemorySnapshot)
                 .build();
 
-        // Submenu: Diagnostic Tools >
+        // Section 7: Submenu: Diagnostic Tools > (13 entries: 9 items + 4 separators matching screenshot)
         ActionGroup diagnosticTools = new ActionGroup("help.diagnostic.tools", "Diagnostic Tools", true);
-        diagnosticTools.addAll(
-                AnAction.builder("help.diagnostic.activity.monitor", "Activity Monitor…")
-                        .onAction(MainWindow::showActivityMonitorDialog).build(),
-                AnAction.builder("help.diagnostic.dump.threads", "Dump Threads")
-                        .onAction(MainWindow::dumpThreads).build(),
-                AnAction.builder("help.diagnostic.debug.log.settings", "Debug Log Settings…")
-                        .onAction(MainWindow::showDebugLogSettingsDialog).build(),
-                AnAction.builder("help.diagnostic.special.files", "Special Files and Folders…")
-                        .onAction(MainWindow::showSpecialFilesFoldersDialog).build(),
-                AnAction.builder("help.diagnostic.start.cpu.profiling", "Start CPU Usage Profiling")
-                        .onAction(MainWindow::startCpuProfiling).build(),
-                AnAction.builder("help.diagnostic.start.async.profiler", "Start Async profiler")
-                        .onAction(MainWindow::startAsyncProfiler).build(),
-                AnAction.builder("help.diagnostic.capture.memory.snapshot", "Capture Memory Snapshot")
-                        .icon(FontAwesomeSolid.CAMERA, "#a9b7c6", 11)
-                        .onAction(MainWindow::captureMemorySnapshot).build(),
-                AnAction.builder("help.diagnostic.profile.indexing", "Profile Indexing")
-                        .onAction(MainWindow::profileIndexing).build(),
-                AnAction.builder("help.diagnostic.open.indexing.diagnostics", "Open Indexing Diagnostics")
-                        .onAction(MainWindow::openIndexingDiagnostics).build()
-        );
+        AnAction activityMonitor = AnAction.builder("help.diagnostic.activity.monitor", "Activity Monitor…")
+                .onAction(MainWindow::showActivityMonitorDialog).build();
+        AnAction dumpThreads = AnAction.builder("help.diagnostic.dump.threads", "Dump Threads")
+                .onAction(MainWindow::dumpThreads).build();
+        AnAction debugLogSettings = AnAction.builder("help.diagnostic.debug.log.settings", "Debug Log Settings…")
+                .onAction(MainWindow::showDebugLogSettingsDialog).build();
+        AnAction specialFiles = AnAction.builder("help.diagnostic.special.files", "Special Files and Folders…")
+                .onAction(MainWindow::showSpecialFilesFoldersDialog).build();
+        AnAction diagCpuProfiling = AnAction.builder("help.diagnostic.start.cpu.profiling", "Start CPU Usage Profiling")
+                .dynamicText(ctx -> (ctx != null && ctx.isCpuProfilingActive()) ? "Stop CPU Usage Profiling" : "Start CPU Usage Profiling")
+                .onAction(MainWindow::startCpuProfiling).build();
+        AnAction diagAsyncProfiler = AnAction.builder("help.diagnostic.start.async.profiler", "Start Async profiler")
+                .onAction(MainWindow::startAsyncProfiler).build();
+        AnAction diagCaptureMemory = AnAction.builder("help.diagnostic.capture.memory.snapshot", "Capture Memory Snapshot")
+                .icon(FontAwesomeSolid.CAMERA, "#a9b7c6", 11)
+                .onAction(MainWindow::captureMemorySnapshot).build();
+        AnAction profileIndexing = AnAction.builder("help.diagnostic.profile.indexing", "Profile Indexing")
+                .onAction(MainWindow::profileIndexing).build();
+        AnAction openIndexingDiagnostics = AnAction.builder("help.diagnostic.open.indexing.diagnostics", "Open Indexing Diagnostics")
+                .onAction(MainWindow::openIndexingDiagnostics).build();
 
-        // Section 8: Memory, Custom Properties & VM Options, Delete Leftover Dirs
+        diagnosticTools.addAll(activityMonitor, dumpThreads)
+                .addSeparator()
+                .addAll(debugLogSettings, specialFiles)
+                .addSeparator()
+                .addAll(diagCpuProfiling, diagAsyncProfiler)
+                .addSeparator()
+                .add(diagCaptureMemory)
+                .addSeparator()
+                .addAll(profileIndexing, openIndexingDiagnostics);
+
+        // Section 7 (cont): Memory, Custom Properties & VM Options, Delete Leftover Dirs
         AnAction changeMemory = AnAction.builder("help.change.memory.settings", "Change Memory Settings")
                 .onAction(MainWindow::showChangeMemorySettingsDialog)
                 .build();
@@ -4076,35 +4085,80 @@ public final class ActionRegistry {
                 .onAction(MainWindow::deleteLeftoverDirectories)
                 .build();
 
-        // Section 9: Updates & About (Register... is excluded per user instruction)
+        // Section 8: Register, Updates & About
+        AnAction registerLicense = AnAction.builder("help.registration.register", "Register…")
+                .onAction(MainWindow::showRegistrationDialog)
+                .build();
+
+        AnAction registerAlias = AnAction.builder("help.register", "Register…")
+                .onAction(MainWindow::showRegistrationDialog)
+                .build();
+
         AnAction checkUpdates = AnAction.builder("help.updates", "Check for Updates…")
                 .icon(FontAwesomeSolid.DOWNLOAD, "#a9b7c6", 11)
                 .onAction(MainWindow::showCheckUpdatesDialog)
                 .build();
 
-        AnAction about = AnAction.builder("help.about", "About DBNavigator Pro")
+        AnAction about = AnAction.builder("help.about", "About")
                 .icon(FontAwesomeSolid.INFO_CIRCLE, "#a9b7c6", 11)
                 .onAction(MainWindow::showAboutDialog)
                 .build();
 
+        // Top-level Help menu (8 sections: 26 items + 7 separators = 33 entries matching DataGrip screenshot exactly)
         ActionGroup helpMenu = new ActionGroup("menu.help", "Help");
         helpMenu.addAll(welcomeAction, findHelpAction)
                 .addSeparator()
                 .add(helpAction)
                 .addSeparator()
-                .addAll(tipOfDay, myProductivity, learnFeatures)
+                .addAll(tipOfDay, myProductivity)
                 .addSeparator()
-                .add(whatsNew)
-                .addSeparator()
-                .addAll(gettingStarted, youtube, shortcutsPdf)
+                .addAll(learnFeatures, whatsNew, gettingStarted, youtube, shortcutsPdf)
                 .addSeparator()
                 .addAll(contactSupport, bugReport, submitFeedback)
                 .addSeparator()
-                .addAll(showLogInFiles, showSqlLogInFiles, collectLogs, cpuProfiling, captureMemory, diagnosticTools)
+                .addAll(showLogInFiles, showSqlLogInFiles, collectLogs, cpuProfiling, captureMemory)
                 .addSeparator()
-                .addAll(changeMemory, customProperties, customVmOptions, deleteLeftoverDirs)
+                .addAll(diagnosticTools, changeMemory, customProperties, customVmOptions, deleteLeftoverDirs)
                 .addSeparator()
-                .addAll(checkUpdates, about);
+                .addAll(registerLicense, checkUpdates, about);
+
+        // Register Help actions into manager
+        manager.registerAction(welcomeAction);
+        manager.registerAction(findHelpAction);
+        manager.registerAction(helpAction);
+        manager.registerAction(tipOfDay);
+        manager.registerAction(myProductivity);
+        manager.registerAction(learnFeatures);
+        manager.registerAction(whatsNew);
+        manager.registerAction(gettingStarted);
+        manager.registerAction(youtube);
+        manager.registerAction(shortcutsPdf);
+        manager.registerAction(contactSupport);
+        manager.registerAction(bugReport);
+        manager.registerAction(submitFeedback);
+        manager.registerAction(showLogInFiles);
+        manager.registerAction(showSqlLogInFiles);
+        manager.registerAction(collectLogs);
+        manager.registerAction(cpuProfiling);
+        manager.registerAction(captureMemory);
+        manager.registerGroup(diagnosticTools);
+        manager.registerAction(activityMonitor);
+        manager.registerAction(dumpThreads);
+        manager.registerAction(debugLogSettings);
+        manager.registerAction(specialFiles);
+        manager.registerAction(diagCpuProfiling);
+        manager.registerAction(diagAsyncProfiler);
+        manager.registerAction(diagCaptureMemory);
+        manager.registerAction(profileIndexing);
+        manager.registerAction(openIndexingDiagnostics);
+        manager.registerAction(changeMemory);
+        manager.registerAction(customProperties);
+        manager.registerAction(customVmOptions);
+        manager.registerAction(deleteLeftoverDirs);
+        manager.registerAction(registerLicense);
+        manager.registerAction(registerAlias);
+        manager.registerAction(checkUpdates);
+        manager.registerAction(about);
 
         // Additional Help actions and sub-groups matching DataGrip
         AnAction configureNewUi = AnAction.builder("help.configure.new.ui", "Configure the New UI")
@@ -4117,17 +4171,12 @@ public final class ActionRegistry {
                 .build();
         manager.registerAction(runMemoryTester);
 
-        AnAction registerLicense = AnAction.builder("help.registration.register", "Register…")
-                .onAction(MainWindow::showRegistrationDialog)
-                .build();
-        manager.registerAction(registerLicense);
-
         ActionGroup productivityGroup = new ActionGroup("help.productivity.features", "ProductivityFeatures", true);
         productivityGroup.addAll(tipOfDay).addSeparator().add(myProductivity);
         manager.registerGroup(productivityGroup);
 
         ActionGroup asyncGroup = new ActionGroup("help.diagnostic.async.group", "AsyncGroup", false);
-        asyncGroup.addSeparator().addAll(cpuProfiling, AnAction.builder("help.diagnostic.start.async.profiler", "Start Async Profiler").onAction(MainWindow::startAsyncProfiler).build());
+        asyncGroup.addSeparator().addAll(cpuProfiling, diagAsyncProfiler);
         manager.registerGroup(asyncGroup);
 
         ActionGroup startProfileGroup = new ActionGroup("help.diagnostic.start.profile.group", "StartProfileGroup", false);
@@ -4135,15 +4184,15 @@ public final class ActionRegistry {
         manager.registerGroup(startProfileGroup);
 
         ActionGroup asyncDiagGroup = new ActionGroup("help.diagnostic.async.diagnostic.group", "AsyncDiagnosticGroup", false);
-        asyncDiagGroup.add(AnAction.builder("help.diagnostic.profile.indexing", "Profile Indexing").onAction(MainWindow::profileIndexing).build());
+        asyncDiagGroup.add(profileIndexing);
         manager.registerGroup(asyncDiagGroup);
 
         ActionGroup diagGroup = new ActionGroup("help.diagnostic.diagnostic.group", "DiagnosticGroup", false);
-        diagGroup.addSeparator().add(captureMemory).addSeparator().add(asyncDiagGroup);
+        diagGroup.addSeparator().add(diagCaptureMemory).addSeparator().add(asyncDiagGroup);
         manager.registerGroup(diagGroup);
 
         ActionGroup indexingDiagGroup = new ActionGroup("help.diagnostic.indexing.diagnostic.group", "IndexingDiagnosticGroup", false);
-        indexingDiagGroup.add(AnAction.builder("help.diagnostic.open.indexing.diagnostics", "Open Indexing Diagnostics").onAction(MainWindow::openIndexingDiagnostics).build());
+        indexingDiagGroup.add(openIndexingDiagnostics);
         manager.registerGroup(indexingDiagGroup);
 
         ActionGroup registrationGroup = new ActionGroup("help.registration.actions", "Registration Actions", true);
