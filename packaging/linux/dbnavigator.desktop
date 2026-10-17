@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=DBNavigator
+GenericName=Database Administration & SQL Tool
+Comment=Modern Database Administration, SQL Querying, and Schema Exploration Tool
+Exec=/opt/dbnavigator/bin/DBNavigator %U
+Icon=dbnavigator
+Terminal=false
+Type=Application
+Categories=Development;Database;IDE;
+StartupWMClass=com.roze.dbnavigator.Main
+MimeType=application/sql;text/x-sql;
+Keywords=database;sql;postgres;mysql;oracle;sqlite;stratos;mongodb;
