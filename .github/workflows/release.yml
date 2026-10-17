@@ -124,6 +124,7 @@ jobs:
 
           # 2. Compile Inno Setup .exe wizard
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DMyAppVersion="${{ steps.version.outputs.version }}" packaging\windows\setup.iss
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup compilation failed with exit code $LASTEXITCODE" }
           if (Test-Path "packaging\windows\dist\*.exe") {
             Move-Item -Path "packaging\windows\dist\*.exe" -Destination "dist\" -Force
           }
