@@ -1,0 +1,23 @@
+#!/bin/sh
+set -e
+
+# Link binary to /usr/local/bin if present
+if [ -x "/opt/dbnavigator/bin/DBNavigator" ]; then
+    ln -sf /opt/dbnavigator/bin/DBNavigator /usr/local/bin/dbnavigator || true
+fi
+
+# Install desktop icon
+if [ -f "/opt/dbnavigator/lib/packaging/dbnavigator.png" ]; then
+    mkdir -p /usr/share/icons/hicolor/512x512/apps/
+    cp -f /opt/dbnavigator/lib/packaging/dbnavigator.png /usr/share/icons/hicolor/512x512/apps/dbnavigator.png || true
+fi
+
+# Update desktop icon caches
+if which update-desktop-database >/dev/null 2>&1; then
+    update-desktop-database -q /usr/share/applications || true
+fi
+if which gtk-update-icon-cache >/dev/null 2>&1; then
+    gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor || true
+fi
+
+exit 0

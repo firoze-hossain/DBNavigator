@@ -1,0 +1,199 @@
+name: Release
+
+# ==============================================================================
+# Automated Multi-Platform Release Workflow for DBNavigator
+# 
+# Triggered ONLY when a version tag like 'v2.0.0' is pushed to the repository.
+# Standard code pushes to master/branches do NOT trigger this workflow.
+#
+# Builds native desktop installers across 3 parallel runner environments:
+#   - Linux:   Ubuntu/Debian .deb package (with desktop menu, icons, file associations)
+#   - Windows: Inno Setup .exe installer wizard (with desktop/start menu shortcuts)
+#              plus WiX .msi package
+#   - macOS:   Apple .dmg disk image (with .app bundle and ICNS icon)
+#
+# Collects all artifacts, generates SHA-256 checksums, and publishes a GitHub Release.
+# ==============================================================================
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build (${{ matrix.platform }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            platform: linux
+          - os: windows-latest
+            platform: windows
+          - os: macos-latest
+            platform: macos
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Install Windows Tools (WiX & Inno Setup)
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: |
+          choco install wixtoolset --version=3.14.1 -y
+          choco install innosetup -y
+          echo "C:\Program Files (x86)\Inno Setup 6" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Derive version from Git tag
+        shell: bash
+        id: version
+        run: |
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=2.0.0" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build DBNavigator JAR and Dependencies with Maven
+        run: mvn -B clean package -DskipTests
+
+      - name: Prepare common packaging input
+        shell: bash
+        run: |
+          mkdir -p packaging/input dist
+          cp target/DBNavigatorPro-*.jar packaging/input/dbnavigator.jar
+          cp target/dependency/*.jar packaging/input/
+
+      # ------------------------------------------------------------------------
+      # Linux: Ubuntu/Debian .deb package
+      # ------------------------------------------------------------------------
+      - name: Build Linux .deb Package
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fakeroot
+          jpackage \
+            --type deb \
+            --input packaging/input \
+            --name dbnavigator \
+            --main-jar dbnavigator.jar \
+            --main-class com.roze.dbnavigator.Launcher \
+            --app-version "${{ steps.version.outputs.version }}" \
+            --vendor "Roze Ecosystem" \
+            --description "DBNavigator - Modern Database Administration & SQL Query Tool" \
+            --linux-package-name dbnavigator \
+            --linux-deb-maintainer "maintainer@rozehub.dev" \
+            --linux-shortcut \
+            --linux-menu-group "Development;Database;" \
+            --icon packaging/linux/dbnavigator.png \
+            --resource-dir packaging/linux \
+            --dest dist
+
+      # ------------------------------------------------------------------------
+      # Windows: Inno Setup .exe Setup Wizard & WiX .msi
+      # ------------------------------------------------------------------------
+      - name: Build Windows .exe Setup Wizard and .msi
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: |
+          # 1. Create Windows runtime app image
+          jpackage `
+            --type app-image `
+            --input packaging/input `
+            --name DBNavigator `
+            --main-jar dbnavigator.jar `
+            --main-class com.roze.dbnavigator.Launcher `
+            --app-version "${{ steps.version.outputs.version }}" `
+            --vendor "Roze Ecosystem" `
+            --icon packaging\windows\DBNavigator.ico `
+            --dest dist\dbnavigator-win-pkg
+
+          # Move contents into a clean root structure for Inno Setup
+          Move-Item -Path "dist\dbnavigator-win-pkg\DBNavigator\*" -Destination "dist\dbnavigator-win-pkg\"
+          Remove-Item -Path "dist\dbnavigator-win-pkg\DBNavigator" -Recurse -Force
+
+          # 2. Compile Inno Setup .exe wizard
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DMyAppVersion="${{ steps.version.outputs.version }}" packaging\windows\setup.iss
+
+          # 3. Build Windows .msi with jpackage
+          jpackage `
+            --type msi `
+            --input packaging/input `
+            --name DBNavigator `
+            --main-jar dbnavigator.jar `
+            --main-class com.roze.dbnavigator.Launcher `
+            --app-version "${{ steps.version.outputs.version }}" `
+            --vendor "Roze Ecosystem" `
+            --description "DBNavigator - Modern Database Administration & SQL Query Tool" `
+            --win-menu `
+            --win-shortcut `
+            --icon packaging\windows\DBNavigator.ico `
+            --dest dist
+
+          # Clean intermediate app-image so only final installers remain
+          Remove-Item -Path "dist\dbnavigator-win-pkg" -Recurse -Force
+
+      # ------------------------------------------------------------------------
+      # macOS: .dmg disk image
+      # ------------------------------------------------------------------------
+      - name: Build macOS .dmg Disk Image
+        if: matrix.platform == 'macos'
+        run: |
+          jpackage \
+            --type dmg \
+            --input packaging/input \
+            --name DBNavigator \
+            --main-jar dbnavigator.jar \
+            --main-class com.roze.dbnavigator.Launcher \
+            --app-version "${{ steps.version.outputs.version }}" \
+            --vendor "Roze Ecosystem" \
+            --description "DBNavigator - Modern Database Administration & SQL Query Tool" \
+            --mac-package-name DBNavigator \
+            --icon packaging/macos/DBNavigator.icns \
+            --dest dist
+
+      - name: Upload Installer Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dbnavigator-${{ matrix.platform }}
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub Release
+    needs: build
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all installer artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Generate SHA-256 Checksums
+        run: |
+          cd dist
+          sha256sum *.* > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: List Release Files
+        run: ls -la dist
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
