@@ -2140,6 +2140,935 @@ public class SchemaTreePane extends VBox {
         return menu;
     }
 
+    Menu buildEngineNewMenu(TreeItem<DbObject> item, DbObject obj, ConnectionProfile profile) {
+        Menu newMenu = new Menu("New");
+
+        String targetCatalog = resolveCatalogFor(item, obj, profile);
+        String schema = resolveSchemaFor(item, obj, profile);
+
+        MenuItem queryConsole = new MenuItem("Query Console", Icons.of(FontAwesomeSolid.TERMINAL, "#4a88c7", 12));
+        queryConsole.setAccelerator(new KeyCodeCombination(KeyCode.Q, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN));
+        queryConsole.setOnAction(e -> {
+            if (mainWindow != null) mainWindow.openQueryTab(profile, targetCatalog, null);
+        });
+
+        MenuItem queryFile = new MenuItem("Query File…", Icons.of(FontAwesomeSolid.FILE_CODE, "#868a91", 12));
+        queryFile.setAccelerator(new KeyCodeCombination(KeyCode.Q, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN));
+        queryFile.setOnAction(e -> promptAndOpenQueryFile(profile));
+
+        newMenu.getItems().addAll(queryConsole, queryFile);
+
+        DbObject.Kind kind = obj != null ? obj.getKind() : null;
+        boolean isServerObjectsFolder = (kind == Kind.SERVER_OBJECTS
+                || kind == Kind.TABLESPACES_FOLDER
+                || kind == Kind.USERS_FOLDER
+                || kind == Kind.COLLATIONS_FOLDER);
+        boolean isVirtualViewsFolder = (kind == Kind.VIRTUAL_VIEWS_FOLDER);
+
+        if (isServerObjectsFolder) {
+            appendCommonNewDataSourceItems(newMenu, profile, false);
+            return newMenu;
+        }
+
+        if (kind == Kind.VIRTUAL_VIEW || (isVirtualViewsFolder && (profile.getType() == ConnectionProfile.DatabaseType.MYSQL || profile.getType() == ConnectionProfile.DatabaseType.MARIADB))) {
+            MenuItem vColItem = new MenuItem("Virtual Column", Icons.of(FontAwesomeSolid.COLUMNS, "#c77dbb", 11));
+            vColItem.setOnAction(e -> {
+                if (mainWindow != null) mainWindow.setStatus("Virtual Column on " + (obj != null ? obj.getName() : ""));
+            });
+            MenuItem vFkItem = new MenuItem("Virtual Foreign Key", Icons.of(FontAwesomeSolid.KEY, "#c77dbb", 11));
+            vFkItem.setOnAction(e -> {
+                if (mainWindow != null) mainWindow.setStatus("Virtual Foreign Key on " + (obj != null ? obj.getName() : ""));
+            });
+            MenuItem vvItem = new MenuItem("Virtual View", Icons.of(FontAwesomeSolid.TABLE, "#c77dbb", 12));
+            vvItem.setOnAction(e -> showVirtualViewInfo(profile, targetCatalog));
+
+            newMenu.getItems().addAll(new SeparatorMenuItem(), vColItem, vFkItem, vvItem);
+            if (profile.getType() == ConnectionProfile.DatabaseType.MYSQL || profile.getType() == ConnectionProfile.DatabaseType.MARIADB) {
+                MenuItem schemaItem = new MenuItem("Schema", Icons.of(FontAwesomeSolid.PROJECT_DIAGRAM, "#3592c4", 12));
+                schemaItem.setOnAction(e -> CreateDatabaseDialog.show(mainWindow, profile));
+                MenuItem userItem = new MenuItem("User", Icons.of(FontAwesomeSolid.USER, "#868a91", 11));
+                userItem.setOnAction(e -> CreateUserDialog.show(mainWindow, profile));
+                MenuItem roleItem = new MenuItem("Role", Icons.of(FontAwesomeSolid.USER, "#868a91", 11));
+                roleItem.setOnAction(e -> CreateRoleDialog.show(mainWindow, profile));
+                newMenu.getItems().addAll(new SeparatorMenuItem(), schemaItem, userItem, roleItem);
+            } else {
+                MenuItem userItem = new MenuItem("User", Icons.of(FontAwesomeSolid.USER, "#868a91", 11));
+                userItem.setOnAction(e -> CreateUserDialog.show(mainWindow, profile));
+                newMenu.getItems().addAll(new SeparatorMenuItem(), userItem);
+            }
+            appendCommonNewDataSourceItems(newMenu, profile, false);
+            return newMenu;
+        }
+
+        if (profile.getType() == ConnectionProfile.DatabaseType.ORACLE && isVirtualViewsFolder) {
+            MenuItem vvItem = new MenuItem("Virtual View", Icons.of(FontAwesomeSolid.TABLE, "#c77dbb", 12));
+            vvItem.setOnAction(e -> showVirtualViewInfo(profile, targetCatalog));
+            MenuItem userItem = new MenuItem("User", Icons.of(FontAwesomeSolid.USER, "#868a91", 11));
+            userItem.setOnAction(e -> CreateUserDialog.show(mainWindow, profile));
+            newMenu.getItems().addAll(new SeparatorMenuItem(), vvItem, userItem);
+            appendCommonNewDataSourceItems(newMenu, profile, false);
+            return newMenu;
+        }
+
+        if (profile.getType() == ConnectionProfile.DatabaseType.ORACLE
+                && (kind == Kind.TABLESPACE || kind == Kind.DATA_FILE || kind == Kind.USER)) {
+            MenuItem userItem = new MenuItem("User", Icons.of(FontAwesomeSolid.USER, "#868a91", 11));
+            userItem.setOnAction(e -> CreateUserDialog.show(mainWindow, profile));
+            MenuItem vvItem = new MenuItem("Virtual View", Icons.of(FontAwesomeSolid.TABLE, "#c77dbb", 12));
+            vvItem.setOnAction(e -> showVirtualViewInfo(profile, targetCatalog));
+            newMenu.getItems().addAll(new SeparatorMenuItem(), userItem, new SeparatorMenuItem(), vvItem);
+            appendCommonNewDataSourceItems(newMenu, profile, false);
+            return newMenu;
+        }
+
+        boolean isTable = (kind == Kind.TABLE || kind == Kind.VIEW || kind == Kind.PARTITION);
+        boolean isTableSubFolder = (kind == Kind.COLUMNS_FOLDER
+                || kind == Kind.KEYS_FOLDER
+                || kind == Kind.FOREIGN_KEYS_FOLDER
+                || kind == Kind.INDEXES_FOLDER
+                || kind == Kind.PARTITIONS_FOLDER);
+        boolean isTableSubItem = (kind == Kind.COLUMN
+                || kind == Kind.KEY
+                || kind == Kind.FOREIGN_KEY
+                || kind == Kind.INDEX);
+        boolean isTableOrTableSubFolder = isTable || isTableSubFolder;
+        boolean isTableOrTableSub = isTable || isTableSubFolder || isTableSubItem;
+        ConnectionProfile.DatabaseType type = profile.getType();
+
+        switch (type) {
+            case MYSQL, MARIADB -> {
+                MenuItem tableItem = new MenuItem("Table", Icons.of(FontAwesomeSolid.TABLE, "#4a88c7", 12));
+                tableItem.setOnAction(e -> {
+                    if (mainWindow != null) mainWindow.openQueryTab(profile, targetCatalog,
+                            "CREATE TABLE `" + (targetCatalog != null ? targetCatalog : "mydb") + "`.`new_table` (\n    `id` INT PRIMARY KEY AUTO_INCREMENT\n);\n");
+                });
+                MenuItem viewItem = new MenuItem("View", Icons.of(FontAwesomeSolid.EYE, "#57965c", 12));
+                viewItem.setOnAction(e -> {
+                    if (mainWindow != null) mainWindow.openQueryTab(profile, targetCatalog,
+                            "CREATE VIEW `" + (targetCatalog != null ? targetCatalog : "mydb") + "`.`new_view` AS\nSELECT 1;\n");
+                });
+                MenuItem schemaItem = new MenuItem("Schema", Icons.of(FontAwesomeSolid.PROJECT_DIAGRAM, "#3592c4", 12));
+                schemaItem.setOnAction(e -> CreateDatabaseDialog.show(mainWindow, profile));
+                MenuItem userItem = new MenuItem("User", Icons.of(FontAwesomeSolid.USER, "#868a91", 11));
+                userItem.setOnAction(e -> CreateUserDialog.show(mainWindow, profile));
+                MenuItem roleItem = new MenuItem("Role", Icons.of(FontAwesomeSolid.USER, "#868a91", 11));
+                roleItem.setOnAction(e -> CreateRoleDialog.show(mainWindow, profile));
+
+                if (kind == Kind.COLLATION) {
+                    MenuItem vvItem = new MenuItem("Virtual View", Icons.of(FontAwesomeSolid.TABLE, "#c77dbb", 12));
+                    vvItem.setOnAction(e -> showVirtualViewInfo(profile, targetCatalog));
+                    newMenu.getItems().addAll(new SeparatorMenuItem(), schemaItem, userItem, roleItem);
+                    newMenu.getItems().addAll(new SeparatorMenuItem(), vvItem);
+                    appendCommonNewDataSourceItems(newMenu, profile, false);
+                    return newMenu;
+                }
+
+                if (kind == Kind.USER) {
+                    MenuItem vvItem = new MenuItem("Virtual View", Icons.of(FontAwesomeSolid.TABLE, "#c77dbb", 12));
+                    vvItem.setOnAction(e -> showVirtualViewInfo(profile, targetCatalog));
+                    newMenu.getItems().addAll(new SeparatorMenuItem(), userItem, roleItem, schemaItem);
+                    newMenu.getItems().addAll(new SeparatorMenuItem(), vvItem);
+                    appendCommonNewDataSourceItems(newMenu, profile, false);
+                    return newMenu;
+                }
+
+
+                if (isTableOrTableSub) {
+                    DbObject parentTable = resolveParentTableFor(item, obj);
+                    String tblName = parentTable != null ? parentTable.getName()
+                            : (obj.getTableName() != null ? obj.getTableName() : obj.getName());
+                    MenuItem colItem = new MenuItem("Column", Icons.of(FontAwesomeSolid.COLUMNS, "#868a91", 11));
+                    colItem.setOnAction(e -> {
+                        if (mainWindow != null) mainWindow.openQueryTab(profile, targetCatalog,
+                                "ALTER TABLE `" + (targetCatalog != null ? targetCatalog : "mydb") + "`.`" + tblName + "` ADD COLUMN `new_column` VARCHAR(255);\n");
+                    });
+                    MenuItem uqItem = new MenuItem("Unique Key", Icons.of(FontAwesomeSolid.KEY, "#e0a44c", 11));
+                    uqItem.setOnAction(e -> {
+                        if (mainWindow != null) mainWindow.openQueryTab(profile, targetCatalog,
+                                "ALTER TABLE `" + (targetCatalog != null ? targetCatalog : "mydb") + "`.`" + tblName + "` ADD CONSTRAINT `uq_" + tblName + "_new` UNIQUE (`column_name`);\n");
+                    });
+                    MenuItem fkItem = new MenuItem("Foreign Key", Icons.of(FontAwesomeSolid.KEY, "#4a88c7", 11));
+                    fkItem.setOnAction(e -> {
+                        if (mainWindow != null) mainWindow.openQueryTab(profile, targetCatalog,
+                                "ALTER TABLE `" + (targetCatalog != null ? targetCatalog : "mydb") + "`.`" + tblName + "` ADD CONSTRAINT `fk_" + tblName + "_ref` FOREIGN KEY (`column_name`) REFERENCES `target_table` (`target_col`);\n");
+                    });
+                    MenuItem idxItem = new MenuItem("Index", Icons.of(FontAwesomeSolid.BOLT, "#e0a44c", 11));
+                    idxItem.setOnAction(e -> {
+                        if (mainWindow != null) mainWindow.openQueryTab(profile, targetCatalog,
+                                "CREATE INDEX `idx_" + tblName + "_col` ON `" + (targetCatalog != null ? targetCatalog : "mydb") + "`.`" + tblName + "` (`column_name`);\n");
+                    });
+                    MenuItem chkItem = new MenuItem("Check", Icons.of(FontAwesomeSolid.CHECK, "#868a91", 11));
+                    chkItem.setOnAction(e -> {
+                        if (mainWindow != null) mainWindow.openQueryTab(profile, targetCatalog,
+                                "ALTER TABLE `" + (targetCatalog != null ? targetCatalog : "mydb") + "`.`" + tblName + "` ADD CONSTRAINT `chk_" + tblName + "_new` CHECK (1 = 1);\n");
+                    });
+                    MenuItem triggerItem = new MenuItem("Trigger", Icons.of(FontAwesomeSolid.BOLT, "#868a91", 11));
+                    triggerItem.setOnAction(e -> {
+                        if (mainWindow != null) mainWindow.openQueryTab(profile, targetCatalog,
+                                "CREATE TRIGGER `trg_" + tblName + "_new` BEFORE INSERT ON `" + (targetCatalog != null ? targetCatalog : "mydb") + "`.`" + tblName + "`\nFOR EACH ROW\nBEGIN\nEND;\n");
+                    });
+
+                    MenuItem vColItem = new MenuItem("Virtual Column", Icons.of(FontAwesomeSolid.COLUMNS, "#c77dbb", 11));
+                    vColItem.setOnAction(e -> {
+                        if (mainWindow != null) mainWindow.setStatus("Virtual Column on " + tblName);
+                    });
+                    MenuItem vFkItem = new MenuItem("Virtual Foreign Key", Icons.of(FontAwesomeSolid.KEY, "#c77dbb", 11));
+                    vFkItem.setOnAction(e -> {
+                        if (mainWindow != null) mainWindow.setStatus("Virtual Foreign Key on " + tblName);
+                    });
+                    MenuItem vvItem = new MenuItem("Virtual View", Icons.of(FontAwesomeSolid.TABLE, "#c77dbb", 12));
+                    vvItem.setOnAction(e -> showVirtualViewInfo(profile, targetCatalog));
+
+                    newMenu.getItems().add(new SeparatorMenuItem());
+                    if (kind == Kind.KEYS_FOLDER || kind == Kind.KEY) {
+                        newMenu.getItems().addAll(uqItem, colItem, fkItem, idxItem, chkItem, triggerItem);
+                    } else if (kind == Kind.FOREIGN_KEYS_FOLDER || kind == Kind.FOREIGN_KEY) {
+                        newMenu.getItems().addAll(fkItem, colItem, uqItem, idxItem, chkItem, triggerItem);
+                    } else if (kind == Kind.INDEXES_FOLDER || kind == Kind.INDEX) {
+                        newMenu.getItems().addAll(idxItem, colItem, uqItem, fkItem, chkItem, triggerItem);
+                    } else {
+                        newMenu.getItems().addAll(colItem, uqItem, fkItem, idxItem, chkItem, triggerItem);
+                    }
+                    newMenu.getItems().addAll(tableItem, viewItem, schemaItem, userItem, roleItem);
+                    newMenu.getItems().addAll(new SeparatorMenuItem(), vColItem, vFkItem, vvItem);
+                    appendCommonNewDataSourceItems(newMenu, profile, false);
+                    return newMenu;
+                } else {
+                    newMenu.getItems().addAll(new SeparatorMenuItem(), tableItem, viewItem, schemaItem, userItem, roleItem);
+                }
+            }
+            case MONGODB -> {
+                if (kind == Kind.COLLECTION
+                        || kind == Kind.FIELDS_FOLDER
+                        || kind == Kind.INDEXES_FOLDER
+                        || kind == Kind.FIELD
+                        || kind == Kind.INDEX) {
+                    MenuItem vCol = new MenuItem("Virtual Column", Icons.of(FontAwesomeSolid.COLUMNS, "#c77dbb", 11));
+                    vCol.setOnAction(e -> {
+                        if (mainWindow != null) mainWindow.setStatus("Virtual Column on " + (obj != null ? obj.getName() : ""));
+                    });
+                    MenuItem vFk = new MenuItem("Virtual Foreign Key", Icons.of(FontAwesomeSolid.KEY, "#c77dbb", 11));
+                    vFk.setOnAction(e -> {
+                        if (mainWindow != null) mainWindow.setStatus("Virtual Foreign Key on " + (obj != null ? obj.getName() : ""));
+                    });
+                    MenuItem vv = new MenuItem("Virtual View", Icons.of(FontAwesomeSolid.TABLE, "#c77dbb", 12));
+                    vv.setOnAction(e -> showVirtualViewInfo(profile, targetCatalog));
+                    newMenu.getItems().addAll(new SeparatorMenuItem(), vCol, vFk, vv);
+                    appendCommonNewDataSourceItems(newMenu, profile, false);
+                    return newMenu;
+                }
+            }
+            case SQLITE -> {
+                MenuItem tableItem = new MenuItem("Table", Icons.of(FontAwesomeSolid.TABLE, "#4a88c7", 12));
+                tableItem.setOnAction(e -> {
+                    if (mainWindow != null) mainWindow.openQueryTab(profile, null,
+                            "CREATE TABLE new_table (\n    id INTEGER PRIMARY KEY AUTOINCREMENT\n);\n");
+                });
+                MenuItem viewItem = new MenuItem("View", Icons.of(FontAwesomeSolid.EYE, "#57965c", 12));
+                viewItem.setOnAction(e -> {
+                    if (mainWindow != null) mainWindow.openQueryTab(profile, null,
+                            "CREATE VIEW new_view AS\nSELECT 1;\n");
+                });
+                if (isTable) {
+                    DbObject parentTable = resolveParentTableFor(item, obj);
+                    String tblName = parentTable != null ? parentTable.getName()
+                            : (obj.getTableName() != null ? obj.getTableName() : obj.getName());
+                    MenuItem colItem = new MenuItem("Column", Icons.of(FontAwesomeSolid.COLUMNS, "#868a91", 11));
+                    colItem.setOnAction(e -> {
+                        if (mainWindow != null) mainWindow.openQueryTab(profile, null,
+                                "ALTER TABLE \"" + tblName + "\" ADD COLUMN new_column TEXT;\n");
+                    });
+                    MenuItem idxItem = new MenuItem("Index", Icons.of(FontAwesomeSolid.BOLT, "#e0a44c", 11));
+                    idxItem.setOnAction(e -> {
+                        if (mainWindow != null) mainWindow.openQueryTab(profile, null,
+                                "CREATE INDEX idx_" + tblName + "_col ON \"" + tblName + "\" (column_name);\n");
+                    });
+                    newMenu.getItems().addAll(new SeparatorMenuItem(), colItem, idxItem);
+                }
+                newMenu.getItems().addAll(new SeparatorMenuItem(), tableItem, viewItem);
+            }
+            case SQLSERVER -> {
+                MenuItem tableItem = new MenuItem("Table", Icons.of(FontAwesomeSolid.TABLE, "#4a88c7", 12));
+                tableItem.setOnAction(e -> {
+                    if (mainWindow != null) mainWindow.openQueryTab(profile, targetCatalog,
+                            "CREATE TABLE [" + (schema != null ? schema : "dbo") + "].[new_table] (\n    [id] INT IDENTITY(1,1) PRIMARY KEY\n);\n");
+                });
+                MenuItem viewItem = new MenuItem("View", Icons.of(FontAwesomeSolid.EYE, "#57965c", 12));
+                viewItem.setOnAction(e -> {
+                    if (mainWindow != null) mainWindow.openQueryTab(profile, targetCatalog,
+                            "CREATE VIEW [" + (schema != null ? schema : "dbo") + "].[new_view] AS\nSELECT 1 AS col;\n");
+                });
+                MenuItem seqItem = new MenuItem("Sequence", Icons.of(FontAwesomeSolid.SORT_NUMERIC_DOWN, "#e0a44c", 12));
+                seqItem.setOnAction(e -> {
+                    if (mainWindow != null) mainWindow.openQueryTab(profile, targetCatalog,
+                            "CREATE SEQUENCE [" + (schema != null ? schema : "dbo") + "].[new_seq] AS INT START WITH 1 INCREMENT BY 1;\n");
+                });
+                MenuItem schemaItem = new MenuItem("Schema", Icons.of(FontAwesomeSolid.PROJECT_DIAGRAM, "#3592c4", 12));
+                schemaItem.setOnAction(e -> promptCreateSqlServerSchema(profile, targetCatalog));
+                MenuItem dbPrincipal = new MenuItem("Database Principal", Icons.of(FontAwesomeSolid.USER, "#3592c4", 11));
+                dbPrincipal.setOnAction(e -> promptCreateSqlServerDbPrincipal(profile, targetCatalog));
+                MenuItem dbItem = new MenuItem("Database", Icons.of(FontAwesomeSolid.DATABASE, "#3592c4", 12));
+                dbItem.setOnAction(e -> CreateDatabaseDialog.show(mainWindow, profile));
+                MenuItem serverPrincipal = new MenuItem("Server Principal", Icons.of(FontAwesomeSolid.USER, "#868a91", 11));
+                serverPrincipal.setOnAction(e -> CreateUserDialog.show(mainWindow, profile));
+
+                if (isTable) {
+                    DbObject parentTable = resolveParentTableFor(item, obj);
+                    String tblName = parentTable != null ? parentTable.getName()
+                            : (obj.getTableName() != null ? obj.getTableName() : obj.getName());
+                    MenuItem colItem = new MenuItem("Column", Icons.of(FontAwesomeSolid.COLUMNS, "#868a91", 11));
+                    colItem.setOnAction(e -> {
+                        if (mainWindow != null) mainWindow.openQueryTab(profile, targetCatalog,
+                                "ALTER TABLE [" + (schema != null ? schema : "dbo") + "].[" + tblName + "] ADD [new_column] NVARCHAR(255);\n");
+                    });
+                    MenuItem uqItem = new MenuItem("Unique Key", Icons.of(FontAwesomeSolid.KEY, "#e0a44c", 11));
+                    uqItem.setOnAction(e -> {
+                        if (mainWindow != null) mainWindow.openQueryTab(profile, targetCatalog,
+                                "ALTER TABLE [" + (schema != null ? schema : "dbo") + "].[" + tblName + "] ADD CONSTRAINT [uq_" + tblName + "_new] UNIQUE ([column_name]);\n");
+                    });
+                    MenuItem fkItem = new MenuItem("Foreign Key", Icons.of(FontAwesomeSolid.KEY, "#4a88c7", 11));
+                    fkItem.setOnAction(e -> {
+                        if (mainWindow != null) mainWindow.openQueryTab(profile, targetCatalog,
+                                "ALTER TABLE [" + (schema != null ? schema : "dbo") + "].[" + tblName + "] ADD CONSTRAINT [fk_" + tblName + "_ref] FOREIGN KEY ([column_name]) REFERENCES [target_table] ([target_col]);\n");
+                    });
+                    MenuItem idxItem = new MenuItem("Index", Icons.of(FontAwesomeSolid.BOLT, "#e0a44c", 11));
+                    idxItem.setOnAction(e -> {
+                        if (mainWindow != null) mainWindow.openQueryTab(profile, targetCatalog,
+                                "CREATE INDEX [idx_" + tblName + "_col] ON [" + (schema != null ? schema : "dbo") + "].[" + tblName + "] ([column_name]);\n");
+                    });
+                    newMenu.getItems().addAll(new SeparatorMenuItem(), colItem, uqItem, fkItem, idxItem);
+                }
+                newMenu.getItems().addAll(new SeparatorMenuItem(), tableItem, viewItem, seqItem, schemaItem, dbPrincipal, dbItem, serverPrincipal);
+            }
+            case ORACLE -> {
+                MenuItem tableItem = new MenuItem("Table", Icons.of(FontAwesomeSolid.TABLE, "#4a88c7", 12));
+                tableItem.setOnAction(e -> {
+                    if (mainWindow != null) mainWindow.openQueryTab(profile, targetCatalog,
+                            "CREATE TABLE \"" + (schema != null ? schema : "HELLO") + "\".\"NEW_TABLE\" (\n    \"ID\" NUMBER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY\n);\n");
+                });
+                MenuItem matViewItem = new MenuItem("Materialized View", Icons.of(FontAwesomeSolid.DATABASE, "#57965c", 12));
+                matViewItem.setOnAction(e -> {
+                    if (mainWindow != null) mainWindow.openQueryTab(profile, targetCatalog,
+                            "CREATE MATERIALIZED VIEW \"" + (schema != null ? schema : "HELLO") + "\".\"NEW_MV\" AS\nSELECT 1 AS ID FROM DUAL;\n");
+                });
+                MenuItem viewItem = new MenuItem("View", Icons.of(FontAwesomeSolid.EYE, "#57965c", 12));
+                viewItem.setOnAction(e -> {
+                    if (mainWindow != null) mainWindow.openQueryTab(profile, targetCatalog,
+                            "CREATE VIEW \"" + (schema != null ? schema : "HELLO") + "\".\"NEW_VIEW\" AS\nSELECT 1 AS ID FROM DUAL;\n");
+                });
+                MenuItem seqItem = new MenuItem("Sequence", Icons.of(FontAwesomeSolid.SORT_NUMERIC_DOWN, "#e0a44c", 12));
+                seqItem.setOnAction(e -> {
+                    if (mainWindow != null) mainWindow.openQueryTab(profile, targetCatalog,
+                            "CREATE SEQUENCE \"" + (schema != null ? schema : "HELLO") + "\".\"NEW_SEQ\" START WITH 1 INCREMENT BY 1;\n");
+                });
+                MenuItem userItem = new MenuItem("User", Icons.of(FontAwesomeSolid.USER, "#868a91", 11));
+                userItem.setOnAction(e -> CreateUserDialog.show(mainWindow, profile));
+
+                if (isTableOrTableSub) {
+                    DbObject parentTable = resolveParentTableFor(item, obj);
+                    String tblName = parentTable != null ? parentTable.getName()
+                            : (obj.getTableName() != null ? obj.getTableName() : obj.getName());
+                    MenuItem colItem = new MenuItem("Column", Icons.of(FontAwesomeSolid.COLUMNS, "#868a91", 11));
+                    colItem.setOnAction(e -> {
+                        if (mainWindow != null) mainWindow.openQueryTab(profile, targetCatalog,
+                                "ALTER TABLE \"" + (schema != null ? schema : "HELLO") + "\".\"" + tblName + "\" ADD \"NEW_COLUMN\" VARCHAR2(255);\n");
+                    });
+                    MenuItem uqItem = new MenuItem("Unique Key", Icons.of(FontAwesomeSolid.KEY, "#e0a44c", 11));
+                    uqItem.setOnAction(e -> {
+                        if (mainWindow != null) mainWindow.openQueryTab(profile, targetCatalog,
+                                "ALTER TABLE \"" + (schema != null ? schema : "HELLO") + "\".\"" + tblName + "\" ADD CONSTRAINT \"UQ_" + tblName + "_NEW\" UNIQUE (\"COLUMN_NAME\");\n");
+                    });
+                    MenuItem fkItem = new MenuItem("Foreign Key", Icons.of(FontAwesomeSolid.KEY, "#4a88c7", 11));
+                    fkItem.setOnAction(e -> {
+                        if (mainWindow != null) mainWindow.openQueryTab(profile, targetCatalog,
+                                "ALTER TABLE \"" + (schema != null ? schema : "HELLO") + "\".\"" + tblName + "\" ADD CONSTRAINT \"FK_" + tblName + "_REF\" FOREIGN KEY (\"COLUMN_NAME\") REFERENCES \"TARGET_TABLE\" (\"TARGET_COL\");\n");
+                    });
+                    MenuItem idxItem = new MenuItem("Index", Icons.of(FontAwesomeSolid.BOLT, "#e0a44c", 11));
+                    idxItem.setOnAction(e -> {
+                        if (mainWindow != null) mainWindow.openQueryTab(profile, targetCatalog,
+                                "CREATE INDEX \"IDX_" + tblName + "_COL\" ON \"" + (schema != null ? schema : "HELLO") + "\".\"" + tblName + "\" (\"COLUMN_NAME\");\n");
+                    });
+                    MenuItem chkItem = new MenuItem("Check", Icons.of(FontAwesomeSolid.CHECK, "#868a91", 11));
+                    chkItem.setOnAction(e -> {
+                        if (mainWindow != null) mainWindow.openQueryTab(profile, targetCatalog,
+                                "ALTER TABLE \"" + (schema != null ? schema : "HELLO") + "\".\"" + tblName + "\" ADD CONSTRAINT \"CHK_" + tblName + "_NEW\" CHECK (1 = 1);\n");
+                    });
+
+                    MenuItem vColItem = new MenuItem("Virtual Column", Icons.of(FontAwesomeSolid.COLUMNS, "#c77dbb", 11));
+                    vColItem.setOnAction(e -> {
+                        if (mainWindow != null) mainWindow.setStatus("Virtual Column on " + tblName);
+                    });
+                    MenuItem vFkItem = new MenuItem("Virtual Foreign Key", Icons.of(FontAwesomeSolid.KEY, "#c77dbb", 11));
+                    vFkItem.setOnAction(e -> {
+                        if (mainWindow != null) mainWindow.setStatus("Virtual Foreign Key on " + tblName);
+                    });
+
+                    if (kind == Kind.KEYS_FOLDER) {
+                        newMenu.getItems().addAll(new SeparatorMenuItem(), uqItem, colItem, fkItem, idxItem, chkItem);
+                    } else if (kind == Kind.FOREIGN_KEYS_FOLDER) {
+                        newMenu.getItems().addAll(new SeparatorMenuItem(), fkItem, colItem, uqItem, idxItem, chkItem);
+                    } else if (kind == Kind.INDEXES_FOLDER) {
+                        newMenu.getItems().addAll(new SeparatorMenuItem(), idxItem, colItem, uqItem, fkItem, chkItem);
+                    } else {
+                        newMenu.getItems().addAll(new SeparatorMenuItem(), colItem, uqItem, fkItem, idxItem, chkItem);
+                    }
+                    newMenu.getItems().addAll(new SeparatorMenuItem(), tableItem, matViewItem, viewItem, seqItem, userItem);
+                    newMenu.getItems().addAll(new SeparatorMenuItem(), vColItem, vFkItem);
+                } else if (kind == Kind.VIEWS_FOLDER) {
+                    newMenu.getItems().addAll(new SeparatorMenuItem(), viewItem, tableItem, matViewItem, seqItem, userItem);
+                } else if (kind == Kind.SEQUENCES_FOLDER) {
+                    newMenu.getItems().addAll(new SeparatorMenuItem(), seqItem, tableItem, matViewItem, viewItem, userItem);
+                } else {
+                    newMenu.getItems().addAll(new SeparatorMenuItem(), tableItem, matViewItem, viewItem, seqItem, userItem);
+                }
+            }
+            default -> {}
+        }
+
+        MenuItem virtualView = new MenuItem("Virtual View", Icons.of(FontAwesomeSolid.TABLE, "#c77dbb", 12));
+        virtualView.setOnAction(e -> showVirtualViewInfo(profile, targetCatalog));
+        if (type == ConnectionProfile.DatabaseType.ORACLE && isTableOrTableSub) {
+            newMenu.getItems().add(virtualView);
+        } else {
+            newMenu.getItems().addAll(new SeparatorMenuItem(), virtualView);
+        }
+
+        appendCommonNewDataSourceItems(newMenu, profile, false);
+        return newMenu;
+    }
+
+    ContextMenu buildEngineMenu(TreeItem<DbObject> item, DbObject obj, ConnectionProfile profile) {
+        if (profile == null || obj == null) return null;
+
+        ConnectionProfile.DatabaseType type = profile.getType();
+        DbObject.Kind kind = obj.getKind();
+        boolean isServerObjectsFolder = (kind == Kind.SERVER_OBJECTS
+                || kind == Kind.TABLESPACES_FOLDER
+                || kind == Kind.USERS_FOLDER
+                || kind == Kind.COLLATIONS_FOLDER);
+        boolean isVirtualViewsFolder = (kind == Kind.VIRTUAL_VIEWS_FOLDER);
+        boolean isVirtualViewItem = (kind == Kind.VIRTUAL_VIEW);
+        boolean isCollationItem = (kind == Kind.COLLATION);
+        boolean isUserItem = (kind == Kind.USER);
+        boolean isRoutineItem = (kind == Kind.PROCEDURE || kind == Kind.FUNCTION);
+
+        boolean isMongoFolder = (type == ConnectionProfile.DatabaseType.MONGODB
+                && (kind == Kind.FIELDS_FOLDER || kind == Kind.INDEXES_FOLDER));
+        boolean isMongoSubItem = (type == ConnectionProfile.DatabaseType.MONGODB
+                && (kind == Kind.FIELD || kind == Kind.INDEX));
+
+        boolean isOracleServerObjectItem = (type == ConnectionProfile.DatabaseType.ORACLE
+                && (kind == Kind.TABLESPACE || kind == Kind.DATA_FILE || kind == Kind.USER));
+        boolean isTableSubFolder = (kind == Kind.COLUMNS_FOLDER
+                || kind == Kind.KEYS_FOLDER
+                || kind == Kind.FOREIGN_KEYS_FOLDER
+                || kind == Kind.INDEXES_FOLDER
+                || kind == Kind.PARTITIONS_FOLDER);
+        boolean isTableSubItem = (kind == Kind.COLUMN
+                || kind == Kind.KEY
+                || kind == Kind.FOREIGN_KEY
+                || kind == Kind.INDEX);
+
+        boolean isCategoryFolder = (kind == Kind.TABLES_FOLDER
+                || kind == Kind.COLLECTIONS_FOLDER
+                || kind == Kind.VIEWS_FOLDER
+                || kind == Kind.SEQUENCES_FOLDER
+                || kind == Kind.PROCEDURES_FOLDER
+                || kind == Kind.FUNCTIONS_FOLDER
+                || isServerObjectsFolder
+                || isVirtualViewsFolder
+                || isMongoFolder
+                || isTableSubFolder);
+        boolean isTable = (kind == Kind.TABLE || kind == Kind.VIEW || kind == Kind.PARTITION);
+        boolean isCollection = (kind == Kind.COLLECTION);
+        boolean isSequence = (kind == Kind.SEQUENCE);
+
+        if (!isCategoryFolder && !isTable && !isCollection && !isSequence && !isRoutineItem
+                && !isMongoSubItem && !isOracleServerObjectItem && !isTableSubItem
+                && !isVirtualViewItem && !isCollationItem && !isUserItem) {
+            return null;
+        }
+
+        ContextMenu menu = new ContextMenu();
+        String targetCatalog = resolveCatalogFor(item, obj, profile);
+
+        // 1. + New >
+        Menu newMenu = buildEngineNewMenu(item, obj, profile);
+        menu.getItems().add(newMenu);
+
+        // 2. Modify Table... (Modify View / Modify Collection / Modify Sequence / Modify Virtual View / Modify User)
+        if (type == ConnectionProfile.DatabaseType.MONGODB) {
+            if (kind == Kind.COLLECTIONS_FOLDER) {
+                MenuItem modifyTable = new MenuItem("Modify Table…");
+                modifyTable.setAccelerator(new KeyCodeCombination(KeyCode.F6, KeyCombination.CONTROL_DOWN));
+                modifyTable.setDisable(true);
+                menu.getItems().add(modifyTable);
+            } else if (isCollection) {
+                MenuItem modifyTable = new MenuItem("Modify Table…");
+                modifyTable.setAccelerator(new KeyCodeCombination(KeyCode.F6, KeyCombination.CONTROL_DOWN));
+                modifyTable.setOnAction(e -> ModifyCollectionDialog.show(mainWindow, profile, obj));
+                menu.getItems().add(modifyTable);
+            }
+        } else if (type == ConnectionProfile.DatabaseType.ORACLE && kind == Kind.VIEWS_FOLDER) {
+            MenuItem modifyView = new MenuItem("Modify View…");
+            modifyView.setAccelerator(new KeyCodeCombination(KeyCode.F6, KeyCombination.CONTROL_DOWN));
+            modifyView.setDisable(true);
+            menu.getItems().add(modifyView);
+        } else if (type == ConnectionProfile.DatabaseType.ORACLE && isVirtualViewsFolder) {
+            MenuItem modifyVv = new MenuItem("Modify Virtual View…");
+            modifyVv.setAccelerator(new KeyCodeCombination(KeyCode.F6, KeyCombination.CONTROL_DOWN));
+            modifyVv.setDisable(true);
+            menu.getItems().add(modifyVv);
+        } else if (kind == Kind.VIRTUAL_VIEW) {
+            MenuItem modifyVv = new MenuItem("Modify Virtual View…");
+            modifyVv.setAccelerator(new KeyCodeCombination(KeyCode.F6, KeyCombination.CONTROL_DOWN));
+            modifyVv.setOnAction(e -> {
+                if (mainWindow != null) mainWindow.setStatus("Modify Virtual View on " + obj.getName());
+            });
+            menu.getItems().add(modifyVv);
+        } else if ((type == ConnectionProfile.DatabaseType.ORACLE || type == ConnectionProfile.DatabaseType.MYSQL || type == ConnectionProfile.DatabaseType.MARIADB) && isUserItem) {
+            MenuItem modifyUser = new MenuItem("Modify User…");
+            modifyUser.setAccelerator(new KeyCodeCombination(KeyCode.F6, KeyCombination.CONTROL_DOWN));
+            modifyUser.setOnAction(e -> CreateUserDialog.show(mainWindow, profile));
+            menu.getItems().add(modifyUser);
+        } else if ((type == ConnectionProfile.DatabaseType.MYSQL || type == ConnectionProfile.DatabaseType.MARIADB)
+                && (kind == Kind.KEYS_FOLDER || kind == Kind.KEY)) {
+            MenuItem modifyKey = new MenuItem("Modify Key…");
+            modifyKey.setAccelerator(new KeyCodeCombination(KeyCode.F6, KeyCombination.CONTROL_DOWN));
+            modifyKey.setOnAction(e -> {
+                if (mainWindow != null) mainWindow.setStatus("Modify Key on " + obj.getName());
+            });
+            menu.getItems().add(modifyKey);
+        } else if ((type == ConnectionProfile.DatabaseType.MYSQL || type == ConnectionProfile.DatabaseType.MARIADB || type == ConnectionProfile.DatabaseType.ORACLE)
+                && kind == Kind.COLUMN) {
+            MenuItem modifyCol = new MenuItem("Modify Column…");
+            modifyCol.setAccelerator(new KeyCodeCombination(KeyCode.F6, KeyCombination.CONTROL_DOWN));
+            modifyCol.setOnAction(e -> {
+                if (mainWindow != null) mainWindow.setStatus("Modify Column on " + obj.getName());
+            });
+            menu.getItems().add(modifyCol);
+        } else if (isTable) {
+            String modifyTitle = (kind == Kind.VIEW) ? "Modify View…" : "Modify Table…";
+            MenuItem modifyTable = new MenuItem(modifyTitle);
+            modifyTable.setAccelerator(new KeyCodeCombination(KeyCode.F6, KeyCombination.CONTROL_DOWN));
+            modifyTable.setOnAction(e -> ModifyTableDialog.show(mainWindow, profile, obj));
+            menu.getItems().add(modifyTable);
+        } else if (isSequence) {
+            MenuItem modifySeq = new MenuItem("Modify Sequence…");
+            modifySeq.setAccelerator(new KeyCodeCombination(KeyCode.F6, KeyCombination.CONTROL_DOWN));
+            modifySeq.setOnAction(e -> ModifySequenceDialog.show(mainWindow, profile, obj));
+            menu.getItems().add(modifySeq);
+        }
+
+        // 3. Copy/Paste >
+        Menu copyPasteMenu = new Menu("Copy/Paste");
+        MenuItem copyName = new MenuItem("Copy");
+        copyName.setAccelerator(new KeyCodeCombination(KeyCode.C, KeyCombination.CONTROL_DOWN));
+        copyName.setOnAction(e -> {
+            copyToClipboard(obj.getName());
+            if (mainWindow != null) mainWindow.setStatus("Copied to clipboard: " + obj.getName());
+        });
+        MenuItem copyPath = new MenuItem("Copy Path/Reference…");
+        copyPath.setAccelerator(new KeyCodeCombination(KeyCode.C, KeyCombination.CONTROL_DOWN, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN));
+        copyPath.setOnAction(e -> {
+            String ref = obj.qualifiedName();
+            copyToClipboard(ref);
+            if (mainWindow != null) mainWindow.setStatus("Copied reference: " + ref);
+        });
+        copyPasteMenu.getItems().addAll(copyName, copyPath);
+        if (isCategoryFolder) {
+            copyPasteMenu.setDisable(true);
+        }
+        menu.getItems().add(copyPasteMenu);
+
+        if (isCategoryFolder) {
+            // 4. Refresh (Ctrl+F5)
+            MenuItem refresh = new MenuItem("Refresh");
+            refresh.setGraphic(Icons.of(FontAwesomeSolid.SYNC_ALT, "#868a91", 12));
+            refresh.setAccelerator(new KeyCodeCombination(KeyCode.F5, KeyCombination.CONTROL_DOWN));
+            refresh.setOnAction(e -> {
+                if (item != null) refreshNode(item, obj, obj.getName());
+                else reload();
+            });
+            menu.getItems().add(refresh);
+
+            menu.getItems().add(new SeparatorMenuItem());
+
+            // 5. Rename… (Shift+F6, disabled)
+            MenuItem rename = new MenuItem("Rename…");
+            rename.setAccelerator(new KeyCodeCombination(KeyCode.F6, KeyCombination.SHIFT_DOWN));
+            rename.setDisable(true);
+            menu.getItems().add(rename);
+
+            // 6. Open the List (F4)
+            MenuItem openList = new MenuItem("Open the List");
+            openList.setAccelerator(new KeyCodeCombination(KeyCode.F4));
+            openList.setOnAction(e -> {
+                if (item != null) item.setExpanded(!item.isExpanded());
+            });
+            menu.getItems().add(openList);
+
+            // 7. Quick Documentation (Ctrl+Q, disabled)
+            MenuItem quickDoc = new MenuItem("Quick Documentation");
+            quickDoc.setAccelerator(new KeyCodeCombination(KeyCode.Q, KeyCombination.CONTROL_DOWN));
+            quickDoc.setDisable(true);
+            menu.getItems().add(quickDoc);
+
+            // 8. Compare Schema Structure (Ctrl+D, disabled)
+            MenuItem compareStructure = new MenuItem("Compare Schema Structure");
+            compareStructure.setAccelerator(new KeyCodeCombination(KeyCode.D, KeyCombination.CONTROL_DOWN));
+            compareStructure.setDisable(true);
+            menu.getItems().add(compareStructure);
+
+            menu.getItems().add(new SeparatorMenuItem());
+        } else {
+            // Table, Collection, Sequence, Routine, Mongo Sub-item, or Oracle Server Object item
+            if (!isRoutineItem && !isOracleServerObjectItem && !isCollationItem && !isUserItem) {
+                MenuItem editData = new MenuItem("Edit Data");
+                editData.setGraphic(Icons.of(FontAwesomeSolid.TABLE, "#4a88c7", 12));
+                editData.setAccelerator(new KeyCodeCombination(KeyCode.F4));
+                editData.setOnAction(e -> {
+                    if (isCollection || isMongoSubItem) {
+                        DbObject targetColl = resolveParentTableFor(item, obj);
+                        if (mainWindow != null) mainWindow.openMongoTab(profile, targetColl != null ? targetColl : obj);
+                    } else if (isTableSubItem) {
+                        DbObject targetTbl = resolveParentTableFor(item, obj);
+                        if (mainWindow != null) mainWindow.openDataTab(profile, targetTbl != null ? targetTbl : obj);
+                    } else {
+                        if (mainWindow != null) mainWindow.openDataTab(profile, obj);
+                    }
+                });
+                menu.getItems().add(editData);
+            }
+
+            MenuItem refresh = new MenuItem("Refresh");
+            refresh.setGraphic(Icons.of(FontAwesomeSolid.SYNC_ALT, "#868a91", 12));
+            refresh.setAccelerator(new KeyCodeCombination(KeyCode.F5, KeyCombination.CONTROL_DOWN));
+            refresh.setOnAction(e -> {
+                if (item != null) refreshNode(item, obj, obj.getName());
+                else reload();
+            });
+            menu.getItems().addAll(refresh, new SeparatorMenuItem());
+
+            MenuItem rename = new MenuItem("Rename…");
+            rename.setAccelerator(new KeyCodeCombination(KeyCode.F6, KeyCombination.SHIFT_DOWN));
+            if (isMongoSubItem || isOracleServerObjectItem || isTableSubItem || isVirtualViewItem || isCollationItem || isUserItem) {
+                rename.setDisable(true);
+            } else if (isRoutineItem) {
+                rename.setOnAction(e -> renameRoutine(profile, obj));
+            } else if (isCollection) {
+                rename.setOnAction(e -> promptRenameMongoCollection(profile, obj));
+            } else {
+                rename.setOnAction(e -> promptRenameTable(profile, obj));
+            }
+            menu.getItems().addAll(rename, new SeparatorMenuItem());
+
+            MenuItem quickDoc = new MenuItem("Quick Documentation");
+            quickDoc.setAccelerator(new KeyCodeCombination(KeyCode.Q, KeyCombination.CONTROL_DOWN));
+            quickDoc.setOnAction(e -> showQuickDocumentation(profile, obj));
+            menu.getItems().add(quickDoc);
+
+            String compareTitle = isVirtualViewItem ? "Compare Schema Structure" : "Compare Schema Structure With…";
+            MenuItem compareStructure = new MenuItem(compareTitle);
+            compareStructure.setGraphic(Icons.of(FontAwesomeSolid.EXCHANGE_ALT, "#868a91", 12));
+            compareStructure.setAccelerator(new KeyCodeCombination(KeyCode.D, KeyCombination.CONTROL_DOWN));
+            compareStructure.setDisable(true);
+            menu.getItems().add(compareStructure);
+
+            Menu navMenu = new Menu("Navigation");
+            MenuItem goToDdl = new MenuItem("Go to DDL");
+            goToDdl.setOnAction(e -> {
+                if (mainWindow != null) mainWindow.openDdlTab(profile, obj);
+            });
+            MenuItem jumpConsole = new MenuItem("Jump to Query Console");
+            jumpConsole.setAccelerator(new KeyCodeCombination(KeyCode.F10, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN));
+            jumpConsole.setOnAction(e -> jumpToQueryConsole());
+            MenuItem selectInTree = new MenuItem("Select in Database Explorer");
+            selectInTree.setAccelerator(new KeyCodeCombination(KeyCode.F1, KeyCombination.ALT_DOWN));
+            selectInTree.setOnAction(e -> {
+                if (item != null) tree.getSelectionModel().select(item);
+            });
+            navMenu.getItems().addAll(goToDdl, jumpConsole, selectInTree);
+            menu.getItems().add(navMenu);
+
+            MenuItem findUsages = new MenuItem("Find Usages");
+            findUsages.setAccelerator(new KeyCodeCombination(KeyCode.DIGIT7, KeyCombination.ALT_DOWN, KeyCombination.SHIFT_DOWN));
+            findUsages.setDisable(true);
+            menu.getItems().addAll(findUsages, new SeparatorMenuItem());
+        }
+
+        // Introspection Level > (MySQL, MariaDB, SQL Server, Oracle)
+        boolean hasIntrospectionLevel = (type == ConnectionProfile.DatabaseType.MYSQL
+                || type == ConnectionProfile.DatabaseType.MARIADB
+                || type == ConnectionProfile.DatabaseType.SQLSERVER
+                || type == ConnectionProfile.DatabaseType.ORACLE);
+        if (hasIntrospectionLevel) {
+            Menu introMenu = new Menu("Introspection Level");
+            ToggleGroup introGroup = new ToggleGroup();
+            RadioMenuItem introAuto = new RadioMenuItem("Auto");
+            introAuto.setToggleGroup(introGroup);
+            introAuto.setSelected(true);
+            RadioMenuItem introHigh = new RadioMenuItem("High");
+            introHigh.setToggleGroup(introGroup);
+            RadioMenuItem introMed = new RadioMenuItem("Medium");
+            introMed.setToggleGroup(introGroup);
+            RadioMenuItem introLow = new RadioMenuItem("Low");
+            introLow.setToggleGroup(introGroup);
+            introMenu.getItems().addAll(introAuto, introHigh, introMed, introLow);
+            if (!isCategoryFolder) {
+                menu.getItems().addAll(introMenu, new SeparatorMenuItem());
+            } else {
+                menu.getItems().add(introMenu);
+            }
+        }
+
+        if (isRoutineItem) {
+            String runLabel = (kind == Kind.FUNCTION) ? "Run Function…" : "Run Procedure…";
+            MenuItem runRoutine = new MenuItem(runLabel, Icons.of(FontAwesomeSolid.PLAY, "#57965c", 12));
+            runRoutine.setOnAction(e -> {
+                if (mainWindow != null) mainWindow.openRoutineRunTab(profile, obj);
+            });
+            menu.getItems().addAll(runRoutine, new SeparatorMenuItem());
+        }
+
+        // SQL Scripts >
+        Menu sqlScripts = new Menu("SQL Scripts");
+        MenuItem openConsole = new MenuItem("Open Query Console");
+        openConsole.setOnAction(e -> {
+            if (mainWindow != null) mainWindow.openQueryTab(profile, targetCatalog, null);
+        });
+        MenuItem runSqlScript = new MenuItem("Run SQL Script…");
+        runSqlScript.setOnAction(e -> promptRunSqlScript(profile));
+        MenuItem genDdl = new MenuItem("Generate DDL to Query Console");
+        genDdl.setOnAction(e -> {
+            AppExecutor.run(() -> {
+                try {
+                    String ddl = DdlGeneratorService.generateDdl(profile, obj);
+                    Platform.runLater(() -> {
+                        if (mainWindow != null) mainWindow.openQueryTab(profile, targetCatalog, ddl);
+                    });
+                } catch (Exception ex) {
+                    Platform.runLater(() -> {
+                        if (mainWindow != null) mainWindow.openQueryTab(profile, targetCatalog,
+                                "-- Could not generate DDL: " + ex.getMessage());
+                    });
+                }
+            });
+        });
+        sqlScripts.getItems().addAll(openConsole, runSqlScript, genDdl);
+        if (isTable) {
+            MenuItem select = new MenuItem("New Query: SELECT *");
+            select.setOnAction(e -> mainWindow.openQueryTab(profile, obj.getCatalog(),
+                    selectTopRowsSql(profile.getType(), obj)));
+            MenuItem count = new MenuItem("New Query: COUNT(*)");
+            count.setOnAction(e -> mainWindow.openQueryTab(profile, obj.getCatalog(),
+                    "SELECT COUNT(*) FROM " + obj.qualifiedName() + ";"));
+            sqlScripts.getItems().addAll(new SeparatorMenuItem(), select, count);
+        }
+        menu.getItems().add(sqlScripts);
+
+        // Object Actions >
+        boolean isMongoSubNode = (type == ConnectionProfile.DatabaseType.MONGODB
+                && (isMongoFolder || isMongoSubItem));
+        boolean isMySqlSubFolder = (type == ConnectionProfile.DatabaseType.MYSQL
+                || type == ConnectionProfile.DatabaseType.MARIADB) && isTableSubFolder;
+        boolean includeObjActions = (kind != Kind.SEQUENCES_FOLDER && kind != Kind.SEQUENCE)
+                && !isServerObjectsFolder && !isVirtualViewsFolder && !isMongoSubNode
+                && !isOracleServerObjectItem
+                && !isVirtualViewItem
+                && !isCollationItem
+                && kind != Kind.COLUMNS_FOLDER
+                && !isMySqlSubFolder
+                && (kind != Kind.INDEXES_FOLDER || type != ConnectionProfile.DatabaseType.ORACLE);
+        if (includeObjActions) {
+            Menu objActions = new Menu("Object Actions");
+            boolean filterable = MetadataService.supportsDatabaseFilter(profile);
+            String noun = (type == ConnectionProfile.DatabaseType.SQLSERVER
+                    || type == ConnectionProfile.DatabaseType.MYSQL
+                    || type == ConnectionProfile.DatabaseType.MARIADB
+                    || type == ConnectionProfile.DatabaseType.ORACLE) ? "schema" : "database";
+            String capNoun = Character.toUpperCase(noun.charAt(0)) + noun.substring(1);
+
+            if (filterable) {
+                MenuItem showHide = new MenuItem("Show / Hide " + capNoun + "s…");
+                TreeItem<DbObject> connItem = item != null ? item : findConnectionItem(profile);
+                showHide.setOnAction(e -> showDatabaseFilterDialog(connItem, profile));
+                objActions.getItems().add(showHide);
+            }
+            MenuItem forgetPw = new MenuItem("Forget Saved Passwords");
+            forgetPw.setOnAction(e -> {
+                profile.setPassword("");
+                ConnectionStore.saveOrUpdate(profile);
+                if (mainWindow != null) mainWindow.setStatus("Forgot saved password for " + profile.getName());
+            });
+            objActions.getItems().add(forgetPw);
+            menu.getItems().add(objActions);
+        }
+
+        // Tools >
+        Menu toolsMenu = new Menu("Tools");
+        boolean filterable = MetadataService.supportsDatabaseFilter(profile);
+        String noun = (type == ConnectionProfile.DatabaseType.SQLSERVER
+                || type == ConnectionProfile.DatabaseType.MYSQL
+                || type == ConnectionProfile.DatabaseType.MARIADB
+                || type == ConnectionProfile.DatabaseType.ORACLE) ? "schema" : "database";
+        String capNoun = Character.toUpperCase(noun.charAt(0)) + noun.substring(1);
+
+        if (filterable) {
+            MenuItem manage = new MenuItem("Manage " + capNoun + "s…");
+            TreeItem<DbObject> connItem = item != null ? item : findConnectionItem(profile);
+            manage.setOnAction(e -> showDatabaseFilterDialog(connItem, profile));
+            toolsMenu.getItems().add(manage);
+        }
+        MenuItem verifyConn = new MenuItem("Verify Connection");
+        verifyConn.setOnAction(e -> verifyConnection(profile));
+        toolsMenu.getItems().add(verifyConn);
+        menu.getItems().add(toolsMenu);
+
+        // Import/Export >
+        boolean includeImportExport = !isServerObjectsFolder && !isVirtualViewsFolder;
+        if (includeImportExport) {
+            Menu importExport = new Menu("Import/Export");
+            if (isCategoryFolder) {
+                String dumpName = switch (type) {
+                    case MYSQL -> "Dump with mysqldump…";
+                    case MARIADB -> "Dump with mariadb-dump…";
+                    case MONGODB -> "Dump with mongodump…";
+                    case SQLITE -> "Export SQLite Database…";
+                    case SQLSERVER -> "Export Database with bcp…";
+                    case ORACLE -> "Export with expdp…";
+                    default -> "Dump Database…";
+                };
+                MenuItem dumpItem = new MenuItem(dumpName);
+                dumpItem.setOnAction(e -> {
+                    if (type == ConnectionProfile.DatabaseType.MYSQL || type == ConnectionProfile.DatabaseType.MARIADB) {
+                        MySqlDumpDialog.show(mainWindow, profile, targetCatalog);
+                    } else {
+                        if (mainWindow != null) mainWindow.setStatus(dumpName.replace("…", ""));
+                    }
+                });
+                MenuItem restoreItem = new MenuItem("Restore…");
+                restoreItem.setOnAction(e -> {
+                    if (type == ConnectionProfile.DatabaseType.MYSQL || type == ConnectionProfile.DatabaseType.MARIADB) {
+                        MySqlRestoreDialog.show(mainWindow, profile, targetCatalog);
+                    } else {
+                        if (mainWindow != null) mainWindow.setStatus("Restore database");
+                    }
+                });
+                importExport.getItems().addAll(dumpItem, restoreItem);
+            } else if (isRoutineItem) {
+                String dumpName = (type == ConnectionProfile.DatabaseType.ORACLE) ? "Export with expdp…" : "Dump Database…";
+                MenuItem dumpItem = new MenuItem(dumpName);
+                dumpItem.setOnAction(e -> {
+                    if (mainWindow != null) mainWindow.setStatus(dumpName.replace("…", ""));
+                });
+                MenuItem restoreItem = new MenuItem("Restore…");
+                restoreItem.setOnAction(e -> {
+                    if (mainWindow != null) mainWindow.setStatus("Restore database");
+                });
+                importExport.getItems().addAll(dumpItem, restoreItem);
+            } else if (isMongoSubItem) {
+                MenuItem dumpItem = new MenuItem("Dump with mongodump…");
+                dumpItem.setOnAction(e -> {
+                    if (mainWindow != null) mainWindow.setStatus("Dump with mongodump");
+                });
+                MenuItem restoreItem = new MenuItem("Restore…");
+                restoreItem.setOnAction(e -> {
+                    if (mainWindow != null) mainWindow.setStatus("Restore database");
+                });
+                importExport.getItems().addAll(dumpItem, restoreItem);
+            } else if (isOracleServerObjectItem) {
+                MenuItem dumpItem = new MenuItem("Export with expdp…");
+                dumpItem.setOnAction(e -> {
+                    if (mainWindow != null) mainWindow.setStatus("Export with expdp");
+                });
+                MenuItem restoreItem = new MenuItem("Restore…");
+                restoreItem.setOnAction(e -> {
+                    if (mainWindow != null) mainWindow.setStatus("Restore database");
+                });
+                importExport.getItems().addAll(dumpItem, restoreItem);
+            } else if (isCollationItem || isUserItem) {
+                String dumpName = (type == ConnectionProfile.DatabaseType.MARIADB)
+                        ? "Dump with mariadb-dump…"
+                        : "Dump with mysqldump…";
+                MenuItem dumpItem = new MenuItem(dumpName);
+                dumpItem.setOnAction(e -> {
+                    if (mainWindow != null) mainWindow.setStatus(dumpName.replace("…", ""));
+                });
+                MenuItem restoreItem = new MenuItem("Restore…");
+                restoreItem.setOnAction(e -> {
+                    if (mainWindow != null) mainWindow.setStatus("Restore database");
+                });
+                importExport.getItems().addAll(dumpItem, restoreItem);
+            } else {
+                MenuItem exportData = new MenuItem("Export Data to File…");
+                exportData.setOnAction(e -> exportTableData(profile, obj));
+                MenuItem importData = new MenuItem("Import Data from File(s)…");
+                importData.setOnAction(e -> ImportDataDialog.show(mainWindow, profile, obj));
+                importExport.getItems().addAll(exportData, importData);
+                if (type == ConnectionProfile.DatabaseType.MYSQL || type == ConnectionProfile.DatabaseType.MARIADB) {
+                    MenuItem exportMysqldump = new MenuItem("Export with 'mysqldump'…");
+                    exportMysqldump.setOnAction(e -> MySqlDumpDialog.show(mainWindow, profile, targetCatalog));
+                    MenuItem restoreMysql = new MenuItem("Restore with 'mysql'…");
+                    restoreMysql.setOnAction(e -> MySqlRestoreDialog.show(mainWindow, profile, targetCatalog));
+                    importExport.getItems().addAll(new SeparatorMenuItem(), exportMysqldump, restoreMysql);
+                }
+            }
+            menu.getItems().add(importExport);
+        }
+
+        // Diagrams >
+        Menu diagrams = new Menu("Diagrams");
+        MenuItem showDiagram = new MenuItem("Show Diagram…");
+        showDiagram.setOnAction(e -> {
+            if (mainWindow != null) {
+                if (isTable) {
+                    mainWindow.openDiagramTab(profile, obj);
+                } else {
+                    mainWindow.openDatabaseDiagramTab(profile, targetCatalog);
+                }
+            }
+        });
+        diagrams.getItems().add(showDiagram);
+        menu.getItems().add(diagrams);
+
+        menu.getItems().add(new SeparatorMenuItem());
+
+        // Diagnostics >
+        Menu diagnostics = new Menu("Diagnostics");
+        MenuItem diagRefresh = new MenuItem("Diagnostic Refresh");
+        diagRefresh.setOnAction(e -> {
+            if (item != null) refreshNode(item, obj, obj.getName());
+            else reload();
+            if (mainWindow != null) mainWindow.setStatus("Diagnostic refresh performed for " + obj.getName());
+        });
+        diagnostics.getItems().add(diagRefresh);
+        menu.getItems().add(diagnostics);
+
+        menu.getItems().add(new SeparatorMenuItem());
+
+        // Drop… (Delete)
+        MenuItem drop = new MenuItem("Drop…");
+        drop.setAccelerator(new KeyCodeCombination(KeyCode.DELETE));
+        if (isCategoryFolder || isMongoSubItem || isCollationItem) {
+            drop.setDisable(true);
+        } else if (isOracleServerObjectItem || isTableSubItem || isVirtualViewItem || isUserItem) {
+            drop.setOnAction(e -> confirmAndDropGenericObject(profile, obj));
+        } else if (isCollection) {
+            drop.setOnAction(e -> confirmAndDropCollection(profile, obj));
+        } else if (isTable) {
+            drop.setOnAction(e -> confirmAndDeleteTable(profile, obj));
+        } else if (isSequence) {
+            drop.setOnAction(e -> confirmAndDeleteSequence(profile, obj));
+        } else if (isRoutineItem) {
+            String kindLabel = (kind == Kind.FUNCTION) ? "Function" : "Procedure";
+            drop.setOnAction(e -> dropRoutine(profile, obj, kindLabel));
+        }
+        menu.getItems().add(drop);
+
+        return menu;
+    }
+
     ContextMenu buildDatabaseMenu(TreeItem<DbObject> item, DbObject obj, ConnectionProfile profile) {
         return buildDatabaseOrSchemaMenu(item, obj, profile);
     }
@@ -2630,6 +3559,17 @@ public class SchemaTreePane extends VBox {
                 ContextMenu pgMenu = buildPostgreSqlMenu(getTreeItem(), obj, profile);
                 if (pgMenu != null) {
                     return pgMenu;
+                }
+            }
+            if (profile.getType() == ConnectionProfile.DatabaseType.MYSQL
+                    || profile.getType() == ConnectionProfile.DatabaseType.MARIADB
+                    || profile.getType() == ConnectionProfile.DatabaseType.MONGODB
+                    || profile.getType() == ConnectionProfile.DatabaseType.SQLITE
+                    || profile.getType() == ConnectionProfile.DatabaseType.SQLSERVER
+                    || profile.getType() == ConnectionProfile.DatabaseType.ORACLE) {
+                ContextMenu engineMenu = buildEngineMenu(getTreeItem(), obj, profile);
+                if (engineMenu != null) {
+                    return engineMenu;
                 }
             }
             ContextMenu menu = new ContextMenu();
@@ -3184,6 +4124,34 @@ public class SchemaTreePane extends VBox {
         });
     }
 
+    private void promptRenameMongoCollection(ConnectionProfile profile, DbObject obj) {
+        TextInputDialog dialog = DialogTheme.apply(new TextInputDialog(obj.getName()));
+        dialog.initOwner(getScene() == null ? null : getScene().getWindow());
+        dialog.setTitle("Rename Collection");
+        dialog.setHeaderText(null);
+        dialog.setContentText("New name for \"" + obj.getName() + "\":");
+
+        dialog.showAndWait().ifPresent(newName -> {
+            String trimmed = newName.trim();
+            if (trimmed.isEmpty() || trimmed.equals(obj.getName())) return;
+            AppExecutor.run(() -> {
+                try {
+                    String database = (obj.getCatalog() != null && !obj.getCatalog().isBlank())
+                            ? obj.getCatalog() : profile.getDatabase();
+                    var res = ClientRegistry.mongo(profile).renameCollection(database, obj.getName(), trimmed);
+                    Platform.runLater(() -> {
+                        mainWindow.setStatus(res.message());
+                        reload();
+                    });
+                } catch (Exception ex) {
+                    String msg = ex.getMessage() == null ? ex.toString() : ex.getMessage();
+                    Platform.runLater(() -> DialogTheme.apply(new Alert(Alert.AlertType.ERROR,
+                            "Could not rename collection " + obj.getName() + ": " + msg)).showAndWait());
+                }
+            });
+        });
+    }
+
     private void promptRenameSequence(ConnectionProfile profile, DbObject obj) {
         TextInputDialog dialog = DialogTheme.apply(new TextInputDialog(obj.getName()));
         dialog.initOwner(getScene() == null ? null : getScene().getWindow());
@@ -3289,6 +4257,11 @@ public class SchemaTreePane extends VBox {
             case KEY -> "key";
             case FOREIGN_KEY -> "foreign key";
             case INDEX -> "index";
+            case PROCEDURE -> "procedure";
+            case FUNCTION -> "function";
+            case TABLESPACE -> "tablespace";
+            case DATA_FILE -> "data file";
+            case USER -> "user";
             default -> "object";
         };
         Alert warn = (Alert) DialogTheme.apply(new Alert(Alert.AlertType.WARNING,
@@ -3312,8 +4285,44 @@ public class SchemaTreePane extends VBox {
                     case EXTENSION -> "DROP EXTENSION \"" + obj.getName().replace("\"", "\"\"") + "\" CASCADE";
                     case LANGUAGE -> "DROP LANGUAGE \"" + obj.getName().replace("\"", "\"\"") + "\" CASCADE";
                     case CAST -> "DROP CAST (" + obj.getName() + ") CASCADE";
+                    case TABLESPACE -> (profile.getType() == ConnectionProfile.DatabaseType.ORACLE)
+                            ? "DROP TABLESPACE \"" + obj.getName().replace("\"", "\"\"") + "\" INCLUDING CONTENTS AND DATAFILES CASCADE CONSTRAINTS"
+                            : "DROP TABLESPACE \"" + obj.getName().replace("\"", "\"\"") + "\"";
+                    case USER -> {
+                        if (profile.getType() == ConnectionProfile.DatabaseType.ORACLE) {
+                            yield "DROP USER \"" + obj.getName().replace("\"", "\"\"") + "\" CASCADE";
+                        }
+                        String u = obj.getName();
+                        if (u.contains("@")) {
+                            int at = u.indexOf('@');
+                            String uname = u.substring(0, at);
+                            String host = u.substring(at + 1);
+                            yield "DROP USER '" + uname.replace("'", "''") + "'@'" + host.replace("'", "''") + "'";
+                        } else {
+                            yield "DROP USER '" + u.replace("'", "''") + "'";
+                        }
+                    }
+                    case DATA_FILE -> (profile.getType() == ConnectionProfile.DatabaseType.ORACLE)
+                            ? "ALTER DATABASE DATAFILE '" + obj.getName() + "' OFFLINE DROP"
+                            : "DROP DATAFILE '" + obj.getName() + "'";
                     case COLUMN -> {
                         String tbl = obj.getTableName() != null ? obj.getTableName() : "table_name";
+                        if (profile.getType() == ConnectionProfile.DatabaseType.MYSQL || profile.getType() == ConnectionProfile.DatabaseType.MARIADB) {
+                            String cat = obj.getCatalog() != null ? obj.getCatalog() : (obj.getSchema() != null ? obj.getSchema() : "");
+                            if (!cat.isEmpty()) {
+                                yield "ALTER TABLE `" + cat.replace("`", "``") + "`.`" + tbl.replace("`", "``") + "` DROP COLUMN `" + obj.getName().replace("`", "``") + "`";
+                            } else {
+                                yield "ALTER TABLE `" + tbl.replace("`", "``") + "` DROP COLUMN `" + obj.getName().replace("`", "``") + "`";
+                            }
+                        }
+                        if (profile.getType() == ConnectionProfile.DatabaseType.ORACLE) {
+                            String sch = obj.getSchema() != null ? obj.getSchema() : (obj.getCatalog() != null ? obj.getCatalog() : "");
+                            if (!sch.isEmpty()) {
+                                yield "ALTER TABLE \"" + sch.replace("\"", "\"\"") + "\".\"" + tbl.replace("\"", "\"\"") + "\" DROP COLUMN \"" + obj.getName().replace("\"", "\"\"") + "\"";
+                            } else {
+                                yield "ALTER TABLE \"" + tbl.replace("\"", "\"\"") + "\" DROP COLUMN \"" + obj.getName().replace("\"", "\"\"") + "\"";
+                            }
+                        }
                         String sch = obj.getSchema() != null ? obj.getSchema() : "public";
                         yield "ALTER TABLE \"" + sch.replace("\"", "\"\"") + "\".\"" + tbl.replace("\"", "\"\"") + "\" DROP COLUMN \"" + obj.getName().replace("\"", "\"\"") + "\" CASCADE";
                     }
@@ -3325,6 +4334,14 @@ public class SchemaTreePane extends VBox {
                     case INDEX -> {
                         String sch = obj.getSchema() != null ? obj.getSchema() : "public";
                         yield "DROP INDEX \"" + sch.replace("\"", "\"\"") + "\".\"" + obj.getName().replace("\"", "\"\"") + "\" CASCADE";
+                    }
+                    case PROCEDURE -> {
+                        String sch = obj.getSchema() != null ? obj.getSchema() : "public";
+                        yield "DROP PROCEDURE \"" + sch.replace("\"", "\"\"") + "\".\"" + obj.getName().replace("\"", "\"\"") + "\"";
+                    }
+                    case FUNCTION -> {
+                        String sch = obj.getSchema() != null ? obj.getSchema() : "public";
+                        yield "DROP FUNCTION \"" + sch.replace("\"", "\"\"") + "\".\"" + obj.getName().replace("\"", "\"\"") + "\"";
                     }
                     default -> "DROP " + obj.getKind() + " \"" + obj.getName().replace("\"", "\"\"") + "\" CASCADE";
                 };
@@ -3546,24 +4563,33 @@ public class SchemaTreePane extends VBox {
     }
 
     private String resolveCatalogFor(TreeItem<DbObject> item, DbObject obj) {
-        if (obj != null && obj.getKind() == Kind.DATABASE) {
-            return obj.getName();
+        return resolveCatalogFor(item, obj, null);
+    }
+
+    private String resolveCatalogFor(TreeItem<DbObject> item, DbObject obj, ConnectionProfile profile) {
+        if (obj != null && (obj.getKind() == Kind.DATABASE || obj.getKind() == Kind.SCHEMA)) {
+            return obj.getCatalog() != null && !obj.getCatalog().isBlank() ? obj.getCatalog() : obj.getName();
         }
         if (obj != null && obj.getCatalog() != null && !obj.getCatalog().isBlank()) {
             return obj.getCatalog();
         }
         TreeItem<DbObject> curr = item != null ? item.getParent() : null;
         while (curr != null) {
-            if (curr.getValue() != null && curr.getValue().getKind() == Kind.DATABASE) {
-                return curr.getValue().getName();
+            if (curr.getValue() != null && (curr.getValue().getKind() == Kind.DATABASE || curr.getValue().getKind() == Kind.SCHEMA)) {
+                return curr.getValue().getCatalog() != null && !curr.getValue().getCatalog().isBlank()
+                        ? curr.getValue().getCatalog() : curr.getValue().getName();
             }
             curr = curr.getParent();
         }
-        ConnectionProfile profile = profileFor(item);
-        return profile != null ? profile.getDatabase() : null;
+        ConnectionProfile p = profile != null ? profile : profileFor(item);
+        return p != null ? p.getDatabase() : null;
     }
 
     private String resolveSchemaFor(TreeItem<DbObject> item, DbObject obj) {
+        return resolveSchemaFor(item, obj, null);
+    }
+
+    private String resolveSchemaFor(TreeItem<DbObject> item, DbObject obj, ConnectionProfile profile) {
         if (obj != null && obj.getKind() == Kind.SCHEMA) {
             return obj.getName();
         }
@@ -3575,20 +4601,31 @@ public class SchemaTreePane extends VBox {
             if (curr.getValue() != null && curr.getValue().getKind() == Kind.SCHEMA) {
                 return curr.getValue().getName();
             }
+            if (curr.getValue() != null && curr.getValue().getSchema() != null && !curr.getValue().getSchema().isBlank()) {
+                return curr.getValue().getSchema();
+            }
             curr = curr.getParent();
+        }
+        ConnectionProfile p = profile != null ? profile : profileFor(item);
+        if (p != null && p.getType() == ConnectionProfile.DatabaseType.SQLSERVER) {
+            return "dbo";
+        }
+        if (p != null && p.getType() == ConnectionProfile.DatabaseType.ORACLE) {
+            return p.getUsername() != null && !p.getUsername().isBlank() ? p.getUsername().toUpperCase() : "HELLO";
         }
         return "public";
     }
 
     private DbObject resolveParentTableFor(TreeItem<DbObject> item, DbObject obj) {
-        if (obj != null && (obj.getKind() == Kind.TABLE || obj.getKind() == Kind.VIEW || obj.getKind() == Kind.PARTITION)) {
+        if (obj != null && (obj.getKind() == Kind.TABLE || obj.getKind() == Kind.VIEW || obj.getKind() == Kind.PARTITION || obj.getKind() == Kind.COLLECTION)) {
             return obj;
         }
         TreeItem<DbObject> curr = item != null ? item.getParent() : null;
         while (curr != null) {
             if (curr.getValue() != null && (curr.getValue().getKind() == Kind.TABLE
                     || curr.getValue().getKind() == Kind.VIEW
-                    || curr.getValue().getKind() == Kind.PARTITION)) {
+                    || curr.getValue().getKind() == Kind.PARTITION
+                    || curr.getValue().getKind() == Kind.COLLECTION)) {
                 return curr.getValue();
             }
             curr = curr.getParent();
