@@ -17,18 +17,7 @@
         <javafx.version>23.0.2</javafx.version>
     </properties>
 
-    <!--
-      StratosDB's own modules (stratosdb-jdbc and its own real, transitive
-      dependencies) aren't published to Maven Central or any other public
-      registry - this is StratosDB's own real, current driver, speaking its
-      own real, current wire protocol (see stratosdb-jdbc's own StratosDriver
-      javadoc), not a third-party artifact. A real, project-local, file-based
-      Maven repository is checked in alongside this project specifically so
-      a plain `mvn clean package` here needs no external service, no account,
-      and no separate setup step by anyone who clones this repo - see
-      local-maven-repo/README.md for exactly how these jars were built and
-      how to rebuild them from a real StratosDB checkout.
-    -->
+    <!-- JitPack repository for StratosDB and other GitHub-hosted libraries -->
     <repositories>
         <repository>
             <id>jitpack.io</id>
@@ -86,19 +75,11 @@
             <artifactId>postgresql</artifactId>
             <version>42.7.4</version>
         </dependency>
-        <!--
-          StratosDB's own real JDBC driver - see the <repositories> block
-          above's own comment for why this comes from a project-local
-          repository rather than Maven Central. Only stratosdb-jdbc itself
-          needs listing here; Maven resolves its own real, transitive
-          module dependencies (stratosdb-network, stratosdb-core, etc.)
-          automatically from the same local repository, exactly like any
-          other real Maven dependency graph.
-        -->
+        <!-- StratosDB native JDBC driver -->
         <dependency>
             <groupId>com.github.firoze-hossain.stratosdb</groupId>
             <artifactId>stratosdb-jdbc</artifactId>
-            <version>1.0.7</version>
+            <version>1.0.8</version>
         </dependency>
         <dependency>
             <groupId>org.xerial</groupId>

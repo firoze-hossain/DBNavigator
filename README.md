@@ -58,14 +58,10 @@ It currently supports **seven relational engines and MongoDB** through one
 consistent interface: the same schema tree, the same tab system, the same
 keyboard habits — whether you're writing SQL against Postgres or `db.collection`
 shell commands against Mongo. StratosDB support connects through its own real,
-native JDBC driver (not a compatibility shim against another engine's driver) -
-see `local-maven-repo/README.md` for how that driver is packaged, since it
-isn't published to Maven Central. A few of StratosDB's own real, current
-engine limitations carry through honestly rather than being papered over: no
-TLS yet (connecting with "Use SSL" checked surfaces a clear error, not a
-silent failure), and no dump/restore tooling yet (StratosDB's own real backup
-tooling - PITR, `StratosDump` - isn't wrapped here yet, the same real gap
-Oracle/SQL Server also currently have).
+native JDBC driver (`stratosdb-jdbc`) fetched directly via JitPack, supporting
+full SSL/TLS encryption and native wire protocol connectivity. Dump/restore
+tooling for StratosDB (wrapping `StratosDump`/PITR) is planned on the roadmap,
+matching the same current state as Oracle and SQL Server.
 
 This is an actively evolving project. The feature list below reflects what's
 implemented *today*; the [Roadmap](#-roadmap--whats-next) section is what's
