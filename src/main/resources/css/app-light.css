@@ -640,6 +640,7 @@
 .completion-sequence       { -fx-text-fill: #b06f00; }
 .completion-database       { -fx-text-fill: #b06f00; }
 .completion-schema         { -fx-text-fill: #7c5295; }
+.completion-type           { -fx-text-fill: #0070c0; }
 .completion-join_condition { -fx-text-fill: #7c5295; -fx-font-weight: bold; }
 .completion-collection     { -fx-text-fill: #1a5fb4; }
 .completion-method         { -fx-text-fill: #9c27b0; }
@@ -653,6 +654,7 @@
 .completion-icon-sequence           { -fx-text-fill: #b06f00; }
 .completion-icon-database           { -fx-text-fill: #b06f00; }
 .completion-icon-schema             { -fx-text-fill: #7c5295; }
+.completion-icon-type               { -fx-text-fill: #0070c0; }
 .completion-icon-join_condition     { -fx-text-fill: #7c5295; }
 
 .completion-popup-box {

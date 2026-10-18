@@ -28,14 +28,19 @@ public final class SqlHighlighter {
             "FUNCTION", "PROCEDURE", "TEMPORARY", "TEMP", "SECURITY", "LABEL", "OWNER",
             "OVER", "PARTITION", "WINDOW", "ROWS", "RANGE", "PRECEDING", "FOLLOWING",
             "CURRENT", "ROW", "AUTO_INCREMENT", "IDENTITY", "GENERATED", "ALWAYS", "COLLATE",
-            "FORCE", "NOFORCE"
+            "FORCE", "NOFORCE", "CURRENT_DATE", "CURRENT_TIME", "CURRENT_TIMESTAMP",
+            "LOCALTIME", "LOCALTIMESTAMP", "SYSDATE", "SYSTIMESTAMP", "INTERVAL"
     };
 
     /** Data-type names get their own color, distinct from control-flow keywords. */
     private static final String[] TYPES = {
+            "DOUBLE PRECISION", "CHARACTER VARYING",
             "INT", "INTEGER", "BIGINT", "SMALLINT", "TINYINT", "VARCHAR", "CHAR", "TEXT",
-            "DATE", "TIME", "TIMESTAMP", "BOOLEAN", "BOOL", "DECIMAL", "NUMERIC",
-            "FLOAT", "DOUBLE", "REAL", "SERIAL", "BIGSERIAL", "UUID", "JSON", "JSONB", "BYTEA"
+            "DATE", "DATETIME", "DATETIME2", "SMALLDATETIME", "DATETIMEOFFSET",
+            "TIME", "TIMETZ", "TIMESTAMP", "TIMESTAMPTZ",
+            "BOOLEAN", "BOOL", "DECIMAL", "DEC", "NUMERIC",
+            "FLOAT", "DOUBLE", "REAL", "SERIAL", "BIGSERIAL", "UUID", "JSON", "JSONB", "BYTEA",
+            "VARCHAR2", "NVARCHAR", "NVARCHAR2", "CLOB", "BLOB", "DATERANGE"
     };
 
     private static final Pattern PATTERN = Pattern.compile(

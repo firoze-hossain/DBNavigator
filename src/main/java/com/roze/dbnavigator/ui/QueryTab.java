@@ -492,6 +492,7 @@ public class QueryTab extends Tab {
                     case DATABASE -> "🗄";
                     case SCHEMA -> "📁";
                     case JOIN_CONDITION -> "⇄";
+                    case TYPE -> "T";
                 };
                 Label icon = new Label(iconSymbol);
                 icon.getStyleClass().addAll("completion-icon", "completion-icon-" + item.kind().name().toLowerCase(Locale.ROOT));
@@ -724,6 +725,9 @@ public class QueryTab extends Tab {
             } else if (inserted.equals(" ")
                     && contextAt(editor.getCaretPosition()) != CompletionService.Context.ANY) {
                 showCompletions();   // popup right after FROM/SELECT/…
+            } else if (inserted.equals(":") && editor.getCaretPosition() >= 2
+                    && editor.getText(editor.getCaretPosition() - 2, editor.getCaretPosition()).equals("::")) {
+                showCompletions();   // popup immediately upon typing :: cast
             } else if (completionPopup.isShowing()) {
                 showCompletions();   // refresh after backspace etc.
             }
@@ -868,17 +872,38 @@ public class QueryTab extends Tab {
             return CompletionService.Context.AFTER_TABLE;
         }
 
-        // 13. SELECT projection (e.g. SELECT * or SELECT col1, col2) before FROM -> AFTER_SELECT_PROJECTION
+        // 13. PostgreSQL shorthand cast: e.g. "b.bill_date_time::", "b.bill_date_time::d"
+        if (trimmedBefore.matches("(?i).*::[A-Za-z0-9_]*$")) {
+            return CompletionService.Context.TYPE_CAST;
+        }
+
+        // 14. Standard CAST / TRY_CAST: e.g. "CAST(b.col AS ", "CAST(b.col AS d"
+        if (trimmedBefore.matches("(?i).*(?:\\bcast|\\btry_cast)\\s*\\([^)]*\\bas\\s+[A-Za-z0-9_]*$")) {
+            return CompletionService.Context.TYPE_CAST;
+        }
+
+        // 15. SQL Server CONVERT / TRY_CONVERT: e.g. "CONVERT(DATE, ...)", "CONVERT(d"
+        if (trimmedBefore.matches("(?i).*(?:\\bconvert|\\btry_convert)\\s*\\(\\s*[A-Za-z0-9_]*$")) {
+            return CompletionService.Context.TYPE_CAST;
+        }
+
+        // 16. Column type definition in CREATE TABLE or ALTER TABLE:
+        // e.g. "CREATE TABLE my_table (id INT, created_at d", "ALTER TABLE my_table ADD COLUMN created_at d"
+        if (trimmedBefore.matches("(?i).*(?:create\\s+table\\s+[A-Za-z0-9_.\"']+\\s*\\([^)]*|alter\\s+table\\s+[A-Za-z0-9_.\"']+\\s+add(?:\\s+column)?\\s+)[A-Za-z0-9_]+\\s+[A-Za-z0-9_]*$")) {
+            return CompletionService.Context.TYPE_CAST;
+        }
+
+        // 17. SELECT projection (e.g. SELECT * or SELECT col1, col2) before FROM -> AFTER_SELECT_PROJECTION
         if (trimmedBefore.matches("(?i)^\\s*select\\s+.*") && !trimmedBefore.matches("(?i).*\\bfrom\\b.*")) {
             return CompletionService.Context.AFTER_SELECT_PROJECTION;
         }
 
-        // 14. Sequences keyword context
+        // 18. Sequences keyword context
         if (trimmedBefore.matches("(?i).*\\bsequence\\s*$")) {
             return CompletionService.Context.SEQUENCES;
         }
 
-        // 15. Standard column contexts: WHERE, ON, SET, HAVING, ORDER BY, GROUP BY
+        // 19. Standard column contexts: WHERE, ON, SET, HAVING, ORDER BY, GROUP BY
         if (trimmedBefore.matches("(?i).*\\b(where|on|set|having|by|between|like|when|then)\\b.*")) {
             return CompletionService.Context.COLUMNS;
         }

@@ -211,5 +211,166 @@ public class SqlCompletionAndHighlightingTest {
         assertTrue(hasDropd, "'dropd' template must be suggested");
         assertTrue(hasDropt, "'dropt' template must be suggested");
     }
+
+    @Test
+    public void testPostgresTypeCastContextAndDateSuggestions() {
+        ConnectionProfile profile = createProfile();
+        String sql = "select b.id as invoiceId, b.uhid from bbill b where b.bill_date_time::d";
+
+        // 1. Verify context detection for ::d at end of statement and at tokenStart
+        CompletionService.Context ctxEnd = QueryTab.contextAt(sql, sql.length());
+        assertEquals(CompletionService.Context.TYPE_CAST, ctxEnd, "Context at '::d' must be TYPE_CAST");
+
+        CompletionService.Context ctxStart = QueryTab.contextAt(sql, sql.length() - 1);
+        assertEquals(CompletionService.Context.TYPE_CAST, ctxStart, "Context right after '::' must be TYPE_CAST");
+
+        // 2. Verify suggestions for prefix 'd'
+        List<CompletionService.Suggestion> suggestions =
+                CompletionService.suggest(profile, "erpdb", sql, "d", ctxEnd);
+
+        assertFalse(suggestions.isEmpty(), "Should suggest completions for 'd' after '::'");
+
+        // Verify top suggestion is date with pg_catalog qualification
+        CompletionService.Suggestion first = suggestions.get(0);
+        assertEquals("date", first.text().toLowerCase(), "'date' must be the top suggestion");
+        assertEquals(CompletionService.Kind.TYPE, first.kind(), "'date' must have Kind.TYPE");
+        assertTrue(first.detail().contains("pg_catalog"), "Detail should indicate pg_catalog");
+
+        // Verify dec, decimal, double precision are present
+        List<String> names = suggestions.stream().map(s -> s.text().toLowerCase()).toList();
+        assertTrue(names.contains("dec"), "Must contain 'dec'");
+        assertTrue(names.contains("decimal"), "Must contain 'decimal'");
+        assertTrue(names.contains("double precision"), "Must contain 'double precision'");
+    }
+
+    @Test
+    public void testStandardCastAndConvertAcrossDialects() {
+        // 1. Standard CAST context
+        String castSql = "select cast(b.amount as d";
+        assertEquals(CompletionService.Context.TYPE_CAST, QueryTab.contextAt(castSql, castSql.length()));
+
+        // MySQL
+        ConnectionProfile mysql = new ConnectionProfile();
+        mysql.setId("test-mysql");
+        mysql.setType(ConnectionProfile.DatabaseType.MYSQL);
+        List<CompletionService.Suggestion> mySqlSug =
+                CompletionService.suggest(mysql, null, castSql, "d", CompletionService.Context.TYPE_CAST);
+        List<String> mySqlNames = mySqlSug.stream().map(s -> s.text().toLowerCase()).toList();
+        assertTrue(mySqlNames.contains("date"), "MySQL must suggest 'DATE'");
+        assertTrue(mySqlNames.contains("datetime"), "MySQL must suggest 'DATETIME'");
+        assertTrue(mySqlNames.contains("decimal"), "MySQL must suggest 'DECIMAL'");
+
+        // Oracle
+        ConnectionProfile oracle = new ConnectionProfile();
+        oracle.setId("test-oracle");
+        oracle.setType(ConnectionProfile.DatabaseType.ORACLE);
+        List<CompletionService.Suggestion> oraSug =
+                CompletionService.suggest(oracle, null, castSql, "d", CompletionService.Context.TYPE_CAST);
+        List<String> oraNames = oraSug.stream().map(s -> s.text().toLowerCase()).toList();
+        assertTrue(oraNames.contains("date"), "Oracle must suggest 'DATE'");
+        assertTrue(oraNames.contains("decimal"), "Oracle must suggest 'DECIMAL'");
+
+        // SQL Server CONVERT context
+        String convertSql = "select convert(d";
+        assertEquals(CompletionService.Context.TYPE_CAST, QueryTab.contextAt(convertSql, convertSql.length()));
+        ConnectionProfile sqlServer = new ConnectionProfile();
+        sqlServer.setId("test-mssql");
+        sqlServer.setType(ConnectionProfile.DatabaseType.SQLSERVER);
+        List<CompletionService.Suggestion> msSug =
+                CompletionService.suggest(sqlServer, null, convertSql, "d", CompletionService.Context.TYPE_CAST);
+        List<String> msNames = msSug.stream().map(s -> s.text().toLowerCase()).toList();
+        assertTrue(msNames.contains("date"), "SQL Server must suggest 'DATE'");
+        assertTrue(msNames.contains("datetime"), "SQL Server must suggest 'DATETIME'");
+        assertTrue(msNames.contains("datetime2"), "SQL Server must suggest 'DATETIME2'");
+
+        // SQLite
+        ConnectionProfile sqlite = new ConnectionProfile();
+        sqlite.setId("test-sqlite");
+        sqlite.setType(ConnectionProfile.DatabaseType.SQLITE);
+        List<CompletionService.Suggestion> sqliteSug =
+                CompletionService.suggest(sqlite, null, castSql, "d", CompletionService.Context.TYPE_CAST);
+        List<String> sqliteNames = sqliteSug.stream().map(s -> s.text().toLowerCase()).toList();
+        assertTrue(sqliteNames.contains("date"), "SQLite must suggest 'DATE'");
+        assertTrue(sqliteNames.contains("datetime"), "SQLite must suggest 'DATETIME'");
+    }
+
+    @Test
+    public void testTableColumnDefinitionTypeContext() {
+        String createSql = "create table employees (id int, created_at d";
+        assertEquals(CompletionService.Context.TYPE_CAST, QueryTab.contextAt(createSql, createSql.length()));
+
+        String alterSql = "alter table employees add column created_at d";
+        assertEquals(CompletionService.Context.TYPE_CAST, QueryTab.contextAt(alterSql, alterSql.length()));
+
+        String alterNoColSql = "alter table employees add created_at d";
+        assertEquals(CompletionService.Context.TYPE_CAST, QueryTab.contextAt(alterNoColSql, alterNoColSql.length()));
+    }
+
+    @Test
+    public void testDateKeywordsInGeneralExpressions() {
+        // PostgreSQL date functions & constants
+        ConnectionProfile pg = createProfile();
+        List<CompletionService.Suggestion> pgSug =
+                CompletionService.suggest(pg, "public", "where b.col >= curr", "curr", CompletionService.Context.COLUMNS);
+        List<String> pgNames = pgSug.stream().map(s -> s.text().toLowerCase()).toList();
+        assertTrue(pgNames.contains("current_date"), "Postgres should suggest CURRENT_DATE");
+
+        // MySQL date functions
+        ConnectionProfile mysql = new ConnectionProfile();
+        mysql.setId("test-mysql");
+        mysql.setType(ConnectionProfile.DatabaseType.MYSQL);
+        List<CompletionService.Suggestion> mySug =
+                CompletionService.suggest(mysql, null, "select cur", "cur", CompletionService.Context.AFTER_SELECT_PROJECTION);
+        List<String> myNames = mySug.stream().map(s -> s.text().toLowerCase()).toList();
+        assertTrue(myNames.contains("curdate()"), "MySQL should suggest CURDATE()");
+        assertTrue(myNames.contains("current_date"), "MySQL should suggest CURRENT_DATE");
+    }
+
+    @Test
+    public void testDateAndTypeHighlighting() {
+        String sql = "select b.bill_date_time::date, current_date from bbill b;";
+        StyleSpans<Collection<String>> spans = SqlHighlighter.computeHighlighting(sql);
+        assertNotNull(spans);
+
+        // Verify 'date' is highlighted as sql-type
+        boolean foundDateType = false;
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?i)\\bdate\\b").matcher(sql);
+        while (m.find()) {
+            int start = m.start();
+            int end = m.end();
+            int currentOffset = 0;
+            for (org.fxmisc.richtext.model.StyleSpan<Collection<String>> span : spans) {
+                int nextOffset = currentOffset + span.getLength();
+                if (currentOffset <= start && nextOffset >= end) {
+                    if (span.getStyle().contains("sql-type")) {
+                        foundDateType = true;
+                        break;
+                    }
+                }
+                currentOffset = nextOffset;
+            }
+        }
+        assertTrue(foundDateType, "'date' must be highlighted as 'sql-type'");
+
+        // Verify 'current_date' is highlighted as sql-keyword
+        boolean foundCurrentDate = false;
+        java.util.regex.Matcher m2 = java.util.regex.Pattern.compile("(?i)\\bcurrent_date\\b").matcher(sql);
+        while (m2.find()) {
+            int start = m2.start();
+            int end = m2.end();
+            int currentOffset = 0;
+            for (org.fxmisc.richtext.model.StyleSpan<Collection<String>> span : spans) {
+                int nextOffset = currentOffset + span.getLength();
+                if (currentOffset <= start && nextOffset >= end) {
+                    if (span.getStyle().contains("sql-keyword")) {
+                        foundCurrentDate = true;
+                        break;
+                    }
+                }
+                currentOffset = nextOffset;
+            }
+        }
+        assertTrue(foundCurrentDate, "'current_date' must be highlighted as 'sql-keyword'");
+    }
 }
 

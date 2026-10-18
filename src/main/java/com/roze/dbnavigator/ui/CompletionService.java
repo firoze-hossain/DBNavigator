@@ -20,7 +20,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class CompletionService {
 
-    public enum Kind { KEYWORD, TABLE, COLUMN, SEQUENCE, DATABASE, SCHEMA, TEMPLATE, JOIN_CONDITION }
+    public enum Kind { KEYWORD, TABLE, COLUMN, SEQUENCE, DATABASE, SCHEMA, TEMPLATE, JOIN_CONDITION, TYPE }
 
     /** What the surrounding query structure tells us the user is about to type. */
     public enum Context {
@@ -38,7 +38,8 @@ public final class CompletionService {
         DDL_OBJECT_TYPE,
         POST_OBJECT_DDL,
         FOREIGN_KEY_ACTION,
-        DROP_DATABASE_OPTION
+        DROP_DATABASE_OPTION,
+        TYPE_CAST
     }
 
     public record Suggestion(String text, Kind kind, String detail, String templateExpansion) {
@@ -94,10 +95,28 @@ public final class CompletionService {
             "AND", "OR", "NOT", "NULL", "IS NULL", "IS NOT NULL", "IN", "BETWEEN",
             "LIKE", "EXISTS", "CASE", "WHEN", "THEN", "ELSE", "END", "AS",
             "CASCADE", "RESTRICT", "CASCADE CONSTRAINTS", "PURGE", "FORCE", "NOFORCE",
+            "DATE", "DATETIME", "TIMESTAMP", "TIME", "CURRENT_DATE", "CURRENT_TIME", "CURRENT_TIMESTAMP", "INTERVAL",
             "COUNT(*)", "SUM(", "AVG(", "MIN(", "MAX(", "COALESCE(", "CAST(",
             "PRIMARY KEY", "FOREIGN KEY", "REFERENCES", "DEFAULT", "UNIQUE", "CONSTRAINT",
             "BEGIN", "COMMIT", "ROLLBACK", "TRUNCATE TABLE", "ASC", "DESC",
             "NEXTVAL(", "CURRVAL(", "SETVAL(");
+
+    private static final List<String> POSTGRES_KEYWORDS = List.of(
+            "CURRENT_DATE", "CURRENT_TIME", "CURRENT_TIMESTAMP", "LOCALTIME", "LOCALTIMESTAMP",
+            "NOW()", "DATE_PART(", "DATE_TRUNC(", "EXTRACT(", "AGE(", "TO_DATE(", "TO_TIMESTAMP(",
+            "DATERANGE", "INTERVAL", "ILIKE", "SIMILAR TO", "RETURNING", "VACUUM", "ANALYZE");
+
+    private static final List<String> MYSQL_KEYWORDS = List.of(
+            "CURDATE()", "CURRENT_DATE", "CURTIME()", "CURRENT_TIME", "CURRENT_TIMESTAMP",
+            "NOW()", "UTC_DATE()", "UTC_TIME()", "UTC_TIMESTAMP()",
+            "DATE(", "DATEDIFF(", "DATE_ADD(", "DATE_SUB(", "DATE_FORMAT(", "STR_TO_DATE(",
+            "DAY(", "DAYNAME(", "MONTH(", "YEAR(", "MAKEDATE(", "EXTRACT(",
+            "IFNULL(", "LAST_INSERT_ID()", "CONCAT(", "AUTO_INCREMENT");
+
+    private static final List<String> SQLITE_KEYWORDS = List.of(
+            "CURRENT_DATE", "CURRENT_TIME", "CURRENT_TIMESTAMP",
+            "date(", "time(", "datetime(", "julianday(", "unixepoch(", "strftime(",
+            "glob", "randomblob(", "typeof(");
 
     private static final List<String> SQLSERVER_KEYWORDS = List.of(
             "TOP", "IDENTITY(", "MERGE", "USING", "WHEN MATCHED THEN", "WHEN NOT MATCHED THEN",
@@ -105,19 +124,22 @@ public final class CompletionService {
             "WITH (NOLOCK)", "OFFSET 0 ROWS", "FETCH NEXT", "ROWS ONLY",
             "OVER (", "PARTITION BY", "ROW_NUMBER()", "RANK()", "DENSE_RANK()",
             "ISNULL(", "IIF(", "TRY_CAST(", "TRY_CONVERT(", "CONVERT(",
-            "GETDATE()", "GETUTCDATE()", "SYSDATETIME()", "DATEADD(", "DATEDIFF(", "DATEPART(",
+            "GETDATE()", "GETUTCDATE()", "SYSDATETIME()", "SYSDATETIMEOFFSET()",
+            "DATEADD(", "DATEDIFF(", "DATEPART(", "DATENAME(", "DATEFROMPARTS(", "EOMONTH(", "ISDATE(",
+            "CURRENT_TIMESTAMP",
             "LEN(", "SUBSTRING(", "STUFF(", "CHARINDEX(", "PATINDEX(", "STRING_AGG(", "FORMAT(",
             "DECLARE", "PRINT", "EXEC", "EXECUTE", "RAISERROR(", "THROW", "WAITFOR DELAY",
             "BEGIN TRAN", "BEGIN TRANSACTION", "COMMIT TRAN", "ROLLBACK TRAN", "GO",
-            "NVARCHAR(", "VARCHAR(", "NCHAR(", "DATETIME2", "UNIQUEIDENTIFIER", "BIT",
+            "DATE", "DATETIME", "DATETIME2", "NVARCHAR(", "VARCHAR(", "NCHAR(", "UNIQUEIDENTIFIER", "BIT",
             "SCOPE_IDENTITY()", "@@IDENTITY", "IDENT_CURRENT(", "@@ROWCOUNT");
 
     private static final List<String> ORACLE_KEYWORDS = List.of(
             "ROWNUM", "ROWID", "DUAL", "MINUS", "CONNECT BY", "START WITH", "PRIOR",
             "CASCADE CONSTRAINTS", "PURGE",
             "MERGE INTO", "USING", "WHEN MATCHED THEN", "WHEN NOT MATCHED THEN",
-            "NVL(", "NVL2(", "DECODE(", "TO_CHAR(", "TO_DATE(", "TO_NUMBER(", "TO_TIMESTAMP(",
-            "SYSDATE", "SYSTIMESTAMP", "TRUNC(", "EXTRACT(", "ADD_MONTHS(", "MONTHS_BETWEEN(",
+            "NVL(", "NVL2(", "DECODE(", "TO_CHAR(", "TO_DATE(", "TO_NUMBER(", "TO_TIMESTAMP(", "TO_TIMESTAMP_TZ(",
+            "SYSDATE", "SYSTIMESTAMP", "CURRENT_DATE", "CURRENT_TIMESTAMP", "LOCALTIMESTAMP",
+            "TRUNC(", "EXTRACT(", "ADD_MONTHS(", "MONTHS_BETWEEN(", "LAST_DAY(", "NEXT_DAY(",
             "SUBSTR(", "INSTR(", "LENGTH(", "LPAD(", "RPAD(", "LISTAGG(", "REGEXP_LIKE(",
             "REGEXP_SUBSTR(", "REGEXP_REPLACE(",
             "OVER (", "PARTITION BY", "ROW_NUMBER()", "RANK()", "DENSE_RANK()",
@@ -128,6 +150,50 @@ public final class CompletionService {
             "RAISE", "RAISE_APPLICATION_ERROR(", "PRAGMA", "END;", "DBMS_OUTPUT.PUT_LINE(",
             "CREATE USER", "IDENTIFIED BY", "GRANT", "REVOKE", "QUOTA UNLIMITED ON",
             "CREATE OR REPLACE VIEW", "CREATE SYNONYM", "ALL_TABLES", "USER_TABLES", "ALL_TAB_COLUMNS");
+
+    // Dialect-specific data types for type cast (::, CAST, CONVERT) and DDL definitions
+    private static final List<String> POSTGRES_TYPES = List.of(
+            "date", "dec", "decimal", "double precision", "time", "timestamp",
+            "timestamptz", "timetz", "interval", "numeric", "real",
+            "int", "integer", "bigint", "smallint", "serial", "bigserial", "smallserial",
+            "varchar", "character varying", "char", "character", "text",
+            "boolean", "bool", "bytea", "uuid", "json", "jsonb", "xml",
+            "daterange", "tsrange", "tstzrange", "numrange", "int4range", "int8range",
+            "inet", "cidr", "macaddr", "point", "polygon", "tsvector", "tsquery", "money");
+
+    private static final List<String> MYSQL_TYPES = List.of(
+            "DATE", "DATETIME", "TIME", "TIMESTAMP", "YEAR",
+            "DECIMAL", "DEC", "NUMERIC", "FLOAT", "DOUBLE", "REAL",
+            "INT", "INTEGER", "BIGINT", "SMALLINT", "TINYINT", "MEDIUMINT",
+            "VARCHAR", "CHAR", "TEXT", "TINYTEXT", "MEDIUMTEXT", "LONGTEXT",
+            "BINARY", "VARBINARY", "BLOB", "TINYBLOB", "MEDIUMBLOB", "LONGBLOB",
+            "JSON", "BOOLEAN", "BOOL", "BIT", "SIGNED", "UNSIGNED");
+
+    private static final List<String> ORACLE_TYPES = List.of(
+            "DATE", "TIMESTAMP", "TIMESTAMP WITH TIME ZONE", "TIMESTAMP WITH LOCAL TIME ZONE",
+            "INTERVAL YEAR TO MONTH", "INTERVAL DAY TO SECOND",
+            "NUMBER", "DECIMAL", "DEC", "DOUBLE PRECISION", "FLOAT", "INTEGER", "INT", "SMALLINT",
+            "VARCHAR2", "NVARCHAR2", "CHAR", "NCHAR", "CLOB", "NCLOB", "LONG",
+            "BLOB", "BFILE", "RAW", "LONG RAW", "ROWID", "UROWID", "XMLTYPE",
+            "BINARY_FLOAT", "BINARY_DOUBLE");
+
+    private static final List<String> SQLSERVER_TYPES = List.of(
+            "DATE", "DATETIME", "DATETIME2", "SMALLDATETIME", "DATETIMEOFFSET", "TIME",
+            "INT", "BIGINT", "SMALLINT", "TINYINT", "BIT",
+            "DECIMAL", "NUMERIC", "MONEY", "SMALLMONEY", "FLOAT", "REAL",
+            "VARCHAR", "NVARCHAR", "CHAR", "NCHAR", "TEXT", "NTEXT",
+            "VARBINARY", "BINARY", "IMAGE", "UNIQUEIDENTIFIER", "XML", "JSON",
+            "GEOMETRY", "GEOGRAPHY", "ROWVERSION");
+
+    private static final List<String> SQLITE_TYPES = List.of(
+            "DATE", "DATETIME", "TEXT", "NUMERIC", "INTEGER", "REAL", "BLOB", "BOOLEAN", "VARCHAR");
+
+    private static final List<String> STRATOSDB_TYPES = List.of(
+            "DATE", "DATETIME", "TIMESTAMP", "TIME", "VARCHAR", "INT", "BIGINT", "DECIMAL", "DOUBLE", "BOOLEAN");
+
+    private static final List<String> GENERAL_TYPES = List.of(
+            "DATE", "DATETIME", "TIMESTAMP", "TIME", "VARCHAR", "CHAR", "TEXT",
+            "INT", "INTEGER", "BIGINT", "SMALLINT", "DECIMAL", "NUMERIC", "DOUBLE", "FLOAT", "BOOLEAN");
 
     private static final int MAX_SUGGESTIONS = 35;
 
@@ -227,6 +293,9 @@ public final class CompletionService {
                 addSpecificKeyword("AS", "alias", prefix, isUpper, matches);
                 addFunctions(prefix, isUpper, matches);
                 addScopedColumns(profile, catalog, fullText, prefix, matches);
+                if (!prefix.isBlank()) {
+                    addKeywordsList(profile, GENERAL_KEYWORDS, prefix, isUpper, matches);
+                }
             }
             case TABLES -> {
                 addTables(profile, catalog, prefix, matches);
@@ -325,6 +394,9 @@ public final class CompletionService {
             case COLUMNS -> {
                 addScopedColumns(profile, catalog, fullText, prefix, matches);
                 addKeywordsList(profile, GENERAL_KEYWORDS, prefix, isUpper, matches);
+            }
+            case TYPE_CAST -> {
+                addTypeCastSuggestions(profile, catalog, prefix, isUpper, matches);
             }
             case ANY -> {
                 addLiveTemplates(prefix, isUpper, matches);
@@ -561,6 +633,34 @@ public final class CompletionService {
                 matches.add(new Suggestion(formatted, Kind.KEYWORD, "keyword"));
             }
         }
+        if (profile != null && profile.getType() == ConnectionProfile.DatabaseType.POSTGRESQL) {
+            for (String keyword : POSTGRES_KEYWORDS) {
+                if (matches.size() >= MAX_SUGGESTIONS) return;
+                String formatted = isUpper ? keyword.toUpperCase(Locale.ROOT) : keyword.toLowerCase(Locale.ROOT);
+                if (formatted.toLowerCase(Locale.ROOT).startsWith(prefix) && notPresent(matches, formatted)) {
+                    matches.add(new Suggestion(formatted, Kind.KEYWORD, "PostgreSQL"));
+                }
+            }
+        }
+        if (profile != null && (profile.getType() == ConnectionProfile.DatabaseType.MYSQL
+                || profile.getType() == ConnectionProfile.DatabaseType.MARIADB)) {
+            for (String keyword : MYSQL_KEYWORDS) {
+                if (matches.size() >= MAX_SUGGESTIONS) return;
+                String formatted = isUpper ? keyword.toUpperCase(Locale.ROOT) : keyword.toLowerCase(Locale.ROOT);
+                if (formatted.toLowerCase(Locale.ROOT).startsWith(prefix) && notPresent(matches, formatted)) {
+                    matches.add(new Suggestion(formatted, Kind.KEYWORD, "MySQL"));
+                }
+            }
+        }
+        if (profile != null && profile.getType() == ConnectionProfile.DatabaseType.SQLITE) {
+            for (String keyword : SQLITE_KEYWORDS) {
+                if (matches.size() >= MAX_SUGGESTIONS) return;
+                String formatted = isUpper ? keyword.toUpperCase(Locale.ROOT) : keyword.toLowerCase(Locale.ROOT);
+                if (formatted.toLowerCase(Locale.ROOT).startsWith(prefix) && notPresent(matches, formatted)) {
+                    matches.add(new Suggestion(formatted, Kind.KEYWORD, "SQLite"));
+                }
+            }
+        }
         if (profile != null && profile.getType() == ConnectionProfile.DatabaseType.SQLSERVER) {
             for (String keyword : SQLSERVER_KEYWORDS) {
                 if (matches.size() >= MAX_SUGGESTIONS) return;
@@ -576,6 +676,104 @@ public final class CompletionService {
                 String formatted = isUpper ? keyword.toUpperCase(Locale.ROOT) : keyword.toLowerCase(Locale.ROOT);
                 if (formatted.toLowerCase(Locale.ROOT).startsWith(prefix) && notPresent(matches, formatted)) {
                     matches.add(new Suggestion(formatted, Kind.KEYWORD, "PL/SQL"));
+                }
+            }
+        }
+    }
+
+    private static void addTypeCastSuggestions(ConnectionProfile profile, String catalog,
+                                               String prefix, boolean isUpper, List<Suggestion> matches) {
+        ConnectionProfile.DatabaseType type = profile != null ? profile.getType() : ConnectionProfile.DatabaseType.POSTGRESQL;
+
+        if (type == ConnectionProfile.DatabaseType.POSTGRESQL) {
+            // 1. In Postgres, DataGrip shows qualified type from pg_catalog first (e.g. date (erpdb.pg_catalog))
+            if ("date".startsWith(prefix)) {
+                String catName = (catalog != null && !catalog.isBlank()) ? "(" + catalog + ".pg_catalog)" : "(pg_catalog)";
+                matches.add(new Suggestion(isUpper ? "DATE" : "date", Kind.TYPE, catName));
+            }
+
+            // 2. Standard PostgreSQL data types (date, dec, decimal, double precision, etc.)
+            for (String t : POSTGRES_TYPES) {
+                if (matches.size() >= MAX_SUGGESTIONS) return;
+                if (prefix.isBlank() || t.toLowerCase(Locale.ROOT).startsWith(prefix)) {
+                    String formatted = isUpper ? t.toUpperCase(Locale.ROOT) : t.toLowerCase(Locale.ROOT);
+                    if (notPresent(matches, formatted)) {
+                        matches.add(new Suggestion(formatted, Kind.TYPE, "type"));
+                    }
+                }
+            }
+
+            // 3. PostgreSQL composite row types from tables in current schema (matching DataGrip screenshot)
+            for (String tbl : tableCache.getOrDefault(key(profile, catalog), List.of())) {
+                if (matches.size() >= MAX_SUGGESTIONS) return;
+                if (prefix.isBlank() || tbl.toLowerCase(Locale.ROOT).startsWith(prefix)) {
+                    String schema = (catalog != null && !catalog.isBlank()) ? "(" + catalog + ".public)" : "(public)";
+                    if (notPresent(matches, tbl)) {
+                        matches.add(new Suggestion(tbl, Kind.TABLE, schema));
+                    }
+                    String rowType = tbl + "%rowtype";
+                    if (matches.size() < MAX_SUGGESTIONS && notPresent(matches, rowType)) {
+                        matches.add(new Suggestion(rowType, Kind.TYPE, schema));
+                    }
+                }
+            }
+        } else if (type == ConnectionProfile.DatabaseType.MYSQL || type == ConnectionProfile.DatabaseType.MARIADB) {
+            for (String t : MYSQL_TYPES) {
+                if (matches.size() >= MAX_SUGGESTIONS) return;
+                if (prefix.isBlank() || t.toLowerCase(Locale.ROOT).startsWith(prefix)) {
+                    String formatted = isUpper ? t.toUpperCase(Locale.ROOT) : t.toLowerCase(Locale.ROOT);
+                    if (notPresent(matches, formatted)) {
+                        matches.add(new Suggestion(formatted, Kind.TYPE, "type"));
+                    }
+                }
+            }
+        } else if (type == ConnectionProfile.DatabaseType.ORACLE) {
+            for (String t : ORACLE_TYPES) {
+                if (matches.size() >= MAX_SUGGESTIONS) return;
+                if (prefix.isBlank() || t.toLowerCase(Locale.ROOT).startsWith(prefix)) {
+                    String formatted = isUpper ? t.toUpperCase(Locale.ROOT) : t.toLowerCase(Locale.ROOT);
+                    if (notPresent(matches, formatted)) {
+                        matches.add(new Suggestion(formatted, Kind.TYPE, "type"));
+                    }
+                }
+            }
+            for (String tbl : tableCache.getOrDefault(key(profile, catalog), List.of())) {
+                if (matches.size() >= MAX_SUGGESTIONS) return;
+                if (prefix.isBlank() || tbl.toLowerCase(Locale.ROOT).startsWith(prefix)) {
+                    String rowType = tbl + "%ROWTYPE";
+                    if (notPresent(matches, rowType)) {
+                        matches.add(new Suggestion(rowType, Kind.TYPE, "rowtype"));
+                    }
+                }
+            }
+        } else if (type == ConnectionProfile.DatabaseType.SQLSERVER) {
+            for (String t : SQLSERVER_TYPES) {
+                if (matches.size() >= MAX_SUGGESTIONS) return;
+                if (prefix.isBlank() || t.toLowerCase(Locale.ROOT).startsWith(prefix)) {
+                    String formatted = isUpper ? t.toUpperCase(Locale.ROOT) : t.toLowerCase(Locale.ROOT);
+                    if (notPresent(matches, formatted)) {
+                        matches.add(new Suggestion(formatted, Kind.TYPE, "T-SQL type"));
+                    }
+                }
+            }
+        } else if (type == ConnectionProfile.DatabaseType.SQLITE) {
+            for (String t : SQLITE_TYPES) {
+                if (matches.size() >= MAX_SUGGESTIONS) return;
+                if (prefix.isBlank() || t.toLowerCase(Locale.ROOT).startsWith(prefix)) {
+                    String formatted = isUpper ? t.toUpperCase(Locale.ROOT) : t.toLowerCase(Locale.ROOT);
+                    if (notPresent(matches, formatted)) {
+                        matches.add(new Suggestion(formatted, Kind.TYPE, "type"));
+                    }
+                }
+            }
+        } else {
+            for (String t : GENERAL_TYPES) {
+                if (matches.size() >= MAX_SUGGESTIONS) return;
+                if (prefix.isBlank() || t.toLowerCase(Locale.ROOT).startsWith(prefix)) {
+                    String formatted = isUpper ? t.toUpperCase(Locale.ROOT) : t.toLowerCase(Locale.ROOT);
+                    if (notPresent(matches, formatted)) {
+                        matches.add(new Suggestion(formatted, Kind.TYPE, "type"));
+                    }
                 }
             }
         }
