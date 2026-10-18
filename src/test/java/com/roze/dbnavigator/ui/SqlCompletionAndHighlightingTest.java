@@ -107,4 +107,48 @@ public class SqlCompletionAndHighlightingTest {
         }
         assertTrue(foundCascadeKeyword, "'cascade' must be highlighted as 'sql-keyword'");
     }
+
+    @Test
+    public void testForceSuggestedInDropDatabaseOption() {
+        ConnectionProfile profile = createProfile();
+        List<CompletionService.Suggestion> suggestions =
+                CompletionService.suggest(profile, "public", "drop database empdb (for", "for", CompletionService.Context.DROP_DATABASE_OPTION);
+
+        assertFalse(suggestions.isEmpty(), "Should suggest completions for 'for' in DROP_DATABASE_OPTION");
+
+        CompletionService.Suggestion forceSug = suggestions.stream()
+                .filter(s -> s.text().equalsIgnoreCase("force"))
+                .findFirst()
+                .orElse(null);
+
+        assertNotNull(forceSug, "'FORCE' must be suggested in DROP_DATABASE_OPTION");
+        assertEquals(CompletionService.Kind.KEYWORD, forceSug.kind());
+    }
+
+    @Test
+    public void testForceHighlightingInSqlHighlighter() {
+        String sql = "drop database empdb (force);";
+        StyleSpans<Collection<String>> spans = SqlHighlighter.computeHighlighting(sql);
+        assertNotNull(spans);
+
+        boolean foundForceKeyword = false;
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?i)\\bforce\\b").matcher(sql);
+        while (m.find()) {
+            int start = m.start();
+            int end = m.end();
+            int currentOffset = 0;
+            for (org.fxmisc.richtext.model.StyleSpan<Collection<String>> span : spans) {
+                int nextOffset = currentOffset + span.getLength();
+                if (currentOffset <= start && nextOffset >= end) {
+                    if (span.getStyle().contains("sql-keyword")) {
+                        foundForceKeyword = true;
+                        break;
+                    }
+                }
+                currentOffset = nextOffset;
+            }
+        }
+        assertTrue(foundForceKeyword, "'force' must be highlighted as 'sql-keyword'");
+    }
 }
+

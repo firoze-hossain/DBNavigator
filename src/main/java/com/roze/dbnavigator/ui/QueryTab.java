@@ -799,8 +799,13 @@ public class QueryTab extends Tab {
 
         if (trimmedBefore.isEmpty()) return CompletionService.Context.STATEMENT_START;
 
-        // 1. DDL drop/truncate table/sequence/view/schema/type: e.g. "DROP TABLE users ", "DROP SEQUENCE s1 "
-        if (trimmedBefore.matches("(?i).*\\b(drop\\s+(?:table|view|sequence|schema|type)|truncate\\s+(?:table)?)\\s+[A-Za-z0-9_.\"']+\\s*.*")) {
+        // 1. DDL drop database options in parentheses: e.g. "DROP DATABASE empdb (for"
+        if (trimmedBefore.matches("(?i).*\\bdrop\\s+database\\s+[A-Za-z0-9_.\"']+\\s*(?:with\\s*)?\\(.*")) {
+            return CompletionService.Context.DROP_DATABASE_OPTION;
+        }
+
+        // 2. DDL drop/truncate database/table/view/sequence/schema/type: e.g. "DROP TABLE users ", "DROP DATABASE empdb "
+        if (trimmedBefore.matches("(?i).*\\b(drop\\s+(?:database|table|view|sequence|schema|type)|truncate\\s+(?:table)?)\\s+[A-Za-z0-9_.\"']+\\s*.*")) {
             return CompletionService.Context.POST_OBJECT_DDL;
         }
 

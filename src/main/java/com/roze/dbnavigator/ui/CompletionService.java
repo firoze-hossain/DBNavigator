@@ -34,7 +34,8 @@ public final class CompletionService {
         COLUMNS,
         SEQUENCES,
         POST_OBJECT_DDL,
-        FOREIGN_KEY_ACTION
+        FOREIGN_KEY_ACTION,
+        DROP_DATABASE_OPTION
     }
 
     public record Suggestion(String text, Kind kind, String detail, String templateExpansion) {
@@ -77,7 +78,7 @@ public final class CompletionService {
             "GROUP BY", "ORDER BY", "HAVING", "LIMIT", "OFFSET", "UNION", "ALL", "DISTINCT",
             "AND", "OR", "NOT", "NULL", "IS NULL", "IS NOT NULL", "IN", "BETWEEN",
             "LIKE", "EXISTS", "CASE", "WHEN", "THEN", "ELSE", "END", "AS",
-            "CASCADE", "RESTRICT", "CASCADE CONSTRAINTS", "PURGE",
+            "CASCADE", "RESTRICT", "CASCADE CONSTRAINTS", "PURGE", "FORCE", "NOFORCE",
             "COUNT(*)", "SUM(", "AVG(", "MIN(", "MAX(", "COALESCE(", "CAST(",
             "PRIMARY KEY", "FOREIGN KEY", "REFERENCES", "DEFAULT", "UNIQUE", "CONSTRAINT",
             "BEGIN", "COMMIT", "ROLLBACK", "TRUNCATE TABLE", "ASC", "DESC",
@@ -211,12 +212,21 @@ public final class CompletionService {
                 addSmartJoinConditions(profile, catalog, fullText, prefix, matches);
                 addScopedColumns(profile, catalog, fullText, prefix, matches);
             }
+            case DROP_DATABASE_OPTION -> {
+                addSpecificKeyword("FORCE", "terminate active connections and drop database (PostgreSQL 13+)", prefix, isUpper, matches);
+            }
             case POST_OBJECT_DDL -> {
+                if (fullText.toLowerCase(Locale.ROOT).contains("drop database")) {
+                    addSpecificKeyword("(FORCE)", "terminate active connections and drop (PostgreSQL 13+)", prefix, isUpper, matches);
+                    addSpecificKeyword("WITH (FORCE)", "terminate active connections and drop (PostgreSQL 13+)", prefix, isUpper, matches);
+                    addSpecificKeyword("FORCE", "terminate active connections and drop (PostgreSQL 13+)", prefix, isUpper, matches);
+                }
                 addSpecificKeyword("CASCADE", "drop dependent objects (Postgres/MySQL/Oracle)", prefix, isUpper, matches);
                 addSpecificKeyword("RESTRICT", "restrict drop if dependencies exist", prefix, isUpper, matches);
                 if (profile != null && profile.getType() == ConnectionProfile.DatabaseType.ORACLE) {
                     addSpecificKeyword("CASCADE CONSTRAINTS", "Oracle drop referential integrity constraints", prefix, isUpper, matches);
                     addSpecificKeyword("PURGE", "Oracle bypass recycle bin", prefix, isUpper, matches);
+                    addSpecificKeyword("FORCE", "Oracle force drop/override", prefix, isUpper, matches);
                 }
             }
             case FOREIGN_KEY_ACTION -> {
