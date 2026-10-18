@@ -1032,11 +1032,45 @@ public class QueryTab extends Tab {
             int startPara = editor.offsetToPosition(range[0], org.fxmisc.richtext.model.TwoDimensional.Bias.Forward).getMajor();
             int endPara = editor.offsetToPosition(range[1], org.fxmisc.richtext.model.TwoDimensional.Bias.Backward).getMajor();
 
-            double minX = Double.MAX_VALUE;
-            double maxX = Double.MIN_VALUE;
-            double minY = Double.MAX_VALUE;
-            double maxY = Double.MIN_VALUE;
-            boolean found = false;
+            int firstVisible = editor.firstVisibleParToAllParIndex();
+            int lastVisible = editor.lastVisibleParToAllParIndex();
+            if (firstVisible >= 0 && lastVisible >= 0) {
+                if (endPara < firstVisible || startPara > lastVisible) {
+                    statementBoundingBox.setVisible(false);
+                    return;
+                }
+            }
+
+            // 1. Determine gutter right boundary in statementOverlay coordinates
+            double gutterRightX = -1;
+            var pText = editor.lookup(".paragraph-box .paragraph-text");
+            if (pText != null) {
+                Point2D p = statementOverlay.screenToLocal(pText.localToScreen(0, 0));
+                if (p != null && p.getX() > 10.0) {
+                    gutterRightX = p.getX();
+                }
+            }
+            if (gutterRightX < 0) {
+                var pBox = editor.lookup(".paragraph-box");
+                if (pBox != null) {
+                    Point2D pb = statementOverlay.screenToLocal(pBox.localToScreen(0, 0));
+                    if (pb != null && pb.getX() >= 0) {
+                        gutterRightX = pb.getX() + 46.5;
+                    }
+                }
+            }
+            if (gutterRightX < 0) {
+                gutterRightX = 46.5;
+            }
+
+            // Left edge is anchored immediately after gutter with a clean 2px breathing margin
+            double boxX = gutterRightX + 2.0;
+
+            // 2. Compute vertical bounds (minY, maxY) and character maxX
+            double minFoundY = Double.MAX_VALUE;
+            double maxFoundY = Double.MIN_VALUE;
+            double maxCharX = boxX + 60.0;
+            boolean anyBoundsFound = false;
 
             for (int p = startPara; p <= endPara; p++) {
                 int pStart = editor.getAbsolutePosition(p, 0);
@@ -1048,9 +1082,9 @@ public class QueryTab extends Tab {
                         Point2D pTop = statementOverlay.screenToLocal(pb.getMinX(), pb.getMinY());
                         Point2D pBottom = statementOverlay.screenToLocal(pb.getMinX(), pb.getMaxY());
                         if (pTop != null && pBottom != null) {
-                            minY = Math.min(minY, Math.min(pTop.getY(), pBottom.getY()));
-                            maxY = Math.max(maxY, Math.max(pTop.getY(), pBottom.getY()));
-                            found = true;
+                            minFoundY = Math.min(minFoundY, Math.min(pTop.getY(), pBottom.getY()));
+                            maxFoundY = Math.max(maxFoundY, Math.max(pTop.getY(), pBottom.getY()));
+                            anyBoundsFound = true;
                         }
                     }
                     continue;
@@ -1065,33 +1099,51 @@ public class QueryTab extends Tab {
                         Point2D p1 = statementOverlay.screenToLocal(sb.getMinX(), sb.getMinY());
                         Point2D p2 = statementOverlay.screenToLocal(sb.getMaxX(), sb.getMaxY());
                         if (p1 != null && p2 != null) {
-                            minX = Math.min(minX, Math.min(p1.getX(), p2.getX()));
-                            maxX = Math.max(maxX, Math.max(p1.getX(), p2.getX()));
-                            minY = Math.min(minY, Math.min(p1.getY(), p2.getY()));
-                            maxY = Math.max(maxY, Math.max(p1.getY(), p2.getY()));
-                            found = true;
+                            maxCharX = Math.max(maxCharX, Math.max(p1.getX(), p2.getX()));
+                            minFoundY = Math.min(minFoundY, Math.min(p1.getY(), p2.getY()));
+                            maxFoundY = Math.max(maxFoundY, Math.max(p1.getY(), p2.getY()));
+                            anyBoundsFound = true;
+                        }
+                    } else {
+                        var optPb = editor.getParagraphBoundsOnScreen(p);
+                        if (optPb.isPresent()) {
+                            Bounds pb = optPb.get();
+                            Point2D pTop = statementOverlay.screenToLocal(pb.getMinX(), pb.getMinY());
+                            Point2D pBottom = statementOverlay.screenToLocal(pb.getMinX(), pb.getMaxY());
+                            if (pTop != null && pBottom != null) {
+                                minFoundY = Math.min(minFoundY, Math.min(pTop.getY(), pBottom.getY()));
+                                maxFoundY = Math.max(maxFoundY, Math.max(pTop.getY(), pBottom.getY()));
+                                anyBoundsFound = true;
+                            }
                         }
                     }
                 }
             }
 
-            if (!found || minX >= maxX || minY >= maxY) {
-                Optional<Bounds> screenBounds = editor.getCharacterBoundsOnScreen(range[0], range[1]);
-                if (screenBounds.isEmpty()) {
-                    statementBoundingBox.setVisible(false);
-                    return;
+            // Estimate width from longest line in statement so maxX never collapses when lines are virtualized
+            double charWidth = 8.2;
+            int maxLineLen = 0;
+            for (int p = startPara; p <= endPara; p++) {
+                maxLineLen = Math.max(maxLineLen, editor.getParagraph(p).length());
+            }
+            double estimatedMaxX = boxX + (maxLineLen * charWidth);
+            double boxMaxX = Math.max(maxCharX, estimatedMaxX);
+
+            // Compute robust Y bounds using visible reference paragraph if needed
+            double computedMinY = minFoundY;
+            double computedMaxY = maxFoundY;
+            if (!anyBoundsFound || minFoundY >= maxFoundY) {
+                int refPara = Math.max(startPara, Math.min(firstVisible >= 0 ? firstVisible : startPara, endPara));
+                var optPb = editor.getParagraphBoundsOnScreen(refPara);
+                double lineH = 21.6;
+                double refY = 0;
+                if (optPb.isPresent()) {
+                    lineH = Math.max(16.0, optPb.get().getHeight());
+                    Point2D pt = statementOverlay.screenToLocal(0, optPb.get().getMinY());
+                    if (pt != null) refY = pt.getY();
                 }
-                Bounds sb = screenBounds.get();
-                Point2D p1 = statementOverlay.screenToLocal(sb.getMinX(), sb.getMinY());
-                Point2D p2 = statementOverlay.screenToLocal(sb.getMaxX(), sb.getMaxY());
-                if (p1 == null || p2 == null) {
-                    statementBoundingBox.setVisible(false);
-                    return;
-                }
-                minX = Math.min(p1.getX(), p2.getX());
-                maxX = Math.max(p1.getX(), p2.getX());
-                minY = Math.min(p1.getY(), p2.getY());
-                maxY = Math.max(p1.getY(), p2.getY());
+                computedMinY = refY - (refPara - startPara) * lineH;
+                computedMaxY = computedMinY + (endPara - startPara + 1) * lineH;
             }
 
             boolean isLight = com.roze.dbnavigator.db.AppSettingsStore.load().getTheme() == com.roze.dbnavigator.db.AppSettingsStore.Theme.LIGHT;
@@ -1102,11 +1154,14 @@ public class QueryTab extends Tab {
                 statementBoundingBox.setStroke(javafx.scene.paint.Color.web("#385e43"));
                 statementBoundingBox.setFill(javafx.scene.paint.Color.web("#365847", 0.04));
             }
+            statementBoundingBox.setStrokeWidth(1.2);
+            statementBoundingBox.setArcWidth(6.0);
+            statementBoundingBox.setArcHeight(6.0);
 
-            double x = Math.max(0, minX - 5);
-            double y = Math.max(0, minY - 2);
-            double w = Math.max(30, (maxX - minX) + 24);
-            double h = Math.max(16, (maxY - minY) + 4);
+            double x = boxX;
+            double y = computedMinY - 1.5;
+            double w = Math.max(60, (boxMaxX - boxX) + 18.0);
+            double h = Math.max(18, (computedMaxY - computedMinY) + 3.0);
 
             statementBoundingBox.setX(x);
             statementBoundingBox.setY(y);
@@ -1116,6 +1171,14 @@ public class QueryTab extends Tab {
         } catch (Exception ignored) {
             statementBoundingBox.setVisible(false);
         }
+    }
+
+    javafx.scene.shape.Rectangle getStatementBoundingBox() {
+        return statementBoundingBox;
+    }
+
+    void refreshEditorStylingPublic() {
+        refreshEditorStyling();
     }
 
     private void setupStatementHighlighting() {
@@ -1192,6 +1255,12 @@ public class QueryTab extends Tab {
             lineNum.getStyleClass().add("lineno-text");
             lineNum.setAlignment(Pos.CENTER_RIGHT);
 
+            int totalLines = Math.max(1, editor.getParagraphs().size());
+            int digits = Math.max(2, String.valueOf(totalLines).length());
+            double numWidth = Math.max(18.0, digits * 8.5);
+            lineNum.setMinWidth(numWidth);
+            lineNum.setPrefWidth(numWidth);
+
             var settings = com.roze.dbnavigator.db.AppSettingsStore.load();
             String mode = settings.getLineNumbersMode();
             int cur = editor.getCurrentParagraph();
@@ -1204,7 +1273,9 @@ public class QueryTab extends Tab {
             }
 
             Label icon = new Label();
+            icon.setMinWidth(14);
             icon.setPrefWidth(14);
+            icon.setMaxWidth(14);
             icon.setAlignment(Pos.CENTER);
             if (executedLines.contains(lineIdx)) {
                 icon.setText("✓");
@@ -1238,6 +1309,7 @@ public class QueryTab extends Tab {
     /** File → Settings → Editor → General → Appearance & Breadcrumbs, applied here and re-applied after Apply/OK. */
     public void applyEditorAppearanceFromSettings() {
         var settings = com.roze.dbnavigator.db.AppSettingsStore.load();
+        syncEditorStylesheet(settings.getTheme());
 
         // 1. Line numbers (with DataGrip execution checkmarks & gutter styling)
         if (!settings.isShowLineNumbers()) {
@@ -1286,9 +1358,20 @@ public class QueryTab extends Tab {
         updateEditorFontStyle();
     }
 
+    private void syncEditorStylesheet(com.roze.dbnavigator.db.AppSettingsStore.Theme theme) {
+        try {
+            String themeUrl = ThemeManager.stylesheetUrl(theme);
+            if (!editor.getStylesheets().contains(themeUrl)) {
+                editor.getStylesheets().removeIf(s -> s.contains("app.css") || s.contains("app-light.css"));
+                editor.getStylesheets().add(themeUrl);
+            }
+        } catch (Exception ignored) {}
+    }
+
     private void updateEditorFontStyle() {
         var settings = com.roze.dbnavigator.db.AppSettingsStore.load();
-        double lh = settings.getEditorLineHeight();
+        syncEditorStylesheet(settings.getTheme());
+
         String weight = settings.getEditorFontMainWeight();
         String fxWeight = "normal";
         if ("Bold".equalsIgnoreCase(weight) || "ExtraBold".equalsIgnoreCase(weight) || "Bold Recommended".equalsIgnoreCase(weight)) {
@@ -1297,7 +1380,6 @@ public class QueryTab extends Tab {
             fxWeight = "100";
         }
         double effectiveFontSize = currentEditorFontSize <= 13.0 ? 13.5 : currentEditorFontSize;
-        double lineSpacingPx = Math.max(5.0, (lh - 1.0) * effectiveFontSize + 3.0);
         String fam = (currentEditorFontFamily != null && !currentEditorFontFamily.isBlank())
                 ? currentEditorFontFamily : "DBNavigator Mono";
         if ("DBNavigator Mono".equalsIgnoreCase(fam)) {
@@ -1305,7 +1387,6 @@ public class QueryTab extends Tab {
         }
         editor.setStyle("-fx-font-family: '" + fam + "', 'DBNavigator Mono', 'Menlo', 'Monaco', 'Consolas', monospace; "
                 + "-fx-font-size: " + effectiveFontSize + "px; "
-                + "-fx-line-spacing: " + lineSpacingPx + "px; "
                 + "-fx-font-weight: " + fxWeight + ";");
     }
 

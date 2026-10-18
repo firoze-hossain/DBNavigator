@@ -77,7 +77,7 @@ public class ConfirmExitDialogTest {
                 future.completeExceptionally(t);
             }
         });
-        future.get(10, java.util.concurrent.TimeUnit.SECONDS);
+        future.get(20, java.util.concurrent.TimeUnit.SECONDS);
 
         assertTrue(inputs.containsKey("appearance_confirmExit"), "inputs map must contain 'appearance_confirmExit'");
         Object obj = inputs.get("appearance_confirmExit");

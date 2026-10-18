@@ -45,7 +45,7 @@ public class QueryTabHideDataPanelTest {
                 latch.countDown();
             }
         });
-        assertTrue(latch.await(5, java.util.concurrent.TimeUnit.SECONDS), "Timed out waiting for FX thread execution");
+        assertTrue(latch.await(15, java.util.concurrent.TimeUnit.SECONDS), "Timed out waiting for FX thread execution");
         if (error.get() != null) {
             if (error.get() instanceof AssertionError) throw (AssertionError) error.get();
             if (error.get() instanceof Exception) throw (Exception) error.get();

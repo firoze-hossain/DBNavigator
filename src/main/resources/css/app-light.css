@@ -221,10 +221,10 @@
     -fx-font-size: 13.5px;
 }
 .sql-editor .paragraph-box {
-    -fx-padding: 3px 0 3px 0;
+    -fx-padding: 0.8px 0 0.8px 0;
 }
 .sql-editor .paragraph-text {
-    -fx-line-spacing: 5px;
+    -fx-line-spacing: 2px;
 }
 .sql-editor .text { -fx-fill: #1a1a1e; }
 .sql-editor .caret { -fx-stroke: #000000; }
