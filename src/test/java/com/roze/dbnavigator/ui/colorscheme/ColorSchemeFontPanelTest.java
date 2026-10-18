@@ -64,7 +64,7 @@ public class ColorSchemeFontPanelTest {
     public void testFontSettingsValuesAndPersistence() {
         AppSettingsStore.Settings settings = new AppSettingsStore.Settings();
         settings.setUseColorSchemeFontInsteadOfDefault(true);
-        settings.setColorSchemeFontFamily("JetBrains Mono");
+        settings.setColorSchemeFontFamily("DBNavigator Mono");
         settings.setColorSchemeFontFallbackFamily("<None>");
         settings.setColorSchemeFontSize(14.0);
         settings.setColorSchemeFontLineHeight(1.3);
@@ -76,7 +76,7 @@ public class ColorSchemeFontPanelTest {
         assertTrue(settings.isUseColorSchemeFontInsteadOfDefault());
         assertTrue(settings.isColorSchemeFontEnableLigatures());
         assertFalse(settings.isColorSchemeFontShowOnlyMonospaced());
-        assertEquals("JetBrains Mono", settings.getColorSchemeFontFamily());
+        assertEquals("DBNavigator Mono", settings.getColorSchemeFontFamily());
         assertEquals("<None>", settings.getColorSchemeFontFallbackFamily());
 
         Map<String, Object> inputs = new HashMap<>();

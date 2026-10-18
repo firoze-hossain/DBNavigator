@@ -7,7 +7,7 @@ import java.io.File;
 import java.util.Objects;
 
 /**
- * Represents a user project in DBNavigator Pro, matching JetBrains DataGrip's project concept.
+ * Represents a user project in DBNavigator Pro.
  * Projects have a name, directory path, and last opened timestamp.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)

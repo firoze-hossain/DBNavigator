@@ -552,7 +552,7 @@ public class LanguageSettingsTest {
         AppSettingsStore.XsltFileAssociationsConfig cfg = new AppSettingsStore.XsltFileAssociationsConfig();
         assertNotNull(cfg.getEntries());
         assertEquals(1, cfg.getEntries().size());
-        assertEquals("Db  ~/DataGripProjects/Db", cfg.getEntries().get(0).getXsltFileOrDir());
+        assertEquals("Db  ~/DBNavigatorProjects/Db", cfg.getEntries().get(0).getXsltFileOrDir());
 
         AppSettingsStore.XsltAssociationEntry entry = cfg.getEntries().get(0);
         entry.getAssociatedFiles().add("/path/to/doc.xml");

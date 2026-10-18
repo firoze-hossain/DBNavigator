@@ -63,7 +63,7 @@ public class ConsoleFontPanelTest {
     public void testConsoleFontSettingsAndPersistence() {
         AppSettingsStore.Settings settings = new AppSettingsStore.Settings();
         settings.setUseConsoleFontInsteadOfDefault(true);
-        settings.setConsoleFontFamily("JetBrains Mono");
+        settings.setConsoleFontFamily("DBNavigator Mono");
         settings.setConsoleFontFallbackFamily("<None>");
         settings.setConsoleFontSize(12.5);
         settings.setConsoleFontLineHeight(1.15);
@@ -75,7 +75,7 @@ public class ConsoleFontPanelTest {
         assertTrue(settings.isUseConsoleFontInsteadOfDefault());
         assertTrue(settings.isConsoleFontEnableLigatures());
         assertTrue(settings.isConsoleFontShowOnlyMonospaced());
-        assertEquals("JetBrains Mono", settings.getConsoleFontFamily());
+        assertEquals("DBNavigator Mono", settings.getConsoleFontFamily());
         assertEquals("<None>", settings.getConsoleFontFallbackFamily());
 
         Map<String, Object> inputs = new HashMap<>();

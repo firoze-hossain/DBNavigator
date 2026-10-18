@@ -53,7 +53,7 @@ public class IssueNavigationPatternDialog {
             linkField.setText(initial.getLink());
         } else if ("YouTrack".equalsIgnoreCase(trackerType) || "YouTrack Pattern".equalsIgnoreCase(trackerType)) {
             issueField.setText("([A-Z]+-\\d+)");
-            linkField.setText("https://youtrack.jetbrains.com/issue/$1");
+            linkField.setText("https://youtrack.example.com/issue/$1");
         } else if ("JIRA".equalsIgnoreCase(trackerType) || "JIRA Pattern".equalsIgnoreCase(trackerType)) {
             issueField.setText("([A-Z]+-\\d+)");
             linkField.setText("https://jira.atlassian.com/browse/$1");

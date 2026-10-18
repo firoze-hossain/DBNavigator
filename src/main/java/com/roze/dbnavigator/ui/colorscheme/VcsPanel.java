@@ -368,14 +368,14 @@ public final class VcsPanel {
                 // 1. Annotation column
                 Label annotLabel = new Label(annotText);
                 annotLabel.setPrefWidth(180);
-                annotLabel.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 11px; -fx-padding: 1 6; -fx-background-color: " +
+                annotLabel.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 11px; -fx-padding: 1 6; -fx-background-color: " +
                         annotBg + "; -fx-text-fill: " + annotFg + "; -fx-cursor: hand;");
                 annotLabel.setOnMouseClicked(e -> selectTreeItemById(treeView, rootItem, annotId));
 
                 // 2. Line number
                 Label numLabel = new Label(String.format("%2d", lineNum));
                 numLabel.setPrefWidth(24);
-                numLabel.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 11px; -fx-text-fill: #5a5d60;");
+                numLabel.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 11px; -fx-text-fill: #5a5d60;");
 
                 // 3. Gutter marker
                 Pane markerPane = new Pane();
@@ -414,7 +414,7 @@ public final class VcsPanel {
 
                 // 4. Code text
                 Label codeLabel = new Label("  " + codeText);
-                codeLabel.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 11px; -fx-text-fill: #bcbec4; -fx-cursor: hand;");
+                codeLabel.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 11px; -fx-text-fill: #bcbec4; -fx-cursor: hand;");
                 if (markerId != null) {
                     codeLabel.setOnMouseClicked(e -> selectTreeItemById(treeView, rootItem, markerId));
                 }

@@ -503,7 +503,7 @@ public final class UserDefinedFileTypesPanel {
                                         TreeItem<ColorSchemeElement> rootItem,
                                         String[] currentSelectedRef) {
         Label label = new Label(text);
-        StringBuilder style = new StringBuilder("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-cursor: hand;");
+        StringBuilder style = new StringBuilder("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-cursor: hand;");
         if (attr != null) {
             if (attr.foregroundEnabled && attr.foreground != null && !attr.foreground.isBlank()) {
                 style.append(" -fx-text-fill: #").append(attr.foreground).append(";");

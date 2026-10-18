@@ -83,6 +83,11 @@ public class QueryTab extends Tab {
     private List<String> cachedDatabases;
     private final CodeArea editor = SqlHighlighter.createEditor();
     private final VirtualizedScrollPane<CodeArea> editorScroll;
+    private final StackPane editorStack = new StackPane();
+    private final Pane statementOverlay = new Pane();
+    private final javafx.scene.shape.Rectangle statementBoundingBox = new javafx.scene.shape.Rectangle();
+    private final Set<Integer> executedLines = new java.util.TreeSet<>();
+    private int lastCaretParagraph = -1;
     private final VBox editorContainer = new VBox();
     private final HBox breadcrumbsBar = new HBox(6);
     private final Label breadcrumbsFileLabel = new Label("console.sql");
@@ -151,6 +156,7 @@ public class QueryTab extends Tab {
     }
 
     public QueryTab(MainWindow mainWindow, ConnectionProfile profile, String catalog, String title) {
+        FontLoader.loadBundledFonts();
         this.mainWindow = mainWindow;
         this.profile = profile;
         this.catalog = catalog;
@@ -225,6 +231,7 @@ public class QueryTab extends Tab {
         editor.moveTo(0);
         editorScroll = new VirtualizedScrollPane<>(editor);
         VBox.setVgrow(editorScroll, Priority.ALWAYS);
+        initStatementOverlay();
         initBreadcrumbsBar();
         applyEditorFontFromSettings();
         applyEditorAppearanceFromSettings();
@@ -988,29 +995,161 @@ public class QueryTab extends Tab {
      * registered after that one, this pass's result is simply what's
      * actually shown once both have run for a given change.
      */
+    private void initStatementOverlay() {
+        statementOverlay.setPickOnBounds(false);
+        statementOverlay.setMouseTransparent(true);
+        statementBoundingBox.setStroke(javafx.scene.paint.Color.web("#385e43"));
+        statementBoundingBox.setStrokeWidth(1.0);
+        statementBoundingBox.setFill(javafx.scene.paint.Color.web("#365847", 0.04));
+        statementBoundingBox.setArcWidth(4.0);
+        statementBoundingBox.setArcHeight(4.0);
+        statementBoundingBox.setVisible(false);
+        statementOverlay.getChildren().add(statementBoundingBox);
+
+        javafx.scene.shape.Rectangle clip = new javafx.scene.shape.Rectangle();
+        clip.widthProperty().bind(editorScroll.widthProperty());
+        clip.heightProperty().bind(editorScroll.heightProperty());
+        statementOverlay.setClip(clip);
+
+        editorStack.getChildren().setAll(editorScroll, statementOverlay);
+        VBox.setVgrow(editorStack, Priority.ALWAYS);
+
+        editorScroll.estimatedScrollYProperty().addListener((obs, o, n) -> Platform.runLater(this::updateStatementOverlay));
+        editorScroll.estimatedScrollXProperty().addListener((obs, o, n) -> Platform.runLater(this::updateStatementOverlay));
+        editor.widthProperty().addListener((obs, o, n) -> Platform.runLater(this::updateStatementOverlay));
+        editor.heightProperty().addListener((obs, o, n) -> Platform.runLater(this::updateStatementOverlay));
+    }
+
+    private void updateStatementOverlay() {
+        try {
+            String text = editor.getText();
+            int[] range = currentStatementCharRange(text);
+            if (range == null || range[1] <= range[0] || statementOverlay.getScene() == null) {
+                statementBoundingBox.setVisible(false);
+                return;
+            }
+
+            int startPara = editor.offsetToPosition(range[0], org.fxmisc.richtext.model.TwoDimensional.Bias.Forward).getMajor();
+            int endPara = editor.offsetToPosition(range[1], org.fxmisc.richtext.model.TwoDimensional.Bias.Backward).getMajor();
+
+            double minX = Double.MAX_VALUE;
+            double maxX = Double.MIN_VALUE;
+            double minY = Double.MAX_VALUE;
+            double maxY = Double.MIN_VALUE;
+            boolean found = false;
+
+            for (int p = startPara; p <= endPara; p++) {
+                int pStart = editor.getAbsolutePosition(p, 0);
+                int pLen = editor.getParagraph(p).length();
+                if (pLen == 0) {
+                    var optBounds = editor.getParagraphBoundsOnScreen(p);
+                    if (optBounds.isPresent()) {
+                        Bounds pb = optBounds.get();
+                        Point2D pTop = statementOverlay.screenToLocal(pb.getMinX(), pb.getMinY());
+                        Point2D pBottom = statementOverlay.screenToLocal(pb.getMinX(), pb.getMaxY());
+                        if (pTop != null && pBottom != null) {
+                            minY = Math.min(minY, Math.min(pTop.getY(), pBottom.getY()));
+                            maxY = Math.max(maxY, Math.max(pTop.getY(), pBottom.getY()));
+                            found = true;
+                        }
+                    }
+                    continue;
+                }
+                int pEnd = pStart + pLen;
+                int charFrom = Math.max(range[0], pStart);
+                int charTo = Math.min(range[1], pEnd);
+                if (charTo > charFrom) {
+                    Optional<Bounds> optBounds = editor.getCharacterBoundsOnScreen(charFrom, charTo);
+                    if (optBounds.isPresent()) {
+                        Bounds sb = optBounds.get();
+                        Point2D p1 = statementOverlay.screenToLocal(sb.getMinX(), sb.getMinY());
+                        Point2D p2 = statementOverlay.screenToLocal(sb.getMaxX(), sb.getMaxY());
+                        if (p1 != null && p2 != null) {
+                            minX = Math.min(minX, Math.min(p1.getX(), p2.getX()));
+                            maxX = Math.max(maxX, Math.max(p1.getX(), p2.getX()));
+                            minY = Math.min(minY, Math.min(p1.getY(), p2.getY()));
+                            maxY = Math.max(maxY, Math.max(p1.getY(), p2.getY()));
+                            found = true;
+                        }
+                    }
+                }
+            }
+
+            if (!found || minX >= maxX || minY >= maxY) {
+                Optional<Bounds> screenBounds = editor.getCharacterBoundsOnScreen(range[0], range[1]);
+                if (screenBounds.isEmpty()) {
+                    statementBoundingBox.setVisible(false);
+                    return;
+                }
+                Bounds sb = screenBounds.get();
+                Point2D p1 = statementOverlay.screenToLocal(sb.getMinX(), sb.getMinY());
+                Point2D p2 = statementOverlay.screenToLocal(sb.getMaxX(), sb.getMaxY());
+                if (p1 == null || p2 == null) {
+                    statementBoundingBox.setVisible(false);
+                    return;
+                }
+                minX = Math.min(p1.getX(), p2.getX());
+                maxX = Math.max(p1.getX(), p2.getX());
+                minY = Math.min(p1.getY(), p2.getY());
+                maxY = Math.max(p1.getY(), p2.getY());
+            }
+
+            boolean isLight = com.roze.dbnavigator.db.AppSettingsStore.load().getTheme() == com.roze.dbnavigator.db.AppSettingsStore.Theme.LIGHT;
+            if (isLight) {
+                statementBoundingBox.setStroke(javafx.scene.paint.Color.web("#57965c"));
+                statementBoundingBox.setFill(javafx.scene.paint.Color.web("#57965c", 0.04));
+            } else {
+                statementBoundingBox.setStroke(javafx.scene.paint.Color.web("#385e43"));
+                statementBoundingBox.setFill(javafx.scene.paint.Color.web("#365847", 0.04));
+            }
+
+            double x = Math.max(0, minX - 5);
+            double y = Math.max(0, minY - 2);
+            double w = Math.max(30, (maxX - minX) + 24);
+            double h = Math.max(16, (maxY - minY) + 4);
+
+            statementBoundingBox.setX(x);
+            statementBoundingBox.setY(y);
+            statementBoundingBox.setWidth(w);
+            statementBoundingBox.setHeight(h);
+            statementBoundingBox.setVisible(true);
+        } catch (Exception ignored) {
+            statementBoundingBox.setVisible(false);
+        }
+    }
+
     private void setupStatementHighlighting() {
         editor.multiPlainChanges()
                 .successionEnds(Duration.ofMillis(120))
                 .subscribe(ignore -> {
                     refreshEditorStyling();
                     updateBreadcrumbsText();
+                    Platform.runLater(this::updateStatementOverlay);
                 });
         editor.caretPositionProperty().addListener((obs, o, n) -> {
+            int prevCur = lastCaretParagraph;
+            int newCur = editor.getCurrentParagraph();
+            lastCaretParagraph = newCur;
             refreshEditorStyling();
             updateBreadcrumbsText();
+            Platform.runLater(this::updateStatementOverlay);
+            if (prevCur != newCur && prevCur >= 0 && prevCur < editor.getParagraphs().size()) {
+                try {
+                    editor.recreateParagraphGraphic(prevCur);
+                    editor.recreateParagraphGraphic(newCur);
+                } catch (Exception ignored) {}
+            }
         });
-        // Recompute after every mouse press (including right-clicks) too — a
-        // right-click's ContextMenuEvent can fire before the caret-position
-        // property listener has settled, which is why the wrong statement was
-        // sometimes still shown highlighted when the menu opened.
         editor.addEventFilter(javafx.scene.input.MouseEvent.MOUSE_PRESSED,
                 e -> Platform.runLater(() -> {
                     refreshEditorStyling();
                     updateBreadcrumbsText();
+                    updateStatementOverlay();
                 }));
         Platform.runLater(() -> {
             refreshEditorStyling();
             updateBreadcrumbsText();
+            updateStatementOverlay();
         });
     }
 
@@ -1042,28 +1181,69 @@ public class QueryTab extends Tab {
         } catch (Exception ignored) {}
     }
 
+    private java.util.function.IntFunction<Node> createDataGripGutterFactory() {
+        return lineIdx -> {
+            HBox gutter = new HBox(4);
+            gutter.setAlignment(Pos.CENTER_RIGHT);
+            gutter.setPadding(new Insets(0, 4, 0, 8));
+            gutter.getStyleClass().add("lineno");
+
+            Label lineNum = new Label();
+            lineNum.getStyleClass().add("lineno-text");
+            lineNum.setAlignment(Pos.CENTER_RIGHT);
+
+            var settings = com.roze.dbnavigator.db.AppSettingsStore.load();
+            String mode = settings.getLineNumbersMode();
+            int cur = editor.getCurrentParagraph();
+            if ("Relative".equalsIgnoreCase(mode)) {
+                lineNum.setText(String.valueOf(Math.abs(lineIdx - cur)));
+            } else if ("Hybrid".equalsIgnoreCase(mode)) {
+                lineNum.setText((lineIdx == cur) ? String.valueOf(lineIdx + 1) : String.valueOf(Math.abs(lineIdx - cur)));
+            } else {
+                lineNum.setText(String.valueOf(lineIdx + 1));
+            }
+
+            Label icon = new Label();
+            icon.setPrefWidth(14);
+            icon.setAlignment(Pos.CENTER);
+            if (executedLines.contains(lineIdx)) {
+                icon.setText("✓");
+                icon.setStyle("-fx-text-fill: #57965c; -fx-font-size: 11px; -fx-font-weight: bold;");
+                icon.setTooltip(new Tooltip("Statement executed successfully"));
+            } else if (bookmarkedLines.contains(lineIdx)) {
+                icon.setText("★");
+                icon.setStyle("-fx-text-fill: #3574f0; -fx-font-size: 11px;");
+                icon.setTooltip(new Tooltip("Bookmarked line"));
+            } else if (lineIdx == cur && isInsideExecutableStatement()) {
+                icon.setText("💡");
+                icon.setStyle("-fx-font-size: 10px;");
+            } else {
+                icon.setText("");
+            }
+
+            gutter.getChildren().addAll(lineNum, icon);
+            return gutter;
+        };
+    }
+
+    private boolean isInsideExecutableStatement() {
+        try {
+            int[] range = currentStatementCharRange(editor.getText());
+            return range != null && range[1] > range[0];
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
     /** File → Settings → Editor → General → Appearance & Breadcrumbs, applied here and re-applied after Apply/OK. */
     public void applyEditorAppearanceFromSettings() {
         var settings = com.roze.dbnavigator.db.AppSettingsStore.load();
 
-        // 1. Line numbers
+        // 1. Line numbers (with DataGrip execution checkmarks & gutter styling)
         if (!settings.isShowLineNumbers()) {
             editor.setParagraphGraphicFactory(null);
         } else {
-            String mode = settings.getLineNumbersMode();
-            if ("Relative".equalsIgnoreCase(mode)) {
-                editor.setParagraphGraphicFactory(LineNumberFactory.get(editor, lineIdx -> {
-                    int cur = editor.getCurrentParagraph();
-                    return String.valueOf(Math.abs(lineIdx - cur));
-                }));
-            } else if ("Hybrid".equalsIgnoreCase(mode)) {
-                editor.setParagraphGraphicFactory(LineNumberFactory.get(editor, lineIdx -> {
-                    int cur = editor.getCurrentParagraph();
-                    return (lineIdx == cur) ? String.valueOf(lineIdx + 1) : String.valueOf(Math.abs(lineIdx - cur));
-                }));
-            } else {
-                editor.setParagraphGraphicFactory(LineNumberFactory.get(editor));
-            }
+            editor.setParagraphGraphicFactory(createDataGripGutterFactory());
         }
 
         // 2. Caret blinking
@@ -1079,16 +1259,16 @@ public class QueryTab extends Tab {
         } catch (Exception ignored) {}
 
         // 3. Breadcrumbs
-        if (editorContainer != null && editorScroll != null) {
+        if (editorContainer != null && editorStack != null) {
             boolean show = settings.isShowBreadcrumbs();
             if (!show) {
-                editorContainer.getChildren().setAll(editorScroll);
+                editorContainer.getChildren().setAll(editorStack);
             } else {
                 String placement = settings.getBreadcrumbsPlacement();
                 if ("Top".equalsIgnoreCase(placement)) {
-                    editorContainer.getChildren().setAll(breadcrumbsBar, editorScroll);
+                    editorContainer.getChildren().setAll(breadcrumbsBar, editorStack);
                 } else {
-                    editorContainer.getChildren().setAll(editorScroll, breadcrumbsBar);
+                    editorContainer.getChildren().setAll(editorStack, breadcrumbsBar);
                 }
                 updateBreadcrumbsText();
             }
@@ -1099,6 +1279,9 @@ public class QueryTab extends Tab {
     public void applyEditorFontFromSettings() {
         var settings = com.roze.dbnavigator.db.AppSettingsStore.load();
         currentEditorFontFamily = settings.getEditorFontFamily();
+        if ("DBNavigator Mono".equalsIgnoreCase(currentEditorFontFamily)) {
+            currentEditorFontFamily = "DBNavigator Mono";
+        }
         currentEditorFontSize = settings.getEditorFontSize();
         updateEditorFontStyle();
     }
@@ -1113,9 +1296,17 @@ public class QueryTab extends Tab {
         } else if ("Light".equalsIgnoreCase(weight) || "ExtraLight".equalsIgnoreCase(weight) || "Thin".equalsIgnoreCase(weight)) {
             fxWeight = "100";
         }
-        double lineSpacingPx = Math.max(0, (lh - 1.0) * currentEditorFontSize);
-        editor.setStyle("-fx-font-family: '" + currentEditorFontFamily + "'; -fx-font-size: "
-                + currentEditorFontSize + "px; -fx-line-spacing: " + lineSpacingPx + "px; -fx-font-weight: " + fxWeight + ";");
+        double effectiveFontSize = currentEditorFontSize <= 13.0 ? 13.5 : currentEditorFontSize;
+        double lineSpacingPx = Math.max(5.0, (lh - 1.0) * effectiveFontSize + 3.0);
+        String fam = (currentEditorFontFamily != null && !currentEditorFontFamily.isBlank())
+                ? currentEditorFontFamily : "DBNavigator Mono";
+        if ("DBNavigator Mono".equalsIgnoreCase(fam)) {
+            fam = "DBNavigator Mono";
+        }
+        editor.setStyle("-fx-font-family: '" + fam + "', 'DBNavigator Mono', 'Menlo', 'Monaco', 'Consolas', monospace; "
+                + "-fx-font-size: " + effectiveFontSize + "px; "
+                + "-fx-line-spacing: " + lineSpacingPx + "px; "
+                + "-fx-font-weight: " + fxWeight + ";");
     }
 
     /**
@@ -1192,34 +1383,27 @@ public class QueryTab extends Tab {
         if (activeChooserPopup != null && activeChooserPopup.isShowing()) activeChooserPopup.hide();
     }
 
-    /** Recomputes syntax highlighting and overlays the current-statement highlight in one combined pass. */
+    /** Recomputes syntax highlighting and overlays the current-statement and active row styling in DataGrip fashion. */
     private void refreshEditorStyling() {
         try {
             String text = editor.getText();
             org.fxmisc.richtext.model.StyleSpans<java.util.Collection<String>> syntax =
                     plainTextMode ? emptySpans(text.length()) : SqlHighlighter.computeHighlighting(text);
-            int[] range = currentStatementCharRange(text);
+            editor.setStyleSpans(0, syntax);
 
-            if (range == null) {
-                editor.setStyleSpans(0, syntax);
-            } else {
-                var spansBuilder = new org.fxmisc.richtext.model.StyleSpansBuilder<java.util.Collection<String>>();
-                if (range[0] > 0) spansBuilder.add(java.util.Collections.emptyList(), range[0]);
-                spansBuilder.add(java.util.Collections.singleton("current-statement-line"), range[1] - range[0]);
-                if (range[1] < text.length()) {
-                    spansBuilder.add(java.util.Collections.emptyList(), text.length() - range[1]);
+            int currentPara = editor.getCurrentParagraph();
+            int count = editor.getParagraphs().size();
+            for (int i = 0; i < count; i++) {
+                List<String> paraStyles = new ArrayList<>();
+                if (i == currentPara) {
+                    paraStyles.add("current-line-highlight");
                 }
-                var highlight = spansBuilder.create();
-
-                var merged = syntax.overlay(highlight, (base, extra) -> {
-                    if (extra.isEmpty()) return base;
-                    LinkedHashSet<String> combined = new LinkedHashSet<>(base);
-                    combined.addAll(extra);
-                    return combined;
-                });
-                editor.setStyleSpans(0, merged);
+                if (bookmarkedLines.contains(i)) {
+                    paraStyles.add("bookmarked-line");
+                }
+                editor.setParagraphStyle(i, paraStyles);
             }
-            refreshBookmarkParagraphStyles();
+            updateStatementOverlay();
         } catch (Exception ignored) {
             // Never let a highlight-computation edge case leave stale/broken styling behind.
         }
@@ -1233,13 +1417,9 @@ public class QueryTab extends Tab {
 
     // ----------------------------------------------------------- bookmarks
 
-    /** Whole-line markers (paragraph-level, independent of the character-range statement highlight above). */
+    /** Whole-line markers (paragraph-level, combined with statement highlight above). */
     private void refreshBookmarkParagraphStyles() {
-        int count = editor.getParagraphs().size();
-        for (int i = 0; i < count; i++) {
-            boolean bookmarked = bookmarkedLines.contains(i);
-            editor.setParagraphStyle(i, bookmarked ? List.of("bookmarked-line") : List.of());
-        }
+        refreshEditorStyling();
     }
 
     /** Tab context menu → Bookmarks → Toggle Bookmark. */
@@ -1299,7 +1479,7 @@ public class QueryTab extends Tab {
      */
     private int[] currentStatementCharRange(String text) {
         List<SqlStatementSplitter.Statement> statements = SqlStatementSplitter.split(text);
-        if (statements.size() < 2) return null;
+        if (statements.isEmpty()) return null;
 
         SqlStatementSplitter.Statement stmt =
                 SqlStatementSplitter.statementAt(statements, editor.getCaretPosition());
@@ -2378,6 +2558,15 @@ public class QueryTab extends Tab {
                 final boolean wasViaCtid = viaCtid;
 
                 Platform.runLater(() -> {
+                    try {
+                        int[] range = currentStatementCharRange(editor.getText());
+                        int targetPara = (range != null && range[0] < editor.getText().length())
+                                ? editor.offsetToPosition(range[0], org.fxmisc.richtext.model.TwoDimensional.Bias.Forward).getMajor()
+                                : editor.getCurrentParagraph();
+                        executedLines.add(targetPara);
+                        editor.recreateParagraphGraphic(targetPara);
+                    } catch (Exception ignored) {}
+
                     closeActiveCursor();   // now that the new one opened successfully
                     activeCursor = finalCursor;
                     currentPageStart = 0;

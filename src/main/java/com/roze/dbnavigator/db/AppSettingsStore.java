@@ -114,7 +114,7 @@ public final class AppSettingsStore {
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class Settings {
         public Theme theme = Theme.DARK;
-        public String editorFontFamily = "JetBrains Mono";
+        public String editorFontFamily = "DBNavigator Mono";
         public double editorFontSize = 13.0;
         public double editorLineHeight = 1.2;
         public boolean editorEnableLigatures = false;
@@ -192,7 +192,7 @@ public final class AppSettingsStore {
 
         // 3. Data Presentation
         public boolean useCustomFont = false;
-        public String customFontFamily = "JetBrains Mono";
+        public String customFontFamily = "DBNavigator Mono";
         public double customFontSize = 13.0;
         public double customLineHeight = 1.2;
         public boolean alternateRowColors = false;
@@ -292,7 +292,7 @@ public final class AppSettingsStore {
 
         // Editor > Color Scheme > Color Scheme Font
         public boolean useColorSchemeFontInsteadOfDefault = false;
-        public String colorSchemeFontFamily = "JetBrains Mono";
+        public String colorSchemeFontFamily = "DBNavigator Mono";
         public String colorSchemeFontFallbackFamily = "<None>";
         public double colorSchemeFontSize = 13.0;
         public double colorSchemeFontLineHeight = 1.2;
@@ -301,7 +301,7 @@ public final class AppSettingsStore {
 
         // Editor > Color Scheme > Console Font
         public boolean useConsoleFontInsteadOfDefault = false;
-        public String consoleFontFamily = "JetBrains Mono";
+        public String consoleFontFamily = "DBNavigator Mono";
         public String consoleFontFallbackFamily = "<None>";
         public double consoleFontSize = 13.0;
         public double consoleFontLineHeight = 1.2;
@@ -1657,9 +1657,9 @@ public final class AppSettingsStore {
             MenuItemConfig learnFeaturesItem = MenuItemConfig.action("help.learn.features", "Learn IDE Features");
             learnFeaturesItem.setIconName("GRADUATION_CAP");
             helpMenu.add(learnFeaturesItem);
-            helpMenu.add(MenuItemConfig.action("help.whats.new", "What's New in DataGrip"));
+            helpMenu.add(MenuItemConfig.action("help.whats.new", "What's New in DBNavigator"));
             helpMenu.add(MenuItemConfig.action("help.getting.started", "Getting Started"));
-            helpMenu.add(MenuItemConfig.action("help.youtube", "DataGrip on YouTube"));
+            helpMenu.add(MenuItemConfig.action("help.youtube", "DBNavigator on YouTube"));
             helpMenu.add(MenuItemConfig.action("help.shortcuts.pdf", "Keyboard Shortcuts PDF"));
             helpMenu.add(MenuItemConfig.separator());
 
@@ -4458,7 +4458,7 @@ public final class AppSettingsStore {
 
         public String getCustomFontFamily() { return customFontFamily; }
         public void setCustomFontFamily(String customFontFamily) {
-            this.customFontFamily = (customFontFamily != null && !customFontFamily.isBlank()) ? customFontFamily : "JetBrains Mono";
+            this.customFontFamily = (customFontFamily != null && !customFontFamily.isBlank()) ? customFontFamily : "DBNavigator Mono";
         }
 
         public double getCustomFontSize() { return customFontSize; }
@@ -4776,10 +4776,10 @@ public final class AppSettingsStore {
         public void setUseColorSchemeFontInsteadOfDefault(boolean val) { this.useColorSchemeFontInsteadOfDefault = val; }
 
         public String getColorSchemeFontFamily() {
-            return (colorSchemeFontFamily != null && !colorSchemeFontFamily.isBlank()) ? colorSchemeFontFamily : "JetBrains Mono";
+            return (colorSchemeFontFamily != null && !colorSchemeFontFamily.isBlank()) ? colorSchemeFontFamily : "DBNavigator Mono";
         }
         public void setColorSchemeFontFamily(String family) {
-            this.colorSchemeFontFamily = (family != null && !family.isBlank()) ? family : "JetBrains Mono";
+            this.colorSchemeFontFamily = (family != null && !family.isBlank()) ? family : "DBNavigator Mono";
         }
 
         public String getColorSchemeFontFallbackFamily() {
@@ -4806,10 +4806,10 @@ public final class AppSettingsStore {
         public void setUseConsoleFontInsteadOfDefault(boolean val) { this.useConsoleFontInsteadOfDefault = val; }
 
         public String getConsoleFontFamily() {
-            return (consoleFontFamily != null && !consoleFontFamily.isBlank()) ? consoleFontFamily : "JetBrains Mono";
+            return (consoleFontFamily != null && !consoleFontFamily.isBlank()) ? consoleFontFamily : "DBNavigator Mono";
         }
         public void setConsoleFontFamily(String family) {
-            this.consoleFontFamily = (family != null && !family.isBlank()) ? family : "JetBrains Mono";
+            this.consoleFontFamily = (family != null && !family.isBlank()) ? family : "DBNavigator Mono";
         }
 
         public String getConsoleFontFallbackFamily() {
@@ -7257,7 +7257,7 @@ public final class AppSettingsStore {
     // Languages > XSLT File Associations Configuration
     // =========================================================================
     public static class XsltAssociationEntry {
-        private String xsltFileOrDir = "Db  ~/DataGripProjects/Db";
+        private String xsltFileOrDir = "Db  ~/DBNavigatorProjects/Db";
         private List<String> associatedFiles = new ArrayList<>();
 
         public XsltAssociationEntry() {}
@@ -7290,7 +7290,7 @@ public final class AppSettingsStore {
 
     public static class XsltFileAssociationsConfig {
         private List<XsltAssociationEntry> entries = new ArrayList<>(List.of(
-                new XsltAssociationEntry("Db  ~/DataGripProjects/Db", new ArrayList<>())
+                new XsltAssociationEntry("Db  ~/DBNavigatorProjects/Db", new ArrayList<>())
         ));
 
         public XsltFileAssociationsConfig() {}
@@ -8177,8 +8177,8 @@ public final class AppSettingsStore {
         private String startDirectory = "";
         private String environmentVariables = "";
 
-        private String font = "JetBrains Mono";
-        private String fallbackFont = "JetBrains Mono";
+        private String font = "DBNavigator Mono";
+        private String fallbackFont = "DBNavigator Mono";
         private double fontSize = 13.0;
         private double lineHeight = 1.0;
         private double columnWidth = 1.0;

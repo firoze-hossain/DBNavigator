@@ -176,8 +176,8 @@ public class TerminalPanel {
         fontSectionTitle.setStyle("-fx-text-fill: -text; -fx-font-size: 13px; -fx-font-weight: bold;");
 
         List<String> fontFamilies = new ArrayList<>(Font.getFamilies());
-        if (!fontFamilies.contains("JetBrains Mono")) {
-            fontFamilies.add(0, "JetBrains Mono");
+        if (!fontFamilies.contains("DBNavigator Mono")) {
+            fontFamilies.add(0, "DBNavigator Mono");
         }
 
         Label fontLbl = new Label("Font:");

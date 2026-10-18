@@ -25,7 +25,7 @@ import java.util.*;
 public final class ConsoleFontPanel {
 
     private static final List<String> COMMON_MONOSPACED = List.of(
-            "JetBrains Mono", "Fira Code", "Source Code Pro", "Consolas",
+            "DBNavigator Mono", "Fira Code", "Source Code Pro", "Consolas",
             "Menlo", "Monaco", "Courier New", "DejaVu Sans Mono",
             "Inconsolata", "Cascadia Code", "Ubuntu Mono", "Liberation Mono"
     );
@@ -108,7 +108,7 @@ public final class ConsoleFontPanel {
         HBox topBar = new HBox(10, schemeLabel, schemeCombo, gearBtn, changeThemeLink, topSpacer, helpIcon);
         topBar.setAlignment(Pos.CENTER_LEFT);
 
-        // 2. Master Toggle: Use console font instead of the default (JetBrains Mono,13)
+        // 2. Master Toggle: Use console font instead of the default (DBNavigator Mono,13)
         CheckBox masterToggle = new CheckBox("Use console font instead of the default ("
                 + settings.getEditorFontFamily() + "," + (int) settings.getEditorFontSize() + ")");
         masterToggle.setSelected(settings.isUseConsoleFontInsteadOfDefault());
@@ -135,7 +135,7 @@ public final class ConsoleFontPanel {
 
         ComboBox<String> fallbackCombo = new ComboBox<>();
         fallbackCombo.setPrefWidth(160);
-        fallbackCombo.getItems().addAll("<None>", "JetBrains Mono", "Courier New", "Menlo", "Consolas");
+        fallbackCombo.getItems().addAll("<None>", "DBNavigator Mono", "Courier New", "Menlo", "Consolas");
         String currentFallback = settings.getConsoleFontFallbackFamily();
         fallbackCombo.setValue(currentFallback != null ? currentFallback : "<None>");
         fallbackCombo.setStyle("-fx-background-color: #2b2d30; -fx-text-fill: -text; -fx-border-color: #393b40; -fx-border-radius: 4; -fx-background-radius: 4;");
@@ -177,7 +177,7 @@ public final class ConsoleFontPanel {
                 }
             }
             if (items.isEmpty()) {
-                items.addAll(List.of("JetBrains Mono", "Menlo", "Consolas", "Courier New"));
+                items.addAll(List.of("DBNavigator Mono", "Menlo", "Consolas", "Courier New"));
             }
             fontCombo.getItems().addAll(items);
             if (selected != null && fontCombo.getItems().contains(selected)) {
@@ -262,7 +262,7 @@ public final class ConsoleFontPanel {
 
         Runnable updatePreview = () -> {
             consoleFlow.getChildren().clear();
-            String family = fontCombo.getValue() != null ? fontCombo.getValue() : "JetBrains Mono";
+            String family = fontCombo.getValue() != null ? fontCombo.getValue() : "DBNavigator Mono";
             double size = sizeSpinner.getValue() != null ? sizeSpinner.getValue() : 13.0;
             double lh = lineHeightSpinner.getValue() != null ? lineHeightSpinner.getValue() : 1.2;
             consoleFlow.setLineSpacing(size * (lh - 1.0));

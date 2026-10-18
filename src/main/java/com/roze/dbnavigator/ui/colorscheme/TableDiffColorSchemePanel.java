@@ -312,7 +312,7 @@ public final class TableDiffColorSchemePanel {
         // 4. Bottom Live Table Diff Preview
         VBox previewLines = new VBox(4);
         previewLines.setPadding(new Insets(8, 12, 8, 12));
-        previewLines.setStyle("-fx-background-color: #1e1f22; -fx-font-family: 'JetBrains Mono', 'Fira Code', monospace; -fx-font-size: 12px;");
+        previewLines.setStyle("-fx-background-color: #1e1f22; -fx-font-family: 'DBNavigator Mono', 'Fira Code', monospace; -fx-font-size: 12px;");
 
         // Error stripe track on the right
         VBox errorStripeTrack = new VBox(4);
@@ -475,7 +475,7 @@ public final class TableDiffColorSchemePanel {
 
             // Row 1: Matched text
             Label matchedLbl = new Label("Matched text");
-            matchedLbl.setStyle("-fx-font-family: 'JetBrains Mono', 'Fira Code', monospace; -fx-font-size: 12px; -fx-text-fill: #BCBEC4;");
+            matchedLbl.setStyle("-fx-font-family: 'DBNavigator Mono', 'Fira Code', monospace; -fx-font-size: 12px; -fx-text-fill: #BCBEC4;");
             HBox row1 = new HBox(matchedLbl);
             row1.setPadding(new Insets(2, 4, 2, 4));
             row1.setOnMouseClicked(e -> {
@@ -487,7 +487,7 @@ public final class TableDiffColorSchemePanel {
 
             // Row 2: Inserted text (green diff)
             Label insertedLbl = new Label("Inserted text");
-            insertedLbl.setStyle("-fx-font-family: 'JetBrains Mono', 'Fira Code', monospace; -fx-font-size: 12px; -fx-text-fill: #BCBEC4; -fx-background-color: #264D3B; -fx-padding: 1 4;");
+            insertedLbl.setStyle("-fx-font-family: 'DBNavigator Mono', 'Fira Code', monospace; -fx-font-size: 12px; -fx-text-fill: #BCBEC4; -fx-background-color: #264D3B; -fx-padding: 1 4;");
             HBox row2 = new HBox(insertedLbl);
             previewLines.getChildren().add(row2);
             Rectangle greenStripe = new Rectangle(10, 4, Color.web("#388E3C"));
@@ -495,7 +495,7 @@ public final class TableDiffColorSchemePanel {
 
             // Row 3: Removed text (diff)
             Label removedLbl = new Label("Removed text");
-            removedLbl.setStyle("-fx-font-family: 'JetBrains Mono', 'Fira Code', monospace; -fx-font-size: 12px; -fx-text-fill: #BCBEC4; -fx-background-color: #3A2323; -fx-padding: 1 4;");
+            removedLbl.setStyle("-fx-font-family: 'DBNavigator Mono', 'Fira Code', monospace; -fx-font-size: 12px; -fx-text-fill: #BCBEC4; -fx-background-color: #3A2323; -fx-padding: 1 4;");
             HBox row3 = new HBox(removedLbl);
             previewLines.getChildren().add(row3);
             Rectangle redStripe = new Rectangle(10, 4, Color.web("#D32F2F"));
@@ -503,7 +503,7 @@ public final class TableDiffColorSchemePanel {
 
             // Row 4: Modified text (diff)
             Label modLbl = new Label("Modified text");
-            modLbl.setStyle("-fx-font-family: 'JetBrains Mono', 'Fira Code', monospace; -fx-font-size: 12px; -fx-text-fill: #BCBEC4; -fx-background-color: #1B3B54; -fx-padding: 1 4;");
+            modLbl.setStyle("-fx-font-family: 'DBNavigator Mono', 'Fira Code', monospace; -fx-font-size: 12px; -fx-text-fill: #BCBEC4; -fx-background-color: #1B3B54; -fx-padding: 1 4;");
             HBox row4 = new HBox(modLbl);
             previewLines.getChildren().add(row4);
             Rectangle blueStripe = new Rectangle(10, 4, Color.web("#1976D2"));
@@ -511,10 +511,10 @@ public final class TableDiffColorSchemePanel {
 
             // Row 5: Fuzzy matched /mismatch/ text
             Label fuzzyPrefix = new Label("Fuzzy matched ");
-            fuzzyPrefix.setStyle("-fx-font-family: 'JetBrains Mono', 'Fira Code', monospace; -fx-font-size: 12px; -fx-text-fill: #7A7E85;");
+            fuzzyPrefix.setStyle("-fx-font-family: 'DBNavigator Mono', 'Fira Code', monospace; -fx-font-size: 12px; -fx-text-fill: #7A7E85;");
 
             Label mismatchToken = new Label("/mismatch/");
-            StringBuilder msb = new StringBuilder("-fx-font-family: 'JetBrains Mono', 'Fira Code', monospace; -fx-font-size: 12px; -fx-padding: 1 4; -fx-cursor: hand;");
+            StringBuilder msb = new StringBuilder("-fx-font-family: 'DBNavigator Mono', 'Fira Code', monospace; -fx-font-size: 12px; -fx-padding: 1 4; -fx-cursor: hand;");
             if (mismatchedAttr != null) {
                 if (mismatchedAttr.backgroundEnabled && mismatchedAttr.background != null && !mismatchedAttr.background.isBlank()) {
                     msb.append("-fx-background-color: #").append(mismatchedAttr.background).append(";");
@@ -536,7 +536,7 @@ public final class TableDiffColorSchemePanel {
             mismatchToken.setStyle(msb.toString());
 
             Label fuzzySuffix = new Label(" text");
-            fuzzySuffix.setStyle("-fx-font-family: 'JetBrains Mono', 'Fira Code', monospace; -fx-font-size: 12px; -fx-text-fill: #7A7E85;");
+            fuzzySuffix.setStyle("-fx-font-family: 'DBNavigator Mono', 'Fira Code', monospace; -fx-font-size: 12px; -fx-text-fill: #7A7E85;");
 
             HBox row5 = new HBox(fuzzyPrefix, mismatchToken, fuzzySuffix);
             row5.setAlignment(Pos.CENTER_LEFT);
@@ -553,7 +553,7 @@ public final class TableDiffColorSchemePanel {
 
             // Row 6: Excluded from diff
             Label excludedLbl = new Label("Excluded from diff");
-            StringBuilder exsb = new StringBuilder("-fx-font-family: 'JetBrains Mono', 'Fira Code', monospace; -fx-font-size: 12px; -fx-padding: 1 4; -fx-cursor: hand;");
+            StringBuilder exsb = new StringBuilder("-fx-font-family: 'DBNavigator Mono', 'Fira Code', monospace; -fx-font-size: 12px; -fx-padding: 1 4; -fx-cursor: hand;");
             if (excludedAttr != null && excludedAttr.backgroundEnabled && excludedAttr.background != null && !excludedAttr.background.isBlank()) {
                 exsb.append("-fx-background-color: #").append(excludedAttr.background).append(";");
             } else {

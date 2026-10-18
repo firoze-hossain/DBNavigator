@@ -50,7 +50,7 @@ public class VcsShelfPanel {
         shelveBaseHint.setStyle("-fx-text-fill: #868a91; -fx-font-size: 12px; -fx-padding: 0 0 0 24;");
 
         // Shelves location row
-        String defaultLocation = System.getProperty("user.home") + File.separator + "DataGripProjects" + File.separator + "Db" + File.separator + ".idea" + File.separator + "shelf";
+        String defaultLocation = System.getProperty("user.home") + File.separator + "DBNavigatorProjects" + File.separator + "Db" + File.separator + ".dbnavigator" + File.separator + "shelf";
         String initialLocation = cfg.getCustomShelvesLocation() != null && !cfg.getCustomShelvesLocation().isBlank()
                 ? cfg.getCustomShelvesLocation() : defaultLocation;
 

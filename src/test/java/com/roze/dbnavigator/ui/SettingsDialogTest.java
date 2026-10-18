@@ -452,7 +452,7 @@ public class SettingsDialogTest {
         assertTrue(settings.isEnableQuickActionsCustomization());
 
         assertFalse(settings.isUseCustomFont());
-        assertEquals("JetBrains Mono", settings.getCustomFontFamily());
+        assertEquals("DBNavigator Mono", settings.getCustomFontFamily());
         assertEquals(13.0, settings.getCustomFontSize(), 0.001);
         assertEquals(1.2, settings.getCustomLineHeight(), 0.001);
         assertFalse(settings.isAlternateRowColors());
@@ -1907,7 +1907,7 @@ public class SettingsDialogTest {
         assertEquals(2, AppSettingsStore.Settings.defaultRefactoringOptions().size());
 
         // 3. Font defaults
-        assertEquals("JetBrains Mono", settings.getEditorFontFamily());
+        assertEquals("DBNavigator Mono", settings.getEditorFontFamily());
         assertEquals(13.0, settings.getEditorFontSize());
         assertEquals(1.2, settings.getEditorLineHeight());
         assertFalse(settings.isEditorEnableLigatures());

@@ -383,7 +383,7 @@ public final class ConsoleColorsPanel {
 
             // Line 10: ANSI 16 Colors Badges
             Label ansi16Label = new Label("ANSI colors: ");
-            ansi16Label.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #868a91;");
+            ansi16Label.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #868a91;");
             HBox ansi16Row = new HBox(6, ansi16Label);
             ansi16Row.setAlignment(Pos.CENTER_LEFT);
 
@@ -397,7 +397,7 @@ public final class ConsoleColorsPanel {
 
             // Line 11: Bright ANSI Colors Badges
             Label brightLabel = new Label("Bright ANSI: ");
-            brightLabel.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #868a91;");
+            brightLabel.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #868a91;");
             HBox brightRow = new HBox(6, brightLabel);
             brightRow.setAlignment(Pos.CENTER_LEFT);
 
@@ -601,7 +601,7 @@ public final class ConsoleColorsPanel {
                                             TreeItem<ColorSchemeElement> rootItem,
                                             String[] currentSelectedRef) {
         Label label = new Label(text);
-        StringBuilder style = new StringBuilder("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-cursor: hand;");
+        StringBuilder style = new StringBuilder("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-cursor: hand;");
         if (attr != null) {
             if (attr.foregroundEnabled && attr.foreground != null && !attr.foreground.isBlank()) {
                 style.append(" -fx-text-fill: #").append(attr.foreground).append(";");
@@ -646,7 +646,7 @@ public final class ConsoleColorsPanel {
         Label badge = new Label(" " + name + " ");
         String fg = (attr != null && attr.foregroundEnabled && attr.foreground != null) ? "#" + attr.foreground : "#bcbec4";
         String bg = (attr != null && attr.backgroundEnabled && attr.background != null) ? "#" + attr.background : "#2b2d30";
-        badge.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 11px; -fx-text-fill: " + fg +
+        badge.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 11px; -fx-text-fill: " + fg +
                 "; -fx-background-color: " + bg + "; -fx-border-color: #393b40; -fx-border-radius: 3; -fx-background-radius: 3; -fx-cursor: hand;");
         badge.setOnMouseClicked(e -> {
             selectTreeItemById(treeView, rootItem, elementId);

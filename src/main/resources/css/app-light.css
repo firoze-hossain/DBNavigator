@@ -74,12 +74,12 @@
 /* ---------- table data WHERE / ORDER BY controls ---------- */
 .data-clause-label {
     -fx-text-fill: -text-dim;
-    -fx-font-family: "JetBrains Mono", "Consolas", monospace;
+    -fx-font-family: "DBNavigator Mono", "Consolas", monospace;
     -fx-font-size: 11px;
     -fx-font-weight: bold;
 }
 .data-clause-label:clause-active { -fx-text-fill: #a56000; }
-.data-clause-field { -fx-font-family: "JetBrains Mono", "Consolas", monospace; }
+.data-clause-field { -fx-font-family: "DBNavigator Mono", "Consolas", monospace; }
 
 /* ---------- split panes ---------- */
 .split-pane { -fx-background-color: -bg-dark; -fx-padding: 0; }
@@ -217,21 +217,38 @@
 /* ---------- SQL editor (RichTextFX) ---------- */
 .sql-editor {
     -fx-background-color: -bg-darkest;
-    -fx-font-family: "JetBrains Mono", "Consolas", "Menlo", monospace;
-    -fx-font-size: 14px;
+    -fx-font-family: "DBNavigator Mono", "Menlo", "Monaco", "Consolas", monospace;
+    -fx-font-size: 13.5px;
 }
-.sql-editor .text { -fx-fill: #a9b7c6; }
-.sql-editor .caret { -fx-stroke: #dfe1e5; }
-.sql-editor .selection { -fx-fill: #214283; }
+.sql-editor .paragraph-box {
+    -fx-padding: 3px 0 3px 0;
+}
+.sql-editor .paragraph-text {
+    -fx-line-spacing: 5px;
+}
+.sql-editor .text { -fx-fill: #1a1a1e; }
+.sql-editor .caret { -fx-stroke: #000000; }
+.sql-editor .selection { -fx-fill: #b4d5fe; }
 .sql-editor .lineno {
     -fx-background-color: -bg-darkest;
-    -fx-text-fill: #5c6064;
+    -fx-text-fill: #8c8c8c;
+    -fx-font-size: 12px;
+    -fx-padding: 0 8px 0 8px;
+    -fx-alignment: center-right;
+}
+.sql-editor .lineno-text {
+    -fx-text-fill: #8c8c8c;
     -fx-font-size: 12px;
 }
-.sql-keyword { -fx-fill: #cc7832; -fx-font-weight: bold; }
-.sql-string  { -fx-fill: #6a8759; }
-.sql-number  { -fx-fill: #6897bb; }
-.sql-comment { -fx-fill: #808080; -fx-font-style: italic; }
+.sql-keyword { -fx-fill: #0033b3; -fx-font-weight: bold; }
+.sql-string  { -fx-fill: #067d17; }
+.sql-number  { -fx-fill: #1750eb; }
+.sql-comment { -fx-fill: #8c8c8c; -fx-font-style: italic; }
+
+/* Caret row active line highlight (DataGrip light style) */
+.sql-editor .current-line-highlight {
+    -fx-background-color: #f2f5fa;
+}
 
 /* ---------- result grid ---------- */
 .result-grid {
@@ -260,7 +277,7 @@
 .result-grid.no-zebra .table-row-cell:selected:odd { -fx-background-color: #3574f0; }
 .result-grid .table-cell {
     -fx-text-fill: #1a1a1e;
-    -fx-font-family: "JetBrains Mono", "Consolas", monospace;
+    -fx-font-family: "DBNavigator Mono", "Consolas", monospace;
     -fx-font-size: 12px;
     -fx-border-color: transparent #e5e5ea transparent transparent;
 }
@@ -358,7 +375,7 @@
     -fx-border-color: -border;
     -fx-border-radius: 6;
     -fx-background-radius: 6;
-    -fx-font-family: "JetBrains Mono", "Consolas", monospace;
+    -fx-font-family: "DBNavigator Mono", "Consolas", monospace;
     -fx-font-size: 13px;
 }
 .completion-list .list-cell {
@@ -372,7 +389,7 @@
 /* ---------- dump/restore process output ---------- */
 .process-output {
     -fx-control-inner-background: -bg-darkest;
-    -fx-font-family: "JetBrains Mono", "Consolas", monospace;
+    -fx-font-family: "DBNavigator Mono", "Consolas", monospace;
     -fx-font-size: 12px;
     -fx-text-fill: #a9b7c6;
 }
@@ -615,7 +632,7 @@
 }
 
 /* ---------- colored completion entries (DataGrip style) ---------- */
-.completion-name    { -fx-font-family: "JetBrains Mono", "Consolas", monospace; -fx-font-size: 13px; }
+.completion-name    { -fx-font-family: "DBNavigator Mono", "Consolas", monospace; -fx-font-size: 13px; }
 .completion-keyword { -fx-text-fill: #cc7832; -fx-font-weight: bold; }
 .completion-table   { -fx-text-fill: #4a88c7; }
 .completion-column  { -fx-text-fill: #6a8759; }
@@ -778,7 +795,7 @@
 
 .diff-lineno {
     -fx-text-fill: #5c6064;
-    -fx-font-family: "JetBrains Mono", "Consolas", monospace;
+    -fx-font-family: "DBNavigator Mono", "Consolas", monospace;
     -fx-font-size: 11px;
     -fx-alignment: center-right;
     -fx-padding: 2 8 2 0;
@@ -789,7 +806,7 @@
 }
 .diff-segment {
     -fx-text-fill: #c8ccd4;
-    -fx-font-family: "JetBrains Mono", "Consolas", monospace;
+    -fx-font-family: "DBNavigator Mono", "Consolas", monospace;
     -fx-font-size: 12px;
     -fx-padding: 0;
 }
@@ -937,7 +954,7 @@
 .modify-pill { -fx-background-color: #f2f2f2; -fx-border-color: #d1d1d1; -fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 3 10 3 10; }
 .modify-form-scroll { -fx-background-color: -bg-darkest; -fx-background: -bg-darkest; }
 .modify-preview-header { -fx-background-color: #f2f2f2; -fx-border-color: #d1d1d1; -fx-border-width: 1 0 1 0; -fx-padding: 3 8 3 8; }
-.modify-preview-text { -fx-font-family: "JetBrains Mono", "Fira Code", monospace; -fx-font-size: 12px; -fx-control-inner-background: #ffffff; }
+.modify-preview-text { -fx-font-family: "DBNavigator Mono", "Fira Code", monospace; -fx-font-size: 12px; -fx-control-inner-background: #ffffff; }
 .modify-ok-btn { -fx-background-color: #3574f0; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 4; -fx-padding: 4 16 4 16; }
 .modify-ok-btn:hover { -fx-background-color: #3068d8; }
 .modify-dropped-item { -fx-strikethrough: true; -fx-text-fill: #8c8c8c; }
@@ -951,7 +968,7 @@
 
 /* ---------- current-statement highlight (multi-statement consoles) ---------- */
 .current-statement-line {
-    -rtfx-background-color: rgba(87, 150, 92, 0.28);
+    -rtfx-background-color: transparent;
 }
 
 /* ---------- Statements quick-pick popup ---------- */
@@ -1181,7 +1198,7 @@
 .sql-editor .sql-parameter { -fx-fill: #a56000; -fx-font-weight: bold; }
 .sql-editor .sql-qualifier { -fx-fill: #1a56c4; }
 .current-statement-line {
-    -rtfx-background-color: rgba(46, 125, 50, 0.30);
+    -rtfx-background-color: transparent;
 }
 
 .process-output { -fx-control-inner-background: #ffffff; -fx-text-fill: #1a1a1e; }

@@ -33,56 +33,82 @@ public class QueryTabHideDataPanelTest {
         return p;
     }
 
-    @Test
-    public void testHideButtonPropertiesMatchingDataGrip() {
-        ConnectionProfile profile = createTestProfile();
-        QueryTab tab = new QueryTab(null, profile, "testdb", "console [postgres@localhost]");
-
-        Button hideBtn = tab.getHideDataPanelButton();
-        assertNotNull(hideBtn, "Hide button must be present in QueryTab data panel");
-        assertNotNull(hideBtn.getTooltip(), "Hide button must have a tooltip");
-        assertTrue(hideBtn.getTooltip().getText().startsWith("Hide"), "Tooltip must start with 'Hide'");
-        assertTrue(hideBtn.getTooltip().getText().contains("Shift+Escape") || hideBtn.getTooltip().getText().contains("⇧⎋"),
-                "Tooltip must contain Shift+Escape shortcut");
-        assertNotNull(hideBtn.getGraphic(), "Hide button must have an icon");
+    private void runOnFxThread(Runnable action) throws Exception {
+        java.util.concurrent.atomic.AtomicReference<Throwable> error = new java.util.concurrent.atomic.AtomicReference<>();
+        java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(1);
+        Platform.runLater(() -> {
+            try {
+                action.run();
+            } catch (Throwable t) {
+                error.set(t);
+            } finally {
+                latch.countDown();
+            }
+        });
+        assertTrue(latch.await(5, java.util.concurrent.TimeUnit.SECONDS), "Timed out waiting for FX thread execution");
+        if (error.get() != null) {
+            if (error.get() instanceof AssertionError) throw (AssertionError) error.get();
+            if (error.get() instanceof Exception) throw (Exception) error.get();
+            throw new RuntimeException(error.get());
+        }
     }
 
     @Test
-    public void testHideAndShowDataPanel() {
-        ConnectionProfile profile = createTestProfile();
-        QueryTab tab = new QueryTab(null, profile, "testdb", "console [postgres@localhost]");
+    public void testHideButtonPropertiesMatchingDataGrip() throws Exception {
+        runOnFxThread(() -> {
+            ConnectionProfile profile = createTestProfile();
+            QueryTab tab = new QueryTab(null, profile, "testdb", "console [postgres@localhost]");
 
-        assertTrue(tab.isDataPanelVisible(), "Data panel should initially be visible");
-
-        tab.hideDataPanel();
-        assertFalse(tab.isDataPanelVisible(), "Data panel should be hidden after hideDataPanel()");
-
-        tab.showDataPanel();
-        assertTrue(tab.isDataPanelVisible(), "Data panel should be visible after showDataPanel()");
-
-        tab.toggleDataPanel();
-        assertFalse(tab.isDataPanelVisible(), "Data panel should be hidden after toggleDataPanel()");
-
-        tab.toggleDataPanel();
-        assertTrue(tab.isDataPanelVisible(), "Data panel should be visible after toggleDataPanel() again");
+            Button hideBtn = tab.getHideDataPanelButton();
+            assertNotNull(hideBtn, "Hide button must be present in QueryTab data panel");
+            assertNotNull(hideBtn.getTooltip(), "Hide button must have a tooltip");
+            assertTrue(hideBtn.getTooltip().getText().startsWith("Hide"), "Tooltip must start with 'Hide'");
+            assertTrue(hideBtn.getTooltip().getText().contains("Shift+Escape") || hideBtn.getTooltip().getText().contains("⇧⎋"),
+                    "Tooltip must contain Shift+Escape shortcut");
+            assertNotNull(hideBtn.getGraphic(), "Hide button must have an icon");
+        });
     }
 
     @Test
-    public void testShiftEscapeHidesDataPanel() {
-        ConnectionProfile profile = createTestProfile();
-        QueryTab tab = new QueryTab(null, profile, "testdb", "console [postgres@localhost]");
+    public void testHideAndShowDataPanel() throws Exception {
+        runOnFxThread(() -> {
+            ConnectionProfile profile = createTestProfile();
+            QueryTab tab = new QueryTab(null, profile, "testdb", "console [postgres@localhost]");
 
-        assertTrue(tab.isDataPanelVisible());
+            assertTrue(tab.isDataPanelVisible(), "Data panel should initially be visible");
 
-        KeyEvent shiftEscapeEvent = new KeyEvent(
-                KeyEvent.KEY_PRESSED,
-                "", "", KeyCode.ESCAPE,
-                true, false, false, false
-        );
+            tab.hideDataPanel();
+            assertFalse(tab.isDataPanelVisible(), "Data panel should be hidden after hideDataPanel()");
 
-        tab.getContent().fireEvent(shiftEscapeEvent);
+            tab.showDataPanel();
+            assertTrue(tab.isDataPanelVisible(), "Data panel should be visible after showDataPanel()");
 
-        assertFalse(tab.isDataPanelVisible(), "Shift+Escape should hide the console query data panel");
+            tab.toggleDataPanel();
+            assertFalse(tab.isDataPanelVisible(), "Data panel should be hidden after toggleDataPanel()");
+
+            tab.toggleDataPanel();
+            assertTrue(tab.isDataPanelVisible(), "Data panel should be visible after toggleDataPanel() again");
+        });
+    }
+
+    @Test
+    public void testShiftEscapeHidesDataPanel() throws Exception {
+        runOnFxThread(() -> {
+            ConnectionProfile profile = createTestProfile();
+            QueryTab tab = new QueryTab(null, profile, "testdb", "console [postgres@localhost]");
+
+            assertTrue(tab.isDataPanelVisible());
+
+            KeyEvent shiftEscapeEvent = new KeyEvent(
+                    KeyEvent.KEY_PRESSED,
+                    "", "", KeyCode.ESCAPE,
+                    true, false, false, false
+            );
+
+            tab.getContent().fireEvent(shiftEscapeEvent);
+
+            assertFalse(tab.isDataPanelVisible(), "Shift+Escape should hide the console query data panel");
+        });
     }
 
     @Test

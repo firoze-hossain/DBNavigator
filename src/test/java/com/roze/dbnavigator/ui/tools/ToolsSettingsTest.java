@@ -897,7 +897,7 @@ public class ToolsSettingsTest {
         assertTrue(cfg.isShowCompletionShortcutEnabled());
         assertEquals("Ctrl+Space", cfg.getCompletionShortcut());
         assertEquals("Enter", cfg.getInsertSuggestionWith());
-        assertEquals("JetBrains Mono", cfg.getFont());
+        assertEquals("DBNavigator Mono", cfg.getFont());
         assertEquals(13.0, cfg.getFontSize());
         assertEquals(1.0, cfg.getLineHeight());
         assertEquals(1.0, cfg.getColumnWidth());

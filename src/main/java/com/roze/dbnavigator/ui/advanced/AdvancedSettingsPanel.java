@@ -16,7 +16,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 /**
- * Settings panel for Advanced Settings, replicating JetBrains DataGrip.
+ * Settings panel for Advanced Settings in DBNavigator.
  * Features a dynamic, data-driven registry of all 21 categories and 43+ advanced settings,
  * with real-time search filtering, modified-only filtering, and full persistence.
  */

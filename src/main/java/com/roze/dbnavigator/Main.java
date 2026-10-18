@@ -17,6 +17,7 @@ public class Main extends Application {
 
     @Override
     public void start(Stage stage) {
+        com.roze.dbnavigator.ui.FontLoader.loadBundledFonts();
         Rectangle2D visualBounds = Screen.getPrimary().getVisualBounds();
         double screenW = visualBounds.getWidth();
         double screenH = visualBounds.getHeight();

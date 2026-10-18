@@ -458,7 +458,7 @@ public final class DiffMergePanel {
             Label wave1 = new Label("14  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
             Label wave2 = new Label("14  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
             Label wave3 = new Label("14  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-            String waveStyle = "-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 11px; -fx-text-fill: " + waveColor + "; -fx-cursor: hand;";
+            String waveStyle = "-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 11px; -fx-text-fill: " + waveColor + "; -fx-cursor: hand;";
             wave1.setStyle(waveStyle);
             wave2.setStyle(waveStyle);
             wave3.setStyle(waveStyle);
@@ -607,10 +607,10 @@ public final class DiffMergePanel {
     private static HBox makeDiffLine(String lineNum, String code, String bgColor, String elementId,
                                      TreeView<ColorSchemeElement> treeView, TreeItem<ColorSchemeElement> rootItem) {
         Label numLabel = new Label(String.format("%2s ", lineNum));
-        numLabel.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 11px; -fx-text-fill: #5a5d60;");
+        numLabel.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 11px; -fx-text-fill: #5a5d60;");
 
         Label codeLabel = new Label(code.isEmpty() ? " " : code);
-        codeLabel.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 11px; -fx-text-fill: #bcbec4;");
+        codeLabel.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 11px; -fx-text-fill: #bcbec4;");
 
         HBox lineBox = new HBox(4, numLabel, codeLabel);
         lineBox.setAlignment(Pos.CENTER_LEFT);

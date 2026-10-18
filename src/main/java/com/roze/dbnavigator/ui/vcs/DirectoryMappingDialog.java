@@ -114,7 +114,7 @@ public class DirectoryMappingDialog {
             vcsCombo.setValue(initialEntry != null && initialEntry.getVcs() != null ? initialEntry.getVcs() : "Git");
             projectRadio.setSelected(true);
             String userHome = System.getProperty("user.home");
-            dirField.setText(userHome + File.separator + "DataGripProjects" + File.separator + "Db");
+            dirField.setText(userHome + File.separator + "DBNavigatorProjects" + File.separator + "Db");
         }
 
         // Action buttons

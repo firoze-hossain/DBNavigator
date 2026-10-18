@@ -117,10 +117,10 @@ public final class InvalidateCachesDialog {
         alert.initOwner(owner);
         alert.setHeaderText("Restart needed");
         String message = clearedItems.isEmpty()
-                ? "Please restart DBNavigator Pro manually (e.g. rerun it from IntelliJ) "
+                ? "Please restart DBNavigator Pro manually "
                   + "for this to take effect."
                 : "Cleared: " + String.join(", ", clearedItems) + ".\n\n"
-                  + "Please restart DBNavigator Pro manually (e.g. rerun it from IntelliJ) "
+                  + "Please restart DBNavigator Pro manually "
                   + "to finish.";
         alert.setContentText(message);
         alert.showAndWait();

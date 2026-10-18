@@ -311,7 +311,7 @@ public final class SqlColorSchemePanel {
         // 4. Bottom Live SQL Preview
         VBox previewPane = new VBox(4);
         previewPane.setPadding(new Insets(8, 12, 8, 12));
-        previewPane.setStyle("-fx-background-color: #1e1f22; -fx-border-color: #393b40; -fx-border-width: 1; -fx-border-radius: 4; -fx-background-radius: 4; -fx-font-family: 'JetBrains Mono', 'Fira Code', monospace; -fx-font-size: 12px;");
+        previewPane.setStyle("-fx-background-color: #1e1f22; -fx-border-color: #393b40; -fx-border-width: 1; -fx-border-radius: 4; -fx-background-radius: 4; -fx-font-family: 'DBNavigator Mono', 'Fira Code', monospace; -fx-font-size: 12px;");
         previewPane.setMinHeight(220);
 
         ScrollPane previewScroll = new ScrollPane(previewPane);
@@ -454,14 +454,14 @@ public final class SqlColorSchemePanel {
         class TokenBuilder {
             HBox makeToken(String text, String elementId) {
                 Label lbl = new Label(text);
-                lbl.setStyle("-fx-font-family: 'JetBrains Mono', 'Fira Code', monospace; -fx-font-size: 12px; -fx-cursor: hand;");
+                lbl.setStyle("-fx-font-family: 'DBNavigator Mono', 'Fira Code', monospace; -fx-font-size: 12px; -fx-cursor: hand;");
                 HBox box = new HBox(lbl);
                 box.setAlignment(Pos.CENTER_LEFT);
 
                 Runnable styleUpdater = () -> {
                     String curScheme = schemeCombo.getValue() != null ? schemeCombo.getValue() : "Dark Theme default";
                     ColorSchemeAttribute attr = ColorSchemeModel.resolveAttribute(curScheme, elementId, workingOverrides);
-                    StringBuilder sb = new StringBuilder("-fx-font-family: 'JetBrains Mono', 'Fira Code', monospace; -fx-font-size: 12px; -fx-cursor: hand;");
+                    StringBuilder sb = new StringBuilder("-fx-font-family: 'DBNavigator Mono', 'Fira Code', monospace; -fx-font-size: 12px; -fx-cursor: hand;");
                     if (attr != null) {
                         if (attr.bold) sb.append("-fx-font-weight: bold;");
                         if (attr.italic) sb.append("-fx-font-style: italic;");
@@ -496,7 +496,7 @@ public final class SqlColorSchemePanel {
 
             Label makePlain(String text) {
                 Label lbl = new Label(text);
-                lbl.setStyle("-fx-font-family: 'JetBrains Mono', 'Fira Code', monospace; -fx-font-size: 12px; -fx-text-fill: #BCBEC4;");
+                lbl.setStyle("-fx-font-family: 'DBNavigator Mono', 'Fira Code', monospace; -fx-font-size: 12px; -fx-text-fill: #BCBEC4;");
                 return lbl;
             }
         }

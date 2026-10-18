@@ -310,7 +310,7 @@ public final class XsltColorSchemePanel {
         // 4. Bottom Live XSLT Preview
         VBox previewPane = new VBox(4);
         previewPane.setPadding(new Insets(8, 12, 8, 12));
-        previewPane.setStyle("-fx-background-color: #1e1f22; -fx-border-color: #393b40; -fx-border-width: 1; -fx-border-radius: 4; -fx-background-radius: 4; -fx-font-family: 'JetBrains Mono', 'Fira Code', monospace; -fx-font-size: 12px;");
+        previewPane.setStyle("-fx-background-color: #1e1f22; -fx-border-color: #393b40; -fx-border-width: 1; -fx-border-radius: 4; -fx-background-radius: 4; -fx-font-family: 'DBNavigator Mono', 'Fira Code', monospace; -fx-font-size: 12px;");
         previewPane.setMinHeight(220);
 
         ScrollPane previewScroll = new ScrollPane(previewPane);
@@ -460,10 +460,10 @@ public final class XsltColorSchemePanel {
                     ? dirAttr.background : "2B2D30";
 
             String directiveBoxStyle = "-fx-background-color: #" + bgHex + "; -fx-background-radius: 2; -fx-padding: 1 4; -fx-cursor: hand;";
-            String plainStyle = "-fx-font-family: 'JetBrains Mono', 'Fira Code', monospace; -fx-font-size: 12px; -fx-text-fill: #E8BF6A;";
-            String attrNameStyle = "-fx-font-family: 'JetBrains Mono', 'Fira Code', monospace; -fx-font-size: 12px; -fx-text-fill: #BABABA;";
-            String attrValStyle = "-fx-font-family: 'JetBrains Mono', 'Fira Code', monospace; -fx-font-size: 12px; -fx-text-fill: #6A8759;";
-            String htmlTagStyle = "-fx-font-family: 'JetBrains Mono', 'Fira Code', monospace; -fx-font-size: 12px; -fx-text-fill: #E8BF6A;";
+            String plainStyle = "-fx-font-family: 'DBNavigator Mono', 'Fira Code', monospace; -fx-font-size: 12px; -fx-text-fill: #E8BF6A;";
+            String attrNameStyle = "-fx-font-family: 'DBNavigator Mono', 'Fira Code', monospace; -fx-font-size: 12px; -fx-text-fill: #BABABA;";
+            String attrValStyle = "-fx-font-family: 'DBNavigator Mono', 'Fira Code', monospace; -fx-font-size: 12px; -fx-text-fill: #6A8759;";
+            String htmlTagStyle = "-fx-font-family: 'DBNavigator Mono', 'Fira Code', monospace; -fx-font-size: 12px; -fx-text-fill: #E8BF6A;";
 
             Consumer<HBox> attachDirectiveClick = box -> {
                 box.setOnMouseClicked(e -> {

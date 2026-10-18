@@ -1239,7 +1239,7 @@ public final class SettingsDialog {
         inputs.put("appearance_useCustomIdeFont", useCustomFontCheck);
 
         ComboBox<String> fontFamCombo = new ComboBox<>();
-        fontFamCombo.getItems().addAll("Inter", "JetBrains Sans", "Segoe UI", "SF Pro Text", "Ubuntu", "Cantarell", "Roboto", "Arial", "System-ui");
+        fontFamCombo.getItems().addAll("Inter", "DBNavigator Sans", "Segoe UI", "SF Pro Text", "Ubuntu", "Cantarell", "Roboto", "Arial", "System-ui");
         fontFamCombo.getSelectionModel().select(settings.getCustomIdeFontFamily());
         fontFamCombo.setPrefWidth(220);
         fontFamCombo.disableProperty().bind(useCustomFontCheck.selectedProperty().not());
@@ -1716,7 +1716,7 @@ public final class SettingsDialog {
                 "end note"
         );
         codePreview.setEditable(false);
-        codePreview.setStyle("-fx-font-family: 'JetBrains Mono', 'Consolas', monospace; -fx-font-size: 12px; -fx-control-inner-background: #1e1f22;");
+        codePreview.setStyle("-fx-font-family: 'DBNavigator Mono', 'Consolas', monospace; -fx-font-size: 12px; -fx-control-inner-background: #1e1f22;");
         codePreview.setPrefRowCount(12);
         VBox.setVgrow(codePreview, Priority.ALWAYS);
 
@@ -2752,7 +2752,7 @@ public final class SettingsDialog {
         area.setPrefWidth(34);
         area.setMinWidth(34);
         area.setMaxWidth(34);
-        area.setStyle("-fx-font-family: 'JetBrains Mono', 'Consolas', monospace; -fx-font-size: 11px; -fx-control-inner-background: #1e1f22; -fx-text-fill: #565861; -fx-text-alignment: right;");
+        area.setStyle("-fx-font-family: 'DBNavigator Mono', 'Consolas', monospace; -fx-font-size: 11px; -fx-control-inner-background: #1e1f22; -fx-text-fill: #565861; -fx-text-alignment: right;");
         StringBuilder sb = new StringBuilder();
         for (int i = 1; i <= lines; i++) {
             if (i > 1) sb.append("\n");
@@ -2766,7 +2766,7 @@ public final class SettingsDialog {
         TextArea area = new TextArea();
         area.setEditable(false);
         area.setFocusTraversable(false);
-        area.setStyle("-fx-font-family: 'JetBrains Mono', 'Consolas', monospace; -fx-font-size: 11px; -fx-control-inner-background: #1e1f22; -fx-text-fill: #bcbec4;");
+        area.setStyle("-fx-font-family: 'DBNavigator Mono', 'Consolas', monospace; -fx-font-size: 11px; -fx-control-inner-background: #1e1f22; -fx-text-fill: #bcbec4;");
         area.setPrefHeight(prefHeight);
         return area;
     }
@@ -4686,7 +4686,7 @@ public final class SettingsDialog {
         ComboBox<String> fontCombo = new ComboBox<>();
         // Monospaced fonts prioritized
         List<String> preferredFonts = List.of(
-                "JetBrains Mono", "Fira Code", "Inconsolata", "Source Code Pro",
+                "DBNavigator Mono", "Fira Code", "Inconsolata", "Source Code Pro",
                 "Menlo", "Monaco", "Courier New", "Droid Sans Mono", "Consolas"
         );
         List<String> installed = Font.getFamilies();
@@ -4880,7 +4880,7 @@ public final class SettingsDialog {
         customInput.setStyle("-fx-font-size: 12px;");
 
         Runnable refreshPreview = () -> {
-            String fam = fontCombo.getValue() != null ? fontCombo.getValue() : "JetBrains Mono";
+            String fam = fontCombo.getValue() != null ? fontCombo.getValue() : "DBNavigator Mono";
             Double sz = sizeSpinner.getValue() != null ? sizeSpinner.getValue() : 13.0;
             Double lh = lineHeightSpinner.getValue() != null ? lineHeightSpinner.getValue() : 1.2;
             String wt = mainWeightCombo.getValue() != null ? mainWeightCombo.getValue() : "Regular";
@@ -5555,7 +5555,7 @@ public final class SettingsDialog {
 
         ComboBox<String> fontCombo = new ComboBox<>();
         List<String> families = new ArrayList<>(Font.getFamilies());
-        if (!families.contains("JetBrains Mono")) families.add(0, "JetBrains Mono");
+        if (!families.contains("DBNavigator Mono")) families.add(0, "DBNavigator Mono");
         fontCombo.getItems().addAll(families);
         fontCombo.setValue(settings.getCustomFontFamily());
         fontCombo.setPrefWidth(220);
@@ -6875,7 +6875,7 @@ public final class SettingsDialog {
         // Preview components
         TextArea rawTextArea = new TextArea();
         rawTextArea.setEditable(false);
-        rawTextArea.setStyle("-fx-font-family: 'JetBrains Mono', 'Consolas', monospace; -fx-font-size: 11px; -fx-control-inner-background: #1e1f22; -fx-text-fill: #bcbec4;");
+        rawTextArea.setStyle("-fx-font-family: 'DBNavigator Mono', 'Consolas', monospace; -fx-font-size: 11px; -fx-control-inner-background: #1e1f22; -fx-text-fill: #bcbec4;");
         rawTextArea.setPrefHeight(170);
 
         TextArea lineNumArea = new TextArea();
@@ -6883,7 +6883,7 @@ public final class SettingsDialog {
         lineNumArea.setPrefWidth(34);
         lineNumArea.setMinWidth(34);
         lineNumArea.setMaxWidth(34);
-        lineNumArea.setStyle("-fx-font-family: 'JetBrains Mono', 'Consolas', monospace; -fx-font-size: 11px; -fx-control-inner-background: #1e1f22; -fx-text-fill: #565861; -fx-text-alignment: right;");
+        lineNumArea.setStyle("-fx-font-family: 'DBNavigator Mono', 'Consolas', monospace; -fx-font-size: 11px; -fx-control-inner-background: #1e1f22; -fx-text-fill: #565861; -fx-text-alignment: right;");
 
         HBox textPreviewBox = new HBox(0, lineNumArea, rawTextArea);
         HBox.setHgrow(rawTextArea, Priority.ALWAYS);
@@ -8718,7 +8718,7 @@ public final class SettingsDialog {
 
                     // Gutter line number
                     Label numLabel = new Label(String.format("%2d", lineNum));
-                    numLabel.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: " + lineNumColor + "; -fx-cursor: hand;");
+                    numLabel.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: " + lineNumColor + "; -fx-cursor: hand;");
                     numLabel.setOnMouseClicked(e -> selectColorSchemeElement(treeView, rootItem, "code.line_number", currentSelectedElementId, previewScroll));
                     numLabel.setPrefWidth(26);
 
@@ -8745,27 +8745,27 @@ public final class SettingsDialog {
             // Line 1: //TODO: Visit JB Web resources:
             Label todoLbl = new Label("//TODO: Visit JB Web resources:");
             String todoFg = (todoAttr.foregroundEnabled && todoAttr.foreground != null) ? "#" + todoAttr.foreground : "#A8C023";
-            todoLbl.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: " + todoFg +
+            todoLbl.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: " + todoFg +
                     "; -fx-font-style: italic; -fx-cursor: hand;");
             todoLbl.setOnMouseClicked(e -> selectColorSchemeElement(treeView, rootItem, "code.todo", currentSelectedElementId, previewScroll));
             previewPane.getChildren().add(pb.build(1, todoLbl, todoAttr.errorStripeEnabled ? todoAttr.errorStripe : "73AD2B", "code.todo"));
 
-            // Line 2: JetBrains Home Page: http://www.jetbrains.com
-            Label jbHome = new Label("JetBrains Home Page: ");
-            jbHome.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
-            Label link1 = new Label("http://www.jetbrains.com");
+            // Line 2: DBNavigator Home Page: https://dbnavigator.dev
+            Label jbHome = new Label("DBNavigator Home Page: ");
+            jbHome.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
+            Label link1 = new Label("https://dbnavigator.dev");
             String linkFg = (linkAttr.foregroundEnabled && linkAttr.foreground != null) ? "#" + linkAttr.foreground : "#287BDE";
-            link1.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: " + linkFg + "; -fx-underline: true; -fx-cursor: hand;");
+            link1.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: " + linkFg + "; -fx-underline: true; -fx-cursor: hand;");
             link1.setOnMouseClicked(e -> selectColorSchemeElement(treeView, rootItem, "hyperlinks.unfollowed", currentSelectedElementId, previewScroll));
             HBox l2 = new HBox(jbHome, link1);
             l2.setAlignment(Pos.CENTER_LEFT);
             previewPane.getChildren().add(pb.build(2, l2, "287BDE", "hyperlinks.unfollowed"));
 
-            // Line 3: JetBrains Developer Community: https://www.jetbrains.com/devnet
-            Label jbDev = new Label("JetBrains Developer Community: ");
-            jbDev.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
-            Label link2 = new Label("https://www.jetbrains.com/devnet");
-            link2.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: " + linkFg + "; -fx-underline: true; -fx-cursor: hand;");
+            // Line 3: DBNavigator Developer Community: https://community.dbnavigator.dev
+            Label jbDev = new Label("DBNavigator Developer Community: ");
+            jbDev.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
+            Label link2 = new Label("https://community.dbnavigator.dev");
+            link2.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: " + linkFg + "; -fx-underline: true; -fx-cursor: hand;");
             link2.setOnMouseClicked(e -> selectColorSchemeElement(treeView, rootItem, "hyperlinks.unfollowed", currentSelectedElementId, previewScroll));
             HBox l3 = new HBox(jbDev, link2);
             l3.setAlignment(Pos.CENTER_LEFT);
@@ -8774,17 +8774,17 @@ public final class SettingsDialog {
             // Line 4: ReferenceHyperlink
             Label refLink = new Label("ReferenceHyperlink");
             String refLinkFg = (refLinkAttr.foregroundEnabled && refLinkAttr.foreground != null) ? "#" + refLinkAttr.foreground : "#589DF6";
-            refLink.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: " + refLinkFg + "; -fx-font-weight: bold; -fx-underline: true; -fx-cursor: hand;");
+            refLink.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: " + refLinkFg + "; -fx-font-weight: bold; -fx-underline: true; -fx-cursor: hand;");
             refLink.setOnMouseClicked(e -> selectColorSchemeElement(treeView, rootItem, "hyperlinks.reference", currentSelectedElementId, previewScroll));
             previewPane.getChildren().add(pb.build(4, refLink, "589DF6", "hyperlinks.reference"));
 
-            // Line 5: Inactive hyperlink in code: "http://jetbrains.com"
+            // Line 5: Inactive hyperlink in code: "https://dbnavigator.dev"
             Label inactPrefix = new Label("Inactive hyperlink in code: ");
-            inactPrefix.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
-            Label inactLink = new Label("\"http://jetbrains.com\"");
+            inactPrefix.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
+            Label inactLink = new Label("\"https://dbnavigator.dev\"");
             String inactEff = (inactiveLinkAttr.effectEnabled && inactiveLinkAttr.effectColor != null)
                     ? "#" + inactiveLinkAttr.effectColor : "#6B6C73";
-            inactLink.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #868A91; -fx-border-color: transparent transparent " + inactEff + " transparent; -fx-border-width: 0 0 1 0; -fx-cursor: hand;");
+            inactLink.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #868A91; -fx-border-color: transparent transparent " + inactEff + " transparent; -fx-border-width: 0 0 1 0; -fx-cursor: hand;");
             inactLink.setOnMouseClicked(e -> selectColorSchemeElement(treeView, rootItem, "hyperlinks.inactive", currentSelectedElementId, previewScroll));
             HBox l5 = new HBox(inactPrefix, inactLink);
             l5.setAlignment(Pos.CENTER_LEFT);
@@ -8795,31 +8795,31 @@ public final class SettingsDialog {
 
             // Line 7: Search:
             Label searchLbl = new Label("Search:");
-            searchLbl.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
+            searchLbl.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
             previewPane.getChildren().add(pb.build(7, searchLbl, null, null));
 
             // Line 8:   result = "text, text, text";
             Label resIndent = new Label("  ");
             Label resToken = new Label("result");
             String searchBg = (searchResultAttr.backgroundEnabled && searchResultAttr.background != null) ? "#" + searchResultAttr.background : "#32593D";
-            resToken.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-background-color: " + searchBg +
+            resToken.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-background-color: " + searchBg +
                     "; -fx-text-fill: #dfe1e5; -fx-padding: 0 2; -fx-background-radius: 2; -fx-cursor: hand;");
             resToken.setOnMouseClicked(e -> selectColorSchemeElement(treeView, rootItem, "search.result", currentSelectedElementId, previewScroll));
             Label eqToken = new Label(" = \"");
-            eqToken.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
+            eqToken.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
 
             Label t1 = new Label("text");
-            t1.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-background-color: #2e596b; -fx-text-fill: #ffffff; -fx-padding: 0 2; -fx-background-radius: 2;");
+            t1.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-background-color: #2e596b; -fx-text-fill: #ffffff; -fx-padding: 0 2; -fx-background-radius: 2;");
             Label comma1 = new Label(", ");
-            comma1.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
+            comma1.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
             Label t2 = new Label("text");
-            t2.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-background-color: #2e596b; -fx-text-fill: #ffffff; -fx-padding: 0 2; -fx-background-radius: 2;");
+            t2.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-background-color: #2e596b; -fx-text-fill: #ffffff; -fx-padding: 0 2; -fx-background-radius: 2;");
             Label comma2 = new Label(", ");
-            comma2.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
+            comma2.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
             Label t3 = new Label("text");
-            t3.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-background-color: #2e596b; -fx-text-fill: #ffffff; -fx-padding: 0 2; -fx-background-radius: 2;");
+            t3.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-background-color: #2e596b; -fx-text-fill: #ffffff; -fx-padding: 0 2; -fx-background-radius: 2;");
             Label endQuote = new Label("\";");
-            endQuote.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
+            endQuote.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
 
             HBox l8 = new HBox(resIndent, resToken, eqToken, t1, comma1, t2, comma2, t3, endQuote);
             l8.setAlignment(Pos.CENTER_LEFT);
@@ -8829,16 +8829,16 @@ public final class SettingsDialog {
             Label l9Indent = new Label("  ");
             Label iToken = new Label("i");
             if (reassignedAttr.effectEnabled && "Bordered".equals(reassignedAttr.effectType)) {
-                iToken.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #dfe1e5; -fx-border-color: #3574F0; -fx-border-radius: 2; -fx-padding: 0 2; -fx-cursor: hand;");
+                iToken.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #dfe1e5; -fx-border-color: #3574F0; -fx-border-radius: 2; -fx-padding: 0 2; -fx-cursor: hand;");
             } else {
-                iToken.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #dfe1e5; -fx-cursor: hand;");
+                iToken.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #dfe1e5; -fx-cursor: hand;");
             }
             iToken.setOnMouseClicked(e -> selectColorSchemeElement(treeView, rootItem, "identifiers.reassigned_local_variable", currentSelectedElementId, previewScroll));
 
             Label l9Eq = new Label(" = ");
-            l9Eq.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
+            l9Eq.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
             Label resToken2 = new Label("result");
-            resToken2.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-background-color: " + searchBg +
+            resToken2.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-background-color: " + searchBg +
                     "; -fx-text-fill: #dfe1e5; -fx-padding: 0 2; -fx-background-radius: 2; -fx-cursor: hand;");
             resToken2.setOnMouseClicked(e -> selectColorSchemeElement(treeView, rootItem, "search.result", currentSelectedElementId, previewScroll));
             HBox l9 = new HBox(l9Indent, iToken, l9Eq, resToken2);
@@ -8847,7 +8847,7 @@ public final class SettingsDialog {
 
             // Line 10:   return i;
             Label l10 = new Label("  return i;");
-            l10.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
+            l10.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
             previewPane.getChildren().add(pb.build(10, l10, null, null));
 
             // Line 11: Blank
@@ -8856,14 +8856,14 @@ public final class SettingsDialog {
             // Line 12: Folded text
             Label foldedLbl = new Label("Folded text");
             String foldBg = (foldedAttr.backgroundEnabled && foldedAttr.background != null) ? "#" + foldedAttr.background : "#3A3A3A";
-            foldedLbl.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-background-color: " + foldBg +
+            foldedLbl.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-background-color: " + foldBg +
                     "; -fx-text-fill: #8c8c8c; -fx-padding: 0 6; -fx-background-radius: 3; -fx-cursor: hand;");
             foldedLbl.setOnMouseClicked(e -> selectColorSchemeElement(treeView, rootItem, "text.folded", currentSelectedElementId, previewScroll));
             previewPane.getChildren().add(pb.build(12, foldedLbl, "8C8C8C", "text.folded"));
 
             // Line 13: Folded text with highlighting
             Label foldedHighLbl = new Label("Folded text with highlighting");
-            foldedHighLbl.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-background-color: " + foldBg +
+            foldedHighLbl.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-background-color: " + foldBg +
                     "; -fx-text-fill: #8c8c8c; -fx-border-color: #3574F0; -fx-border-radius: 3; -fx-padding: 0 6; -fx-background-radius: 3; -fx-cursor: hand;");
             foldedHighLbl.setOnMouseClicked(e -> selectColorSchemeElement(treeView, rootItem, "text.folded_highlighted", currentSelectedElementId, previewScroll));
             previewPane.getChildren().add(pb.build(13, foldedHighLbl, null, "text.folded_highlighted"));
@@ -8871,24 +8871,24 @@ public final class SettingsDialog {
             // Line 14: Deleted text
             Label delLbl = new Label("Deleted text");
             String delFg = (deletedAttr.foregroundEnabled && deletedAttr.foreground != null) ? "#" + deletedAttr.foreground : "#CC666E";
-            delLbl.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: " + delFg +
+            delLbl.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: " + delFg +
                     "; -fx-border-color: " + delFg + " transparent transparent transparent; -fx-border-style: dashed; -fx-cursor: hand;");
             delLbl.setOnMouseClicked(e -> selectColorSchemeElement(treeView, rootItem, "text.deleted", currentSelectedElementId, previewScroll));
             previewPane.getChildren().add(pb.build(14, delLbl, "CC666E", "text.deleted"));
 
             // Line 15: Live template: active inactive $VARIABLE$
             Label tmplPrefix = new Label("Live template: ");
-            tmplPrefix.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
+            tmplPrefix.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
             Label tmplActive = new Label("active");
-            tmplActive.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #dfe1e5; -fx-border-color: #3574F0; -fx-border-radius: 2; -fx-padding: 0 4; -fx-cursor: hand;");
+            tmplActive.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #dfe1e5; -fx-border-color: #3574F0; -fx-border-radius: 2; -fx-padding: 0 4; -fx-cursor: hand;");
             tmplActive.setOnMouseClicked(e -> selectColorSchemeElement(treeView, rootItem, "templates.active", currentSelectedElementId, previewScroll));
             Label tmplSpace = new Label(" ");
             Label tmplInactive = new Label("inactive");
-            tmplInactive.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #dfe1e5; -fx-border-color: #4E5157; -fx-border-radius: 2; -fx-padding: 0 4; -fx-cursor: hand;");
+            tmplInactive.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #dfe1e5; -fx-border-color: #4E5157; -fx-border-radius: 2; -fx-padding: 0 4; -fx-cursor: hand;");
             tmplInactive.setOnMouseClicked(e -> selectColorSchemeElement(treeView, rootItem, "templates.inactive", currentSelectedElementId, previewScroll));
             Label tmplVar = new Label(" $VARIABLE$");
             String varFg = (varTemplateAttr.foregroundEnabled && varTemplateAttr.foreground != null) ? "#" + varTemplateAttr.foreground : "#9876AA";
-            tmplVar.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: " + varFg + "; -fx-font-style: italic; -fx-cursor: hand;");
+            tmplVar.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: " + varFg + "; -fx-font-style: italic; -fx-cursor: hand;");
             tmplVar.setOnMouseClicked(e -> selectColorSchemeElement(treeView, rootItem, "templates.variable", currentSelectedElementId, previewScroll));
 
             HBox l15 = new HBox(tmplPrefix, tmplActive, tmplSpace, tmplInactive, tmplVar);
@@ -8897,10 +8897,10 @@ public final class SettingsDialog {
 
             // Line 16: Injected language: \.(gif|jpg|png)$
             Label injPrefix = new Label("Injected language: ");
-            injPrefix.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
+            injPrefix.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
             Label injContent = new Label("\\.(gif|jpg|png)$");
             String injBg = (injectedAttr.backgroundEnabled && injectedAttr.background != null) ? "#" + injectedAttr.background : "#363636";
-            injContent.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-background-color: " + injBg + "; -fx-text-fill: #dfe1e5; -fx-padding: 0 4; -fx-background-radius: 2; -fx-cursor: hand;");
+            injContent.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-background-color: " + injBg + "; -fx-text-fill: #dfe1e5; -fx-padding: 0 4; -fx-background-radius: 2; -fx-cursor: hand;");
             injContent.setOnMouseClicked(e -> selectColorSchemeElement(treeView, rootItem, "code.injected_fragment", currentSelectedElementId, previewScroll));
             HBox l16 = new HBox(injPrefix, injContent);
             l16.setAlignment(Pos.CENTER_LEFT);
@@ -8911,7 +8911,7 @@ public final class SettingsDialog {
 
             // Line 18: Code Inspections:
             Label inspectLbl = new Label("Code Inspections:");
-            inspectLbl.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
+            inspectLbl.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
             previewPane.getChildren().add(pb.build(18, inspectLbl, null, null));
 
             // Line 19:   Warning
@@ -8919,7 +8919,7 @@ public final class SettingsDialog {
                     ColorSchemeModel.resolveAttribute(activeScheme, "errors.warning", workingOverrides);
             Label warnLbl = new Label("  Warning");
             String warnEff = (warnAttr.effectColor != null) ? "#" + warnAttr.effectColor : "#F4AF3D";
-            warnLbl.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;" +
+            warnLbl.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;" +
                     (warnAttr.effectEnabled ? " -fx-border-color: transparent transparent " + warnEff + " transparent; -fx-border-width: 0 0 1.5 0; -fx-border-style: dashed;" : "") +
                     "; -fx-cursor: hand;");
             warnLbl.setOnMouseClicked(e -> selectColorSchemeElement(treeView, rootItem, "errors.warning", currentSelectedElementId, previewScroll));
@@ -8930,7 +8930,7 @@ public final class SettingsDialog {
                     ColorSchemeModel.resolveAttribute(activeScheme, "errors.weak_warning", workingOverrides);
             Label weakWarnLbl = new Label("  Weak warning");
             String weakEff = (weakWarnAttr.effectColor != null) ? "#" + weakWarnAttr.effectColor : "#756D56";
-            weakWarnLbl.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;" +
+            weakWarnLbl.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;" +
                     (weakWarnAttr.effectEnabled ? " -fx-border-color: transparent transparent " + weakEff + " transparent; -fx-border-width: 0 0 1 0; -fx-border-style: dashed;" : "") +
                     "; -fx-cursor: hand;");
             weakWarnLbl.setOnMouseClicked(e -> selectColorSchemeElement(treeView, rootItem, "errors.weak_warning", currentSelectedElementId, previewScroll));
@@ -8940,7 +8940,7 @@ public final class SettingsDialog {
             AppSettingsStore.ColorSchemeAttribute depAttr =
                     ColorSchemeModel.resolveAttribute(activeScheme, "errors.deprecated", workingOverrides);
             Text depText = new Text("  Deprecated symbol");
-            depText.setFont(Font.font("JetBrains Mono", 12));
+            depText.setFont(Font.font("DBNavigator Mono", 12));
             depText.setFill(javafx.scene.paint.Color.web("#868A91"));
             depText.setStrikethrough(depAttr.effectEnabled && "Strikeout".equals(depAttr.effectType));
             HBox depBox = new HBox(depText);
@@ -8953,7 +8953,7 @@ public final class SettingsDialog {
             AppSettingsStore.ColorSchemeAttribute depRemAttr =
                     ColorSchemeModel.resolveAttribute(activeScheme, "errors.deprecated_marked_for_removal", workingOverrides);
             Text depRemText = new Text("  Deprecated symbol marked for removal");
-            depRemText.setFont(Font.font("JetBrains Mono", 12));
+            depRemText.setFont(Font.font("DBNavigator Mono", 12));
             String depRemColor = (depRemAttr.effectColor != null) ? "#" + depRemAttr.effectColor : "#F75464";
             depRemText.setFill(javafx.scene.paint.Color.web(depRemColor));
             depRemText.setStrikethrough(depRemAttr.effectEnabled && "Strikeout".equals(depRemAttr.effectType));
@@ -8968,7 +8968,7 @@ public final class SettingsDialog {
                     ColorSchemeModel.resolveAttribute(activeScheme, "errors.unused", workingOverrides);
             String unusedFg = (unusedAttr.foregroundEnabled && unusedAttr.foreground != null) ? "#" + unusedAttr.foreground : "#72737A";
             Label unusedLbl = new Label("  Unused symbol");
-            unusedLbl.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: " + unusedFg + "; -fx-cursor: hand;");
+            unusedLbl.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: " + unusedFg + "; -fx-cursor: hand;");
             unusedLbl.setOnMouseClicked(e -> selectColorSchemeElement(treeView, rootItem, "errors.unused", currentSelectedElementId, previewScroll));
             previewPane.getChildren().add(pb.build(23, unusedLbl, null, "errors.unused"));
 
@@ -8977,7 +8977,7 @@ public final class SettingsDialog {
                     ColorSchemeModel.resolveAttribute(activeScheme, "errors.unknown_symbol", workingOverrides);
             String unkFg = (unkAttr.foregroundEnabled && unkAttr.foreground != null) ? "#" + unkAttr.foreground : "#BC3F3C";
             Label unkLbl = new Label("  Unknown symbol");
-            unkLbl.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: " + unkFg +
+            unkLbl.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: " + unkFg +
                     "; -fx-border-color: transparent transparent #BC3F3C transparent; -fx-border-width: 0 0 1.5 0; -fx-border-style: dashed; -fx-cursor: hand;");
             unkLbl.setOnMouseClicked(e -> selectColorSchemeElement(treeView, rootItem, "errors.unknown_symbol", currentSelectedElementId, previewScroll));
             previewPane.getChildren().add(pb.build(24, unkLbl, unkAttr.errorStripeEnabled ? unkAttr.errorStripe : "BC3F3C", "errors.unknown_symbol"));
@@ -8986,7 +8986,7 @@ public final class SettingsDialog {
             AppSettingsStore.ColorSchemeAttribute rtAttr =
                     ColorSchemeModel.resolveAttribute(activeScheme, "errors.runtime_problem", workingOverrides);
             Label rtLbl = new Label("  Runtime problem");
-            rtLbl.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6; -fx-border-color: transparent transparent #E05555 transparent; -fx-border-width: 0 0 1.5 0; -fx-border-style: dashed; -fx-cursor: hand;");
+            rtLbl.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6; -fx-border-color: transparent transparent #E05555 transparent; -fx-border-width: 0 0 1.5 0; -fx-border-style: dashed; -fx-cursor: hand;");
             rtLbl.setOnMouseClicked(e -> selectColorSchemeElement(treeView, rootItem, "errors.runtime_problem", currentSelectedElementId, previewScroll));
             previewPane.getChildren().add(pb.build(25, rtLbl, rtAttr.errorStripeEnabled ? rtAttr.errorStripe : "E05555", "errors.runtime_problem"));
 
@@ -8994,7 +8994,7 @@ public final class SettingsDialog {
             AppSettingsStore.ColorSchemeAttribute probAttr =
                     ColorSchemeModel.resolveAttribute(activeScheme, "errors.problem_from_server", workingOverrides);
             Label probLbl = new Label("  Problem from server");
-            probLbl.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6; -fx-border-color: transparent transparent #F4AF3D transparent; -fx-border-width: 0 0 1 0; -fx-cursor: hand;");
+            probLbl.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6; -fx-border-color: transparent transparent #F4AF3D transparent; -fx-border-width: 0 0 1 0; -fx-cursor: hand;");
             probLbl.setOnMouseClicked(e -> selectColorSchemeElement(treeView, rootItem, "errors.problem_from_server", currentSelectedElementId, previewScroll));
             previewPane.getChildren().add(pb.build(26, probLbl, probAttr.errorStripeEnabled ? probAttr.errorStripe : null, "errors.problem_from_server"));
 
@@ -9003,7 +9003,7 @@ public final class SettingsDialog {
                     ColorSchemeModel.resolveAttribute(activeScheme, "errors.duplicate_from_server", workingOverrides);
             String dupBg = (dupAttr.backgroundEnabled && dupAttr.background != null) ? "#" + dupAttr.background : "#544630";
             Label dupLbl = new Label("  Duplicate from server");
-            dupLbl.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-background-color: " + dupBg + "; -fx-text-fill: #dfe1e5; -fx-padding: 0 4; -fx-background-radius: 2; -fx-cursor: hand;");
+            dupLbl.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-background-color: " + dupBg + "; -fx-text-fill: #dfe1e5; -fx-padding: 0 4; -fx-background-radius: 2; -fx-cursor: hand;");
             dupLbl.setOnMouseClicked(e -> selectColorSchemeElement(treeView, rootItem, "errors.duplicate_from_server", currentSelectedElementId, previewScroll));
             previewPane.getChildren().add(pb.build(27, dupLbl, null, "errors.duplicate_from_server"));
         };
@@ -9503,7 +9503,7 @@ public final class SettingsDialog {
                         ? "#" + attr.foreground.replace("#", "")
                         : fallbackFg;
                 StringBuilder sb = new StringBuilder();
-                sb.append("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; ");
+                sb.append("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; ");
                 sb.append("-fx-text-fill: ").append(fg).append("; ");
                 if (attr != null && attr.bold) sb.append("-fx-font-weight: bold; ");
                 if (attr != null && attr.italic) sb.append("-fx-font-style: italic; ");
@@ -9598,7 +9598,7 @@ public final class SettingsDialog {
                     }
 
                     Label numLabel = new Label(String.format("%2d", lineNum));
-                    numLabel.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #4B5059; -fx-cursor: default;");
+                    numLabel.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #4B5059; -fx-cursor: default;");
                     numLabel.setPrefWidth(26);
 
                     HBox.setHgrow(content, Priority.ALWAYS);
@@ -9621,7 +9621,7 @@ public final class SettingsDialog {
 
             // Line 1: Bad characters: ????
             Label badPrefix = new Label("Bad characters: ");
-            badPrefix.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
+            badPrefix.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
             TokenLabel badChars = new TokenLabel("????", "lang.bad_character", badCharAttr, "#F75464");
             previewPane.getChildren().add(pb.build(1, new HBox(badPrefix, badChars), "F75464", "lang.bad_character"));
 
@@ -9649,11 +9649,11 @@ public final class SettingsDialog {
 
             // Line 7: Dot: . comma: , semicolon: ;
             Label dotPrefix = new Label("Dot: ");
-            dotPrefix.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
+            dotPrefix.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
             Label commaPrefix = new Label(" comma: ");
-            commaPrefix.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
+            commaPrefix.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
             Label semiPrefix = new Label(" semicolon: ");
-            semiPrefix.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
+            semiPrefix.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
             HBox l7 = new HBox(
                     dotPrefix, new TokenLabel(".", "lang.braces_and_operators.dot", dotAttr, "#BCBEC4"),
                     commaPrefix, new TokenLabel(",", "lang.braces_and_operators.comma", commaAttr, "#BCBEC4"),
@@ -9664,7 +9664,7 @@ public final class SettingsDialog {
 
             // Line 8: { Braces }
             Label bText = new Label(" Braces ");
-            bText.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
+            bText.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
             HBox l8 = new HBox(
                     new TokenLabel("{", "lang.braces_and_operators.braces", braceAttr, "#BCBEC4"),
                     bText,
@@ -9675,7 +9675,7 @@ public final class SettingsDialog {
 
             // Line 9: ( Parentheses )
             Label pText = new Label(" Parentheses ");
-            pText.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
+            pText.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
             HBox l9 = new HBox(
                     new TokenLabel("(", "lang.braces_and_operators.parentheses", parenAttr, "#BCBEC4"),
                     pText,
@@ -9686,7 +9686,7 @@ public final class SettingsDialog {
 
             // Line 10: [ Brackets ]
             Label brkText = new Label(" Brackets ");
-            brkText.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
+            brkText.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
             HBox l10 = new HBox(
                     new TokenLabel("[", "lang.braces_and_operators.brackets", bracketAttr, "#BCBEC4"),
                     brkText,
@@ -9720,7 +9720,7 @@ public final class SettingsDialog {
             guide17.setStyle("-fx-background-color: #393B40;");
             guide17.setOnMouseClicked(e -> selectColorSchemeElement(treeView, rootItem, "lang.comments.doc.guide", currentSelectedElementId, previewScroll));
             Label docPrefix = new Label("  Rendered documentation with ");
-            docPrefix.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
+            docPrefix.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
             TokenLabel docLink = new TokenLabel("link", "lang.comments.doc.link", docLinkAttr, "#3887A1");
             HBox l17 = new HBox(guide17, docPrefix, docLink);
             l17.setAlignment(Pos.CENTER_LEFT);
@@ -9734,9 +9734,9 @@ public final class SettingsDialog {
 
             // Line 20:  * @tag <code>Markup</code>
             Label codeOpen = new Label(" <code>");
-            codeOpen.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #629755;");
+            codeOpen.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #629755;");
             Label codeClose = new Label("</code>");
-            codeClose.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #629755;");
+            codeClose.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #629755;");
             HBox l20 = new HBox(
                     new TokenLabel(" * ", "lang.comments.doc.text", docTextAttr, "#629755"),
                     new TokenLabel("@tag", "lang.comments.doc.tag", docTagAttr, "#629755"),
@@ -9779,7 +9779,7 @@ public final class SettingsDialog {
 
             // Line 28:     Reassigned local variable
             Label ind28 = new Label("    Reassigned local ");
-            ind28.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
+            ind28.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
             TokenLabel reassignedToken = new TokenLabel("variable", "lang.identifiers.reassigned_local_variable", reassignedVarAttr, "#BCBEC4");
             HBox l28 = new HBox(ind28, reassignedToken);
             l28.setAlignment(Pos.CENTER_LEFT);
@@ -9818,28 +9818,28 @@ public final class SettingsDialog {
 
             // Line 34:     instance method
             Label ind34 = new Label("    instance ");
-            ind34.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
+            ind34.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
             HBox l34 = new HBox(ind34, new TokenLabel("method", "lang.classes.instance_method", instMethodAttr, "#56A8F5"));
             l34.setAlignment(Pos.CENTER_LEFT);
             previewPane.getChildren().add(pb.build(34, l34, null, "lang.classes.instance_method"));
 
             // Line 35:     instance field
             Label ind35 = new Label("    instance ");
-            ind35.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
+            ind35.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
             HBox l35 = new HBox(ind35, new TokenLabel("field", "lang.classes.instance_field", instFieldAttr, "#C77DBB"));
             l35.setAlignment(Pos.CENTER_LEFT);
             previewPane.getChildren().add(pb.build(35, l35, null, "lang.classes.instance_field"));
 
             // Line 36:     static method
             Label ind36 = new Label("    static ");
-            ind36.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
+            ind36.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
             HBox l36 = new HBox(ind36, new TokenLabel("method", "lang.classes.static_method", staticMethodAttr, "#56A8F5"));
             l36.setAlignment(Pos.CENTER_LEFT);
             previewPane.getChildren().add(pb.build(36, l36, null, "lang.classes.static_method"));
 
             // Line 37:     static field
             Label ind37 = new Label("    static ");
-            ind37.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
+            ind37.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
             HBox l37 = new HBox(ind37, new TokenLabel("field", "lang.classes.static_field", staticFieldAttr, "#C77DBB"));
             l37.setAlignment(Pos.CENTER_LEFT);
             previewPane.getChildren().add(pb.build(37, l37, null, "lang.classes.static_field"));
@@ -9861,14 +9861,14 @@ public final class SettingsDialog {
             TokenLabel tag41 = new TokenLabel("@TAG", "lang.markup.tag", tagAttr, "#CF8E6D");
             TokenLabel attr41 = new TokenLabel(" attribute", "lang.markup.attribute", attrAttr, "#BCBEC4");
             Label eq41 = new Label("=Value");
-            eq41.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
+            eq41.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
             HBox l41 = new HBox(tag41, attr41, eq41);
             l41.setAlignment(Pos.CENTER_LEFT);
             previewPane.getChildren().add(pb.build(41, l41, null, "lang.markup.tag"));
 
             // Line 42:     Entity: &amp;
             Label entPrefix = new Label("    Entity: ");
-            entPrefix.setStyle("-fx-font-family: 'JetBrains Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
+            entPrefix.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: #a9b7c6;");
             TokenLabel entToken = new TokenLabel("&amp;", "lang.markup.entity", entityAttr, "#2AACB8");
             HBox l42 = new HBox(entPrefix, entToken);
             l42.setAlignment(Pos.CENTER_LEFT);
@@ -10567,7 +10567,7 @@ public final class SettingsDialog {
         Hyperlink enableCloudLink = new Hyperlink("Enable Cloud");
         enableCloudLink.setStyle("-fx-text-fill: #3574F0; -fx-font-size: 13px; -fx-padding: 0; -fx-border-width: 0;");
 
-        Label cloudHint = new Label("Powered by JetBrains AI Cloud Service. Provides improved grammar checks, style suggestions, and full-sentence rephrasing.");
+        Label cloudHint = new Label("Powered by DBNavigator AI Cloud Service. Provides improved grammar checks, style suggestions, and full-sentence rephrasing.");
         cloudHint.setWrapText(true);
         cloudHint.setMaxWidth(620);
         cloudHint.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 11px;");

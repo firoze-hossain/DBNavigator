@@ -171,7 +171,7 @@ public class McpExposedToolsPanel {
         // 1. AnalysisToolset
         addToolset(root, "AnalysisToolset", List.of(
                 tool("AnalysisToolset.build_project", "build_project", "Triggers building of the project or specified files, waits for completion, and returns build errors.Use this tool when you need to compile code, check for build errors, or verify changes before running tests."),
-                tool("AnalysisToolset.get_file_problems", "get_file_problems", "Analyzes the specified file for errors and warnings using IntelliJ's inspections.Use this tool to identify code issues, syntax errors, and potential improvements in a specific file."),
+                tool("AnalysisToolset.get_file_problems", "get_file_problems", "Analyzes the specified file for errors and warnings using DBNavigator inspections.Use this tool to identify code issues, syntax errors, and potential improvements in a specific file."),
                 tool("AnalysisToolset.get_project_dependancies", "get_project_dependancies", "Get a list of all dependencies defined in the project.Returns structured information about project library dependencies including names, versions, and scopes."),
                 tool("AnalysisToolset.get_project_modules", "get_project_modules", "Get a list of all modules in the project with their types.Returns structured information about each module including name, type, and source roots.")
         ), selectedTools);
