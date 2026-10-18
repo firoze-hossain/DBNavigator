@@ -489,6 +489,8 @@ public class QueryTab extends Tab {
                     case TABLE -> "⊞";
                     case COLUMN -> "•";
                     case SEQUENCE -> "#";
+                    case DATABASE -> "🗄";
+                    case SCHEMA -> "📁";
                     case JOIN_CONDITION -> "⇄";
                 };
                 Label icon = new Label(iconSymbol);
@@ -788,7 +790,11 @@ public class QueryTab extends Tab {
     }
 
     private CompletionService.Context contextAt(int position) {
-        String text = editor.getText();
+        return contextAt(editor.getText(), position);
+    }
+
+    static CompletionService.Context contextAt(String text, int position) {
+        if (text == null) return CompletionService.Context.STATEMENT_START;
         int pos = Math.min(position, text.length());
         if (pos <= 0) return CompletionService.Context.STATEMENT_START;
 
@@ -804,54 +810,77 @@ public class QueryTab extends Tab {
             return CompletionService.Context.DROP_DATABASE_OPTION;
         }
 
-        // 2. DDL drop/truncate database/table/view/sequence/schema/type: e.g. "DROP TABLE users ", "DROP DATABASE empdb "
-        if (trimmedBefore.matches("(?i).*\\b(drop\\s+(?:database|table|view|sequence|schema|type)|truncate\\s+(?:table)?)\\s+[A-Za-z0-9_.\"']+\\s*.*")) {
+        // 2. DDL Object Type: e.g. "DROP ", "CREATE ", "ALTER ", "DROP IF EXISTS "
+        if (trimmedBefore.matches("(?i).*\\b(?:drop|create|alter)(?:\\s+or\\s+replace)?(?:\\s+if\\s+(?:not\\s+)?exists)?\\s*$")) {
+            return CompletionService.Context.DDL_OBJECT_TYPE;
+        }
+
+        // 3. Expecting database name: e.g. "DROP DATABASE ", "DROP DATABASE IF EXISTS ", "ALTER DATABASE ", "USE "
+        if (trimmedBefore.matches("(?i).*\\b(?:drop|alter)\\s+database(?:\\s+if\\s+exists)?\\s*$")
+                || trimmedBefore.matches("(?i).*\\buse\\s*$")) {
+            return CompletionService.Context.DATABASES;
+        }
+
+        // 4. Expecting schema name: e.g. "DROP SCHEMA ", "DROP SCHEMA IF EXISTS ", "ALTER SCHEMA "
+        if (trimmedBefore.matches("(?i).*\\b(?:drop|alter)\\s+schema(?:\\s+if\\s+exists)?\\s*$")) {
+            return CompletionService.Context.SCHEMAS;
+        }
+
+        // 5. Expecting table name in DDL: e.g. "DROP TABLE ", "DROP TABLE IF EXISTS ", "ALTER TABLE ", "TRUNCATE "
+        if (trimmedBefore.matches("(?i).*\\b(?:drop|alter)\\s+table(?:\\s+if\\s+exists)?\\s*$")
+                || trimmedBefore.matches("(?i).*\\btruncate(?:\\s+table)?\\s*$")) {
+            return CompletionService.Context.TABLES;
+        }
+
+        // 6. Expecting sequence name in DDL: e.g. "DROP SEQUENCE ", "DROP SEQUENCE IF EXISTS "
+        if (trimmedBefore.matches("(?i).*\\b(?:drop|alter)\\s+sequence(?:\\s+if\\s+exists)?\\s*$")
+                || trimmedBefore.matches("(?i).*\\bsequence\\s*$")) {
+            return CompletionService.Context.SEQUENCES;
+        }
+
+        // 7. DDL post-object options: e.g. "DROP TABLE users ", "DROP DATABASE empdb "
+        if (trimmedBefore.matches("(?i).*\\b(drop\\s+(?:database|table|view|sequence|schema|type)|truncate\\s+(?:table)?)\\s+(?:if\\s+exists\\s+)?[A-Za-z0-9_.\"']+\\s*.*")) {
             return CompletionService.Context.POST_OBJECT_DDL;
         }
 
-        // 2. Foreign key cascade actions: ON DELETE / ON UPDATE
+        // 8. Foreign key cascade actions: ON DELETE / ON UPDATE
         if (trimmedBefore.matches("(?i).*\\b(?:on\\s+delete|on\\s+update)\\s*.*")) {
             return CompletionService.Context.FOREIGN_KEY_ACTION;
         }
 
-        // 3. JOIN <table> ON -> AFTER_ON
+        // 9. JOIN <table> ON -> AFTER_ON
         if (trimmedBefore.matches("(?i).*\\bjoin\\s+[A-Za-z0-9_.\"']+(\\s+(?:as\\s+)?[A-Za-z0-9_]+)?\\s+on\\s*.*")) {
             return CompletionService.Context.AFTER_ON;
         }
 
-        // 4. JOIN <table> -> AFTER_JOIN_TABLE (expecting ON)
+        // 10. JOIN <table> -> AFTER_JOIN_TABLE (expecting ON)
         if (trimmedBefore.matches("(?i).*\\bjoin\\s+[A-Za-z0-9_.\"']+(\\s+(?:as\\s+)?[A-Za-z0-9_]+)?\\s*$")) {
             return CompletionService.Context.AFTER_JOIN_TABLE;
         }
 
-        // 5. FROM / JOIN / INTO / UPDATE -> TABLES
+        // 11. FROM / JOIN / INTO / UPDATE -> TABLES
         if (trimmedBefore.matches("(?i).*\\b(from|join|into|update)\\s*$")) {
             return CompletionService.Context.TABLES;
         }
 
-        // 6. FROM <table> (and not followed by WHERE / JOIN / GROUP / ORDER / etc.) -> AFTER_TABLE
+        // 12. FROM <table> (and not followed by WHERE / JOIN / GROUP / ORDER / etc.) -> AFTER_TABLE
         if (trimmedBefore.matches("(?i).*\\bfrom\\s+[A-Za-z0-9_.\"']+(\\s+(?:as\\s+)?[A-Za-z0-9_]+)?\\s*$")) {
             return CompletionService.Context.AFTER_TABLE;
         }
 
-        // 7. SELECT projection (e.g. SELECT * or SELECT col1, col2) before FROM -> AFTER_SELECT_PROJECTION
+        // 13. SELECT projection (e.g. SELECT * or SELECT col1, col2) before FROM -> AFTER_SELECT_PROJECTION
         if (trimmedBefore.matches("(?i)^\\s*select\\s+.*") && !trimmedBefore.matches("(?i).*\\bfrom\\b.*")) {
             return CompletionService.Context.AFTER_SELECT_PROJECTION;
         }
 
-        // 8. Sequences
+        // 14. Sequences keyword context
         if (trimmedBefore.matches("(?i).*\\bsequence\\s*$")) {
             return CompletionService.Context.SEQUENCES;
         }
 
-        // 9. Standard column contexts: WHERE, ON, SET, HAVING, ORDER BY, GROUP BY
+        // 15. Standard column contexts: WHERE, ON, SET, HAVING, ORDER BY, GROUP BY
         if (trimmedBefore.matches("(?i).*\\b(where|on|set|having|by|between|like|when|then)\\b.*")) {
             return CompletionService.Context.COLUMNS;
-        }
-
-        // If statement is just starting or single word prefix (e.g. "sel", "ins")
-        if (!trimmedBefore.contains(" ") && !trimmedBefore.contains("\n")) {
-            return CompletionService.Context.STATEMENT_START;
         }
 
         return CompletionService.Context.ANY;
@@ -923,10 +952,29 @@ public class QueryTab extends Tab {
             replacement = replacement + " " + alias;
         }
 
+        // Trailing space for keywords, database, schema that expect next tokens
+        if (selected.kind() == CompletionService.Kind.KEYWORD
+                || selected.kind() == CompletionService.Kind.DATABASE
+                || selected.kind() == CompletionService.Kind.SCHEMA) {
+            int caret = editor.getCaretPosition();
+            String full = editor.getText();
+            if (caret >= full.length() || !Character.isWhitespace(full.charAt(caret))) {
+                if (!replacement.endsWith("(") && !replacement.endsWith(")") && !replacement.endsWith(";")) {
+                    replacement = replacement + " ";
+                }
+            }
+        }
+
         editor.replaceText(tokenStart, editor.getCaretPosition(), replacement);
         suppressCompletion = false;
         completionPopup.hide();
         editor.requestFocus();
+
+        if (selected.kind() == CompletionService.Kind.KEYWORD
+                || selected.kind() == CompletionService.Kind.DATABASE
+                || selected.kind() == CompletionService.Kind.SCHEMA) {
+            Platform.runLater(this::showCompletions);
+        }
     }
 
     private boolean tryExpandPostfixCompletion(KeyCode code) {

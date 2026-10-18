@@ -20,7 +20,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class CompletionService {
 
-    public enum Kind { KEYWORD, TABLE, COLUMN, SEQUENCE, TEMPLATE, JOIN_CONDITION }
+    public enum Kind { KEYWORD, TABLE, COLUMN, SEQUENCE, DATABASE, SCHEMA, TEMPLATE, JOIN_CONDITION }
 
     /** What the surrounding query structure tells us the user is about to type. */
     public enum Context {
@@ -33,6 +33,9 @@ public final class CompletionService {
         AFTER_ON,
         COLUMNS,
         SEQUENCES,
+        DATABASES,
+        SCHEMAS,
+        DDL_OBJECT_TYPE,
         POST_OBJECT_DDL,
         FOREIGN_KEY_ACTION,
         DROP_DATABASE_OPTION
@@ -57,13 +60,19 @@ public final class CompletionService {
             new LiveTemplate("crat", "create table", "create table $END$ (\n    id serial primary key\n);"),
             new LiveTemplate("crav", "create view", "create view $END$ as\nselect * from ;"),
             new LiveTemplate("crai", "create index", "create index idx_$END$ on ()"),
+            new LiveTemplate("crad", "create database", "create database $END$;"),
+            new LiveTemplate("cras", "create schema", "create schema $END$;"),
             new LiveTemplate("altt", "alter table", "alter table $END$ add column "),
             new LiveTemplate("dropt", "drop table with cascade", "drop table $END$ cascade;"),
-            new LiveTemplate("drops", "drop sequence with cascade", "drop sequence $END$ cascade;")
+            new LiveTemplate("dropd", "drop database", "drop database $END$;"),
+            new LiveTemplate("drops", "drop sequence with cascade", "drop sequence $END$ cascade;"),
+            new LiveTemplate("dropsc", "drop schema with cascade", "drop schema $END$ cascade;")
     );
 
     private static final List<String> STATEMENT_KEYWORDS = List.of(
             "SELECT", "INSERT INTO", "UPDATE", "DELETE FROM", "WITH",
+            "CREATE DATABASE", "ALTER DATABASE", "DROP DATABASE",
+            "CREATE SCHEMA", "ALTER SCHEMA", "DROP SCHEMA",
             "CREATE TABLE", "ALTER TABLE", "DROP TABLE", "TRUNCATE TABLE",
             "CREATE VIEW", "ALTER VIEW", "DROP VIEW",
             "CREATE SEQUENCE", "ALTER SEQUENCE", "DROP SEQUENCE",
@@ -73,7 +82,13 @@ public final class CompletionService {
 
     private static final List<String> GENERAL_KEYWORDS = List.of(
             "SELECT", "FROM", "WHERE", "INSERT INTO", "VALUES", "UPDATE", "SET",
-            "DELETE FROM", "CREATE TABLE", "ALTER TABLE", "DROP TABLE", "CREATE INDEX",
+            "DELETE FROM",
+            "CREATE DATABASE", "ALTER DATABASE", "DROP DATABASE", "DATABASE",
+            "CREATE SCHEMA", "ALTER SCHEMA", "DROP SCHEMA", "SCHEMA",
+            "CREATE TABLE", "ALTER TABLE", "DROP TABLE", "TABLE",
+            "CREATE VIEW", "ALTER VIEW", "DROP VIEW", "VIEW",
+            "CREATE INDEX", "DROP INDEX", "INDEX",
+            "CREATE SEQUENCE", "ALTER SEQUENCE", "DROP SEQUENCE", "SEQUENCE",
             "JOIN", "INNER JOIN", "LEFT JOIN", "RIGHT JOIN", "FULL JOIN", "CROSS JOIN", "ON",
             "GROUP BY", "ORDER BY", "HAVING", "LIMIT", "OFFSET", "UNION", "ALL", "DISTINCT",
             "AND", "OR", "NOT", "NULL", "IS NULL", "IS NOT NULL", "IN", "BETWEEN",
@@ -82,7 +97,6 @@ public final class CompletionService {
             "COUNT(*)", "SUM(", "AVG(", "MIN(", "MAX(", "COALESCE(", "CAST(",
             "PRIMARY KEY", "FOREIGN KEY", "REFERENCES", "DEFAULT", "UNIQUE", "CONSTRAINT",
             "BEGIN", "COMMIT", "ROLLBACK", "TRUNCATE TABLE", "ASC", "DESC",
-            "SEQUENCE", "CREATE SEQUENCE", "ALTER SEQUENCE", "DROP SEQUENCE",
             "NEXTVAL(", "CURRVAL(", "SETVAL(");
 
     private static final List<String> SQLSERVER_KEYWORDS = List.of(
@@ -121,6 +135,8 @@ public final class CompletionService {
     private static final Map<String, List<String>> tableCache = new ConcurrentHashMap<>();
     private static final Map<String, List<String>> allColumnsCache = new ConcurrentHashMap<>();
     private static final Map<String, List<String>> sequenceCache = new ConcurrentHashMap<>();
+    private static final Map<String, List<String>> databaseCache = new ConcurrentHashMap<>();
+    private static final Map<String, List<String>> schemaCache = new ConcurrentHashMap<>();
     /** cacheKey = profileId::catalog::table */
     private static final Map<String, List<String>> columnCache = new ConcurrentHashMap<>();
 
@@ -130,26 +146,42 @@ public final class CompletionService {
         return profile.getId() + "::" + (catalog == null ? "" : catalog);
     }
 
-    /** Kick off background loading of table, column, and sequence names for a console. */
+    /** Kick off background loading of table, column, sequence, database, and schema names for a console. */
     public static void preload(ConnectionProfile profile, String catalog) {
+        if (profile == null) return;
         String key = key(profile, catalog);
+        String profId = profile.getId();
         if (tableCache.containsKey(key)) return;
         tableCache.put(key, List.of());
         allColumnsCache.put(key, List.of());
         sequenceCache.put(key, List.of());
+        if (!databaseCache.containsKey(profId)) {
+            databaseCache.put(profId, List.of());
+        }
+        if (!schemaCache.containsKey(key)) {
+            schemaCache.put(key, List.of());
+        }
         AppExecutor.run(() -> {
+            try {
+                databaseCache.put(profId, MetadataService.listDatabaseNames(profile));
+            } catch (Exception ignored) {}
+            try {
+                schemaCache.put(key, MetadataService.listAllSchemas(profile, catalog));
+            } catch (Exception ignored) {}
             tableCache.put(key, MetadataService.listAllTables(profile, catalog));
             allColumnsCache.put(key, MetadataService.listAllColumns(profile, catalog));
             sequenceCache.put(key, MetadataService.listAllSequences(profile, catalog));
         });
     }
 
-    /** Used by "Invalidate Caches" — forces every table/column cache to reload on next use. */
+    /** Used by "Invalidate Caches" — forces every cache to reload on next use. */
     public static void clearAllCaches() {
         tableCache.clear();
         allColumnsCache.clear();
         sequenceCache.clear();
         columnCache.clear();
+        databaseCache.clear();
+        schemaCache.clear();
     }
 
     /**
@@ -236,6 +268,56 @@ public final class CompletionService {
                 addSpecificKeyword("SET DEFAULT", "set foreign key columns to default", prefix, isUpper, matches);
                 addSpecificKeyword("NO ACTION", "prevent delete or update", prefix, isUpper, matches);
             }
+            case DDL_OBJECT_TYPE -> {
+                boolean isDrop = fullText != null && fullText.toLowerCase(Locale.ROOT).contains("drop");
+                boolean isCreate = fullText != null && fullText.toLowerCase(Locale.ROOT).contains("create");
+
+                if (isCreate) {
+                    addSpecificKeyword("OR REPLACE", "replace existing object", prefix, isUpper, matches);
+                    addSpecificKeyword("TEMPORARY TABLE", "session-scoped table", prefix, isUpper, matches);
+                    addSpecificKeyword("UNIQUE INDEX", "unique index", prefix, isUpper, matches);
+                    addSpecificKeyword("IF NOT EXISTS", "skip if already exists", prefix, isUpper, matches);
+                } else if (isDrop) {
+                    addSpecificKeyword("IF EXISTS", "skip if object does not exist", prefix, isUpper, matches);
+                }
+
+                addSpecificKeyword("DATABASE", "database object", prefix, isUpper, matches);
+                addSpecificKeyword("SCHEMA", "schema object", prefix, isUpper, matches);
+                addSpecificKeyword("TABLE", "table object", prefix, isUpper, matches);
+                addSpecificKeyword("VIEW", "view object", prefix, isUpper, matches);
+                addSpecificKeyword("INDEX", "index object", prefix, isUpper, matches);
+                addSpecificKeyword("SEQUENCE", "sequence object", prefix, isUpper, matches);
+                addSpecificKeyword("FUNCTION", "function object", prefix, isUpper, matches);
+                addSpecificKeyword("PROCEDURE", "procedure object", prefix, isUpper, matches);
+                addSpecificKeyword("TRIGGER", "trigger object", prefix, isUpper, matches);
+                addSpecificKeyword("TYPE", "type / enum object", prefix, isUpper, matches);
+                addSpecificKeyword("USER", "database user", prefix, isUpper, matches);
+                addSpecificKeyword("ROLE", "database role", prefix, isUpper, matches);
+
+                if (profile != null && (profile.getType() == ConnectionProfile.DatabaseType.POSTGRESQL
+                        || profile.getType() == ConnectionProfile.DatabaseType.ORACLE)) {
+                    addSpecificKeyword("MATERIALIZED VIEW", "materialized view object", prefix, isUpper, matches);
+                }
+                if (profile != null && profile.getType() == ConnectionProfile.DatabaseType.POSTGRESQL) {
+                    addSpecificKeyword("EXTENSION", "PostgreSQL extension", prefix, isUpper, matches);
+                    addSpecificKeyword("DOMAIN", "user-defined domain", prefix, isUpper, matches);
+                }
+                if (profile != null && profile.getType() == ConnectionProfile.DatabaseType.ORACLE) {
+                    addSpecificKeyword("SYNONYM", "Oracle synonym", prefix, isUpper, matches);
+                    addSpecificKeyword("PACKAGE", "Oracle package specification", prefix, isUpper, matches);
+                    addSpecificKeyword("PACKAGE BODY", "Oracle package body", prefix, isUpper, matches);
+                }
+                addSpecificKeyword("TABLESPACE", "tablespace storage", prefix, isUpper, matches);
+                addSpecificKeyword("COLLATION", "collation object", prefix, isUpper, matches);
+            }
+            case DATABASES -> {
+                addDatabases(profile, prefix, matches);
+                addSpecificKeyword("IF EXISTS", "skip if database does not exist", prefix, isUpper, matches);
+            }
+            case SCHEMAS -> {
+                addSchemas(profile, catalog, prefix, matches);
+                addSpecificKeyword("IF EXISTS", "skip if schema does not exist", prefix, isUpper, matches);
+            }
             case SEQUENCES -> {
                 addSequences(profile, catalog, prefix, matches);
                 addKeywordsList(profile, GENERAL_KEYWORDS, prefix, isUpper, matches);
@@ -246,6 +328,7 @@ public final class CompletionService {
             }
             case ANY -> {
                 addLiveTemplates(prefix, isUpper, matches);
+                addDatabases(profile, prefix, matches);
                 addTables(profile, catalog, prefix, matches);
                 addScopedColumns(profile, catalog, fullText, prefix, matches);
                 addSequences(profile, catalog, prefix, matches);
@@ -367,6 +450,49 @@ public final class CompletionService {
             }
         }
         return null;
+    }
+
+    private static void addDatabases(ConnectionProfile profile, String prefix, List<Suggestion> matches) {
+        if (profile == null) return;
+        List<String> dbs = databaseCache.get(profile.getId());
+        if (dbs == null || dbs.isEmpty()) {
+            try {
+                dbs = MetadataService.listDatabaseNames(profile);
+                if (dbs != null) databaseCache.put(profile.getId(), dbs);
+            } catch (Exception ignored) {}
+        }
+        if (dbs != null) {
+            for (String db : dbs) {
+                if (matches.size() >= MAX_SUGGESTIONS) return;
+                if (prefix.isBlank() || db.toLowerCase(Locale.ROOT).startsWith(prefix)) {
+                    if (notPresent(matches, db)) {
+                        matches.add(new Suggestion(db, Kind.DATABASE, "database"));
+                    }
+                }
+            }
+        }
+    }
+
+    private static void addSchemas(ConnectionProfile profile, String catalog, String prefix, List<Suggestion> matches) {
+        if (profile == null) return;
+        String key = key(profile, catalog);
+        List<String> schemas = schemaCache.get(key);
+        if (schemas == null || schemas.isEmpty()) {
+            try {
+                schemas = MetadataService.listAllSchemas(profile, catalog);
+                if (schemas != null) schemaCache.put(key, schemas);
+            } catch (Exception ignored) {}
+        }
+        if (schemas != null) {
+            for (String s : schemas) {
+                if (matches.size() >= MAX_SUGGESTIONS) return;
+                if (prefix.isBlank() || s.toLowerCase(Locale.ROOT).startsWith(prefix)) {
+                    if (notPresent(matches, s)) {
+                        matches.add(new Suggestion(s, Kind.SCHEMA, "schema"));
+                    }
+                }
+            }
+        }
     }
 
     private static void addTables(ConnectionProfile profile, String catalog,

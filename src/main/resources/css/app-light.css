@@ -638,6 +638,8 @@
 .completion-table          { -fx-text-fill: #2674c2; }
 .completion-column         { -fx-text-fill: #3c7a29; }
 .completion-sequence       { -fx-text-fill: #b06f00; }
+.completion-database       { -fx-text-fill: #b06f00; }
+.completion-schema         { -fx-text-fill: #7c5295; }
 .completion-join_condition { -fx-text-fill: #7c5295; -fx-font-weight: bold; }
 .completion-collection     { -fx-text-fill: #1a5fb4; }
 .completion-method         { -fx-text-fill: #9c27b0; }
@@ -649,6 +651,8 @@
 .completion-icon-table              { -fx-text-fill: #2674c2; }
 .completion-icon-column             { -fx-text-fill: #3c7a29; }
 .completion-icon-sequence           { -fx-text-fill: #b06f00; }
+.completion-icon-database           { -fx-text-fill: #b06f00; }
+.completion-icon-schema             { -fx-text-fill: #7c5295; }
 .completion-icon-join_condition     { -fx-text-fill: #7c5295; }
 
 .completion-popup-box {

@@ -2211,6 +2211,34 @@ public final class MetadataService {
         return sequences;
     }
 
+    /** All user-defined schema names visible in a database — used for autocomplete. */
+    public static List<String> listAllSchemas(ConnectionProfile profile, String catalog) {
+        List<String> schemas = new ArrayList<>();
+        if (profile == null) return schemas;
+        try (Connection conn = client(profile, catalog).getConnection()) {
+            if (profile.getType() == DatabaseType.POSTGRESQL) {
+                String sql = "SELECT nspname FROM pg_namespace " +
+                        "WHERE nspname NOT IN ('pg_catalog', 'information_schema', 'pg_toast') " +
+                        "AND nspname NOT LIKE 'pg_temp_%' AND nspname NOT LIKE 'pg_toast_temp_%' " +
+                        "ORDER BY nspname";
+                try (Statement stmt = conn.createStatement();
+                     ResultSet rs = stmt.executeQuery(sql)) {
+                    while (rs.next()) schemas.add(rs.getString(1));
+                }
+            } else {
+                try (ResultSet rs = conn.getMetaData().getSchemas(metaCatalog(profile, catalog), "%")) {
+                    while (rs.next()) {
+                        String s = rs.getString("TABLE_SCHEM");
+                        if (s != null && !PG_SYSTEM_SCHEMAS.contains(s) && !isOracleSystemSchema(s)) {
+                            schemas.add(s);
+                        }
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
+        return schemas;
+    }
+
     /** Distinct column names of every user table — global autocomplete pool. */
     public static List<String> listAllColumns(ConnectionProfile profile, String catalog) {
         Set<String> columns = new LinkedHashSet<>();

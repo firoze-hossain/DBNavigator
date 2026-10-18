@@ -150,5 +150,66 @@ public class SqlCompletionAndHighlightingTest {
         }
         assertTrue(foundForceKeyword, "'force' must be highlighted as 'sql-keyword'");
     }
+
+    @Test
+    public void testDropDataSuggestsDatabase() {
+        ConnectionProfile profile = createProfile();
+        // 1. Verify context detection at tokenStart for "drop data" (pos 5, after "drop ")
+        CompletionService.Context ctx = QueryTab.contextAt("drop data", 5);
+        assertEquals(CompletionService.Context.DDL_OBJECT_TYPE, ctx, "Context after 'drop ' must be DDL_OBJECT_TYPE");
+
+        // 2. Verify suggestion for prefix 'data'
+        List<CompletionService.Suggestion> suggestions =
+                CompletionService.suggest(profile, "public", "drop data", "data", ctx);
+
+        assertFalse(suggestions.isEmpty(), "Should suggest completions for 'data' after 'drop '");
+
+        CompletionService.Suggestion dbSug = suggestions.stream()
+                .filter(s -> s.text().equalsIgnoreCase("database"))
+                .findFirst()
+                .orElse(null);
+
+        assertNotNull(dbSug, "'database' keyword must be suggested when typing 'drop data'");
+        assertEquals(CompletionService.Kind.KEYWORD, dbSug.kind());
+    }
+
+    @Test
+    public void testDropSuggestsDdlObjectTypes() {
+        ConnectionProfile profile = createProfile();
+        CompletionService.Context ctx = QueryTab.contextAt("drop ", 5);
+        assertEquals(CompletionService.Context.DDL_OBJECT_TYPE, ctx);
+
+        List<CompletionService.Suggestion> suggestions =
+                CompletionService.suggest(profile, "public", "drop ", "", ctx);
+
+        List<String> names = suggestions.stream().map(s -> s.text().toLowerCase()).toList();
+        assertTrue(names.contains("database"), "Must contain 'database'");
+        assertTrue(names.contains("schema"), "Must contain 'schema'");
+        assertTrue(names.contains("table"), "Must contain 'table'");
+        assertTrue(names.contains("view"), "Must contain 'view'");
+    }
+
+    @Test
+    public void testDropDatabaseAndSchemaContexts() {
+        assertEquals(CompletionService.Context.DATABASES, QueryTab.contextAt("drop database ", 14));
+        assertEquals(CompletionService.Context.DATABASES, QueryTab.contextAt("drop database if exists ", 24));
+        assertEquals(CompletionService.Context.DATABASES, QueryTab.contextAt("alter database ", 15));
+        assertEquals(CompletionService.Context.DATABASES, QueryTab.contextAt("use ", 4));
+
+        assertEquals(CompletionService.Context.SCHEMAS, QueryTab.contextAt("drop schema ", 12));
+        assertEquals(CompletionService.Context.SCHEMAS, QueryTab.contextAt("alter schema ", 13));
+    }
+
+    @Test
+    public void testDatabaseLiveTemplates() {
+        ConnectionProfile profile = createProfile();
+        List<CompletionService.Suggestion> suggestions =
+                CompletionService.suggest(profile, "public", "", "drop", CompletionService.Context.STATEMENT_START);
+
+        boolean hasDropd = suggestions.stream().anyMatch(s -> s.text().equalsIgnoreCase("dropd"));
+        boolean hasDropt = suggestions.stream().anyMatch(s -> s.text().equalsIgnoreCase("dropt"));
+        assertTrue(hasDropd, "'dropd' template must be suggested");
+        assertTrue(hasDropt, "'dropt' template must be suggested");
+    }
 }
 
