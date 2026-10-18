@@ -197,7 +197,7 @@ mvn clean javafx:run
 Or package a runnable jar:
 ```bash
 mvn clean package
-java -jar target/DBNavigatorPro-2.0.0.jar
+java -jar target/DBNavigatorPro-1.0.0.jar
 ```
 
 ### First connection

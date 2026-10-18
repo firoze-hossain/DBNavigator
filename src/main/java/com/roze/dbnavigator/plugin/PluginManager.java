@@ -336,7 +336,7 @@ public final class PluginManager {
         HttpRequest req = HttpRequest.newBuilder(URI.create(url))
                 .timeout(Duration.ofSeconds(6))
                 .header("Accept", "application/json")
-                .header("User-Agent", "DBNavigator-Pro/2.0.0")
+                .header("User-Agent", "DBNavigator-Pro/1.0.0")
                 .GET()
                 .build();
 

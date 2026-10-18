@@ -651,7 +651,7 @@ public class PluginsPanel extends BorderPane {
 
         String notes = p.getReleaseNotes();
         if (notes == null || notes.isBlank()) {
-            notes = "• Compatibility with DBNavigator Pro 2.0.0+\n" +
+            notes = "• Compatibility with DBNavigator Pro 1.0.0+\n" +
                     "• Performance optimization and responsive layout improvements\n" +
                     "• Fixes for UI interaction and keyboard shortcut handling";
         }
@@ -695,7 +695,7 @@ public class PluginsPanel extends BorderPane {
         grid.addRow(2, makeDimLabel("Category:"), makeValLabel(p.getCategory()));
         grid.addRow(3, makeDimLabel("Downloads:"), makeValLabel(p.formattedDownloads()));
         grid.addRow(4, makeDimLabel("License:"), makeValLabel("Roze Ecosystem License"));
-        grid.addRow(5, makeDimLabel("Compatibility:"), makeValLabel("DBNavigator Pro 2.0.0+"));
+        grid.addRow(5, makeDimLabel("Compatibility:"), makeValLabel("DBNavigator Pro 1.0.0+"));
 
         return grid;
     }

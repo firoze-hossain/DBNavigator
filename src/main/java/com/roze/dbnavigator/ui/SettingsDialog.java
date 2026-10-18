@@ -8256,8 +8256,8 @@ public final class SettingsDialog {
                 createPluginRow("MySQL Connector/J", "v8.4.0", "Bundled JDBC driver for MySQL & MariaDB databases", true),
                 createPluginRow("StratosDB Driver", "v1.0.7", "Bundled driver for StratosDB distributed instances", true),
                 createPluginRow("SQLite Driver", "v3.45.1", "Bundled JDBC driver for SQLite embedded databases", true),
-                createPluginRow("SQL Formatter", "v2.0.0", "Dialect-aware SQL beautifier and statement validator", true),
-                createPluginRow("Git VCS Integration", "v2.0.0", "Git repository log, commit history, and diff tools", true)
+                createPluginRow("SQL Formatter", "v1.0.0", "Dialect-aware SQL beautifier and statement validator", true),
+                createPluginRow("Git VCS Integration", "v1.0.0", "Git repository log, commit history, and diff tools", true)
         );
 
         VBox panel = new VBox(14, titleRow, list);

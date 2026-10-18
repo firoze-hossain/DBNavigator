@@ -37,7 +37,7 @@ public final class AppUpdateService {
     public static String currentVersion() {
         String version = AppUpdateService.class.getPackage().getImplementationVersion();
         if (version == null || version.isBlank()) {
-            return "2.0.0";
+            return "1.0.0";
         }
         return version.startsWith("v") || version.startsWith("V") ? version.substring(1) : version;
     }

@@ -13,4 +13,4 @@ This directory contains resources and scripts for packaging DBNavigator into nat
 * **macOS**:
   * `macos/DBNavigator.icns`: High-resolution Apple ICNS icon for `.app` bundle and `.dmg` installer
 
-Installers are built automatically via GitHub Actions upon pushing a version tag (e.g. `v2.0.0`).
+Installers are built automatically via GitHub Actions upon pushing a version tag (e.g. `v1.0.0`).
