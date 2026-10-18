@@ -473,7 +473,7 @@ public class QueryTab extends Tab {
 
     private void setupCompletion() {
         completionList.getStyleClass().add("completion-list");
-        completionList.setPrefSize(430, 210);
+        completionList.setPrefSize(440, 210);
         completionList.setCellFactory(list -> new ListCell<>() {
             @Override
             protected void updateItem(CompletionService.Suggestion item, boolean empty) {
@@ -483,20 +483,39 @@ public class QueryTab extends Tab {
                     setText(null);
                     return;
                 }
+                String iconSymbol = switch (item.kind()) {
+                    case TEMPLATE -> "⚡";
+                    case KEYWORD -> "K";
+                    case TABLE -> "⊞";
+                    case COLUMN -> "•";
+                    case SEQUENCE -> "#";
+                    case JOIN_CONDITION -> "⇄";
+                };
+                Label icon = new Label(iconSymbol);
+                icon.getStyleClass().addAll("completion-icon", "completion-icon-" + item.kind().name().toLowerCase(Locale.ROOT));
+
                 Label name = new Label(item.text());
                 name.getStyleClass().addAll("completion-name",
-                        "completion-" + item.kind().name().toLowerCase());
+                        "completion-" + item.kind().name().toLowerCase(Locale.ROOT));
                 Label detail = new Label(item.detail());
                 detail.getStyleClass().add("completion-detail");
                 Region gap = new Region();
                 HBox.setHgrow(gap, Priority.ALWAYS);
-                HBox box = new HBox(10, name, gap, detail);
+                HBox box = new HBox(8, icon, name, gap, detail);
                 box.setAlignment(Pos.CENTER_LEFT);
                 setGraphic(box);
                 setText(null);
             }
         });
-        completionPopup.getContent().add(completionList);
+
+        Label tipLabel = new Label("Press Enter to insert, Tab to replace");
+        tipLabel.getStyleClass().add("completion-tip-text");
+        HBox tipBar = new HBox(tipLabel);
+        tipBar.getStyleClass().add("completion-tip-bar");
+
+        VBox popupBox = new VBox(completionList, tipBar);
+        popupBox.getStyleClass().add("completion-popup-box");
+        completionPopup.getContent().add(popupBox);
         completionPopup.setAutoHide(true);
 
         completionList.setOnMouseClicked(e -> insertSelectedCompletion());
@@ -768,26 +787,69 @@ public class QueryTab extends Tab {
         return text.substring(start, caret);
     }
 
-    private static final Pattern COMPLETION_CONTEXT_KEYWORD = Pattern.compile(
-        "(?i)\\b(select|from|join|update|into|table|sequence|where|on|and|or|by|set|having|between|like|when|then)\\b");
-
     private CompletionService.Context contextAt(int position) {
         String text = editor.getText();
         int pos = Math.min(position, text.length());
-        String before = text.substring(0, pos).toLowerCase(Locale.ROOT);
-        Matcher matcher = COMPLETION_CONTEXT_KEYWORD.matcher(before);
-        String lastKeyword = null;
-        while (matcher.find()) {
-            lastKeyword = matcher.group(1);
+        if (pos <= 0) return CompletionService.Context.STATEMENT_START;
+
+        int lastSemi = text.lastIndexOf(';', pos - 1);
+        int stmtStart = lastSemi == -1 ? 0 : lastSemi + 1;
+        String before = text.substring(stmtStart, pos);
+        String trimmedBefore = before.trim();
+
+        if (trimmedBefore.isEmpty()) return CompletionService.Context.STATEMENT_START;
+
+        // 1. DDL drop/truncate table/sequence/view/schema/type: e.g. "DROP TABLE users ", "DROP SEQUENCE s1 "
+        if (trimmedBefore.matches("(?i).*\\b(drop\\s+(?:table|view|sequence|schema|type)|truncate\\s+(?:table)?)\\s+[A-Za-z0-9_.\"']+\\s*.*")) {
+            return CompletionService.Context.POST_OBJECT_DDL;
         }
-        if (lastKeyword == null) return CompletionService.Context.ANY;
-        return switch (lastKeyword) {
-            case "from", "join", "update", "into", "table" -> CompletionService.Context.TABLES;
-            case "sequence" -> CompletionService.Context.SEQUENCES;
-            case "select", "where", "on", "and", "or", "by", "set",
-                 "having", "between", "like", "when", "then" -> CompletionService.Context.COLUMNS;
-            default -> CompletionService.Context.ANY;
-        };
+
+        // 2. Foreign key cascade actions: ON DELETE / ON UPDATE
+        if (trimmedBefore.matches("(?i).*\\b(?:on\\s+delete|on\\s+update)\\s*.*")) {
+            return CompletionService.Context.FOREIGN_KEY_ACTION;
+        }
+
+        // 3. JOIN <table> ON -> AFTER_ON
+        if (trimmedBefore.matches("(?i).*\\bjoin\\s+[A-Za-z0-9_.\"']+(\\s+(?:as\\s+)?[A-Za-z0-9_]+)?\\s+on\\s*.*")) {
+            return CompletionService.Context.AFTER_ON;
+        }
+
+        // 4. JOIN <table> -> AFTER_JOIN_TABLE (expecting ON)
+        if (trimmedBefore.matches("(?i).*\\bjoin\\s+[A-Za-z0-9_.\"']+(\\s+(?:as\\s+)?[A-Za-z0-9_]+)?\\s*$")) {
+            return CompletionService.Context.AFTER_JOIN_TABLE;
+        }
+
+        // 5. FROM / JOIN / INTO / UPDATE -> TABLES
+        if (trimmedBefore.matches("(?i).*\\b(from|join|into|update)\\s*$")) {
+            return CompletionService.Context.TABLES;
+        }
+
+        // 6. FROM <table> (and not followed by WHERE / JOIN / GROUP / ORDER / etc.) -> AFTER_TABLE
+        if (trimmedBefore.matches("(?i).*\\bfrom\\s+[A-Za-z0-9_.\"']+(\\s+(?:as\\s+)?[A-Za-z0-9_]+)?\\s*$")) {
+            return CompletionService.Context.AFTER_TABLE;
+        }
+
+        // 7. SELECT projection (e.g. SELECT * or SELECT col1, col2) before FROM -> AFTER_SELECT_PROJECTION
+        if (trimmedBefore.matches("(?i)^\\s*select\\s+.*") && !trimmedBefore.matches("(?i).*\\bfrom\\b.*")) {
+            return CompletionService.Context.AFTER_SELECT_PROJECTION;
+        }
+
+        // 8. Sequences
+        if (trimmedBefore.matches("(?i).*\\bsequence\\s*$")) {
+            return CompletionService.Context.SEQUENCES;
+        }
+
+        // 9. Standard column contexts: WHERE, ON, SET, HAVING, ORDER BY, GROUP BY
+        if (trimmedBefore.matches("(?i).*\\b(where|on|set|having|by|between|like|when|then)\\b.*")) {
+            return CompletionService.Context.COLUMNS;
+        }
+
+        // If statement is just starting or single word prefix (e.g. "sel", "ins")
+        if (!trimmedBefore.contains(" ") && !trimmedBefore.contains("\n")) {
+            return CompletionService.Context.STATEMENT_START;
+        }
+
+        return CompletionService.Context.ANY;
     }
 
     private void insertSelectedCompletion() {
@@ -799,6 +861,31 @@ public class QueryTab extends Tab {
         }
         suppressCompletion = true;
         AppSettingsStore.Settings s = AppSettingsStore.load();
+
+        // 1. Live Template expansion (e.g. 'sel' -> 'select *\nfrom ')
+        if (selected.kind() == CompletionService.Kind.TEMPLATE && selected.templateExpansion() != null) {
+            String expansion = selected.templateExpansion();
+            int endMarker = expansion.indexOf("$END$");
+            String insertText = expansion.replace("$END$", "");
+            int replaceFrom = tokenStart;
+            int replaceTo = editor.getCaretPosition();
+
+            editor.replaceText(replaceFrom, replaceTo, insertText);
+            if (endMarker != -1) {
+                editor.moveTo(replaceFrom + endMarker);
+            } else {
+                editor.moveTo(replaceFrom + insertText.length());
+            }
+
+            suppressCompletion = false;
+            completionPopup.hide();
+            editor.requestFocus();
+
+            // Automatically open completions for the next step (e.g. table selection after 'from ')
+            Platform.runLater(this::showCompletions);
+            return;
+        }
+
         String replacement = selected.text();
 
         // Automatically add parentheses if applicable

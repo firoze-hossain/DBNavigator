@@ -663,14 +663,44 @@
 }
 
 /* ---------- colored completion entries (DataGrip style) ---------- */
-.completion-name    { -fx-font-family: "DBNavigator Mono", "Consolas", monospace; -fx-font-size: 13px; }
-.completion-keyword { -fx-text-fill: #cc7832; -fx-font-weight: bold; }
-.completion-table   { -fx-text-fill: #4a88c7; }
-.completion-column  { -fx-text-fill: #6a8759; }
-.completion-sequence { -fx-text-fill: #e0a44c; }
-.completion-collection { -fx-text-fill: #4a88c7; }
-.completion-method  { -fx-text-fill: #c77dbb; }
-.completion-detail  { -fx-text-fill: #6f7680; -fx-font-size: 11px; }
+.completion-name           { -fx-font-family: "DBNavigator Mono", "Consolas", monospace; -fx-font-size: 13px; }
+.completion-keyword        { -fx-text-fill: #cc7832; -fx-font-weight: bold; }
+.completion-template       { -fx-text-fill: #4ec9b0; -fx-font-weight: bold; }
+.completion-table          { -fx-text-fill: #4a88c7; }
+.completion-column         { -fx-text-fill: #6a8759; }
+.completion-sequence       { -fx-text-fill: #e0a44c; }
+.completion-join_condition { -fx-text-fill: #9876aa; -fx-font-weight: bold; }
+.completion-collection     { -fx-text-fill: #4a88c7; }
+.completion-method         { -fx-text-fill: #c77dbb; }
+.completion-detail         { -fx-text-fill: #6f7680; -fx-font-size: 11px; }
+
+.completion-icon                    { -fx-font-family: "DBNavigator Mono", monospace; -fx-font-size: 11px; -fx-font-weight: bold; -fx-min-width: 14px; -fx-alignment: center; }
+.completion-icon-template           { -fx-text-fill: #4ec9b0; }
+.completion-icon-keyword            { -fx-text-fill: #cc7832; }
+.completion-icon-table              { -fx-text-fill: #4a88c7; }
+.completion-icon-column             { -fx-text-fill: #6a8759; }
+.completion-icon-sequence           { -fx-text-fill: #e0a44c; }
+.completion-icon-join_condition     { -fx-text-fill: #9876aa; }
+
+.completion-popup-box {
+    -fx-background-color: -bg-mid;
+    -fx-border-color: -border;
+    -fx-border-width: 1;
+    -fx-background-radius: 4;
+    -fx-border-radius: 4;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.45), 8, 0, 0, 3);
+}
+.completion-tip-bar {
+    -fx-background-color: -bg-darkest;
+    -fx-border-color: -border transparent transparent transparent;
+    -fx-border-width: 1;
+    -fx-padding: 3 8 3 8;
+    -fx-alignment: center-left;
+}
+.completion-tip-text {
+    -fx-text-fill: #6f7680;
+    -fx-font-size: 10px;
+}
 
 /* ---------- search everywhere ---------- */
 .search-dialog {

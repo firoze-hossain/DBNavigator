@@ -4,53 +4,86 @@ import com.roze.dbnavigator.db.MetadataService;
 import com.roze.dbnavigator.model.ConnectionProfile;
 import com.roze.dbnavigator.util.AppExecutor;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * DataGrip-style contextual completion:
- *   after FROM / JOIN / UPDATE / INTO  → tables
- *   after CREATE / ALTER / DROP SEQUENCE → sequences
- *   after SELECT / WHERE / ON / SET …  → columns first
- *   "tableName."                       → that table's columns
- * Each suggestion carries a kind + description so the popup can color it.
+ * Professional contextual SQL code completion and live templates:
+ *   - Live Templates: sel, selc, selw, ins, upd, del, etc.
+ *   - After SELECT projection: FROM keyword as #1 suggestion
+ *   - After FROM / JOIN: tables and views
+ *   - After JOIN <table>: ON keyword
+ *   - After ON: Smart join conditions (foreign key matches & common column equality)
+ *   - After DROP TABLE / SEQUENCE / VIEW: CASCADE, RESTRICT, CASCADE CONSTRAINTS
+ *   - After ON DELETE / ON UPDATE: CASCADE, RESTRICT, SET NULL, NO ACTION
+ *   - "tableName." / "alias.": that table's columns
  */
 public final class CompletionService {
 
-    public enum Kind { KEYWORD, TABLE, COLUMN, SEQUENCE }
+    public enum Kind { KEYWORD, TABLE, COLUMN, SEQUENCE, TEMPLATE, JOIN_CONDITION }
 
-    /** What the previous word tells us the user is about to type. */
-    public enum Context { ANY, TABLES, COLUMNS, SEQUENCES }
+    /** What the surrounding query structure tells us the user is about to type. */
+    public enum Context {
+        ANY,
+        STATEMENT_START,
+        AFTER_SELECT_PROJECTION,
+        TABLES,
+        AFTER_TABLE,
+        AFTER_JOIN_TABLE,
+        AFTER_ON,
+        COLUMNS,
+        SEQUENCES,
+        POST_OBJECT_DDL,
+        FOREIGN_KEY_ACTION
+    }
 
-    public record Suggestion(String text, Kind kind, String detail) {
+    public record Suggestion(String text, Kind kind, String detail, String templateExpansion) {
+        public Suggestion(String text, Kind kind, String detail) {
+            this(text, kind, detail, null);
+        }
         @Override public String toString() { return text; }
     }
 
-    private static final List<String> KEYWORDS = List.of(
+    public record LiveTemplate(String abbreviation, String description, String expansion) {}
+
+    private static final List<LiveTemplate> LIVE_TEMPLATES = List.of(
+            new LiveTemplate("sel", "select all rows from a table", "select *\nfrom $END$"),
+            new LiveTemplate("selc", "select the number of specific rows in a table", "select count(*)\nfrom $END$"),
+            new LiveTemplate("selw", "select specific rows from a table", "select *\nfrom $END$\nwhere "),
+            new LiveTemplate("ins", "insert statement", "insert into $END$ () values ();"),
+            new LiveTemplate("upd", "update statement", "update $END$\nset \nwhere ;"),
+            new LiveTemplate("del", "delete statement", "delete from $END$\nwhere ;"),
+            new LiveTemplate("crat", "create table", "create table $END$ (\n    id serial primary key\n);"),
+            new LiveTemplate("crav", "create view", "create view $END$ as\nselect * from ;"),
+            new LiveTemplate("crai", "create index", "create index idx_$END$ on ()"),
+            new LiveTemplate("altt", "alter table", "alter table $END$ add column "),
+            new LiveTemplate("dropt", "drop table with cascade", "drop table $END$ cascade;"),
+            new LiveTemplate("drops", "drop sequence with cascade", "drop sequence $END$ cascade;")
+    );
+
+    private static final List<String> STATEMENT_KEYWORDS = List.of(
+            "SELECT", "INSERT INTO", "UPDATE", "DELETE FROM", "WITH",
+            "CREATE TABLE", "ALTER TABLE", "DROP TABLE", "TRUNCATE TABLE",
+            "CREATE VIEW", "ALTER VIEW", "DROP VIEW",
+            "CREATE SEQUENCE", "ALTER SEQUENCE", "DROP SEQUENCE",
+            "CREATE INDEX", "DROP INDEX", "SECURITY LABEL",
+            "BEGIN", "COMMIT", "ROLLBACK", "GRANT", "REVOKE",
+            "SHOW", "DESCRIBE", "EXPLAIN", "USE");
+
+    private static final List<String> GENERAL_KEYWORDS = List.of(
             "SELECT", "FROM", "WHERE", "INSERT INTO", "VALUES", "UPDATE", "SET",
             "DELETE FROM", "CREATE TABLE", "ALTER TABLE", "DROP TABLE", "CREATE INDEX",
-            "JOIN", "INNER JOIN", "LEFT JOIN", "RIGHT JOIN", "FULL JOIN", "ON",
-            "GROUP BY", "ORDER BY", "HAVING", "LIMIT", "OFFSET", "UNION", "DISTINCT",
+            "JOIN", "INNER JOIN", "LEFT JOIN", "RIGHT JOIN", "FULL JOIN", "CROSS JOIN", "ON",
+            "GROUP BY", "ORDER BY", "HAVING", "LIMIT", "OFFSET", "UNION", "ALL", "DISTINCT",
             "AND", "OR", "NOT", "NULL", "IS NULL", "IS NOT NULL", "IN", "BETWEEN",
             "LIKE", "EXISTS", "CASE", "WHEN", "THEN", "ELSE", "END", "AS",
+            "CASCADE", "RESTRICT", "CASCADE CONSTRAINTS", "PURGE",
             "COUNT(*)", "SUM(", "AVG(", "MIN(", "MAX(", "COALESCE(", "CAST(",
-            "PRIMARY KEY", "FOREIGN KEY", "REFERENCES", "DEFAULT", "UNIQUE",
+            "PRIMARY KEY", "FOREIGN KEY", "REFERENCES", "DEFAULT", "UNIQUE", "CONSTRAINT",
             "BEGIN", "COMMIT", "ROLLBACK", "TRUNCATE TABLE", "ASC", "DESC",
             "SEQUENCE", "CREATE SEQUENCE", "ALTER SEQUENCE", "DROP SEQUENCE",
             "NEXTVAL(", "CURRVAL(", "SETVAL(");
 
-    /**
-     * T-SQL syntax with no equivalent (or a differently-spelled equivalent)
-     * in the ANSI-ish KEYWORDS list above — SQL Server's paging, identity,
-     * ranking, and variable/scripting constructs. Kept separate rather than
-     * merged into KEYWORDS so a Postgres/MySQL console isn't offered TOP or
-     * GETDATE(), the way DataGrip itself tailors suggestions per dialect.
-     */
     private static final List<String> SQLSERVER_KEYWORDS = List.of(
             "TOP", "IDENTITY(", "MERGE", "USING", "WHEN MATCHED THEN", "WHEN NOT MATCHED THEN",
             "OUTPUT", "INSERTED.", "DELETED.", "CROSS APPLY", "OUTER APPLY",
@@ -64,15 +97,9 @@ public final class CompletionService {
             "NVARCHAR(", "VARCHAR(", "NCHAR(", "DATETIME2", "UNIQUEIDENTIFIER", "BIT",
             "SCOPE_IDENTITY()", "@@IDENTITY", "IDENT_CURRENT(", "@@ROWCOUNT");
 
-    /**
-     * PL/SQL and Oracle-SQL syntax with no equivalent in the ANSI-ish
-     * KEYWORDS list above — Oracle's row-limiting, hierarchical-query,
-     * NVL/DECODE-style, and PL/SQL block/exception constructs. Kept
-     * separate for the same reason as SQLSERVER_KEYWORDS: a Postgres/MySQL
-     * console shouldn't be offered ROWNUM or SYSDATE.
-     */
     private static final List<String> ORACLE_KEYWORDS = List.of(
             "ROWNUM", "ROWID", "DUAL", "MINUS", "CONNECT BY", "START WITH", "PRIOR",
+            "CASCADE CONSTRAINTS", "PURGE",
             "MERGE INTO", "USING", "WHEN MATCHED THEN", "WHEN NOT MATCHED THEN",
             "NVL(", "NVL2(", "DECODE(", "TO_CHAR(", "TO_DATE(", "TO_NUMBER(", "TO_TIMESTAMP(",
             "SYSDATE", "SYSTIMESTAMP", "TRUNC(", "EXTRACT(", "ADD_MONTHS(", "MONTHS_BETWEEN(",
@@ -87,7 +114,7 @@ public final class CompletionService {
             "CREATE USER", "IDENTIFIED BY", "GRANT", "REVOKE", "QUOTA UNLIMITED ON",
             "CREATE OR REPLACE VIEW", "CREATE SYNONYM", "ALL_TABLES", "USER_TABLES", "ALL_TAB_COLUMNS");
 
-    private static final int MAX_SUGGESTIONS = 20;
+    private static final int MAX_SUGGESTIONS = 35;
 
     /** cacheKey = profileId::catalog */
     private static final Map<String, List<String>> tableCache = new ConcurrentHashMap<>();
@@ -106,7 +133,7 @@ public final class CompletionService {
     public static void preload(ConnectionProfile profile, String catalog) {
         String key = key(profile, catalog);
         if (tableCache.containsKey(key)) return;
-        tableCache.put(key, List.of());        // marker so we only load once
+        tableCache.put(key, List.of());
         allColumnsCache.put(key, List.of());
         sequenceCache.put(key, List.of());
         AppExecutor.run(() -> {
@@ -126,12 +153,6 @@ public final class CompletionService {
 
     /**
      * Ranked suggestions for the token under the caret.
-     * Empty tokens are allowed when the context already narrows the answer
-     * (e.g. right after "FROM " every table is a valid suggestion).
-     *
-     * @param fullText the console's entire SQL text, used to resolve a table
-     *                 alias (e.g. "b." after "FROM bcharge b") to its real
-     *                 table's columns — not just a literal table name.
      */
     public static List<Suggestion> suggest(ConnectionProfile profile, String catalog,
                                            String fullText, String token, Context context) {
@@ -158,37 +179,194 @@ public final class CompletionService {
         if (token.isBlank() && context == Context.ANY) return List.of();
 
         String prefix = token.toLowerCase(Locale.ROOT);
+        boolean isUpper = isAllUpperCase(token);
         List<Suggestion> matches = new ArrayList<>();
 
         switch (context) {
+            case STATEMENT_START -> {
+                addLiveTemplates(prefix, isUpper, matches);
+                addKeywordsList(profile, STATEMENT_KEYWORDS, prefix, isUpper, matches);
+                addTables(profile, catalog, prefix, matches);
+            }
+            case AFTER_SELECT_PROJECTION -> {
+                addSpecificKeyword("FROM", "table source clause", prefix, isUpper, matches);
+                addSpecificKeyword("DISTINCT", "filter duplicates", prefix, isUpper, matches);
+                addSpecificKeyword("AS", "alias", prefix, isUpper, matches);
+                addFunctions(prefix, isUpper, matches);
+                addScopedColumns(profile, catalog, fullText, prefix, matches);
+            }
             case TABLES -> {
                 addTables(profile, catalog, prefix, matches);
-                addKeywords(profile, prefix, matches);      // e.g. FROM (SELECT …
+                if ("(".startsWith(prefix) || prefix.startsWith("(")) {
+                    matches.add(new Suggestion("(SELECT ", Kind.KEYWORD, "subquery"));
+                }
             }
-            case COLUMNS -> {
+            case AFTER_TABLE -> {
+                addAfterTableKeywords(prefix, isUpper, matches);
+            }
+            case AFTER_JOIN_TABLE -> {
+                addSpecificKeyword("ON", "join condition clause", prefix, isUpper, matches);
+            }
+            case AFTER_ON -> {
+                addSmartJoinConditions(profile, catalog, fullText, prefix, matches);
                 addScopedColumns(profile, catalog, fullText, prefix, matches);
-                addKeywords(profile, prefix, matches);
+            }
+            case POST_OBJECT_DDL -> {
+                addSpecificKeyword("CASCADE", "drop dependent objects (Postgres/MySQL/Oracle)", prefix, isUpper, matches);
+                addSpecificKeyword("RESTRICT", "restrict drop if dependencies exist", prefix, isUpper, matches);
+                if (profile != null && profile.getType() == ConnectionProfile.DatabaseType.ORACLE) {
+                    addSpecificKeyword("CASCADE CONSTRAINTS", "Oracle drop referential integrity constraints", prefix, isUpper, matches);
+                    addSpecificKeyword("PURGE", "Oracle bypass recycle bin", prefix, isUpper, matches);
+                }
+            }
+            case FOREIGN_KEY_ACTION -> {
+                addSpecificKeyword("CASCADE", "cascade delete or update", prefix, isUpper, matches);
+                addSpecificKeyword("RESTRICT", "restrict delete or update", prefix, isUpper, matches);
+                addSpecificKeyword("SET NULL", "set foreign key columns to NULL", prefix, isUpper, matches);
+                addSpecificKeyword("SET DEFAULT", "set foreign key columns to default", prefix, isUpper, matches);
+                addSpecificKeyword("NO ACTION", "prevent delete or update", prefix, isUpper, matches);
             }
             case SEQUENCES -> {
                 addSequences(profile, catalog, prefix, matches);
-                addKeywords(profile, prefix, matches);
+                addKeywordsList(profile, GENERAL_KEYWORDS, prefix, isUpper, matches);
+            }
+            case COLUMNS -> {
+                addScopedColumns(profile, catalog, fullText, prefix, matches);
+                addKeywordsList(profile, GENERAL_KEYWORDS, prefix, isUpper, matches);
             }
             case ANY -> {
+                addLiveTemplates(prefix, isUpper, matches);
                 addTables(profile, catalog, prefix, matches);
                 addScopedColumns(profile, catalog, fullText, prefix, matches);
                 addSequences(profile, catalog, prefix, matches);
-                addKeywords(profile, prefix, matches);
+                addKeywordsList(profile, GENERAL_KEYWORDS, prefix, isUpper, matches);
             }
         }
         return matches;
+    }
+
+    private static void addLiveTemplates(String prefix, boolean isUpper, List<Suggestion> matches) {
+        for (LiveTemplate tmpl : LIVE_TEMPLATES) {
+            if (matches.size() >= MAX_SUGGESTIONS) return;
+            if (tmpl.abbreviation().toLowerCase(Locale.ROOT).startsWith(prefix)) {
+                String exp = isUpper ? tmpl.expansion().toUpperCase(Locale.ROOT).replace("$end$", "$END$") : tmpl.expansion();
+                String name = isUpper ? tmpl.abbreviation().toUpperCase(Locale.ROOT) : tmpl.abbreviation();
+                matches.add(new Suggestion(name, Kind.TEMPLATE, tmpl.description(), exp));
+            }
+        }
+    }
+
+    private static void addSpecificKeyword(String keyword, String detail, String prefix, boolean isUpper, List<Suggestion> matches) {
+        String formatted = isUpper ? keyword.toUpperCase(Locale.ROOT) : keyword.toLowerCase(Locale.ROOT);
+        if (prefix.isBlank() || formatted.toLowerCase(Locale.ROOT).startsWith(prefix)) {
+            if (notPresent(matches, formatted)) {
+                matches.add(new Suggestion(formatted, Kind.KEYWORD, detail));
+            }
+        }
+    }
+
+    private static void addAfterTableKeywords(String prefix, boolean isUpper, List<Suggestion> matches) {
+        List<String> nextKeywords = List.of(
+                "JOIN", "INNER JOIN", "LEFT JOIN", "RIGHT JOIN", "FULL JOIN", "CROSS JOIN",
+                "WHERE", "GROUP BY", "HAVING", "ORDER BY", "LIMIT", "OFFSET", "UNION");
+        for (String kw : nextKeywords) {
+            if (matches.size() >= MAX_SUGGESTIONS) return;
+            String formatted = isUpper ? kw.toUpperCase(Locale.ROOT) : kw.toLowerCase(Locale.ROOT);
+            if (prefix.isBlank() || formatted.toLowerCase(Locale.ROOT).startsWith(prefix)) {
+                if (notPresent(matches, formatted)) {
+                    matches.add(new Suggestion(formatted, Kind.KEYWORD, "clause"));
+                }
+            }
+        }
+    }
+
+    private static void addFunctions(String prefix, boolean isUpper, List<Suggestion> matches) {
+        List<String> funcs = List.of("COUNT(*)", "SUM(", "AVG(", "MIN(", "MAX(", "COALESCE(", "CAST(");
+        for (String fn : funcs) {
+            if (matches.size() >= MAX_SUGGESTIONS) return;
+            String formatted = isUpper ? fn.toUpperCase(Locale.ROOT) : fn.toLowerCase(Locale.ROOT);
+            if (prefix.isBlank() || formatted.toLowerCase(Locale.ROOT).startsWith(prefix)) {
+                if (notPresent(matches, formatted)) {
+                    matches.add(new Suggestion(formatted, Kind.KEYWORD, "aggregate function"));
+                }
+            }
+        }
+    }
+
+    private static void addSmartJoinConditions(ConnectionProfile profile, String catalog,
+                                               String fullText, String prefix, List<Suggestion> matches) {
+        Map<String, String> aliasMap = com.roze.dbnavigator.util.SqlAliases.resolve(fullText);
+        List<String> tables = com.roze.dbnavigator.util.SqlAliases.referencedTables(fullText);
+
+        if (tables.size() >= 2) {
+            String table2 = tables.get(tables.size() - 1);
+            String table1 = tables.get(tables.size() - 2);
+
+            String alias1 = findAlias(aliasMap, table1);
+            String alias2 = findAlias(aliasMap, table2);
+
+            String prefix1 = alias1 != null ? alias1 : table1;
+            String prefix2 = alias2 != null ? alias2 : table2;
+
+            List<String> cols1 = columnsOf(profile, catalog, table1);
+            List<String> cols2 = columnsOf(profile, catalog, table2);
+
+            // 1. FK pattern: table1_id in table2 = id in table1
+            for (String c2 : cols2) {
+                String c2Low = c2.toLowerCase(Locale.ROOT);
+                for (String c1 : cols1) {
+                    String c1Low = c1.toLowerCase(Locale.ROOT);
+                    if (c2Low.equals(table1.toLowerCase(Locale.ROOT) + "_id") && c1Low.equals("id")) {
+                        String cond = prefix1 + "." + c1 + " = " + prefix2 + "." + c2;
+                        if (prefix.isBlank() || cond.toLowerCase(Locale.ROOT).contains(prefix)) {
+                            if (notPresent(matches, cond)) {
+                                matches.add(new Suggestion(cond, Kind.JOIN_CONDITION, "foreign key match"));
+                            }
+                        }
+                    } else if (c1Low.equals(table2.toLowerCase(Locale.ROOT) + "_id") && c2Low.equals("id")) {
+                        String cond = prefix1 + "." + c1 + " = " + prefix2 + "." + c2;
+                        if (prefix.isBlank() || cond.toLowerCase(Locale.ROOT).contains(prefix)) {
+                            if (notPresent(matches, cond)) {
+                                matches.add(new Suggestion(cond, Kind.JOIN_CONDITION, "foreign key match"));
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 2. Common column name match
+            for (String c1 : cols1) {
+                for (String c2 : cols2) {
+                    if (c1.equalsIgnoreCase(c2)) {
+                        String cond = prefix1 + "." + c1 + " = " + prefix2 + "." + c2;
+                        if (prefix.isBlank() || cond.toLowerCase(Locale.ROOT).contains(prefix)) {
+                            if (notPresent(matches, cond)) {
+                                matches.add(new Suggestion(cond, Kind.JOIN_CONDITION, "matching column"));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private static String findAlias(Map<String, String> aliasMap, String table) {
+        for (Map.Entry<String, String> entry : aliasMap.entrySet()) {
+            if (entry.getValue().equalsIgnoreCase(table)) {
+                return entry.getKey();
+            }
+        }
+        return null;
     }
 
     private static void addTables(ConnectionProfile profile, String catalog,
                                   String prefix, List<Suggestion> matches) {
         for (String table : tableCache.getOrDefault(key(profile, catalog), List.of())) {
             if (matches.size() >= MAX_SUGGESTIONS) return;
-            if (table.toLowerCase(Locale.ROOT).startsWith(prefix) && notPresent(matches, table)) {
-                matches.add(new Suggestion(table, Kind.TABLE, "table"));
+            if (prefix.isBlank() || table.toLowerCase(Locale.ROOT).startsWith(prefix)) {
+                if (notPresent(matches, table)) {
+                    matches.add(new Suggestion(table, Kind.TABLE, "table"));
+                }
             }
         }
     }
@@ -198,11 +376,10 @@ public final class CompletionService {
         Set<String> seenColumns = new HashSet<>();
         List<String> tables = com.roze.dbnavigator.util.SqlAliases.referencedTables(fullText);
         if (!tables.isEmpty()) {
-            // Prefer columns from tables already referenced in the query.
             for (String table : tables) {
                 for (String col : columnsOf(profile, catalog, table)) {
                     if (matches.size() >= MAX_SUGGESTIONS) return;
-                    if (col.toLowerCase(Locale.ROOT).startsWith(prefix)) {
+                    if (prefix.isBlank() || col.toLowerCase(Locale.ROOT).startsWith(prefix)) {
                         String text = col;
                         if (notPresent(matches, text) && seenColumns.add(text.toLowerCase(Locale.ROOT))) {
                             matches.add(new Suggestion(text, Kind.COLUMN, "column of " + table));
@@ -218,8 +395,10 @@ public final class CompletionService {
                                    String prefix, List<Suggestion> matches) {
         for (String column : allColumnsCache.getOrDefault(key(profile, catalog), List.of())) {
             if (matches.size() >= MAX_SUGGESTIONS) return;
-            if (column.toLowerCase(Locale.ROOT).startsWith(prefix) && notPresent(matches, column)) {
-                matches.add(new Suggestion(column, Kind.COLUMN, "column"));
+            if (prefix.isBlank() || column.toLowerCase(Locale.ROOT).startsWith(prefix)) {
+                if (notPresent(matches, column)) {
+                    matches.add(new Suggestion(column, Kind.COLUMN, "column"));
+                }
             }
         }
     }
@@ -228,33 +407,39 @@ public final class CompletionService {
                                      String prefix, List<Suggestion> matches) {
         for (String sequence : sequenceCache.getOrDefault(key(profile, catalog), List.of())) {
             if (matches.size() >= MAX_SUGGESTIONS) return;
-            if (sequence.toLowerCase(Locale.ROOT).startsWith(prefix) && notPresent(matches, sequence)) {
-                matches.add(new Suggestion(sequence, Kind.SEQUENCE, "sequence"));
+            if (prefix.isBlank() || sequence.toLowerCase(Locale.ROOT).startsWith(prefix)) {
+                if (notPresent(matches, sequence)) {
+                    matches.add(new Suggestion(sequence, Kind.SEQUENCE, "sequence"));
+                }
             }
         }
     }
 
-    private static void addKeywords(ConnectionProfile profile, String prefix, List<Suggestion> matches) {
-        if (prefix.isBlank()) return;              // don't flood with all keywords
-        for (String keyword : KEYWORDS) {
+    private static void addKeywordsList(ConnectionProfile profile, List<String> keywords,
+                                        String prefix, boolean isUpper, List<Suggestion> matches) {
+        if (prefix.isBlank()) return;
+        for (String keyword : keywords) {
             if (matches.size() >= MAX_SUGGESTIONS) return;
-            if (keyword.toLowerCase(Locale.ROOT).startsWith(prefix) && notPresent(matches, keyword)) {
-                matches.add(new Suggestion(keyword, Kind.KEYWORD, "keyword"));
+            String formatted = isUpper ? keyword.toUpperCase(Locale.ROOT) : keyword.toLowerCase(Locale.ROOT);
+            if (formatted.toLowerCase(Locale.ROOT).startsWith(prefix) && notPresent(matches, formatted)) {
+                matches.add(new Suggestion(formatted, Kind.KEYWORD, "keyword"));
             }
         }
-        if (profile.getType() == ConnectionProfile.DatabaseType.SQLSERVER) {
+        if (profile != null && profile.getType() == ConnectionProfile.DatabaseType.SQLSERVER) {
             for (String keyword : SQLSERVER_KEYWORDS) {
                 if (matches.size() >= MAX_SUGGESTIONS) return;
-                if (keyword.toLowerCase(Locale.ROOT).startsWith(prefix) && notPresent(matches, keyword)) {
-                    matches.add(new Suggestion(keyword, Kind.KEYWORD, "T-SQL"));
+                String formatted = isUpper ? keyword.toUpperCase(Locale.ROOT) : keyword.toLowerCase(Locale.ROOT);
+                if (formatted.toLowerCase(Locale.ROOT).startsWith(prefix) && notPresent(matches, formatted)) {
+                    matches.add(new Suggestion(formatted, Kind.KEYWORD, "T-SQL"));
                 }
             }
         }
-        if (profile.getType() == ConnectionProfile.DatabaseType.ORACLE) {
+        if (profile != null && profile.getType() == ConnectionProfile.DatabaseType.ORACLE) {
             for (String keyword : ORACLE_KEYWORDS) {
                 if (matches.size() >= MAX_SUGGESTIONS) return;
-                if (keyword.toLowerCase(Locale.ROOT).startsWith(prefix) && notPresent(matches, keyword)) {
-                    matches.add(new Suggestion(keyword, Kind.KEYWORD, "PL/SQL"));
+                String formatted = isUpper ? keyword.toUpperCase(Locale.ROOT) : keyword.toLowerCase(Locale.ROOT);
+                if (formatted.toLowerCase(Locale.ROOT).startsWith(prefix) && notPresent(matches, formatted)) {
+                    matches.add(new Suggestion(formatted, Kind.KEYWORD, "PL/SQL"));
                 }
             }
         }
@@ -262,6 +447,19 @@ public final class CompletionService {
 
     private static boolean notPresent(List<Suggestion> matches, String text) {
         return matches.stream().noneMatch(s -> s.text().equalsIgnoreCase(text));
+    }
+
+    private static boolean isAllUpperCase(String text) {
+        if (text == null || text.isEmpty()) return false;
+        boolean hasLetter = false;
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (Character.isLetter(c)) {
+                hasLetter = true;
+                if (!Character.isUpperCase(c)) return false;
+            }
+        }
+        return hasLetter;
     }
 
     private static List<String> columnsOf(ConnectionProfile profile, String catalog, String table) {

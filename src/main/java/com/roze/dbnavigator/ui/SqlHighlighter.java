@@ -24,7 +24,10 @@ public final class SqlHighlighter {
             "FOREIGN", "REFERENCES", "DEFAULT", "UNIQUE", "CONSTRAINT", "ADD", "COLUMN",
             "TRUNCATE", "BEGIN", "COMMIT", "ROLLBACK", "TRANSACTION", "GRANT", "REVOKE",
             "WITH", "RETURNING", "IF", "REPLACE", "SHOW", "DESCRIBE", "EXPLAIN", "USE",
-            "ASC", "DESC"
+            "ASC", "DESC", "CASCADE", "RESTRICT", "CONSTRAINTS", "PURGE", "CHECK", "TRIGGER",
+            "FUNCTION", "PROCEDURE", "TEMPORARY", "TEMP", "SECURITY", "LABEL", "OWNER",
+            "OVER", "PARTITION", "WINDOW", "ROWS", "RANGE", "PRECEDING", "FOLLOWING",
+            "CURRENT", "ROW", "AUTO_INCREMENT", "IDENTITY", "GENERATED", "ALWAYS", "COLLATE"
     };
 
     /** Data-type names get their own color, distinct from control-flow keywords. */
