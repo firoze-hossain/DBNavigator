@@ -26,13 +26,17 @@ import java.util.regex.Pattern;
  */
 public final class SqlParameters {
 
-    /** One distinct parameter, with a best-effort guess at the column it's compared against. */
-    public record Parameter(String name, String guessedColumn) {}
+    /** One distinct parameter, with a best-effort guess at the column it's compared against and context snippet. */
+    public record Parameter(String name, String guessedColumn, String contextSnippet) {
+        public Parameter(String name, String guessedColumn) {
+            this(name, guessedColumn, null);
+        }
+    }
 
     public record TokenRange(int start, int end, String name) {}
 
     private static final Pattern COLUMN_COMPARISON = Pattern.compile(
-            "([A-Za-z_][A-Za-z0-9_.]*)\\s*(?:=|<>|!=|>=|<=|>|<|IN)\\s*[:$#%](?:\\{([A-Za-z0-9_]+)\\}|\\(([A-Za-z0-9_]+)\\)s|'([A-Za-z0-9_]+)'|([A-Za-z0-9_]+))",
+            "([A-Za-z_][A-Za-z0-9_.]*(?:::date|::text|::int|::[A-Za-z0-9_]+)?)\\s*(?:=|<>|!=|>=|<=|>|<|IN|BETWEEN|LIKE)\\s*[:$#%](?:\\{([A-Za-z0-9_]+)\\}|\\(([A-Za-z0-9_]+)\\)s|'([A-Za-z0-9_]+)'|([A-Za-z0-9_]+))(?:\\s+AND\\s+[:$#%](?:\\{([A-Za-z0-9_]+)\\}|\\(([A-Za-z0-9_]+)\\)s|'([A-Za-z0-9_]+)'|([A-Za-z0-9_]+)))?",
             Pattern.CASE_INSENSITIVE);
 
     private SqlParameters() {}
@@ -50,14 +54,18 @@ public final class SqlParameters {
         if (ranges.isEmpty()) return List.of();
 
         Set<String> names = new LinkedHashSet<>();
+        Map<String, String> snippets = new LinkedHashMap<>();
         for (TokenRange r : ranges) {
             names.add(r.name());
+            if (!snippets.containsKey(r.name())) {
+                snippets.put(r.name(), extractContextSnippet(sql, r.start(), r.end()));
+            }
         }
 
         Map<String, String> guesses = guessColumns(sql);
         List<Parameter> result = new ArrayList<>();
         for (String name : names) {
-            result.add(new Parameter(name, guesses.get(name)));
+            result.add(new Parameter(name, guesses.get(name), snippets.get(name)));
         }
         return result;
     }
@@ -124,6 +132,46 @@ public final class SqlParameters {
         return commentText.isBlank() ? null : commentText;
     }
 
+    /**
+     * Extracts a clean contextual snippet surrounding a parameter placeholder,
+     * replacing the parameter with '_' to show where it fits in the query (DataGrip style).
+     * E.g. "... ::date BETWEEN _ AND"
+     */
+    public static String extractContextSnippet(String sql, int paramStart, int paramEnd) {
+        if (sql == null || paramStart < 0 || paramEnd > sql.length() || paramStart > paramEnd) {
+            return "";
+        }
+        // Extract up to 24 chars before paramStart
+        int beforeStart = Math.max(0, paramStart - 24);
+        int lastNewline = sql.lastIndexOf('\n', paramStart - 1);
+        if (lastNewline >= beforeStart) {
+            beforeStart = lastNewline + 1;
+        } else if (beforeStart > 0) {
+            int space = sql.indexOf(' ', beforeStart);
+            if (space != -1 && space < paramStart && space - beforeStart <= 8) {
+                beforeStart = space + 1;
+            }
+        }
+        String before = sql.substring(beforeStart, paramStart).replaceAll("\\s+", " ");
+        if (beforeStart > 0 && !before.startsWith("...")) {
+            before = "... " + before.stripLeading();
+        }
+
+        // Extract up to 16 chars after paramEnd (stopping at next parameter or newline)
+        int afterEnd = Math.min(sql.length(), paramEnd + 16);
+        int nextNewline = sql.indexOf('\n', paramEnd);
+        if (nextNewline != -1 && nextNewline < afterEnd) {
+            afterEnd = nextNewline;
+        }
+        int nextParam = sql.indexOf(':', paramEnd);
+        if (nextParam != -1 && nextParam < afterEnd && nextParam > paramEnd) {
+            afterEnd = nextParam;
+        }
+        String after = sql.substring(paramEnd, afterEnd).replaceAll("\\s+", " ");
+
+        return (before + "_" + after).trim();
+    }
+
     private static Map<String, String> guessColumns(String sql) {
         Map<String, String> guesses = new LinkedHashMap<>();
         try {
@@ -134,7 +182,6 @@ public final class SqlParameters {
                     String param = matcher.group(g);
                     if (param != null && !param.isBlank()) {
                         guesses.putIfAbsent(param, col);
-                        break;
                     }
                 }
             }
@@ -201,6 +248,22 @@ public final class SqlParameters {
                 if (c == '/' && next == '*') { inBlockComment = true; i += 2; continue; }
                 if (c == '\'') { inSingleQuote = true; i++; continue; }
                 if (c == '"') { inDoubleQuote = true; i++; continue; }
+
+                // PostgreSQL type cast ::type or PL/SQL := assignment can never be a user parameter
+                if (c == ':' && next == ':') {
+                    while (i < n && sql.charAt(i) == ':') i++;
+                    while (i < n && Character.isWhitespace(sql.charAt(i))) i++;
+                    while (i < n && (Character.isLetterOrDigit(sql.charAt(i)) || sql.charAt(i) == '_')) i++;
+                    continue;
+                }
+                if (c == ':' && next == '=') {
+                    i += 2;
+                    continue;
+                }
+                if (c == ':' && i > 0 && sql.charAt(i - 1) == ':') {
+                    i++;
+                    continue;
+                }
             }
 
             // Test if any rule matches at current index
@@ -215,6 +278,7 @@ public final class SqlParameters {
                     if (!inSingleQuote && !rule.inScripts) continue;
 
                     Matcher m = rule.pattern.matcher(sql);
+                    m.useTransparentBounds(true);
                     m.region(i, n);
                     if (m.lookingAt()) {
                         int start = m.start();
@@ -305,8 +369,13 @@ public final class SqlParameters {
     }
 
     private static String literal(String value) {
-        if (value == null || value.isBlank()) return "NULL";
+        if (value == null || value.isBlank() || value.equalsIgnoreCase("<null>") || value.equalsIgnoreCase("null")) {
+            return "NULL";
+        }
         if (value.matches("-?\\d+(\\.\\d+)?")) return value;
+        if ((value.startsWith("'") && value.endsWith("'")) || (value.startsWith("\"") && value.endsWith("\""))) {
+            return value;
+        }
         return "'" + value.replace("'", "''") + "'";
     }
 }

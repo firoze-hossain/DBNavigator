@@ -40,42 +40,54 @@ public final class ParametersDialog {
         stage.initOwner(owner);
         stage.initModality(Modality.APPLICATION_MODAL);
         stage.setTitle("Parameters");
-        stage.setResizable(false);
+        stage.setResizable(true);
 
         GridPane grid = new GridPane();
-        grid.setHgap(14);
+        grid.setHgap(16);
         grid.setVgap(10);
-        grid.setPadding(new Insets(16, 20, 8, 20));
+        grid.setPadding(new Insets(16, 20, 10, 20));
 
         Map<String, TextField> fields = new LinkedHashMap<>();
         int row = 0;
         for (SqlParameters.Parameter param : params) {
             Label nameLabel = new Label(param.name());
             nameLabel.getStyleClass().add("connection-field-label");
-            nameLabel.setMinWidth(140);
+            nameLabel.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-weight: bold; -fx-font-size: 13px;");
+            nameLabel.setMinWidth(110);
+
+            Label snippetLabel = new Label();
+            snippetLabel.setStyle("-fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 12px; -fx-text-fill: -fg-muted;");
+            if (param.contextSnippet() != null && !param.contextSnippet().isBlank()) {
+                snippetLabel.setText(param.contextSnippet());
+            } else if (param.guessedColumn() != null) {
+                snippetLabel.setText(param.guessedColumn());
+            }
+            snippetLabel.setMinWidth(200);
 
             TextField field = new TextField();
-            field.setPrefWidth(260);
-            String hint = param.guessedColumn() != null ? param.guessedColumn() + "  <null>" : "<null>";
-            field.setPromptText(hint);
+            field.setPrefWidth(220);
+            field.setPromptText("<null>");
             fields.put(param.name(), field);
 
             grid.add(nameLabel, 0, row);
-            grid.add(field, 1, row);
+            grid.add(snippetLabel, 1, row);
+            grid.add(field, 2, row);
+            GridPane.setHgrow(field, Priority.ALWAYS);
             row++;
         }
 
         ScrollPane scroll = new ScrollPane(grid);
         scroll.setFitToWidth(true);
-        scroll.setPrefViewportHeight(Math.min(280, params.size() * 42 + 20));
+        scroll.setPrefViewportHeight(Math.min(320, params.size() * 44 + 24));
         scroll.getStyleClass().add("diagram-scroll");
 
         AtomicReference<Map<String, String>> result = new AtomicReference<>();
 
-        Button closeButton = new Button("Close");
         Button executeButton = new Button("Execute");
         executeButton.getStyleClass().add("run-button");
         executeButton.setDefaultButton(true);
+
+        Button closeButton = new Button("Close");
 
         Runnable onExecute = () -> {
             Map<String, String> values = new LinkedHashMap<>();
@@ -97,13 +109,13 @@ public final class ParametersDialog {
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-        HBox buttons = new HBox(10, spacer, closeButton, executeButton);
-        buttons.setPadding(new Insets(8, 20, 16, 20));
+        HBox buttons = new HBox(10, spacer, executeButton, closeButton);
+        buttons.setPadding(new Insets(10, 20, 16, 20));
         buttons.setAlignment(Pos.CENTER_RIGHT);
 
         VBox root = new VBox(scroll, buttons);
         root.getStyleClass().add("app-root");
-        Scene scene = new Scene(root, 440, Math.min(360, params.size() * 46 + 100));
+        Scene scene = new Scene(root, 600, Math.min(380, params.size() * 46 + 110));
         if (owner != null && owner.getScene() != null) {
             scene.getStylesheets().addAll(owner.getScene().getStylesheets());
         }

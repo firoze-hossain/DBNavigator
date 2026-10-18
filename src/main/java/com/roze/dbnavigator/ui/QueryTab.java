@@ -2638,7 +2638,7 @@ public class QueryTab extends Tab {
     private void resolveBatchParametersThenRun(List<String> statements, java.util.function.Consumer<List<String>> onReady) {
         List<com.roze.dbnavigator.util.SqlParameters.Parameter> allParams = new ArrayList<>();
         for (String stmt : statements) {
-            for (com.roze.dbnavigator.util.SqlParameters.Parameter p : com.roze.dbnavigator.util.SqlParameters.detect(stmt)) {
+            for (com.roze.dbnavigator.util.SqlParameters.Parameter p : com.roze.dbnavigator.util.SqlParameters.detect(stmt, AppSettingsStore.load(), profile)) {
                 if (allParams.stream().noneMatch(existing -> existing.name().equalsIgnoreCase(p.name()))) {
                     allParams.add(p);
                 }
@@ -2651,7 +2651,7 @@ public class QueryTab extends Tab {
         ParametersDialog.show(mainWindow.getOwnerWindow(), allParams).ifPresent(values -> {
             List<String> resolved = new ArrayList<>();
             for (String stmt : statements) {
-                resolved.add(com.roze.dbnavigator.util.SqlParameters.substitute(stmt, values));
+                resolved.add(com.roze.dbnavigator.util.SqlParameters.substitute(stmt, values, AppSettingsStore.load(), profile));
             }
             onReady.accept(resolved);
         });

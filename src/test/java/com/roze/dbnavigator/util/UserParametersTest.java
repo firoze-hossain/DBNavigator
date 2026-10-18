@@ -244,4 +244,47 @@ public class UserParametersTest {
         assertTrue(p.isInLiterals());
         assertTrue(p.isEnabled());
     }
+
+    @Test
+    public void testPostgresCastDoesNotCreateParameter() {
+        String sql = """
+                SELECT
+                    b.id AS invoiceId,
+                    b.uhid AS uhid,
+                    b.bill_date_time::date AS billDate,
+                    b.total_amount AS totalAmount,
+                    COALESCE(b.vat, 0) AS vat,
+                    COALESCE(b.unallocated_vat, 0) AS unallocatedVat,
+                    COALESCE(b.vat, 0) + COALESCE(b.unallocated_vat, 0) AS totalVat
+                FROM bbill b
+                WHERE b.bill_date_time::date BETWEEN :fromDate AND :toDate
+                  AND b.status NOT IN (1, 2, 21, 34)
+                """;
+
+        ConnectionProfile pgProfile = new ConnectionProfile();
+        pgProfile.setType(ConnectionProfile.DatabaseType.POSTGRESQL);
+
+        List<SqlParameters.Parameter> params = SqlParameters.detect(sql, defaultSettings, pgProfile);
+
+        // Exactly 2 parameters: fromDate and toDate (NOT 'date' from ::date)
+        assertEquals(2, params.size(), "Should only detect fromDate and toDate, not ::date cast");
+        assertEquals("fromDate", params.get(0).name());
+        assertEquals("toDate", params.get(1).name());
+
+        assertNotNull(params.get(0).contextSnippet());
+        assertTrue(params.get(0).contextSnippet().contains("::date BETWEEN _ AND"),
+                "Snippet should match DataGrip context: " + params.get(0).contextSnippet());
+
+        assertNotNull(params.get(1).contextSnippet());
+        assertTrue(params.get(1).contextSnippet().contains(":fromDate AND _"),
+                "Snippet should match DataGrip context: " + params.get(1).contextSnippet());
+
+        // Test substitution
+        Map<String, String> values = Map.of(
+                "fromDate", "'2026-01-12'",
+                "toDate", "'2026-01-31'"
+        );
+        String substituted = SqlParameters.substitute(sql, values, defaultSettings, pgProfile);
+        assertTrue(substituted.contains("b.bill_date_time::date BETWEEN '2026-01-12' AND '2026-01-31'"));
+    }
 }
