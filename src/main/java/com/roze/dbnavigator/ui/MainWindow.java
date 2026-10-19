@@ -3,6 +3,7 @@ package com.roze.dbnavigator.ui;
 import com.roze.dbnavigator.db.*;
 import com.roze.dbnavigator.model.ConnectionProfile;
 import com.roze.dbnavigator.model.DbObject;
+import com.roze.dbnavigator.update.AppUpdate;
 import com.roze.dbnavigator.util.AppExecutor;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
@@ -132,6 +133,9 @@ public class MainWindow {
     public static MainWindow getInstance() {
         return instance;
     }
+
+    private Button headerUpdateButton;
+    private AppUpdate latestAvailableUpdate;
 
     private Project currentProject;
     private boolean isExiting = false;
@@ -380,7 +384,22 @@ public class MainWindow {
         middleBox.setAlignment(Pos.CENTER);
         this.headerMiddleBar = middleBox;
 
-        // Right: Search Everywhere & Settings buttons
+        // Right: Update pill, Search Everywhere & Settings buttons
+        headerUpdateButton = new Button();
+        headerUpdateButton.getStyleClass().addAll("header-action-button", "header-update-button");
+        headerUpdateButton.setGraphic(Icons.of(FontAwesomeSolid.DOWNLOAD, "#3574f0", 12));
+        if (latestAvailableUpdate != null && latestAvailableUpdate.available && latestAvailableUpdate.release != null) {
+            String v = latestAvailableUpdate.latestVersion != null ? latestAvailableUpdate.latestVersion : latestAvailableUpdate.release.version;
+            headerUpdateButton.setText("Download " + v);
+            headerUpdateButton.setTooltip(new Tooltip("DBNavigator Pro " + v + " is available\nClick to view and download"));
+            headerUpdateButton.setOnAction(e -> AppUpdateDialog.show(stage, latestAvailableUpdate, null, false, false));
+            headerUpdateButton.setVisible(true);
+            headerUpdateButton.setManaged(true);
+        } else {
+            headerUpdateButton.setVisible(false);
+            headerUpdateButton.setManaged(false);
+        }
+
         Button searchButton = new Button();
         searchButton.getStyleClass().add("header-action-button");
         searchButton.setGraphic(Icons.of(FontAwesomeSolid.SEARCH, "#a9b7c6", 12));
@@ -391,11 +410,12 @@ public class MainWindow {
         settingsButton.getStyleClass().add("header-action-button");
         settingsButton.setGraphic(Icons.of(FontAwesomeSolid.COG, "#a9b7c6", 12));
         settingsButton.setTooltip(new Tooltip("Settings"));
-        ContextMenu settingsMenu = buildSettingsContextMenu();
-        settingsButton.setOnAction(e ->
-                settingsMenu.show(settingsButton, javafx.geometry.Side.BOTTOM, 0, 4));
+        settingsButton.setOnAction(e -> {
+            ContextMenu settingsMenu = buildSettingsContextMenu();
+            settingsMenu.show(settingsButton, javafx.geometry.Side.BOTTOM, 0, 4);
+        });
 
-        HBox rightBox = new HBox(4, searchButton, settingsButton);
+        HBox rightBox = new HBox(6, headerUpdateButton, searchButton, settingsButton);
         rightBox.setAlignment(Pos.CENTER_RIGHT);
 
         BorderPane headerBar = new BorderPane();
@@ -1273,6 +1293,14 @@ public class MainWindow {
 
     private ContextMenu buildSettingsContextMenu() {
         ContextMenu settingsMenu = new ContextMenu();
+        if (latestAvailableUpdate != null && latestAvailableUpdate.available && latestAvailableUpdate.release != null) {
+            String v = latestAvailableUpdate.latestVersion != null ? latestAvailableUpdate.latestVersion : latestAvailableUpdate.release.version;
+            MenuItem updateItem = new MenuItem("Download DBNavigator " + v);
+            updateItem.setGraphic(Icons.of(FontAwesomeSolid.DOWNLOAD, "#3574f0", 12));
+            updateItem.getStyleClass().add("settings-update-menu-item");
+            updateItem.setOnAction(e -> AppUpdateDialog.show(stage, latestAvailableUpdate, null, false, false));
+            settingsMenu.getItems().addAll(updateItem, new SeparatorMenuItem());
+        }
         MenuItem openSettings = new MenuItem("Settings…");
         openSettings.setOnAction(e -> SettingsDialog.show(this));
         MenuItem openPlugins = new MenuItem("Plugins…");
@@ -1924,6 +1952,27 @@ public class MainWindow {
 
     public void showCheckUpdatesDialog() {
         AppUpdateDialog.check(stage, false);
+    }
+
+    public void onUpdateDiscovered(AppUpdate update) {
+        this.latestAvailableUpdate = update;
+        if (update != null && update.available && update.release != null) {
+            String v = update.latestVersion != null ? update.latestVersion : update.release.version;
+            if (headerUpdateButton != null) {
+                headerUpdateButton.setText("Download " + v);
+                headerUpdateButton.setTooltip(new Tooltip("DBNavigator Pro " + v + " is available\nClick to view and download"));
+                headerUpdateButton.setOnAction(e -> AppUpdateDialog.show(stage, update, null, false, false));
+                headerUpdateButton.setVisible(true);
+                headerUpdateButton.setManaged(true);
+            }
+            addNotification("DBNavigator Pro " + v + " is available");
+            NotificationBalloon.showUpdateNotification(stage, update, this);
+        } else {
+            if (headerUpdateButton != null) {
+                headerUpdateButton.setVisible(false);
+                headerUpdateButton.setManaged(false);
+            }
+        }
     }
 
     public void showInvalidateCachesDialog() {

@@ -77,7 +77,10 @@ public final class AppUpdateDialog {
             progress.setVisible(true);
             progress.setManaged(true);
             status.setText("Downloading " + release.effectiveFileName() + "…");
-            AppUpdateService.download(release, value -> Platform.runLater(() -> progress.setProgress(value)))
+            AppUpdateService.download(release, value -> Platform.runLater(() -> {
+                progress.setProgress(value);
+                status.setText(String.format("Downloading %s… (%.1f%%)", release.effectiveFileName(), value * 100));
+            }))
                     .whenComplete((file, downloadError) -> Platform.runLater(() -> {
                         if (downloadError != null) {
                             status.setText("Download failed: " + rootMessage(downloadError));
@@ -85,10 +88,11 @@ public final class AppUpdateDialog {
                             return;
                         }
                         fileHolder[0] = file;
-                        status.setText("Download complete and SHA-256 verified.");
+                        status.setText("Download complete (" + release.effectiveFileName() + "). Ready to install.");
                         install.setVisible(true);
                         install.setManaged(true);
                         install.setDisable(false);
+                        install.setStyle("-fx-background-color: #3574f0; -fx-text-fill: white; -fx-font-weight: bold;");
                     }));
         });
 
@@ -128,7 +132,9 @@ public final class AppUpdateDialog {
         AppUpdate.Release release = update.release;
         releaseHolder[0] = release;
         title.setText("DBNavigator Pro " + release.version + " is available");
-        status.setText("Current version: " + AppUpdateService.currentVersion() + "  •  " + release.effectiveFileName() + "  •  " + release.effectivePackageType().toUpperCase() + (release.mandatory ? "  •  Mandatory update" : ""));
+        String sourceName = "github".equalsIgnoreCase(update.source) ? "GitHub Releases" : "RozeHub Website";
+        String sizeStr = release.effectiveFileSize() > 0 ? "  •  " + formatSize(release.effectiveFileSize()) : "";
+        status.setText("Current: " + AppUpdateService.currentVersion() + " → New: " + release.version + "  •  " + sourceName + "  •  " + release.effectiveFileName() + sizeStr + (release.mandatory ? "  •  Mandatory update" : ""));
         notes.setText(release.displayNotes());
         notes.setVisible(true);
         notes.setManaged(true);
@@ -151,5 +157,11 @@ public final class AppUpdateDialog {
         Throwable t = error;
         while (t.getCause() != null && (t.getMessage() == null || t.getMessage().isBlank())) t = t.getCause();
         return t.getMessage() == null ? t.toString() : t.getMessage();
+    }
+
+    private static String formatSize(long bytes) {
+        if (bytes <= 0) return "";
+        if (bytes < 1024 * 1024) return String.format("%.1f KB", bytes / 1024.0);
+        return String.format("%.1f MB", bytes / (1024.0 * 1024.0));
     }
 }

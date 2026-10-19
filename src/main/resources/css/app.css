@@ -1542,3 +1542,93 @@
     -fx-border-color: -border-subtle;
     -fx-border-width: 1 0 1 0;
 }
+
+/* ---------- DataGrip-style update pill button in header ---------- */
+.header-update-button {
+    -fx-background-color: rgba(53, 116, 240, 0.16);
+    -fx-border-color: #3574f0;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+    -fx-text-fill: #3574f0;
+    -fx-font-weight: bold;
+    -fx-font-size: 11px;
+    -fx-padding: 3 8 3 8;
+    -fx-cursor: hand;
+}
+.header-update-button:hover {
+    -fx-background-color: rgba(53, 116, 240, 0.28);
+    -fx-border-color: #528af5;
+}
+
+/* ---------- Settings gear context menu update item ---------- */
+.settings-update-menu-item {
+    -fx-font-weight: bold;
+}
+.settings-update-menu-item .label {
+    -fx-text-fill: #3574f0;
+    -fx-font-weight: bold;
+}
+
+/* ---------- DataGrip Notification Balloon Card ---------- */
+.notification-balloon-card {
+    -fx-background-color: -bg-dark;
+    -fx-border-color: #3574f0;
+    -fx-border-width: 1px 1px 1px 3px;
+    -fx-border-radius: 6px;
+    -fx-background-radius: 6px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.5), 14, 0.2, 0, 4);
+}
+.notification-balloon-title {
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+    -fx-text-fill: -text;
+}
+.notification-balloon-desc {
+    -fx-font-size: 12px;
+    -fx-text-fill: -text-dim;
+}
+.notification-balloon-close {
+    -fx-background-color: transparent;
+    -fx-text-fill: -text-dim;
+    -fx-font-size: 11px;
+    -fx-padding: 1 4 1 4;
+    -fx-cursor: hand;
+}
+.notification-balloon-close:hover {
+    -fx-text-fill: -text;
+    -fx-background-color: rgba(255, 255, 255, 0.1);
+}
+.notification-balloon-action-btn {
+    -fx-background-color: #3574f0;
+    -fx-text-fill: #ffffff;
+    -fx-font-weight: bold;
+    -fx-font-size: 11px;
+    -fx-background-radius: 4px;
+    -fx-padding: 4 10 4 10;
+    -fx-cursor: hand;
+}
+.notification-balloon-action-btn:hover {
+    -fx-background-color: #4682f4;
+}
+.notification-balloon-link {
+    -fx-text-fill: #3574f0;
+    -fx-font-size: 11px;
+    -fx-padding: 0;
+    -fx-cursor: hand;
+    -fx-underline: false;
+}
+.notification-balloon-link:hover {
+    -fx-underline: true;
+}
+.notification-balloon-link-dim {
+    -fx-text-fill: -text-dim;
+    -fx-font-size: 11px;
+    -fx-padding: 0;
+    -fx-cursor: hand;
+    -fx-underline: false;
+}
+.notification-balloon-link-dim:hover {
+    -fx-underline: true;
+    -fx-text-fill: -text;
+}
+

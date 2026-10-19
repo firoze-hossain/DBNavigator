@@ -1616,3 +1616,93 @@
     -fx-border-color: -border-subtle;
     -fx-border-width: 1 0 1 0;
 }
+
+/* ---------- DataGrip-style update pill button in header ---------- */
+.header-update-button {
+    -fx-background-color: rgba(53, 116, 240, 0.12);
+    -fx-border-color: #3574f0;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+    -fx-text-fill: #1a56c4;
+    -fx-font-weight: bold;
+    -fx-font-size: 11px;
+    -fx-padding: 3 8 3 8;
+    -fx-cursor: hand;
+}
+.header-update-button:hover {
+    -fx-background-color: rgba(53, 116, 240, 0.22);
+    -fx-border-color: #2960cc;
+}
+
+/* ---------- Settings gear context menu update item ---------- */
+.settings-update-menu-item {
+    -fx-font-weight: bold;
+}
+.settings-update-menu-item .label {
+    -fx-text-fill: #1a56c4;
+    -fx-font-weight: bold;
+}
+
+/* ---------- DataGrip Notification Balloon Card ---------- */
+.notification-balloon-card {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #3574f0;
+    -fx-border-width: 1px 1px 1px 3px;
+    -fx-border-radius: 6px;
+    -fx-background-radius: 6px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.18), 12, 0.1, 0, 3);
+}
+.notification-balloon-title {
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+    -fx-text-fill: #1a1a1e;
+}
+.notification-balloon-desc {
+    -fx-font-size: 12px;
+    -fx-text-fill: #6e6e76;
+}
+.notification-balloon-close {
+    -fx-background-color: transparent;
+    -fx-text-fill: #6e6e76;
+    -fx-font-size: 11px;
+    -fx-padding: 1 4 1 4;
+    -fx-cursor: hand;
+}
+.notification-balloon-close:hover {
+    -fx-text-fill: #1a1a1e;
+    -fx-background-color: rgba(0, 0, 0, 0.06);
+}
+.notification-balloon-action-btn {
+    -fx-background-color: #3574f0;
+    -fx-text-fill: #ffffff;
+    -fx-font-weight: bold;
+    -fx-font-size: 11px;
+    -fx-background-radius: 4px;
+    -fx-padding: 4 10 4 10;
+    -fx-cursor: hand;
+}
+.notification-balloon-action-btn:hover {
+    -fx-background-color: #2960cc;
+}
+.notification-balloon-link {
+    -fx-text-fill: #1a56c4;
+    -fx-font-size: 11px;
+    -fx-padding: 0;
+    -fx-cursor: hand;
+    -fx-underline: false;
+}
+.notification-balloon-link:hover {
+    -fx-underline: true;
+}
+.notification-balloon-link-dim {
+    -fx-text-fill: #7a7a82;
+    -fx-font-size: 11px;
+    -fx-padding: 0;
+    -fx-cursor: hand;
+    -fx-underline: false;
+}
+.notification-balloon-link-dim:hover {
+    -fx-underline: true;
+    -fx-text-fill: #1a1a1e;
+}
+

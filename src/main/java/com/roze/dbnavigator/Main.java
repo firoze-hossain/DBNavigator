@@ -104,12 +104,14 @@ public class Main extends Application {
         // Non-blocking startup update check. The user controls this from Settings > Updates.
         var updateSettings = AppSettingsStore.load();
         if (updateSettings.isAutoUpdateEnabled()) {
-            AppUpdateService.checkForUpdate().thenAccept(update -> {
-                if (update != null && update.available) {
-                    javafx.application.Platform.runLater(() ->
-                            AppUpdateDialog.show(stage, update, null, updateSettings.isAutoDownloadUpdates(), false));
-                }
-            }).exceptionally(error -> null);
+            AppExecutor.schedule(() -> {
+                AppUpdateService.checkForUpdate().thenAccept(update -> {
+                    if (update != null && update.available) {
+                        javafx.application.Platform.runLater(() ->
+                                window.onUpdateDiscovered(update));
+                    }
+                }).exceptionally(error -> null);
+            }, 2, java.util.concurrent.TimeUnit.SECONDS);
         }
     }
 

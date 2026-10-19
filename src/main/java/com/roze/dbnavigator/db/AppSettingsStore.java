@@ -126,6 +126,7 @@ public final class AppSettingsStore {
         public boolean autoDownloadUpdates = false;
         public String updateChannel = "Stable";
         public String updateEndpoint = "";
+        public String gitHubRepo = "firoze-hossain/DBNavigator";
         public int queryTimeoutSeconds = 30;
         public int maxResultRows = 500;
         public boolean autoCommit = true;
@@ -3618,6 +3619,10 @@ public final class AppSettingsStore {
         public void setUpdateChannel(String value) { this.updateChannel = value; }
         public String getUpdateEndpoint() { return updateEndpoint; }
         public void setUpdateEndpoint(String value) { this.updateEndpoint = value; }
+        public String getGitHubRepo() {
+            return (gitHubRepo == null || gitHubRepo.isBlank()) ? "firoze-hossain/DBNavigator" : gitHubRepo.trim();
+        }
+        public void setGitHubRepo(String value) { this.gitHubRepo = value; }
 
         /**
          * Returns the effective RozeHub API base URL (default: "http://127.0.0.1:8000/api/v1").

@@ -1781,14 +1781,19 @@ public final class SettingsDialog {
         channel.getSelectionModel().select(settings.getUpdateChannel());
         channel.setPrefWidth(180);
 
-        Label endpointLabel = new Label("RozeHub Base URL:");
+        Label endpointLabel = new Label("Website / RozeHub API Base URL:");
         endpointLabel.getStyleClass().add("connection-field-label");
         TextField endpoint = new TextField(settings.getUpdateEndpoint());
         endpoint.setPromptText("Default: " + AppSettingsStore.DEFAULT_ROZEHUB_API_BASE_URL);
         endpoint.setPrefWidth(420);
 
-        Label hint = new Label("Central RozeHub API Base URL (default: " + AppSettingsStore.DEFAULT_ROZEHUB_API_BASE_URL
-                + "). Powers application updates, release downloads, and plugin marketplace. When deploying to live, only change this single URL.");
+        Label githubLabel = new Label("GitHub Fallback Repository (owner/repo):");
+        githubLabel.getStyleClass().add("connection-field-label");
+        TextField githubRepo = new TextField(settings.getGitHubRepo());
+        githubRepo.setPromptText("Default: firoze-hossain/DBNavigator");
+        githubRepo.setPrefWidth(420);
+
+        Label hint = new Label("DBNavigator checks your website first. If the website is offline or not yet launched, it automatically searches for the latest release in your GitHub repository.");
         hint.getStyleClass().add("console-status");
         hint.setWrapText(true);
         hint.setMaxWidth(500);
@@ -1803,8 +1808,9 @@ public final class SettingsDialog {
         inputs.put("autoDownload", autoDownload);
         inputs.put("channel", channel);
         inputs.put("endpoint", endpoint);
+        inputs.put("githubRepo", githubRepo);
 
-        VBox panel = new VBox(14, title, autoCheck, autoDownload, channelLabel, channel, endpointLabel, endpoint, hint, check);
+        VBox panel = new VBox(14, title, autoCheck, autoDownload, channelLabel, channel, endpointLabel, endpoint, githubLabel, githubRepo, hint, check);
         panel.setPadding(new Insets(4, 8, 16, 8));
         return panel;
     }
@@ -10933,6 +10939,10 @@ public final class SettingsDialog {
         if (inputs.containsKey("endpoint")) {
             TextField tf = (TextField) inputs.get("endpoint");
             if (tf.getText() != null) settings.setUpdateEndpoint(tf.getText().trim());
+        }
+        if (inputs.containsKey("githubRepo")) {
+            TextField tf = (TextField) inputs.get("githubRepo");
+            if (tf.getText() != null) settings.setGitHubRepo(tf.getText().trim());
         }
 
         // Database settings

@@ -15,6 +15,8 @@ public final class AppUpdate {
     public String latestVersion;
     public String minimumSupportedVersion;
     public Release release;
+    public String source = "website"; // "website" or "github"
+    public String htmlUrl;
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static final class Release {
@@ -24,6 +26,7 @@ public final class AppUpdate {
         public String notes;
         public String minimumVersion;
         public boolean mandatory;
+        public String htmlUrl;
 
         // Legacy release-level package fields. Kept for backward compatibility.
         public String fileName;
