@@ -9,6 +9,7 @@ import com.roze.dbnavigator.db.TreeStateStore;
 import com.roze.dbnavigator.model.ConnectionProfile;
 import com.roze.dbnavigator.model.DbObject;
 import com.roze.dbnavigator.model.DbObject.Kind;
+import com.roze.dbnavigator.search.SearchHit;
 import com.roze.dbnavigator.util.AppExecutor;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
@@ -5736,5 +5737,114 @@ public class SchemaTreePane extends VBox {
                 || kind == Kind.PARTITIONS_FOLDER
                 || kind == Kind.FIELDS_FOLDER
                 || kind == Kind.ROLES_FOLDER;
+    }
+
+    /**
+     * DataGrip-grade immediate in-memory search across currently loaded tree items.
+     * Provides 0ms instant response while background queries execute.
+     */
+    public void searchLoadedTreeItems(String query, List<SearchHit> results, int limit) {
+        if (query == null || query.isBlank()) return;
+        String lower = query.toLowerCase(Locale.ROOT);
+        collectLoadedTreeHits(root, lower, results, limit);
+    }
+
+    private void collectLoadedTreeHits(TreeItem<DbObject> parent, String lowerQuery,
+                                       List<SearchHit> results, int limit) {
+        if (parent == null || results.size() >= limit) return;
+        for (TreeItem<DbObject> child : parent.getChildren()) {
+            if (results.size() >= limit) return;
+            DbObject obj = child.getValue();
+            if (obj != null && obj.getName() != null && !obj.getName().isBlank()) {
+                String name = obj.getName();
+                if (name.toLowerCase(Locale.ROOT).contains(lowerQuery)) {
+                    SearchHit.Type hitType = mapKindToSearchHitType(obj.getKind());
+                    if (hitType != null) {
+                        ConnectionProfile profile = profileFor(child);
+                        String detail = buildTreeItemDetail(obj, profile);
+                        String uri = buildTreeItemUri(obj, profile);
+                        boolean isPk = (obj.getKind() == Kind.KEY);
+                        boolean isFk = (obj.getKind() == Kind.FOREIGN_KEY);
+                        boolean isTable = (obj.getKind() == Kind.TABLE || obj.getKind() == Kind.VIEW || obj.getKind() == Kind.PARTITION);
+
+                        SearchHit hit = new SearchHit.Builder()
+                                .type(hitType)
+                                .name(name)
+                                .detail(detail)
+                                .fullUri(uri)
+                                .profile(profile)
+                                .dbObject(obj)
+                                .parentTable(obj.getTableName() != null ? obj.getTableName() : (isTable ? name : null))
+                                .columnName(obj.getKind() == Kind.COLUMN ? name : null)
+                                .primaryKey(isPk)
+                                .foreignKey(isFk)
+                                .build();
+                        results.add(hit);
+                    }
+                }
+            }
+            collectLoadedTreeHits(child, lowerQuery, results, limit);
+        }
+    }
+
+    private SearchHit.Type mapKindToSearchHitType(Kind kind) {
+        if (kind == null) return null;
+        return switch (kind) {
+            case TABLE, COLLECTION -> SearchHit.Type.TABLE;
+            case VIEW, VIRTUAL_VIEW -> SearchHit.Type.VIEW;
+            case COLUMN, FIELD -> SearchHit.Type.COLUMN;
+            case SEQUENCE -> SearchHit.Type.SEQUENCE;
+            case KEY -> SearchHit.Type.PRIMARY_KEY;
+            case FOREIGN_KEY -> SearchHit.Type.CONSTRAINT;
+            case INDEX -> SearchHit.Type.INDEX;
+            default -> null;
+        };
+    }
+
+    private String buildTreeItemDetail(DbObject obj, ConnectionProfile profile) {
+        StringBuilder sb = new StringBuilder();
+        if (obj.getCatalog() != null && !obj.getCatalog().isBlank()) {
+            sb.append(obj.getCatalog());
+        }
+        if (obj.getSchema() != null && !obj.getSchema().isBlank()) {
+            if (sb.length() > 0) sb.append(".");
+            sb.append(obj.getSchema());
+        }
+        if (obj.getTableName() != null && !obj.getTableName().isBlank()) {
+            if (sb.length() > 0) sb.append(".");
+            sb.append(obj.getTableName());
+        }
+        if (profile != null) {
+            sb.append(" [").append(profile.getName()).append("]");
+        }
+        return sb.toString();
+    }
+
+    private String buildTreeItemUri(DbObject obj, ConnectionProfile profile) {
+        StringBuilder sb = new StringBuilder("DATABASE/");
+        if (profile != null) {
+            sb.append(profile.getId() != null ? profile.getId() : profile.getName());
+        }
+        if (obj.getCatalog() != null) {
+            sb.append("/database/").append(obj.getCatalog());
+        }
+        if (obj.getSchema() != null) {
+            sb.append("/schema/").append(obj.getSchema());
+        }
+        if (obj.getTableName() != null) {
+            sb.append("/table/").append(obj.getTableName());
+        }
+        if (obj.getName() != null) {
+            if (obj.getKind() == Kind.COLUMN) {
+                sb.append("/column/").append(obj.getName());
+            } else if (obj.getKind() == Kind.TABLE || obj.getKind() == Kind.VIEW) {
+                if (obj.getTableName() == null) {
+                    sb.append("/table/").append(obj.getName());
+                }
+            } else {
+                sb.append("/").append(obj.getKind().name().toLowerCase(Locale.ROOT)).append("/").append(obj.getName());
+            }
+        }
+        return sb.toString();
     }
 }

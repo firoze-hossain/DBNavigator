@@ -2749,7 +2749,7 @@ public class MainWindow {
     }
 
     /** Every editor pane currently in the split layout — used by TabContextMenu's Close Other/All Tabs, which act across all of them, not just the pane a tab happens to be in. */
-    List<TabPane> editorTabPanes() {
+    public List<TabPane> editorTabPanes() {
         List<TabPane> panes = new java.util.ArrayList<>();
         collectEditorTabPanes(centerSplit.getItems().get(1), panes);
         return panes;

@@ -98,43 +98,73 @@ public class QueryTabDatabaseSelectorTest {
                 "Banner should be hidden when current database ('nexacom_db') is introspected");
     }
 
+    private void runOnFxThread(Runnable r) {
+        java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.atomic.AtomicReference<Throwable> err = new java.util.concurrent.atomic.AtomicReference<>();
+        Platform.runLater(() -> {
+            try {
+                r.run();
+            } catch (Throwable t) {
+                err.set(t);
+            } finally {
+                latch.countDown();
+            }
+        });
+        try {
+            assertTrue(latch.await(5, java.util.concurrent.TimeUnit.SECONDS));
+        } catch (InterruptedException e) {
+            fail(e);
+        }
+        if (err.get() != null) {
+            if (err.get() instanceof RuntimeException re) throw re;
+            if (err.get() instanceof AssertionError ae) throw ae;
+            throw new RuntimeException(err.get());
+        }
+    }
+
     @Test
     public void testSqliteHasNoDropdownAndBannerHidden() {
-        ConnectionProfile profile = createSqliteProfile();
-        QueryTab tab = new QueryTab(null, profile, null, "console_3");
+        runOnFxThread(() -> {
+            ConnectionProfile profile = createSqliteProfile();
+            QueryTab tab = new QueryTab(null, profile, null, "console_3");
 
-        assertNull(tab.getDbSelectorButton(),
-                "SQLite only has 'main', so no dropdown MenuButton is created");
-        assertEquals("main", tab.formatSelectorText(null));
+            assertNull(tab.getDbSelectorButton(),
+                    "SQLite only has 'main', so no dropdown MenuButton is created");
+            assertEquals("main", tab.formatSelectorText(null));
 
-        HBox banner = tab.getIntrospectionBanner();
-        assertNotNull(banner);
-        assertFalse(banner.isVisible(), "Introspection banner must always be hidden for SQLite");
+            HBox banner = tab.getIntrospectionBanner();
+            assertNotNull(banner);
+            assertFalse(banner.isVisible(), "Introspection banner must always be hidden for SQLite");
+        });
     }
 
     @Test
     public void testSqlServerAndOracleSelectorFormatting() {
-        ConnectionProfile mssql = createSqlServerProfile();
-        QueryTab mssqlTab = new QueryTab(null, mssql, "CompanyDB", "console_2");
-        assertEquals("CompanyDB.<schema>", mssqlTab.formatSelectorText("CompanyDB"));
-        assertEquals("CompanyDB.<schema>", mssqlTab.getDbSelectorButton().getText());
+        runOnFxThread(() -> {
+            ConnectionProfile mssql = createSqlServerProfile();
+            QueryTab mssqlTab = new QueryTab(null, mssql, "CompanyDB", "console_2");
+            assertEquals("CompanyDB.<schema>", mssqlTab.formatSelectorText("CompanyDB"));
+            assertEquals("CompanyDB.<schema>", mssqlTab.getDbSelectorButton().getText());
 
-        ConnectionProfile oracle = createOracleProfile();
-        QueryTab oracleTab = new QueryTab(null, oracle, "HELLO", "console_2");
-        assertEquals("HELLO", oracleTab.formatSelectorText("hello"));
-        assertEquals("HELLO", oracleTab.getDbSelectorButton().getText());
+            ConnectionProfile oracle = createOracleProfile();
+            QueryTab oracleTab = new QueryTab(null, oracle, "HELLO", "console_2");
+            assertEquals("HELLO", oracleTab.formatSelectorText("hello"));
+            assertEquals("HELLO", oracleTab.getDbSelectorButton().getText());
+        });
     }
 
     @Test
     public void testMysqlSelectorFormatting() {
-        ConnectionProfile mysql = createMysqlProfile();
-        QueryTab tab = new QueryTab(null, mysql, "bagisto", "console_1");
-        assertEquals("bagisto", tab.formatSelectorText("bagisto"));
-        assertEquals("bagisto", tab.getDbSelectorButton().getText());
+        runOnFxThread(() -> {
+            ConnectionProfile mysql = createMysqlProfile();
+            QueryTab tab = new QueryTab(null, mysql, "bagisto", "console_1");
+            assertEquals("bagisto", tab.formatSelectorText("bagisto"));
+            assertEquals("bagisto", tab.getDbSelectorButton().getText());
 
-        tab.switchDatabase("sakila");
-        assertEquals("sakila", tab.getCatalog());
-        assertEquals("sakila", tab.getDbSelectorButton().getText());
+            tab.switchDatabase("sakila");
+            assertEquals("sakila", tab.getCatalog());
+            assertEquals("sakila", tab.getDbSelectorButton().getText());
+        });
     }
 
     @Test
