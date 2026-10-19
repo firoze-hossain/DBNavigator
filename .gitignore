@@ -48,3 +48,6 @@ nbdist/
 
 # macOS system files
 .DS_Store
+
+# Local SQLite databases
+*.sqlite
