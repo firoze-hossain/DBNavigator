@@ -6,7 +6,7 @@
 
 One unified explorer, intelligent query console, interactive data editor, and visual ER diagram modeler for relational SQL databases and MongoDB.
 
-[![Release](https://img.shields.io/badge/Release-v1.0.0-blue.svg?style=flat-square)](https://github.com/firoze-hossain/DBNavigator/releases/tag/v1.0.0)
+[![Release](https://img.shields.io/badge/Release-1.0.0-blue.svg?style=flat-square)](https://github.com/firoze-hossain/DBNavigator/releases/tag/1.0.0)
 [![Java](https://img.shields.io/badge/Java-21%2B%20(LTS)-orange.svg?style=flat-square)](https://www.oracle.com/java/)
 [![JavaFX](https://img.shields.io/badge/JavaFX-23-purple.svg?style=flat-square)](https://openjfx.io/)
 [![Platforms](https://img.shields.io/badge/Platform-macOS%20|%20Windows%20|%20Linux-brightgreen.svg?style=flat-square)]()
@@ -125,11 +125,11 @@ Instead of switching between disconnected tools for different database engines, 
 
 ## 📥 Downloads & Installation
 
-Download the official binary for your operating system from the [**GitHub Releases**](https://github.com/firoze-hossain/DBNavigator/releases/tag/v1.0.0) page.
+Download the official binary for your operating system from the [**GitHub Releases**](https://github.com/firoze-hossain/DBNavigator/releases/tag/1.0.0) page.
 
 ### 🍎 macOS Installation (Apple Silicon & Intel)
 
-1. Download the macOS package (`DBNavigator-1.0.0.dmg` or `DBNavigator-1.0.0.pkg`) from [Releases](https://github.com/firoze-hossain/DBNavigator/releases/tag/v1.0.0).
+1. Download the macOS package (`DBNavigator-1.0.0.dmg` or `DBNavigator-1.0.0.pkg`) from [Releases](https://github.com/firoze-hossain/DBNavigator/releases/tag/1.0.0).
 2. Open the `.dmg` file and drag `DBNavigator.app` into your **Applications** folder.
 
 #### ⚠️ Resolving macOS Gatekeeper ("Unidentified Developer" Warning)
@@ -161,7 +161,7 @@ Because DBNavigator is an independent open-source project and is not signed with
 
 ### 🪟 Windows Installation (Windows 10 / 11 64-bit)
 
-1. Download `DBNavigator-1.0.0.msi` or `DBNavigator-1.0.0-setup.exe` from [Releases](https://github.com/firoze-hossain/DBNavigator/releases/tag/v1.0.0).
+1. Download `DBNavigator-1.0.0.msi` or `DBNavigator-1.0.0-setup.exe` from [Releases](https://github.com/firoze-hossain/DBNavigator/releases/tag/1.0.0).
 2. Double-click the installer and follow the setup wizard.
 
 #### ⚠️ Resolving Windows SmartScreen Notice
@@ -178,7 +178,7 @@ On initial launch, Microsoft Defender SmartScreen may display:
 ### 🐧 Linux Installation (Ubuntu, Debian, Fedora, Arch)
 
 #### Debian / Ubuntu / Linux Mint (`.deb`)
-1. Download `DBNavigator-1.0.0.deb` from [Releases](https://github.com/firoze-hossain/DBNavigator/releases/tag/v1.0.0).
+1. Download `DBNavigator-1.0.0.deb` from [Releases](https://github.com/firoze-hossain/DBNavigator/releases/tag/1.0.0).
 2. Install via terminal:
    ```bash
    sudo dpkg -i DBNavigator-1.0.0.deb
