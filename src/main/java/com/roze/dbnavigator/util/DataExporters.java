@@ -39,11 +39,12 @@ public final class DataExporters {
         SEMICOLON("Semicolon-separated", FormatCategory.CSV, ".txt"),
 
         // Scripted
+        CSV_GROOVY("CSV-Groovy", FormatCategory.SCRIPTED, ".csv"),
         HTML_GROOVY("HTML (groovy)", FormatCategory.SCRIPTED, ".html"),
         HTML_JS("HTML (js)", FormatCategory.SCRIPTED, ".html"),
         JSON("JSON", FormatCategory.SCRIPTED, ".json"),
         MARKDOWN("Markdown", FormatCategory.SCRIPTED, ".md"),
-        ONE_ROW("One-row", FormatCategory.SCRIPTED, ".txt"),
+        ONE_ROW("One-row", FormatCategory.SCRIPTED, ".sql"),
         PRETTY("Pretty", FormatCategory.SCRIPTED, ".txt"),
         PYTHON_DATAFRAME("Python-DataFrame", FormatCategory.SCRIPTED, ".py"),
         SQL_INSERT_MULTIROW("SQL-Insert-Multirow", FormatCategory.SCRIPTED, ".sql"),
@@ -68,8 +69,15 @@ public final class DataExporters {
 
         public static Format fromLabel(String label) {
             if (label == null) return CSV;
+            String trimmed = label.trim();
             for (Format f : values()) {
-                if (f.label.equalsIgnoreCase(label.trim())) return f;
+                if (f.label.equalsIgnoreCase(trimmed) || f.name().equalsIgnoreCase(trimmed)) {
+                    return f;
+                }
+            }
+            if (trimmed.equalsIgnoreCase("CSV (groovy)") || trimmed.equalsIgnoreCase("CSV-Groovy")
+                    || trimmed.equalsIgnoreCase("csv.groovy") || trimmed.equalsIgnoreCase("CSV (Groovy)")) {
+                return CSV_GROOVY;
             }
             return CSV;
         }
@@ -81,6 +89,10 @@ public final class DataExporters {
         private boolean addRowHeader = false;
         private boolean skipComputedColumns = true;
         private boolean skipGeneratedColumns = false;
+        private boolean addComputedColumns = false;
+        private boolean addGeneratedColumns = true;
+        private boolean addTableDefinition = false;
+        private boolean outputQueryToSeparateSheet = true;
 
         public ExportOptions() {}
 
@@ -104,6 +116,20 @@ public final class DataExporters {
 
         public boolean isSkipGeneratedColumns() { return skipGeneratedColumns; }
         public void setSkipGeneratedColumns(boolean skipGeneratedColumns) { this.skipGeneratedColumns = skipGeneratedColumns; }
+
+        public boolean isAddComputedColumns() { return addComputedColumns; }
+        public void setAddComputedColumns(boolean addComputedColumns) { this.addComputedColumns = addComputedColumns; }
+
+        public boolean isAddGeneratedColumns() { return addGeneratedColumns; }
+        public void setAddGeneratedColumns(boolean addGeneratedColumns) { this.addGeneratedColumns = addGeneratedColumns; }
+
+        public boolean isAddTableDefinition() { return addTableDefinition; }
+        public void setAddTableDefinition(boolean addTableDefinition) { this.addTableDefinition = addTableDefinition; }
+
+        public boolean isOutputQueryToSeparateSheet() { return outputQueryToSeparateSheet; }
+        public void setOutputQueryToSeparateSheet(boolean outputQueryToSeparateSheet) {
+            this.outputQueryToSeparateSheet = outputQueryToSeparateSheet;
+        }
     }
 
     private DataExporters() {}
@@ -124,10 +150,30 @@ public final class DataExporters {
         if (result == null) return "";
         if (options == null) options = new ExportOptions();
 
-        List<String> columns = result.getColumns() != null ? new ArrayList<>(result.getColumns()) : new ArrayList<>();
-        List<List<String>> rows = result.getRows() != null ? new ArrayList<>(result.getRows()) : new ArrayList<>();
-        int limit = rowLimit <= 0 ? rows.size() : Math.min(rowLimit, rows.size());
-        List<List<String>> limitedRows = new ArrayList<>(rows.subList(0, limit));
+        List<String> rawColumns = result.getColumns() != null ? new ArrayList<>(result.getColumns()) : new ArrayList<>();
+        List<List<String>> rawRows = result.getRows() != null ? new ArrayList<>(result.getRows()) : new ArrayList<>();
+
+        List<Integer> validIndices = new ArrayList<>();
+        List<String> columns = new ArrayList<>();
+        for (int i = 0; i < rawColumns.size(); i++) {
+            String col = rawColumns.get(i);
+            if ("tableoid".equalsIgnoreCase(col) || "ctid".equalsIgnoreCase(col)) {
+                continue;
+            }
+            validIndices.add(i);
+            columns.add(col);
+        }
+
+        int limit = rowLimit <= 0 ? rawRows.size() : Math.min(rowLimit, rawRows.size());
+        List<List<String>> limitedRows = new ArrayList<>();
+        for (int r = 0; r < limit; r++) {
+            List<String> originalRow = rawRows.get(r);
+            List<String> row = new ArrayList<>(validIndices.size());
+            for (int idx : validIndices) {
+                row.add(idx < originalRow.size() ? originalRow.get(idx) : "");
+            }
+            limitedRows.add(row);
+        }
 
         String tableName = (qualifiedTable != null && !qualifiedTable.isBlank()) ? qualifiedTable : "table";
 
@@ -146,6 +192,7 @@ public final class DataExporters {
 
         return switch (format) {
             case CSV -> renderDelimited(transposed, ",", options);
+            case CSV_GROOVY -> renderCsvGroovy(transposed, options);
             case TSV -> renderDelimited(transposed, "\t", options);
             case PIPE -> renderDelimited(transposed, "|", options);
             case SEMICOLON -> renderDelimited(transposed, ";", options);
@@ -227,6 +274,23 @@ public final class DataExporters {
         return sb.toString();
     }
 
+    private static String renderCsvGroovy(TransposedData data, ExportOptions options) {
+        StringBuilder sb = new StringBuilder();
+        for (List<String> row : data.rows) {
+            for (int i = 0; i < row.size(); i++) {
+                if (i > 0) sb.append(',');
+                String val = row.get(i);
+                if (val == null || "null".equalsIgnoreCase(val)) {
+                    sb.append("null");
+                } else {
+                    sb.append(escapeDelimited(val, ","));
+                }
+            }
+            sb.append('\n');
+        }
+        return sb.toString();
+    }
+
     private static String joinDelimited(List<String> values, String delim) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < values.size(); i++) {
@@ -245,11 +309,32 @@ public final class DataExporters {
 
     // ------------------------------------------------------------ SQL Formats
 
+    public static String sqlTableName(String qualifiedTable) {
+        if (qualifiedTable == null || qualifiedTable.isBlank()) return "table";
+        String[] parts = qualifiedTable.split("\\.");
+        if (parts.length >= 3) {
+            return DbObject.quote(parts[parts.length - 2]) + "." + DbObject.quote(parts[parts.length - 1]);
+        } else if (parts.length == 2) {
+            return DbObject.quote(parts[0]) + "." + DbObject.quote(parts[1]);
+        }
+        return DbObject.quote(qualifiedTable);
+    }
+
     private static String sqlInserts(List<String> columns, List<List<String>> rows, String table, ExportOptions options) {
         StringBuilder sb = new StringBuilder();
+        String targetTable = sqlTableName(table);
+        if (options != null && options.isAddTableDefinition()) {
+            sb.append("CREATE TABLE ").append(targetTable).append(" (\n");
+            for (int c = 0; c < columns.size(); c++) {
+                sb.append("    ").append(DbObject.quote(columns.get(c))).append(" varchar");
+                if (c < columns.size() - 1) sb.append(",");
+                sb.append("\n");
+            }
+            sb.append(");\n\n");
+        }
         String columnList = String.join(", ", columns.stream().map(DbObject::quote).toList());
         for (List<String> row : rows) {
-            sb.append("INSERT INTO ").append(table).append(" (").append(columnList).append(") VALUES (");
+            sb.append("INSERT INTO ").append(targetTable).append(" (").append(columnList).append(") VALUES (");
             for (int c = 0; c < row.size(); c++) {
                 if (c > 0) sb.append(", ");
                 sb.append(sqlLiteral(row.get(c)));
@@ -262,14 +347,28 @@ public final class DataExporters {
     private static String sqlInsertMultirow(List<String> columns, List<List<String>> rows, String table, ExportOptions options) {
         if (rows.isEmpty()) return "";
         StringBuilder sb = new StringBuilder();
+        String targetTable = sqlTableName(table);
+        if (options != null && options.isAddTableDefinition()) {
+            sb.append("create table ").append(targetTable).append(" (\n");
+            for (int c = 0; c < columns.size(); c++) {
+                sb.append("    ").append(DbObject.quote(columns.get(c))).append(" varchar");
+                if (c < columns.size() - 1) sb.append(",");
+                sb.append("\n");
+            }
+            sb.append(");\n\n");
+        }
         String columnList = String.join(", ", columns.stream().map(DbObject::quote).toList());
-        sb.append("INSERT INTO ").append(table).append(" (").append(columnList).append(")\nVALUES\n");
+        sb.append("insert into ").append(targetTable).append(" (").append(columnList).append(")\n");
         for (int i = 0; i < rows.size(); i++) {
             List<String> row = rows.get(i);
-            sb.append("  (");
+            if (i == 0) {
+                sb.append("values (");
+            } else {
+                sb.append("       (");
+            }
             for (int c = 0; c < row.size(); c++) {
                 if (c > 0) sb.append(", ");
-                sb.append(sqlLiteral(row.get(c)));
+                sb.append(sqlLiteralLower(row.get(c)));
             }
             sb.append(")");
             if (i < rows.size() - 1) {
@@ -282,21 +381,37 @@ public final class DataExporters {
     }
 
     private static String sqlInsertStatements(List<String> columns, List<List<String>> rows, String table, ExportOptions options) {
-        return sqlInserts(columns, rows, table, options);
+        StringBuilder sb = new StringBuilder();
+        String targetTable = sqlTableName(table);
+        if (options != null && options.isAddTableDefinition()) {
+            sb.append("create table ").append(targetTable).append(" (\n");
+            for (int c = 0; c < columns.size(); c++) {
+                sb.append("    ").append(DbObject.quote(columns.get(c))).append(" varchar");
+                if (c < columns.size() - 1) sb.append(",");
+                sb.append("\n");
+            }
+            sb.append(");\n\n");
+        }
+        String columnList = String.join(", ", columns.stream().map(DbObject::quote).toList());
+        for (List<String> row : rows) {
+            sb.append("insert into ").append(targetTable).append(" (").append(columnList).append(") values (");
+            for (int c = 0; c < row.size(); c++) {
+                if (c > 0) sb.append(", ");
+                sb.append(sqlLiteralLower(row.get(c)));
+            }
+            sb.append(");\n");
+        }
+        return sb.toString();
     }
 
     private static String sqlUpdates(List<String> columns, List<List<String>> rows, String table, ExportOptions options) {
         StringBuilder sb = new StringBuilder();
+        String targetTable = sqlTableName(table);
         for (List<String> row : rows) {
-            sb.append("UPDATE ").append(table).append(" SET ");
+            sb.append("UPDATE ").append(targetTable).append(" SET ");
             for (int c = 0; c < columns.size(); c++) {
                 if (c > 0) sb.append(", ");
-                sb.append(DbObject.quote(columns.get(c))).append(" = ").append(sqlLiteral(row.get(c)));
-            }
-            sb.append(" WHERE ");
-            for (int c = 0; c < columns.size(); c++) {
-                if (c > 0) sb.append(" AND ");
-                sb.append(DbObject.quote(columns.get(c))).append(" = ").append(sqlLiteral(row.get(c)));
+                sb.append(DbObject.quote(columns.get(c))).append(" = ").append(sqlLiteral(c < row.size() ? row.get(c) : null));
             }
             sb.append(";\n");
         }
@@ -305,20 +420,36 @@ public final class DataExporters {
 
     private static String whereClauses(List<String> columns, List<List<String>> rows, ExportOptions options) {
         StringBuilder sb = new StringBuilder();
-        for (List<String> row : rows) {
-            sb.append("WHERE ");
+        for (int r = 0; r < rows.size(); r++) {
+            List<String> row = rows.get(r);
+            if (r > 0) {
+                sb.append("OR ");
+            }
             for (int c = 0; c < columns.size(); c++) {
                 if (c > 0) sb.append(" AND ");
-                sb.append(DbObject.quote(columns.get(c))).append(" = ").append(sqlLiteral(row.get(c)));
+                String col = columns.get(c);
+                String val = c < row.size() ? row.get(c) : null;
+                if (val == null || val.equalsIgnoreCase("null") || val.equals("<null>")) {
+                    sb.append(DbObject.quote(col)).append(" IS NULL");
+                } else {
+                    sb.append(DbObject.quote(col)).append(" = ").append(sqlLiteral(val));
+                }
             }
-            sb.append(";\n");
+            sb.append("\n");
         }
         return sb.toString();
     }
 
     private static String sqlLiteral(String value) {
-        if (value == null || value.equals("NULL")) return "NULL";
-        if (value.equalsIgnoreCase("true") || value.equalsIgnoreCase("false")) return value;
+        if (value == null || value.equalsIgnoreCase("null") || value.equals("<null>")) return "NULL";
+        if (value.equalsIgnoreCase("true") || value.equalsIgnoreCase("false")) return value.toUpperCase();
+        if (value.matches("-?\\d+(\\.\\d+)?")) return value;
+        return "'" + value.replace("'", "''") + "'";
+    }
+
+    private static String sqlLiteralLower(String value) {
+        if (value == null || value.equalsIgnoreCase("null") || value.equals("<null>")) return "null";
+        if (value.equalsIgnoreCase("true") || value.equalsIgnoreCase("false")) return value.toLowerCase();
         if (value.matches("-?\\d+(\\.\\d+)?")) return value;
         return "'" + value.replace("'", "''") + "'";
     }
@@ -393,30 +524,39 @@ public final class DataExporters {
     // ------------------------------------------------------------ Markdown
 
     private static String renderMarkdown(List<String> headers, List<List<String>> rows, ExportOptions options) {
+        if (headers == null || headers.isEmpty()) return "";
         StringBuilder sb = new StringBuilder();
-        if (options.isAddColumnHeader() && headers != null && !headers.isEmpty()) {
-            sb.append("| ").append(String.join(" | ", headers.stream().map(DataExporters::mdEscape).toList())).append(" |\n");
+        sb.append("|");
+        for (String h : headers) {
+            sb.append(" ").append(mdEscape(h)).append(" |");
+        }
+        sb.append("\n|");
+        for (int i = 0; i < headers.size(); i++) {
+            sb.append(":---|");
+        }
+        sb.append("\n");
+
+        for (List<String> row : rows) {
             sb.append("|");
             for (int i = 0; i < headers.size(); i++) {
-                sb.append(" --- |");
+                String val = i < row.size() ? row.get(i) : null;
+                if (val == null || val.equalsIgnoreCase("null") || val.equals("<null>")) {
+                    sb.append(" null |");
+                } else {
+                    sb.append(" ").append(mdEscape(val)).append(" |");
+                }
             }
             sb.append("\n");
-        }
-        for (List<String> row : rows) {
-            sb.append("| ");
-            for (int i = 0; i < headers.size(); i++) {
-                if (i > 0) sb.append(" | ");
-                String val = i < row.size() ? row.get(i) : "";
-                sb.append(mdEscape(val));
-            }
-            sb.append(" |\n");
         }
         return sb.toString();
     }
 
     private static String mdEscape(String s) {
         if (s == null) return "";
-        return s.replace("|", "\\|").replace("\n", " ");
+        return s.replace("\\", "\\\\")
+                .replace("_", "\\_")
+                .replace("|", "\\|")
+                .replace("\n", " ");
     }
 
     // ------------------------------------------------------------ Pretty (ASCII Border)
@@ -431,7 +571,8 @@ public final class DataExporters {
         }
         for (List<String> row : rows) {
             for (int c = 0; c < colCount; c++) {
-                String v = c < row.size() && row.get(c) != null ? row.get(c) : "";
+                String raw = c < row.size() ? row.get(c) : null;
+                String v = formatPrettyValue(raw);
                 if (v.length() > widths[c]) widths[c] = v.length();
             }
         }
@@ -443,7 +584,7 @@ public final class DataExporters {
         if (options.isAddColumnHeader()) {
             sb.append("|");
             for (int c = 0; c < colCount; c++) {
-                sb.append(" ").append(padRight(headers.get(c), widths[c])).append(" |");
+                sb.append(padRight(headers.get(c), widths[c])).append("|");
             }
             sb.append('\n');
             sb.append(separator).append('\n');
@@ -452,8 +593,9 @@ public final class DataExporters {
         for (List<String> row : rows) {
             sb.append("|");
             for (int c = 0; c < colCount; c++) {
-                String v = c < row.size() && row.get(c) != null ? row.get(c) : "";
-                sb.append(" ").append(padRight(v, widths[c])).append(" |");
+                String raw = c < row.size() ? row.get(c) : null;
+                String v = formatPrettyValue(raw);
+                sb.append(padRight(v, widths[c])).append("|");
             }
             sb.append('\n');
         }
@@ -461,10 +603,17 @@ public final class DataExporters {
         return sb.toString();
     }
 
+    private static String formatPrettyValue(String raw) {
+        if (raw == null || raw.equalsIgnoreCase("null") || raw.equals("<null>")) {
+            return "null";
+        }
+        return raw;
+    }
+
     private static String buildPrettySeparator(int[] widths) {
         StringBuilder sb = new StringBuilder("+");
         for (int w : widths) {
-            sb.append("-".repeat(w + 2)).append("+");
+            sb.append("-".repeat(w)).append("+");
         }
         return sb.toString();
     }
@@ -511,56 +660,52 @@ public final class DataExporters {
 
     private static String renderHtmlGroovy(List<String> headers, List<List<String>> rows, ExportOptions options) {
         StringBuilder sb = new StringBuilder();
-        sb.append("<table>\n");
-        if (options.isAddColumnHeader() && headers != null && !headers.isEmpty()) {
-            sb.append("  <tr>\n");
+        sb.append("<!DOCTYPE html>\n");
+        sb.append("<html>\n");
+        sb.append("  <head>\n");
+        sb.append("    <title></title>\n");
+        sb.append("    <meta charset=\"UTF-8\">\n");
+        sb.append("  </head>\n");
+        sb.append("  <body>\n");
+        sb.append("  <table border=\"1\" style=\"border-collapse:collapse\">\n");
+        int colCount = headers != null ? headers.size() : 0;
+        if (colCount > 0) {
+            String colWidth = String.format(Locale.ROOT, "%.2f%%", 100.0 / colCount);
+            sb.append("    <colgroup>\n");
+            for (int i = 0; i < colCount; i++) {
+                sb.append("      <col width=\"").append(colWidth).append("\"/>\n");
+            }
+            sb.append("    </colgroup>\n");
+            sb.append("    <thead>\n");
+            sb.append("      <tr>\n");
             for (String h : headers) {
-                sb.append("    <th>").append(htmlEscape(h)).append("</th>\n");
+                sb.append("        <th>").append(htmlEscape(h)).append("</th>\n");
             }
-            sb.append("  </tr>\n");
+            sb.append("      </tr>\n");
+            sb.append("    </thead>\n");
         }
+        sb.append("    <tbody>\n");
         for (List<String> row : rows) {
-            sb.append("  <tr>\n");
-            for (int c = 0; c < headers.size(); c++) {
+            sb.append("      <tr>\n");
+            for (int c = 0; c < colCount; c++) {
                 String val = c < row.size() ? row.get(c) : "";
-                sb.append("    <td>").append(htmlEscape(val)).append("</td>\n");
+                if (val == null || val.equalsIgnoreCase("null") || val.equals("<null>")) {
+                    sb.append("        <td></td>\n");
+                } else {
+                    sb.append("        <td>").append(htmlEscape(val)).append("</td>\n");
+                }
             }
-            sb.append("  </tr>\n");
+            sb.append("      </tr>\n");
         }
-        sb.append("</table>\n");
+        sb.append("    </tbody>\n");
+        sb.append("  </table>\n");
+        sb.append("  </body>\n");
+        sb.append("</html>\n");
         return sb.toString();
     }
 
     private static String renderHtmlJs(List<String> headers, List<List<String>> rows, String table, ExportOptions options) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"utf-8\">\n<title>").append(htmlEscape(table)).append("</title>\n");
-        sb.append("<style>\n");
-        sb.append("  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 20px; background: #1e1f22; color: #bcbec4; }\n");
-        sb.append("  table { border-collapse: collapse; width: 100%; font-size: 13px; }\n");
-        sb.append("  th, td { border: 1px solid #393b40; padding: 6px 12px; text-align: left; }\n");
-        sb.append("  th { background-color: #2b2d30; color: #dfe1e5; font-weight: 600; }\n");
-        sb.append("  tr:nth-child(even) { background-color: #26282e; }\n");
-        sb.append("  tr:hover { background-color: #2e3138; }\n");
-        sb.append("</style>\n</head>\n<body>\n");
-        sb.append("<table>\n");
-        if (options.isAddColumnHeader() && headers != null && !headers.isEmpty()) {
-            sb.append("  <thead>\n    <tr>\n");
-            for (String h : headers) {
-                sb.append("      <th>").append(htmlEscape(h)).append("</th>\n");
-            }
-            sb.append("    </tr>\n  </thead>\n");
-        }
-        sb.append("  <tbody>\n");
-        for (List<String> row : rows) {
-            sb.append("    <tr>\n");
-            for (int c = 0; c < headers.size(); c++) {
-                String val = c < row.size() ? row.get(c) : "";
-                sb.append("      <td>").append(htmlEscape(val)).append("</td>\n");
-            }
-            sb.append("    </tr>\n");
-        }
-        sb.append("  </tbody>\n</table>\n</body>\n</html>\n");
-        return sb.toString();
+        return "";
     }
 
     private static String htmlEscape(String s) {
@@ -575,17 +720,21 @@ public final class DataExporters {
     // ------------------------------------------------------------ One Row
 
     private static String renderOneRow(List<String> headers, List<List<String>> rows, ExportOptions options) {
+        if (rows == null || rows.isEmpty()) return "";
+        List<String> firstRow = rows.get(0);
         StringBuilder sb = new StringBuilder();
-        int maxHeaderLen = headers.stream().mapToInt(h -> h != null ? h.length() : 0).max().orElse(10);
-        for (int r = 0; r < rows.size(); r++) {
-            List<String> row = rows.get(r);
-            sb.append("----------------- Row ").append(r + 1).append(" -----------------\n");
-            for (int c = 0; c < headers.size(); c++) {
-                String h = headers.get(c);
-                String val = c < row.size() && row.get(c) != null ? row.get(c) : "";
-                sb.append(padRight(h, maxHeaderLen)).append(" : ").append(val).append("\n");
+        for (int i = 0; i < firstRow.size(); i++) {
+            if (i > 0) sb.append(", ");
+            String val = firstRow.get(i);
+            if (val == null || val.equalsIgnoreCase("null") || val.equals("<null>")) {
+                sb.append("null");
+            } else if (val.equalsIgnoreCase("true") || val.equalsIgnoreCase("false")) {
+                sb.append(val.toLowerCase());
+            } else if (val.matches("-?\\d+(\\.\\d+)?")) {
+                sb.append(val);
+            } else {
+                sb.append("'").append(val.replace("'", "''")).append("'");
             }
-            sb.append("\n");
         }
         return sb.toString();
     }
@@ -597,13 +746,14 @@ public final class DataExporters {
         sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
         sb.append("<data>\n");
         for (List<String> row : rows) {
-            sb.append("  <row>\n");
+            sb.append("<row>\n");
             for (int c = 0; c < headers.size(); c++) {
                 String tag = sanitizeXmlTag(headers.get(c));
-                String val = c < row.size() ? row.get(c) : "";
-                sb.append("    <").append(tag).append(">").append(xmlEscape(val)).append("</").append(tag).append(">\n");
+                String raw = c < row.size() ? row.get(c) : null;
+                String val = (raw == null || raw.equalsIgnoreCase("null") || raw.equals("<null>")) ? "null" : xmlEscape(raw);
+                sb.append("    <").append(tag).append(">").append(val).append("</").append(tag).append(">\n");
             }
-            sb.append("  </row>\n");
+            sb.append("</row>\n");
         }
         sb.append("</data>\n");
         return sb.toString();

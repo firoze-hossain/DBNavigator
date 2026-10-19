@@ -59,7 +59,8 @@ public final class SqlHighlighter {
             // actually resolve whether it's a real alias
             + "|(?<QUALIFIER>\\b[A-Za-z_][A-Za-z0-9_]*\\b(?=\\.))"
             + "|(?<STRING>'[^']*')"
-            + "|(?<NUMBER>\\b\\d+(\\.\\d+)?\\b)"
+            + "|(?<DOUBLESTRING>\"[^\"\\r\\n]*(?:\\\\.[^\"\\r\\n]*)*\")"
+            + "|(?<NUMBER>\\b\\d+(\\.\\d+)?%?\\b)"
             + "|(?<COMMENT>--[^\\n]*|/\\*(.|\\R)*?\\*/)"
     );
 
@@ -82,16 +83,50 @@ public final class SqlHighlighter {
         StyleSpansBuilder<Collection<String>> spans = new StyleSpansBuilder<>();
         while (matcher.find()) {
             String styleClass =
-                    matcher.group("KEYWORD")   != null ? "sql-keyword" :
-                    matcher.group("TYPE")      != null ? "sql-type" :
-                    matcher.group("PARAMETER") != null ? "sql-parameter" :
-                    matcher.group("FUNCTION")  != null ? "sql-function" :
-                    matcher.group("QUALIFIER") != null ? "sql-qualifier" :
-                    matcher.group("STRING")    != null ? "sql-string"  :
-                    matcher.group("NUMBER")    != null ? "sql-number"  :
-                    matcher.group("COMMENT")   != null ? "sql-comment" : null;
+                    matcher.group("KEYWORD")      != null ? "sql-keyword" :
+                    matcher.group("TYPE")         != null ? "sql-type" :
+                    matcher.group("PARAMETER")    != null ? "sql-parameter" :
+                    matcher.group("FUNCTION")     != null ? "sql-function" :
+                    matcher.group("QUALIFIER")    != null ? "sql-qualifier" :
+                    matcher.group("STRING")       != null ? "sql-string"  :
+                    matcher.group("DOUBLESTRING") != null ? "sql-string"  :
+                    matcher.group("NUMBER")       != null ? "sql-number"  :
+                    matcher.group("COMMENT")      != null ? "sql-comment" : null;
             spans.add(Collections.emptyList(), matcher.start() - lastEnd);
             spans.add(Collections.singleton(styleClass), matcher.end() - matcher.start());
+            lastEnd = matcher.end();
+        }
+        spans.add(Collections.emptyList(), text.length() - lastEnd);
+        return spans.create();
+    }
+
+    private static final Pattern XML_PATTERN = Pattern.compile(
+            "(?<PROLOG><\\?[^?]*\\?>)"
+            + "|(?<COMMENT><!--[\\s\\S]*?-->)"
+            + "|(?<TAG></?[A-Za-z0-9_:-]+)"
+            + "|(?<TAGCLOSE>/?>)"
+            + "|(?<ATTRVAL>\"[^\"\\r\\n]*\"|'[^'\\r\\n]*')"
+            + "|(?<ATTRNAME>[A-Za-z0-9_:-]+(?=\\s*=))"
+    );
+
+    public static StyleSpans<Collection<String>> computeXmlHighlighting(String text) {
+        Matcher matcher = XML_PATTERN.matcher(text);
+        int lastEnd = 0;
+        StyleSpansBuilder<Collection<String>> spans = new StyleSpansBuilder<>();
+        while (matcher.find()) {
+            String styleClass =
+                    matcher.group("PROLOG")   != null ? "sql-keyword" :
+                    matcher.group("COMMENT")  != null ? "sql-comment" :
+                    matcher.group("TAG")      != null ? "sql-keyword" :
+                    matcher.group("TAGCLOSE") != null ? "sql-keyword" :
+                    matcher.group("ATTRVAL")  != null ? "sql-string"  :
+                    matcher.group("ATTRNAME") != null ? "sql-parameter" : null;
+            spans.add(Collections.emptyList(), matcher.start() - lastEnd);
+            if (styleClass != null) {
+                spans.add(Collections.singleton(styleClass), matcher.end() - matcher.start());
+            } else {
+                spans.add(Collections.emptyList(), matcher.end() - matcher.start());
+            }
             lastEnd = matcher.end();
         }
         spans.add(Collections.emptyList(), text.length() - lastEnd);

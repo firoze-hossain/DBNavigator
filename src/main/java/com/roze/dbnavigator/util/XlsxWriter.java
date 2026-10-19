@@ -21,13 +21,22 @@ public final class XlsxWriter {
     private XlsxWriter() {}
 
     public static void write(File file, List<String> columns, List<List<String>> rows) throws IOException {
+        write(file, columns, rows, null, false);
+    }
+
+    public static void write(File file, List<String> columns, List<List<String>> rows,
+                             String query, boolean outputQueryToSeparateSheet) throws IOException {
+        boolean hasQuerySheet = outputQueryToSeparateSheet && query != null && !query.isBlank();
         try (ZipOutputStream zip = new ZipOutputStream(java.nio.file.Files.newOutputStream(file.toPath()))) {
-            entry(zip, "[Content_Types].xml", CONTENT_TYPES);
+            entry(zip, "[Content_Types].xml", hasQuerySheet ? CONTENT_TYPES_WITH_QUERY : CONTENT_TYPES);
             entry(zip, "_rels/.rels", RELS);
-            entry(zip, "xl/workbook.xml", WORKBOOK);
-            entry(zip, "xl/_rels/workbook.xml.rels", WORKBOOK_RELS);
+            entry(zip, "xl/workbook.xml", hasQuerySheet ? WORKBOOK_WITH_QUERY : WORKBOOK);
+            entry(zip, "xl/_rels/workbook.xml.rels", hasQuerySheet ? WORKBOOK_RELS_WITH_QUERY : WORKBOOK_RELS);
             entry(zip, "xl/styles.xml", STYLES);
             entry(zip, "xl/worksheets/sheet1.xml", buildSheet(columns, rows));
+            if (hasQuerySheet) {
+                entry(zip, "xl/worksheets/sheet2.xml", buildQuerySheet(query));
+            }
         }
     }
 
@@ -85,6 +94,19 @@ public final class XlsxWriter {
         return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
     }
 
+    private static String buildQuerySheet(String query) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>");
+        sb.append("<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">");
+        sb.append("<sheetData>");
+        sb.append("<row r=\"1\"><c r=\"A1\" t=\"inlineStr\" s=\"1\"><is><t xml:space=\"preserve\">Query</t></is></c></row>");
+        sb.append("<row r=\"2\"><c r=\"A2\" t=\"inlineStr\"><is><t xml:space=\"preserve\">")
+          .append(escape(query))
+          .append("</t></is></c></row>");
+        sb.append("</sheetData></worksheet>");
+        return sb.toString();
+    }
+
     private static final String CONTENT_TYPES =
             "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
             + "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">"
@@ -92,6 +114,17 @@ public final class XlsxWriter {
             + "<Default Extension=\"xml\" ContentType=\"application/xml\"/>"
             + "<Override PartName=\"/xl/workbook.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml\"/>"
             + "<Override PartName=\"/xl/worksheets/sheet1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/>"
+            + "<Override PartName=\"/xl/styles.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml\"/>"
+            + "</Types>";
+
+    private static final String CONTENT_TYPES_WITH_QUERY =
+            "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
+            + "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">"
+            + "<Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/>"
+            + "<Default Extension=\"xml\" ContentType=\"application/xml\"/>"
+            + "<Override PartName=\"/xl/workbook.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml\"/>"
+            + "<Override PartName=\"/xl/worksheets/sheet1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/>"
+            + "<Override PartName=\"/xl/worksheets/sheet2.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/>"
             + "<Override PartName=\"/xl/styles.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml\"/>"
             + "</Types>";
 
@@ -107,11 +140,28 @@ public final class XlsxWriter {
             + "xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">"
             + "<sheets><sheet name=\"Export\" sheetId=\"1\" r:id=\"rId1\"/></sheets></workbook>";
 
+    private static final String WORKBOOK_WITH_QUERY =
+            "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
+            + "<workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" "
+            + "xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">"
+            + "<sheets>"
+            + "<sheet name=\"Export\" sheetId=\"1\" r:id=\"rId1\"/>"
+            + "<sheet name=\"Query\" sheetId=\"2\" r:id=\"rId2\"/>"
+            + "</sheets></workbook>";
+
     private static final String WORKBOOK_RELS =
             "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
             + "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">"
             + "<Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet1.xml\"/>"
             + "<Relationship Id=\"rId2\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles\" Target=\"styles.xml\"/>"
+            + "</Relationships>";
+
+    private static final String WORKBOOK_RELS_WITH_QUERY =
+            "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
+            + "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">"
+            + "<Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet1.xml\"/>"
+            + "<Relationship Id=\"rId2\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet2.xml\"/>"
+            + "<Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles\" Target=\"styles.xml\"/>"
             + "</Relationships>";
 
     // Style index 0 = default; style index 1 = bold (for the header row)

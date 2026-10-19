@@ -182,6 +182,7 @@ public class DataExtractorsToolbar extends HBox {
         scriptedHeader.setStyle("-fx-font-size: 10px; -fx-text-fill: -text-dim; -fx-padding: 4 6 2 6;");
         extractorButton.getItems().add(scriptedHeader);
 
+        addFormatItem(DataExporters.Format.CSV_GROOVY);
         addFormatItem(DataExporters.Format.HTML_GROOVY);
         addFormatItem(DataExporters.Format.HTML_JS);
         addFormatItem(DataExporters.Format.JSON);
