@@ -28,7 +28,9 @@ import javafx.stage.FileChooser;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -62,6 +64,17 @@ public class SchemaTreePane extends VBox {
     private final Button editDataButton;
     private final Button scrollFromEditorButton;
     private final Button collapseAllButton;
+
+    // Speed Search elements (DataGrip-grade dynamic tree search)
+    private final HBox searchBox;
+    private final TextField searchField = new TextField();
+    private final Label matchCountLabel = new Label();
+    private final Button prevMatchBtn;
+    private final Button nextMatchBtn;
+    private final Button closeSearchBtn;
+    private String currentSearchQuery = "";
+    private final List<TreeItem<DbObject>> searchMatches = new ArrayList<>();
+    private int currentMatchIndex = -1;
 
     public SchemaTreePane(MainWindow mainWindow) {
         this.mainWindow = mainWindow;
@@ -116,7 +129,49 @@ public class SchemaTreePane extends VBox {
         goToDdlButton.setDisable(true);
         editDataButton.setDisable(true);
 
-        HBox toolbarBox = new HBox(4, addButton, propertiesButton, refreshButton,
+        // Speed Search controls
+        this.searchField.setPromptText("Search…");
+        this.searchField.getStyleClass().add("schema-search-field");
+        HBox.setHgrow(searchField, Priority.ALWAYS);
+
+        this.matchCountLabel.getStyleClass().add("schema-search-count");
+
+        this.prevMatchBtn = createToolButton(Icons.of(FontAwesomeSolid.CHEVRON_UP, "#868a91", 9),
+                "Previous Occurrence (Shift+Enter / Up)", e -> selectPreviousMatch());
+        this.nextMatchBtn = createToolButton(Icons.of(FontAwesomeSolid.CHEVRON_DOWN, "#868a91", 9),
+                "Next Occurrence (Enter / Down)", e -> selectNextMatch());
+        this.closeSearchBtn = createToolButton(Icons.of(FontAwesomeSolid.TIMES, "#868a91", 9),
+                "Close Search (Escape)", e -> hideSpeedSearch());
+
+        this.searchBox = new HBox(3, Icons.of(FontAwesomeSolid.SEARCH, "#868a91", 10),
+                searchField, matchCountLabel, prevMatchBtn, nextMatchBtn, closeSearchBtn);
+        this.searchBox.setAlignment(Pos.CENTER_LEFT);
+        this.searchBox.getStyleClass().add("schema-search-box");
+        this.searchBox.setPrefWidth(210);
+        this.searchBox.setMaxWidth(260);
+        this.searchBox.setVisible(false);
+        this.searchBox.setManaged(false);
+
+        searchField.textProperty().addListener((obs, oldVal, newVal) -> {
+            currentSearchQuery = newVal != null ? newVal.trim() : "";
+            updateSearchMatches(currentSearchQuery);
+            tree.refresh();
+        });
+
+        searchField.setOnKeyPressed(e -> {
+            if (e.getCode() == KeyCode.ESCAPE) {
+                hideSpeedSearch();
+                e.consume();
+            } else if (e.getCode() == KeyCode.DOWN || (e.getCode() == KeyCode.ENTER && !e.isShiftDown())) {
+                selectNextMatch();
+                e.consume();
+            } else if (e.getCode() == KeyCode.UP || (e.getCode() == KeyCode.ENTER && e.isShiftDown())) {
+                selectPreviousMatch();
+                e.consume();
+            }
+        });
+
+        HBox toolbarBox = new HBox(4, searchBox, addButton, propertiesButton, refreshButton,
                 jumpToConsoleButton, goToDdlButton, editDataButton);
         toolbarBox.setAlignment(Pos.CENTER_LEFT);
         toolbarBox.setPadding(new Insets(3, 6, 4, 6));
@@ -127,7 +182,37 @@ public class SchemaTreePane extends VBox {
         tree.setShowRoot(false);
         tree.setCellFactory(tv -> new DbObjectCell());
         tree.getStyleClass().add("schema-tree");
+        tree.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
         VBox.setVgrow(tree, Priority.ALWAYS);
+
+        // Multi-selection event handling: Ctrl+Click / Cmd+Click toggle, right-click preservation
+        tree.addEventFilter(javafx.scene.input.MouseEvent.MOUSE_PRESSED, e -> {
+            if (e.getButton() == javafx.scene.input.MouseButton.PRIMARY && (e.isControlDown() || e.isMetaDown())) {
+                TreeItem<DbObject> item = findTreeItemAt(e.getTarget());
+                if (item != null) {
+                    int row = tree.getRow(item);
+                    if (tree.getSelectionModel().getSelectedIndices().contains(row)) {
+                        tree.getSelectionModel().clearSelection(row);
+                    } else {
+                        tree.getSelectionModel().select(item);
+                    }
+                    tree.requestFocus();
+                    e.consume();
+                    return;
+                }
+            }
+            if (e.getButton() == javafx.scene.input.MouseButton.SECONDARY) {
+                TreeItem<DbObject> item = findTreeItemAt(e.getTarget());
+                if (item != null) {
+                    int row = tree.getRow(item);
+                    if (tree.getSelectionModel().getSelectedIndices().contains(row)) {
+                        tree.getFocusModel().focus(row);
+                    } else {
+                        tree.getSelectionModel().clearAndSelect(row);
+                    }
+                }
+            }
+        });
 
         tree.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
             updateToolbarState(newVal);
@@ -145,7 +230,17 @@ public class SchemaTreePane extends VBox {
 
         tree.setOnKeyPressed(e -> {
             boolean isModifier = isMac ? e.isMetaDown() : e.isControlDown();
-            if (isModifier && (e.getCode() == KeyCode.SUBTRACT || e.getCode() == KeyCode.MINUS)) {
+            if (isModifier && e.getCode() == KeyCode.F) {
+                showSpeedSearch();
+                searchField.selectAll();
+                e.consume();
+            } else if (e.getCode() == KeyCode.ESCAPE && searchBox.isVisible()) {
+                hideSpeedSearch();
+                e.consume();
+            } else if (e.getCode() == KeyCode.DELETE || e.getCode() == KeyCode.BACK_SPACE) {
+                triggerDropForSelection();
+                e.consume();
+            } else if (isModifier && (e.getCode() == KeyCode.SUBTRACT || e.getCode() == KeyCode.MINUS)) {
                 collapseAll();
                 e.consume();
             } else if (e.getCode() == KeyCode.F4 && !e.isControlDown() && !e.isAltDown() && !e.isShiftDown() && !e.isMetaDown()) {
@@ -162,6 +257,20 @@ public class SchemaTreePane extends VBox {
                 TreeItem<DbObject> item = tree.getSelectionModel().getSelectedItem();
                 if (item != null) {
                     openObject(item);
+                    e.consume();
+                }
+            }
+        });
+
+        // Type-ahead speed search: typing any alphanumeric key opens search bar instantly
+        tree.setOnKeyTyped(e -> {
+            String ch = e.getCharacter();
+            if (ch != null && !ch.isEmpty() && !e.isControlDown() && !e.isMetaDown() && !e.isAltDown()) {
+                char c = ch.charAt(0);
+                if (c >= 32 && c != 127 && c != '\r' && c != '\n' && c != '\t') {
+                    showSpeedSearch();
+                    searchField.setText(ch);
+                    searchField.positionCaret(ch.length());
                     e.consume();
                 }
             }
@@ -2071,6 +2180,15 @@ public class SchemaTreePane extends VBox {
                 if (mainWindow != null) mainWindow.setStatus("Forgot saved password for " + profile.getName());
             });
             objActions.getItems().addAll(showHideSchemas, forgetPw);
+            if (isTable || isSequence) {
+                MenuItem dropObjAction = new MenuItem("Drop…");
+                dropObjAction.setAccelerator(new KeyCodeCombination(KeyCode.DELETE));
+                dropObjAction.setOnAction(e -> {
+                    List<DbObject> targets = getSelectedDbObjectsForAction(obj);
+                    ConfirmDropDialog.show(mainWindow, profile, targets, this::reload);
+                });
+                objActions.getItems().add(dropObjAction);
+            }
             menu.getItems().add(objActions);
         }
 
@@ -2144,12 +2262,11 @@ public class SchemaTreePane extends VBox {
         drop.setAccelerator(new KeyCodeCombination(KeyCode.DELETE));
         if (isCategoryFolder) {
             drop.setDisable(true);
-        } else if (isTable) {
-            drop.setOnAction(e -> confirmAndDeleteTable(profile, obj));
-        } else if (isSequence) {
-            drop.setOnAction(e -> confirmAndDeleteSequence(profile, obj));
-        } else if (isSchema) {
-            drop.setOnAction(e -> confirmAndDeleteSchema(profile, obj));
+        } else if (isTable || isSequence || isSchema) {
+            drop.setOnAction(e -> {
+                List<DbObject> targets = getSelectedDbObjectsForAction(obj);
+                ConfirmDropDialog.show(mainWindow, profile, targets, this::reload);
+            });
         } else {
             drop.setOnAction(e -> confirmAndDropGenericObject(profile, obj));
         }
@@ -3618,9 +3735,8 @@ public class SchemaTreePane extends VBox {
             ConnectionProfile profile = profileFor(getTreeItem());
             boolean connected = profile != null && ClientRegistry.isConnected(profile);
 
-            Label nameLabel = new Label(obj.getName());
-            nameLabel.getStyleClass().add("tree-name");
-            HBox box = new HBox(6, Icons.forObject(obj, profile, connected), nameLabel);
+            javafx.scene.Node nameNode = buildHighlightedName(obj.getName(), currentSearchQuery);
+            HBox box = new HBox(6, Icons.forObject(obj, profile, connected), nameNode);
             box.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
             if (obj.getDetail() != null && !obj.getDetail().isBlank()) {
                 Label detailLabel = new Label(obj.getDetail());
@@ -5378,5 +5494,247 @@ public class SchemaTreePane extends VBox {
             }
         }
         return String.join(" > ", segments);
+    }
+
+    private TreeItem<DbObject> findTreeItemAt(javafx.event.EventTarget target) {
+        if (!(target instanceof javafx.scene.Node node)) return null;
+        while (node != null && !(node instanceof TreeCell)) {
+            node = node.getParent();
+        }
+        if (node instanceof TreeCell<?> cell) {
+            @SuppressWarnings("unchecked")
+            TreeItem<DbObject> ti = (TreeItem<DbObject>) cell.getTreeItem();
+            return ti;
+        }
+        return null;
+    }
+
+    public void showSpeedSearch() {
+        searchBox.setVisible(true);
+        searchBox.setManaged(true);
+        addButton.setVisible(false);
+        addButton.setManaged(false);
+        propertiesButton.setVisible(false);
+        propertiesButton.setManaged(false);
+        refreshButton.setVisible(false);
+        refreshButton.setManaged(false);
+        searchField.requestFocus();
+    }
+
+    public void hideSpeedSearch() {
+        currentSearchQuery = "";
+        searchMatches.clear();
+        currentMatchIndex = -1;
+        searchField.clear();
+        matchCountLabel.setText("");
+        searchBox.setVisible(false);
+        searchBox.setManaged(false);
+        addButton.setVisible(true);
+        addButton.setManaged(true);
+        propertiesButton.setVisible(true);
+        propertiesButton.setManaged(true);
+        refreshButton.setVisible(true);
+        refreshButton.setManaged(true);
+        tree.refresh();
+        tree.requestFocus();
+    }
+
+    public void setSpeedSearchText(String text) {
+        showSpeedSearch();
+        searchField.setText(text != null ? text : "");
+        if (text != null) {
+            searchField.positionCaret(text.length());
+        }
+    }
+
+    public String getSpeedSearchText() {
+        return currentSearchQuery;
+    }
+
+    public List<TreeItem<DbObject>> getSearchMatches() {
+        return Collections.unmodifiableList(searchMatches);
+    }
+
+    public int getCurrentMatchIndex() {
+        return currentMatchIndex;
+    }
+
+    public void selectNextMatch() {
+        if (searchMatches.isEmpty()) return;
+        currentMatchIndex = (currentMatchIndex + 1) % searchMatches.size();
+        selectMatch(searchMatches.get(currentMatchIndex));
+        matchCountLabel.setText((currentMatchIndex + 1) + " of " + searchMatches.size());
+    }
+
+    public void selectPreviousMatch() {
+        if (searchMatches.isEmpty()) return;
+        currentMatchIndex = (currentMatchIndex - 1 + searchMatches.size()) % searchMatches.size();
+        selectMatch(searchMatches.get(currentMatchIndex));
+        matchCountLabel.setText((currentMatchIndex + 1) + " of " + searchMatches.size());
+    }
+
+    private void updateSearchMatches(String query) {
+        searchMatches.clear();
+        currentMatchIndex = -1;
+
+        if (query == null || query.isBlank()) {
+            matchCountLabel.setText("");
+            searchField.setStyle("");
+            return;
+        }
+
+        String lower = query.toLowerCase(Locale.ROOT);
+        collectTreeMatches(root, lower, searchMatches);
+
+        if (searchMatches.isEmpty()) {
+            matchCountLabel.setText("0 of 0");
+            matchCountLabel.setStyle("-fx-text-fill: #e06c75; -fx-font-size: 10px;");
+            searchField.setStyle("-fx-text-fill: #e06c75;");
+        } else {
+            matchCountLabel.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 10px;");
+            searchField.setStyle("");
+
+            TreeItem<DbObject> currentSel = tree.getSelectionModel().getSelectedItem();
+            int existingIdx = currentSel != null ? searchMatches.indexOf(currentSel) : -1;
+            if (existingIdx >= 0) {
+                currentMatchIndex = existingIdx;
+            } else {
+                currentMatchIndex = 0;
+                selectMatch(searchMatches.get(0));
+            }
+            matchCountLabel.setText((currentMatchIndex + 1) + " of " + searchMatches.size());
+        }
+    }
+
+    private void collectTreeMatches(TreeItem<DbObject> parent, String lowerQuery, List<TreeItem<DbObject>> results) {
+        if (parent == null) return;
+        for (TreeItem<DbObject> child : parent.getChildren()) {
+            DbObject obj = child.getValue();
+            if (obj != null && obj.getName() != null && !obj.getName().isBlank()) {
+                if (obj.getName().toLowerCase(Locale.ROOT).contains(lowerQuery)) {
+                    results.add(child);
+                }
+            }
+            collectTreeMatches(child, lowerQuery, results);
+        }
+    }
+
+    private void selectMatch(TreeItem<DbObject> item) {
+        if (item == null) return;
+        TreeItem<DbObject> p = item.getParent();
+        while (p != null && p != root) {
+            p.setExpanded(true);
+            p = p.getParent();
+        }
+        tree.getSelectionModel().clearSelection();
+        tree.getSelectionModel().select(item);
+        int row = tree.getRow(item);
+        if (row >= 0) {
+            tree.scrollTo(row);
+        }
+    }
+
+    public static javafx.scene.Node buildHighlightedName(String name, String query) {
+        if (name == null || name.isEmpty() || query == null || query.isBlank()) {
+            Label lbl = new Label(name != null ? name : "");
+            lbl.getStyleClass().add("tree-name");
+            return lbl;
+        }
+
+        String lowerName = name.toLowerCase(Locale.ROOT);
+        String lowerQuery = query.toLowerCase(Locale.ROOT);
+        int matchIdx = lowerName.indexOf(lowerQuery);
+        if (matchIdx == -1) {
+            Label lbl = new Label(name);
+            lbl.getStyleClass().add("tree-name");
+            return lbl;
+        }
+
+        HBox box = new HBox(0);
+        box.setAlignment(Pos.CENTER_LEFT);
+        int lastIdx = 0;
+        while (matchIdx != -1) {
+            if (matchIdx > lastIdx) {
+                Label normal = new Label(name.substring(lastIdx, matchIdx));
+                normal.getStyleClass().add("tree-name");
+                box.getChildren().add(normal);
+            }
+            Label match = new Label(name.substring(matchIdx, matchIdx + lowerQuery.length()));
+            match.getStyleClass().addAll("tree-name", "tree-search-match");
+            box.getChildren().add(match);
+
+            lastIdx = matchIdx + lowerQuery.length();
+            matchIdx = lowerName.indexOf(lowerQuery, lastIdx);
+        }
+        if (lastIdx < name.length()) {
+            Label normal = new Label(name.substring(lastIdx));
+            normal.getStyleClass().add("tree-name");
+            box.getChildren().add(normal);
+        }
+        return box;
+    }
+
+    public HBox getSearchBox() {
+        return searchBox;
+    }
+
+    public TextField getSearchField() {
+        return searchField;
+    }
+
+    public Label getMatchCountLabel() {
+        return matchCountLabel;
+    }
+
+    public void triggerDropForSelection() {
+        List<TreeItem<DbObject>> selected = tree.getSelectionModel().getSelectedItems();
+        if (selected == null || selected.isEmpty()) return;
+        List<DbObject> dropObjects = selected.stream()
+                .map(TreeItem::getValue)
+                .filter(obj -> obj != null && !isCategoryFolder(obj.getKind()) && obj.getKind() != Kind.MESSAGE)
+                .toList();
+        if (!dropObjects.isEmpty()) {
+            ConnectionProfile profile = profileFor(selected.get(0));
+            ConfirmDropDialog.show(mainWindow, profile, dropObjects, this::reload);
+        }
+    }
+
+    private List<DbObject> getSelectedDbObjectsForAction(DbObject fallbackObj) {
+        List<TreeItem<DbObject>> selectedItems = tree.getSelectionModel().getSelectedItems();
+        List<DbObject> result = new ArrayList<>();
+        if (selectedItems != null && !selectedItems.isEmpty()) {
+            for (TreeItem<DbObject> ti : selectedItems) {
+                if (ti != null && ti.getValue() != null && !isCategoryFolder(ti.getValue().getKind())
+                        && ti.getValue().getKind() != Kind.MESSAGE) {
+                    result.add(ti.getValue());
+                }
+            }
+        }
+        if (result.isEmpty() && fallbackObj != null) {
+            result.add(fallbackObj);
+        }
+        return result;
+    }
+
+    public static boolean isCategoryFolder(Kind kind) {
+        if (kind == null) return false;
+        return kind == Kind.TABLES_FOLDER
+                || kind == Kind.SEQUENCES_FOLDER
+                || kind == Kind.VIEWS_FOLDER
+                || kind == Kind.PROCEDURES_FOLDER
+                || kind == Kind.FUNCTIONS_FOLDER
+                || kind == Kind.DATABASE_OBJECTS
+                || kind == Kind.VIRTUAL_VIEWS_FOLDER
+                || kind == Kind.ACCESS_METHODS_FOLDER
+                || kind == Kind.CASTS_FOLDER
+                || kind == Kind.EXTENSIONS_FOLDER
+                || kind == Kind.LANGUAGES_FOLDER
+                || kind == Kind.COLUMNS_FOLDER
+                || kind == Kind.KEYS_FOLDER
+                || kind == Kind.FOREIGN_KEYS_FOLDER
+                || kind == Kind.INDEXES_FOLDER
+                || kind == Kind.PARTITIONS_FOLDER
+                || kind == Kind.FIELDS_FOLDER
+                || kind == Kind.ROLES_FOLDER;
     }
 }

@@ -133,9 +133,66 @@
     -fx-text-fill: -text;
     -fx-padding: 3 4 3 4;
 }
-.schema-tree .tree-cell:hover    { -fx-background-color: #393c40; }
-.schema-tree .tree-cell:selected { -fx-background-color: #2e436e; }
+.schema-tree .tree-cell:hover    { -fx-background-color: #e7edfb; }
+.schema-tree .tree-cell:selected { -fx-background-color: #d0d4de; }
+.schema-tree:focused .tree-cell:selected { -fx-background-color: #3574f0; }
 .schema-tree .tree-cell .arrow   { -fx-background-color: -text-dim; }
+
+/* Speed Search in Schema Explorer */
+.schema-search-box {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #d1d5db;
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-padding: 1 4 1 6;
+}
+.schema-search-field {
+    -fx-background-color: transparent;
+    -fx-border-width: 0;
+    -fx-text-fill: -text;
+    -fx-font-size: 11px;
+    -fx-padding: 0 4 0 4;
+}
+.schema-search-field:focused {
+    -fx-background-color: transparent;
+    -fx-border-width: 0;
+}
+.schema-search-count {
+    -fx-text-fill: -text-dim;
+    -fx-font-size: 10px;
+    -fx-padding: 0 2 0 2;
+}
+
+/* Match highlighting in tree cells (DataGrip speed search gold badge) */
+.tree-search-match {
+    -fx-background-color: #ffe082;
+    -fx-text-fill: #1a1a1e;
+    -fx-background-radius: 2;
+    -fx-padding: 0 1 0 1;
+    -fx-font-weight: bold;
+}
+.tree-cell:selected .tree-search-match,
+.schema-tree .tree-cell:selected .tree-search-match {
+    -fx-background-color: #ffd54f;
+    -fx-text-fill: #000000;
+}
+
+.confirm-drop-dialog {
+    -fx-pref-width: 500px;
+    -fx-max-width: 500px;
+}
+.confirm-drop-preview {
+    -fx-font-family: "JetBrains Mono", "DBNavigator Mono", monospace;
+    -fx-font-size: 11.5px;
+    -fx-text-fill: #24292f;
+    -fx-control-inner-background: #ffffff;
+    -fx-border-color: #d1d5db;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-pref-height: 90px;
+    -fx-max-height: 130px;
+}
 
 /* ---------- tabs ---------- */
 .main-tabs .tab-header-area .tab-header-background { -fx-background-color: -bg-mid; }
