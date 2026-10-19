@@ -13,7 +13,10 @@
     -bg-mid:       #ebebef;
     -bg-light:     #e0e0e6;
     -border:       #d0d0d6;
+    -border-subtle:#e2e5eb;
+    -bg-highlight: #e8ebf0;
     -text:         #1a1a1e;
+    -text-normal:  #1a1a1e;
     -text-dim:     #6e6e76;
     -accent:       #3574f0;
     -accent-green: #2e7d32;
@@ -1146,8 +1149,6 @@
 .diagram-pane { -fx-background-color: #f7f8fa; }
 .diagram-canvas-grid {
     -fx-background-color: #f7f8fa;
-    -fx-background-image: radial-gradient(center 50% 50%, radius 1px, #d5d8e0 0%, transparent 100%);
-    -fx-background-size: 20px 20px;
 }
 .diagram-scroll { -fx-background-color: #f7f8fa; }
 .diagram-scroll .viewport { -fx-background-color: #f7f8fa; }
@@ -1607,4 +1608,11 @@
 }
 .change-page-size-dialog .button-bar .cancel-button:hover {
     -fx-background-color: #ebebef;
+}
+
+/* ---------- query editor breadcrumbs bar ---------- */
+.query-breadcrumbs-bar {
+    -fx-background-color: -bg-darkest;
+    -fx-border-color: -border-subtle;
+    -fx-border-width: 1 0 1 0;
 }

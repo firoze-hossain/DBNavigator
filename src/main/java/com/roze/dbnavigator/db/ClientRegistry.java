@@ -92,5 +92,7 @@ public final class ClientRegistry {
                 conn.isValid(5);
             }
         }
+        com.roze.dbnavigator.search.SearchEverywhereService.markProfileReachable(profile.getId());
+        com.roze.dbnavigator.search.SearchEverywhereService.invalidateDatabaseCache(profile.getId());
     }
 }

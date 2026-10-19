@@ -1383,8 +1383,7 @@ public class QueryTab extends Tab {
 
     private void initBreadcrumbsBar() {
         breadcrumbsBar.setAlignment(Pos.CENTER_LEFT);
-        breadcrumbsBar.setPadding(new Insets(3, 10, 3, 10));
-        breadcrumbsBar.setStyle("-fx-background-color: -bg-darkest; -fx-border-color: -border-subtle; -fx-border-width: 1 0 1 0;");
+        breadcrumbsBar.getStyleClass().add("query-breadcrumbs-bar");
         breadcrumbsFileLabel.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 11px;");
         breadcrumbsSepLabel.setStyle("-fx-text-fill: -text-dim; -fx-font-size: 11px;");
         breadcrumbsStmtLabel.setStyle("-fx-text-fill: #3574F0; -fx-font-size: 11px; -fx-font-weight: bold;");

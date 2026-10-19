@@ -547,6 +547,7 @@ public class SchemaTreePane extends VBox {
     private void refreshConnection(TreeItem<DbObject> item, ConnectionProfile profile) {
         if (profile != null) {
             com.roze.dbnavigator.search.SearchEverywhereService.invalidateDatabaseCache(profile.getId());
+            com.roze.dbnavigator.search.SearchEverywhereService.markProfileReachable(profile.getId());
         }
         DbObject obj = item.getValue();
         obj.setLoaded(true);
@@ -567,6 +568,7 @@ public class SchemaTreePane extends VBox {
     public void refreshConnection(ConnectionProfile profile) {
         if (profile != null) {
             com.roze.dbnavigator.search.SearchEverywhereService.invalidateDatabaseCache(profile.getId());
+            com.roze.dbnavigator.search.SearchEverywhereService.markProfileReachable(profile.getId());
         }
         connectionItems.entrySet().stream()
                 .filter(e -> e.getValue().getId().equals(profile.getId()))

@@ -135,6 +135,78 @@ public final class SearchEverywhereService {
     }
 
     private static final Map<String, List<String>> discoveredDatabasesCache = new ConcurrentHashMap<>();
+    private static final Map<String, Long> unreachableProfiles = new ConcurrentHashMap<>();
+    private static final long UNREACHABLE_COOLDOWN_MS = 180_000; // 3 minutes cooldown
+
+    public static boolean isProfileUnreachable(String profileId) {
+        if (profileId == null) return false;
+        Long failedAt = unreachableProfiles.get(profileId);
+        if (failedAt == null) return false;
+        if (System.currentTimeMillis() - failedAt < UNREACHABLE_COOLDOWN_MS) {
+            return true;
+        }
+        unreachableProfiles.remove(profileId);
+        return false;
+    }
+
+    public static void markProfileUnreachable(String profileId) {
+        if (profileId != null) {
+            unreachableProfiles.put(profileId, System.currentTimeMillis());
+        }
+    }
+
+    public static void markProfileReachable(String profileId) {
+        if (profileId != null) {
+            unreachableProfiles.remove(profileId);
+        }
+    }
+
+    public static void clearUnreachableProfiles() {
+        unreachableProfiles.clear();
+    }
+
+    public static boolean isConnectionFailure(Throwable t) {
+        if (t == null) return false;
+        if (t instanceof java.net.SocketException
+                || t instanceof java.net.UnknownHostException
+                || t instanceof java.util.concurrent.TimeoutException) {
+            return true;
+        }
+        String className = t.getClass().getName().toLowerCase(Locale.ROOT);
+        if (className.contains("connectexception")
+                || className.contains("unknownhostexception")
+                || className.contains("sockettimeoutexception")
+                || className.contains("noroutetohostexception")) {
+            return true;
+        }
+        String msg = t.getMessage() != null ? t.getMessage().toLowerCase(Locale.ROOT) : "";
+        if (msg.contains("failed to connect")
+                || msg.contains("connection refused")
+                || msg.contains("failed to initialize pool")
+                || msg.contains("the connection attempt failed")
+                || msg.contains("communications link failure")
+                || msg.contains("unable to connect")
+                || msg.contains("unknown host")
+                || msg.contains("unknownhost")
+                || msg.contains("network is unreachable")
+                || msg.contains("timed out")
+                || msg.contains("timeout")
+                || msg.contains("could not connect")
+                || msg.contains("no route to host")
+                || msg.contains("connection reset")
+                || msg.contains("connection closed")
+                || msg.contains("server not found")
+                || msg.contains("host not found")
+                || msg.contains("cannot open connection")
+                || msg.contains("io error")
+                || (msg.contains("connection to") && msg.contains("refused"))) {
+            return true;
+        }
+        if (t.getCause() != null && t.getCause() != t) {
+            return isConnectionFailure(t.getCause());
+        }
+        return false;
+    }
 
     public static void clearDiscoveredDatabasesCache() {
         discoveredDatabasesCache.clear();
@@ -172,15 +244,26 @@ public final class SearchEverywhereService {
             return cached;
         }
 
+        // D2. If this profile is currently known to be unreachable (offline/uninstalled), skip network discovery
+        if (isProfileUnreachable(profile.getId())) {
+            if (profile.getDatabase() != null && !profile.getDatabase().isBlank()) {
+                return List.of(profile.getDatabase());
+            }
+            return List.of("");
+        }
+
         // E. Dynamic discovery without requiring manual tree exploration
         try {
             List<String> discovered = MetadataService.listDatabaseNames(profile);
             if (discovered != null && !discovered.isEmpty()) {
                 discoveredDatabasesCache.put(profile.getId(), discovered);
+                markProfileReachable(profile.getId());
                 return discovered;
             }
         } catch (Exception e) {
-            System.err.println("Database auto-discovery failed for " + profile.getName() + ": " + e.getMessage());
+            if (isConnectionFailure(e)) {
+                markProfileUnreachable(profile.getId());
+            }
         }
 
         // F. Fallback to default configured database if discovery fails
@@ -234,6 +317,11 @@ public final class SearchEverywhereService {
         for (ConnectionProfile profile : profiles) {
             if (isCancelled(activeGen, currentGen)) return;
 
+            // If database server is offline or not installed, softly skip remote queries
+            if (isProfileUnreachable(profile.getId())) {
+                continue;
+            }
+
             try {
                 if (profile.getType() == DatabaseType.MONGODB) {
                     searchMongo(profile, query, results, limit);
@@ -254,6 +342,12 @@ public final class SearchEverywhereService {
 
                 // Multi-catalog engines: PostgreSQL, SQL Server, etc.
                 List<String> catalogs = resolveDatabasesForProfile(profile);
+
+                // If resolveDatabasesForProfile discovered server is offline, skip querying
+                if (isProfileUnreachable(profile.getId())) {
+                    continue;
+                }
+
                 for (String catalog : catalogs) {
                     if (isCancelled(activeGen, currentGen)) return;
                     try {
@@ -265,12 +359,17 @@ public final class SearchEverywhereService {
                             searchGenericJdbc(profile, catalog, query, results, limit);
                         }
                     } catch (Exception e) {
-                        System.err.println("Search error for " + profile.getName() + " [" + catalog + "]: " + e.getMessage());
+                        if (isConnectionFailure(e)) {
+                            markProfileUnreachable(profile.getId());
+                            break; // Stop attempting remaining catalogs for this unreachable server
+                        }
                     }
                     if (results.size() >= limit * 2) break;
                 }
             } catch (Exception e) {
-                System.err.println("Search error for " + profile.getName() + ": " + e.getMessage());
+                if (isConnectionFailure(e)) {
+                    markProfileUnreachable(profile.getId());
+                }
             }
             if (results.size() >= limit * 2) break;
         }
@@ -365,9 +464,7 @@ public final class SearchEverywhereService {
                                 .build());
                     }
                 }
-            } catch (SQLException e) {
-                System.err.println("PostgreSQL tables search failed: " + e.getMessage());
-            }
+            } catch (SQLException ignored) {}
 
             // Run columns
             try (PreparedStatement stmt = conn.prepareStatement(colSql)) {
@@ -399,9 +496,7 @@ public final class SearchEverywhereService {
                                 .build());
                     }
                 }
-            } catch (SQLException e) {
-                System.err.println("PostgreSQL columns search failed: " + e.getMessage());
-            }
+            } catch (SQLException ignored) {}
 
             // Run sequences
             try (PreparedStatement stmt = conn.prepareStatement(seqSql)) {
@@ -460,7 +555,9 @@ public final class SearchEverywhereService {
                 }
             } catch (SQLException ignored) {}
         } catch (SQLException e) {
-            System.err.println("PostgreSQL connection failed for " + profile.getName() + " [" + catalog + "]: " + e.getMessage());
+            if (isConnectionFailure(e)) {
+                markProfileUnreachable(profile.getId());
+            }
         }
     }
 
@@ -527,9 +624,7 @@ public final class SearchEverywhereService {
                                 .build());
                     }
                 }
-            } catch (SQLException e) {
-                System.err.println("MySQL tables search failed: " + e.getMessage());
-            }
+            } catch (SQLException ignored) {}
 
             // Columns
             try (PreparedStatement stmt = conn.prepareStatement(colSql)) {
@@ -568,9 +663,7 @@ public final class SearchEverywhereService {
                                 .build());
                     }
                 }
-            } catch (SQLException e) {
-                System.err.println("MySQL columns search failed: " + e.getMessage());
-            }
+            } catch (SQLException ignored) {}
 
             // Indexes & PKs
             try (PreparedStatement stmt = conn.prepareStatement(idxSql)) {
@@ -611,7 +704,9 @@ public final class SearchEverywhereService {
                 }
             } catch (SQLException ignored) {}
         } catch (SQLException e) {
-            System.err.println("MySQL connection failed for " + profile.getName() + ": " + e.getMessage());
+            if (isConnectionFailure(e)) {
+                markProfileUnreachable(profile.getId());
+            }
         }
     }
 
@@ -677,9 +772,7 @@ public final class SearchEverywhereService {
                                 .build());
                     }
                 }
-            } catch (SQLException e) {
-                System.err.println("Oracle tables search failed: " + e.getMessage());
-            }
+            } catch (SQLException ignored) {}
 
             // Views
             try (PreparedStatement stmt = conn.prepareStatement(viewSql)) {
@@ -801,7 +894,9 @@ public final class SearchEverywhereService {
                 }
             } catch (SQLException ignored) {}
         } catch (SQLException e) {
-            System.err.println("Oracle connection failed for " + profile.getName() + ": " + e.getMessage());
+            if (isConnectionFailure(e)) {
+                markProfileUnreachable(profile.getId());
+            }
         }
     }
 
@@ -883,9 +978,7 @@ public final class SearchEverywhereService {
                                 .build());
                     }
                 }
-            } catch (SQLException e) {
-                System.err.println("SQL Server tables search failed: " + e.getMessage());
-            }
+            } catch (SQLException ignored) {}
 
             // Views
             try (PreparedStatement stmt = conn.prepareStatement(viewSql)) {
@@ -974,7 +1067,9 @@ public final class SearchEverywhereService {
                 }
             } catch (SQLException ignored) {}
         } catch (SQLException e) {
-            System.err.println("SQL Server connection failed for " + profile.getName() + " [" + catalog + "]: " + e.getMessage());
+            if (isConnectionFailure(e)) {
+                markProfileUnreachable(profile.getId());
+            }
         }
     }
 
@@ -1065,7 +1160,11 @@ public final class SearchEverywhereService {
                             .build());
                 }
             }
-        } catch (SQLException ignored) {}
+        } catch (Exception e) {
+            if (isConnectionFailure(e)) {
+                markProfileUnreachable(profile.getId());
+            }
+        }
     }
 
     private static void searchMongo(
@@ -1109,7 +1208,11 @@ public final class SearchEverywhereService {
                     }
                 }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            if (isConnectionFailure(e)) {
+                markProfileUnreachable(profile.getId());
+            }
+        }
     }
 
     private static void searchConsolesAndFiles(
