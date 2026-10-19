@@ -376,7 +376,7 @@ public class MainWindow {
         AppSettingsStore.MenuItemConfig toolbarCfg = settings.getMenuConfig("root.main.toolbar");
         HBox middleBox = (toolbarCfg != null)
                 ? actionManager.buildToolBarFromConfig(toolbarCfg, this)
-                : actionManager.buildToolBar(actionManager.getGroup("group.middle"), this);
+                : actionManager.buildToolBar(null, this);
         middleBox.setAlignment(Pos.CENTER);
         this.headerMiddleBar = middleBox;
 

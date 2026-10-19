@@ -307,8 +307,6 @@ public class ActionManager {
         toolbar.getStyleClass().add("header-middle-bar");
 
         if (toolbarConfig == null) {
-            ActionGroup middleGroup = getGroup("group.middle");
-            if (middleGroup != null) return buildToolBar(middleGroup, ctx);
             return toolbar;
         }
 

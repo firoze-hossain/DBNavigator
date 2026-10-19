@@ -4106,7 +4106,14 @@ public final class AppSettingsStore {
                                         "toolbar.single.tool.window.bar".equalsIgnoreCase(sub.getId()) ||
                                         "Single Tool Window Bar".equalsIgnoreCase(sub.getText()) ||
                                         "toolbar.file.name.widget".equalsIgnoreCase(sub.getId()) ||
-                                        (sub.getText() != null && sub.getText().startsWith("File Name Widget")));
+                                        (sub.getText() != null && sub.getText().startsWith("File Name Widget")) ||
+                                        "middle.database".equalsIgnoreCase(sub.getId()) ||
+                                        "middle.run".equalsIgnoreCase(sub.getId()) ||
+                                        "middle.console".equalsIgnoreCase(sub.getId()) ||
+                                        "middle.folder".equalsIgnoreCase(sub.getId()) ||
+                                        "middle.more".equalsIgnoreCase(sub.getId()) ||
+                                        "group.middle".equalsIgnoreCase(sub.getId())
+                                );
                             }
                         }
                     } else if ("root.editor.popup".equalsIgnoreCase(root.getId())) {

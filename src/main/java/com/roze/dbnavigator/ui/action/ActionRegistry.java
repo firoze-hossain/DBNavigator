@@ -4247,8 +4247,8 @@ public final class ActionRegistry {
                 .addSeparator()
                 .add(settings);
 
+        manager.registerAction(middleRun);
         ActionGroup middleGroup = new ActionGroup("group.middle", "Center Actions");
-        middleGroup.addAll(middleDatabase, middleRun, middleConsole, middleFolder, moreActionsGroup);
 
         // Register all groups
         manager.registerGroup(fileMenu);
