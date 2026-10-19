@@ -17,6 +17,9 @@ public class QueryTabHideDataPanelTest {
         try {
             Platform.startup(() -> {});
         } catch (IllegalStateException ignored) {}
+        try {
+            Platform.setImplicitExit(false);
+        } catch (Exception ignored) {}
     }
 
     private ConnectionProfile createTestProfile() {

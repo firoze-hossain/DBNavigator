@@ -946,40 +946,144 @@
     -fx-font-weight: bold;
 }
 
-/* ---------- ER diagram ---------- */
-.diagram-pane { -fx-background-color: -bg-darkest; }
-.diagram-scroll { -fx-background-color: -bg-darkest; }
-.diagram-scroll .viewport { -fx-background-color: -bg-darkest; }
+/* ---------- ER diagram (DataGrip style) ---------- */
+.diagram-canvas-root { -fx-background-color: -bg-darkest; }
+.diagram-pane { -fx-background-color: #f7f8fa; }
+.diagram-canvas-grid {
+    -fx-background-color: #f7f8fa;
+    -fx-background-image: radial-gradient(center 50% 50%, radius 1px, #d5d8e0 0%, transparent 100%);
+    -fx-background-size: 20px 20px;
+}
+.diagram-scroll { -fx-background-color: #f7f8fa; }
+.diagram-scroll .viewport { -fx-background-color: #f7f8fa; }
 
 .diagram-table-box, .diagram-table-box-root {
-    -fx-background-color: -bg-mid;
-    -fx-border-color: -border;
+    -fx-background-color: #ffffff;
+    -fx-border-color: #d1d5db;
     -fx-border-width: 1;
     -fx-background-radius: 6;
     -fx-border-radius: 6;
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.1), 6, 0, 0, 2);
 }
 .diagram-table-box-root {
     -fx-border-color: -accent;
     -fx-border-width: 2;
 }
+.diagram-table-box-selected {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #e5a024;
+    -fx-border-width: 2;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-effect: dropshadow(three-pass-box, rgba(229, 160, 36, 0.4), 10, 0, 0, 0);
+}
+.diagram-table-box-connected {
+    -fx-border-color: #3574f0;
+    -fx-border-width: 1.5;
+}
 .diagram-table-header {
-    -fx-background-color: #33363c;
+    -fx-background-color: #edf0f5;
     -fx-background-radius: 6 6 0 0;
-    -fx-text-fill: -text;
+    -fx-border-color: transparent transparent #d1d5db transparent;
+    -fx-border-width: 0 0 1 0;
+}
+.diagram-table-header .label { -fx-text-fill: #1f2328; -fx-font-weight: bold; -fx-font-size: 11.5px; }
+.diagram-table-title { -fx-text-fill: #1f2328; -fx-font-weight: bold; -fx-font-size: 11.5px; }
+
+.diagram-node-ddl-btn {
+    -fx-background-color: transparent;
+    -fx-padding: 1 4 1 4;
+    -fx-background-radius: 3;
+    -fx-cursor: hand;
+}
+.diagram-node-ddl-btn:hover {
+    -fx-background-color: #3574f022;
+}
+
+.diagram-column-row { -fx-border-color: transparent transparent #f0f2f5 transparent; -fx-border-width: 0 0 1 0; }
+.diagram-column-row:hover { -fx-background-color: #f1f4fa; }
+.diagram-column-name { -fx-text-fill: #24292f; -fx-font-size: 11px; }
+.diagram-column-pk   { -fx-text-fill: #b5750f; -fx-font-size: 11px; -fx-font-weight: bold; }
+.diagram-column-type { -fx-text-fill: #656d76; -fx-font-size: 10px; }
+
+/* Orthogonal connectors */
+.diagram-connector   { -fx-stroke: #4a77ad; -fx-stroke-width: 1.5; -fx-fill: transparent; }
+.diagram-connector-selected { -fx-stroke: #e5a024; -fx-stroke-width: 2.5; -fx-fill: transparent; }
+.diagram-connector-arrow { -fx-fill: #4a77ad; }
+.diagram-connector-arrow-selected { -fx-fill: #e5a024; }
+
+.diagram-connector-label {
+    -fx-text-fill: #2a4a80;
+    -fx-font-size: 9.5px;
+    -fx-background-color: #ffffff;
+    -fx-border-color: #d1d5db;
+    -fx-border-width: 1;
+    -fx-background-radius: 3;
+    -fx-border-radius: 3;
+    -fx-padding: 1 4 1 4;
+}
+.diagram-connector-label-selected {
+    -fx-text-fill: #b5750f;
+    -fx-border-color: #e5a024;
+    -fx-background-color: #fff9e6;
     -fx-font-weight: bold;
 }
-.diagram-table-header .label { -fx-text-fill: -text; -fx-font-weight: bold; -fx-font-size: 12px; }
-.diagram-column-row { -fx-border-color: transparent transparent #2c2e32 transparent; }
-.diagram-column-row:hover { -fx-background-color: #2e3033; }
-.diagram-column-name { -fx-text-fill: #c8ccd4; -fx-font-size: 11px; }
-.diagram-column-pk   { -fx-text-fill: #e0a44c; -fx-font-size: 11px; -fx-font-weight: bold; }
-.diagram-column-type { -fx-text-fill: #6f7680; -fx-font-size: 10px; }
-.diagram-connector   { -fx-stroke: #5b8ec4; -fx-stroke-width: 1.5; }
-.diagram-connector-label {
-    -fx-text-fill: #8fa8c4;
-    -fx-font-size: 10px;
-    -fx-background-color: -bg-darkest;
-    -fx-padding: 1 3 1 3;
+
+/* Quick Definition / DDL Popup */
+.diagram-ddl-popup {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #c9ccd4;
+    -fx-border-width: 1;
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.25), 16, 0, 0, 4);
+}
+.diagram-ddl-header {
+    -fx-background-color: #edf0f5;
+    -fx-background-radius: 8 8 0 0;
+    -fx-border-color: transparent transparent #c9ccd4 transparent;
+    -fx-border-width: 0 0 1 0;
+}
+.diagram-ddl-pill {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #d1d5db;
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-text-fill: #4b5563;
+    -fx-font-size: 10.5px;
+    -fx-padding: 2 6 2 6;
+}
+.diagram-ddl-code {
+    -fx-font-family: 'JetBrains Mono', 'Fira Code', 'DejaVu Sans Mono', monospace;
+    -fx-font-size: 11.5px;
+    -fx-text-fill: #1f2328;
+    -fx-control-inner-background: #ffffff;
+    -fx-background-color: #ffffff;
+    -fx-border-color: transparent;
+}
+.diagram-ddl-footer {
+    -fx-background-color: #f7f8fa;
+    -fx-background-radius: 0 0 8 8;
+    -fx-border-color: #d1d5db transparent transparent transparent;
+    -fx-border-width: 1 0 0 0;
+}
+.diagram-ddl-status {
+    -fx-text-fill: #656d76;
+    -fx-font-size: 10.5px;
+}
+.diagram-ddl-action-btn {
+    -fx-background-color: #edf0f5;
+    -fx-border-color: #d1d5db;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-text-fill: #1f2328;
+    -fx-font-size: 11px;
+    -fx-padding: 4 10 4 10;
+}
+.diagram-ddl-action-btn:hover {
+    -fx-background-color: #3574f0;
+    -fx-text-fill: white;
 }
 
 /* ---------- Modify Table dialog ---------- */
