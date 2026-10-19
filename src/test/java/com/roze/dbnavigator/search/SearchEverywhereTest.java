@@ -161,4 +161,59 @@ public class SearchEverywhereTest {
         int scoreUnderscore = tableHit.calculateScore("app_tx");
         assertTrue(scoreUnderscore > 1200, "'app_tx' should score bonus points for 'appointment_tx', got " + scoreUnderscore);
     }
+
+    @Test
+    void testResolveDatabasesRespectsVisibleDatabasesFilter() {
+        SearchEverywhereService.clearDiscoveredDatabasesCache();
+
+        ConnectionProfile pg = new ConnectionProfile();
+        pg.setId("pg-test-id");
+        pg.setName("Postgres Test");
+        pg.setType(ConnectionProfile.DatabaseType.POSTGRESQL);
+        pg.setDatabase("postgres");
+
+        // 1. When visibleDatabases is set explicitly (e.g. from Show/Hide Schemas), it must return only those databases
+        pg.setVisibleDatabases(List.of("nexacom_db", "thunder_db", "tik"));
+        List<String> resolvedFiltered = SearchEverywhereService.resolveDatabasesForProfile(pg);
+        assertEquals(List.of("nexacom_db", "thunder_db", "tik"), resolvedFiltered);
+
+        // 2. When visibleDatabases is empty, fallback to configured database if no live connection
+        pg.setVisibleDatabases(null);
+        SearchEverywhereService.clearDiscoveredDatabasesCache();
+        List<String> resolvedDefault = SearchEverywhereService.resolveDatabasesForProfile(pg);
+        assertTrue(resolvedDefault.contains("postgres"), "Should fall back to default database when visibleDatabases is empty");
+    }
+
+    @Test
+    void testDiscoveredDatabasesCachingAndInvalidation() {
+        SearchEverywhereService.clearDiscoveredDatabasesCache();
+
+        String profileId = "cache-test-profile";
+        SearchEverywhereService.getDiscoveredDatabasesCache().put(profileId, List.of("db_alpha", "db_beta"));
+
+        ConnectionProfile profile = new ConnectionProfile();
+        profile.setId(profileId);
+        profile.setType(ConnectionProfile.DatabaseType.POSTGRESQL);
+
+        List<String> resolved = SearchEverywhereService.resolveDatabasesForProfile(profile);
+        assertEquals(List.of("db_alpha", "db_beta"), resolved, "Should return cached discovered databases");
+
+        // Invalidate cache
+        SearchEverywhereService.invalidateDatabaseCache(profileId);
+        assertFalse(SearchEverywhereService.getDiscoveredDatabasesCache().containsKey(profileId), "Cache should be invalidated");
+    }
+
+    @Test
+    void testDatabaseTypeRoutingRules() {
+        ConnectionProfile sqlite = new ConnectionProfile();
+        sqlite.setType(ConnectionProfile.DatabaseType.SQLITE);
+        assertEquals(List.of("main"), SearchEverywhereService.resolveDatabasesForProfile(sqlite));
+
+        ConnectionProfile oracle = new ConnectionProfile();
+        oracle.setType(ConnectionProfile.DatabaseType.ORACLE);
+        assertEquals(List.of(""), SearchEverywhereService.resolveDatabasesForProfile(oracle));
+
+        oracle.setVisibleDatabases(List.of("HR", "SCOTT"));
+        assertEquals(List.of("HR", "SCOTT"), SearchEverywhereService.resolveDatabasesForProfile(oracle));
+    }
 }

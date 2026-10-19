@@ -545,6 +545,9 @@ public class SchemaTreePane extends VBox {
 
     /** Re-loads one connection's children (used after the filter dialog). */
     private void refreshConnection(TreeItem<DbObject> item, ConnectionProfile profile) {
+        if (profile != null) {
+            com.roze.dbnavigator.search.SearchEverywhereService.invalidateDatabaseCache(profile.getId());
+        }
         DbObject obj = item.getValue();
         obj.setLoaded(true);
         item.getChildren().setAll(loadingNode());
@@ -562,6 +565,9 @@ public class SchemaTreePane extends VBox {
      * it the way a full reload would.
      */
     public void refreshConnection(ConnectionProfile profile) {
+        if (profile != null) {
+            com.roze.dbnavigator.search.SearchEverywhereService.invalidateDatabaseCache(profile.getId());
+        }
         connectionItems.entrySet().stream()
                 .filter(e -> e.getValue().getId().equals(profile.getId()))
                 .findFirst()

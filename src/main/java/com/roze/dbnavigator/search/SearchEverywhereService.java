@@ -2,6 +2,7 @@ package com.roze.dbnavigator.search;
 
 import com.roze.dbnavigator.db.ClientRegistry;
 import com.roze.dbnavigator.db.ConnectionStore;
+import com.roze.dbnavigator.db.MetadataService;
 import com.roze.dbnavigator.db.ProjectStore;
 import com.roze.dbnavigator.model.ConnectionProfile;
 import com.roze.dbnavigator.model.ConnectionProfile.DatabaseType;
@@ -23,14 +24,18 @@ import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+
 import java.util.stream.Stream;
 
 /**
@@ -129,6 +134,62 @@ public final class SearchEverywhereService {
         return "%" + trimmed + "%";
     }
 
+    private static final Map<String, List<String>> discoveredDatabasesCache = new ConcurrentHashMap<>();
+
+    public static void clearDiscoveredDatabasesCache() {
+        discoveredDatabasesCache.clear();
+    }
+
+    public static void invalidateDatabaseCache(String profileId) {
+        if (profileId != null) {
+            discoveredDatabasesCache.remove(profileId);
+        }
+    }
+
+    static Map<String, List<String>> getDiscoveredDatabasesCache() {
+        return discoveredDatabasesCache;
+    }
+
+    static List<String> resolveDatabasesForProfile(ConnectionProfile profile) {
+        // A. If the user explicitly configured visibleDatabases (e.g. from Show/Hide Schemas dialog), respect it!
+        if (profile.getVisibleDatabases() != null && !profile.getVisibleDatabases().isEmpty()) {
+            return new ArrayList<>(profile.getVisibleDatabases());
+        }
+
+        // B. SQLite has 1 schema/database ("main")
+        if (profile.getType() == DatabaseType.SQLITE) {
+            return List.of("main");
+        }
+
+        // C. Oracle organizes by schemas rather than catalogs
+        if (profile.getType() == DatabaseType.ORACLE) {
+            return List.of("");
+        }
+
+        // D. Check discovery cache
+        List<String> cached = discoveredDatabasesCache.get(profile.getId());
+        if (cached != null && !cached.isEmpty()) {
+            return cached;
+        }
+
+        // E. Dynamic discovery without requiring manual tree exploration
+        try {
+            List<String> discovered = MetadataService.listDatabaseNames(profile);
+            if (discovered != null && !discovered.isEmpty()) {
+                discoveredDatabasesCache.put(profile.getId(), discovered);
+                return discovered;
+            }
+        } catch (Exception e) {
+            System.err.println("Database auto-discovery failed for " + profile.getName() + ": " + e.getMessage());
+        }
+
+        // F. Fallback to default configured database if discovery fails
+        if (profile.getDatabase() != null && !profile.getDatabase().isBlank()) {
+            return List.of(profile.getDatabase());
+        }
+        return List.of("");
+    }
+
     private static void searchDatabase(
             String query,
             boolean includeNonProject,
@@ -163,42 +224,53 @@ public final class SearchEverywhereService {
         }
 
         // 2. Query configured database connections
-        List<ConnectionProfile> profiles = ConnectionStore.load();
+        List<ConnectionProfile> profiles = includeNonProject
+                ? ConnectionStore.load()
+                : ConnectionStore.loadForProject(mainWindow != null && mainWindow.getProject() != null ? mainWindow.getProject().getName() : "default");
+        if (profiles.isEmpty()) {
+            profiles = ConnectionStore.load();
+        }
+
         for (ConnectionProfile profile : profiles) {
             if (isCancelled(activeGen, currentGen)) return;
-            if (profile.getType() == DatabaseType.MONGODB) {
-                searchMongo(profile, query, results, limit);
-                continue;
-            }
 
-            // Gather all visible databases or configured database for this profile
-            Set<String> catalogs = new LinkedHashSet<>();
-            if (profile.getVisibleDatabases() != null && !profile.getVisibleDatabases().isEmpty()) {
-                catalogs.addAll(profile.getVisibleDatabases());
-            }
-            if (profile.getDatabase() != null && !profile.getDatabase().isBlank()) {
-                catalogs.add(profile.getDatabase());
-            }
-            if (catalogs.isEmpty()) {
-                catalogs.add(null);
-            }
-
-            for (String catalog : catalogs) {
-                if (isCancelled(activeGen, currentGen)) return;
-                try {
-                    if (profile.getType() == DatabaseType.POSTGRESQL) {
-                        searchPostgreSql(profile, catalog, query, results, limit);
-                    } else if (profile.getType() == DatabaseType.MYSQL || profile.getType() == DatabaseType.MARIADB) {
-                        searchMySql(profile, catalog, query, results, limit);
-                    } else if (profile.getType() == DatabaseType.SQLITE) {
-                        searchSqlite(profile, catalog, query, results, limit);
-                    } else {
-                        searchGenericJdbc(profile, catalog, query, results, limit);
-                    }
-                } catch (Exception e) {
-                    System.err.println("Search error for " + profile.getName() + " [" + catalog + "]: " + e.getMessage());
+            try {
+                if (profile.getType() == DatabaseType.MONGODB) {
+                    searchMongo(profile, query, results, limit);
+                    continue;
                 }
-                if (results.size() >= limit * 2) break;
+                if (profile.getType() == DatabaseType.ORACLE) {
+                    searchOracle(profile, query, results, limit);
+                    continue;
+                }
+                if (profile.getType() == DatabaseType.MYSQL || profile.getType() == DatabaseType.MARIADB) {
+                    searchMySql(profile, query, results, limit);
+                    continue;
+                }
+                if (profile.getType() == DatabaseType.SQLITE) {
+                    searchSqlite(profile, "main", query, results, limit);
+                    continue;
+                }
+
+                // Multi-catalog engines: PostgreSQL, SQL Server, etc.
+                List<String> catalogs = resolveDatabasesForProfile(profile);
+                for (String catalog : catalogs) {
+                    if (isCancelled(activeGen, currentGen)) return;
+                    try {
+                        if (profile.getType() == DatabaseType.POSTGRESQL) {
+                            searchPostgreSql(profile, catalog, query, results, limit);
+                        } else if (profile.getType() == DatabaseType.SQLSERVER) {
+                            searchSqlServer(profile, catalog, query, results, limit);
+                        } else {
+                            searchGenericJdbc(profile, catalog, query, results, limit);
+                        }
+                    } catch (Exception e) {
+                        System.err.println("Search error for " + profile.getName() + " [" + catalog + "]: " + e.getMessage());
+                    }
+                    if (results.size() >= limit * 2) break;
+                }
+            } catch (Exception e) {
+                System.err.println("Search error for " + profile.getName() + ": " + e.getMessage());
             }
             if (results.size() >= limit * 2) break;
         }
@@ -394,36 +466,46 @@ public final class SearchEverywhereService {
 
     private static void searchMySql(
             ConnectionProfile profile,
-            String catalog,
             String query,
             List<SearchHit> results,
             int limit
     ) {
-        String dbName = catalog != null ? catalog : (profile.getDatabase() != null ? profile.getDatabase() : "");
+        List<String> visible = profile.getVisibleDatabases();
+        boolean hasFilter = visible != null && !visible.isEmpty();
 
-        String tableSql = """
-                SELECT TABLE_NAME, TABLE_SCHEMA, TABLE_TYPE
-                FROM information_schema.TABLES
-                WHERE TABLE_SCHEMA NOT IN ('information_schema', 'mysql', 'performance_schema', 'sys')
-                  AND TABLE_NAME LIKE ?
-                ORDER BY TABLE_NAME
-                LIMIT ?
-                """;
+        String schemaFilter;
+        if (hasFilter) {
+            schemaFilter = "TABLE_SCHEMA IN (" + String.join(",", visible.stream().map(s -> "?").toList()) + ")";
+        } else {
+            schemaFilter = "TABLE_SCHEMA NOT IN ('information_schema', 'mysql', 'performance_schema', 'sys')";
+        }
 
-        String colSql = """
-                SELECT COLUMN_NAME, TABLE_NAME, TABLE_SCHEMA, COLUMN_KEY
-                FROM information_schema.COLUMNS
-                WHERE TABLE_SCHEMA NOT IN ('information_schema', 'mysql', 'performance_schema', 'sys')
-                  AND COLUMN_NAME LIKE ?
-                ORDER BY COLUMN_NAME, TABLE_NAME
-                LIMIT ?
-                """;
+        String tableSql = "SELECT TABLE_NAME, TABLE_SCHEMA, TABLE_TYPE " +
+                "FROM information_schema.TABLES " +
+                "WHERE " + schemaFilter + " AND TABLE_NAME LIKE ? " +
+                "ORDER BY TABLE_NAME LIMIT ?";
 
-        try (Connection conn = ClientRegistry.jdbc(profile, catalog).getConnection()) {
+        String colSql = "SELECT COLUMN_NAME, TABLE_NAME, TABLE_SCHEMA, COLUMN_KEY " +
+                "FROM information_schema.COLUMNS " +
+                "WHERE " + schemaFilter + " AND COLUMN_NAME LIKE ? " +
+                "ORDER BY COLUMN_NAME, TABLE_NAME LIMIT ?";
+
+        String idxSql = "SELECT INDEX_NAME, TABLE_NAME, TABLE_SCHEMA, NON_UNIQUE " +
+                "FROM information_schema.STATISTICS " +
+                "WHERE " + schemaFilter + " AND INDEX_NAME LIKE ? " +
+                "ORDER BY INDEX_NAME LIMIT ?";
+
+        try (Connection conn = ClientRegistry.jdbc(profile, null).getConnection()) {
             // Tables
             try (PreparedStatement stmt = conn.prepareStatement(tableSql)) {
-                stmt.setString(1, buildSqlPattern(query));
-                stmt.setInt(2, limit);
+                int paramIdx = 1;
+                if (hasFilter) {
+                    for (String db : visible) {
+                        stmt.setString(paramIdx++, db);
+                    }
+                }
+                stmt.setString(paramIdx++, buildSqlPattern(query));
+                stmt.setInt(paramIdx, limit);
                 try (ResultSet rs = stmt.executeQuery()) {
                     while (rs.next()) {
                         String name = rs.getString(1);
@@ -445,12 +527,20 @@ public final class SearchEverywhereService {
                                 .build());
                     }
                 }
+            } catch (SQLException e) {
+                System.err.println("MySQL tables search failed: " + e.getMessage());
             }
 
             // Columns
             try (PreparedStatement stmt = conn.prepareStatement(colSql)) {
-                stmt.setString(1, buildSqlPattern(query));
-                stmt.setInt(2, limit);
+                int paramIdx = 1;
+                if (hasFilter) {
+                    for (String db : visible) {
+                        stmt.setString(paramIdx++, db);
+                    }
+                }
+                stmt.setString(paramIdx++, buildSqlPattern(query));
+                stmt.setInt(paramIdx, limit);
                 try (ResultSet rs = stmt.executeQuery()) {
                     while (rs.next()) {
                         String colName = rs.getString(1);
@@ -478,8 +568,414 @@ public final class SearchEverywhereService {
                                 .build());
                     }
                 }
+            } catch (SQLException e) {
+                System.err.println("MySQL columns search failed: " + e.getMessage());
             }
-        } catch (SQLException ignored) {}
+
+            // Indexes & PKs
+            try (PreparedStatement stmt = conn.prepareStatement(idxSql)) {
+                int paramIdx = 1;
+                if (hasFilter) {
+                    for (String db : visible) {
+                        stmt.setString(paramIdx++, db);
+                    }
+                }
+                stmt.setString(paramIdx++, buildSqlPattern(query));
+                stmt.setInt(paramIdx, limit);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        String idxName = rs.getString(1);
+                        String tblName = rs.getString(2);
+                        String schema = rs.getString(3);
+                        int nonUnique = rs.getInt(4);
+                        boolean isPk = "PRIMARY".equalsIgnoreCase(idxName);
+                        boolean isUnique = nonUnique == 0;
+
+                        DbObject idxObj = new DbObject(idxName, isPk ? Kind.KEY : Kind.INDEX, schema, null);
+                        idxObj.setTableName(tblName);
+                        String loc = schema + "." + tblName + " [" + profile.getName() + "]";
+                        String uri = "DATABASE/" + profile.getId() + "/database/" + schema + "/table/" + tblName + "/index/" + idxName;
+
+                        results.add(new SearchHit.Builder()
+                                .type(isPk ? SearchHit.Type.PRIMARY_KEY : SearchHit.Type.INDEX)
+                                .name(idxName)
+                                .detail(loc)
+                                .fullUri(uri)
+                                .profile(profile)
+                                .dbObject(idxObj)
+                                .parentTable(tblName)
+                                .primaryKey(isPk)
+                                .uniqueIndex(isUnique)
+                                .build());
+                    }
+                }
+            } catch (SQLException ignored) {}
+        } catch (SQLException e) {
+            System.err.println("MySQL connection failed for " + profile.getName() + ": " + e.getMessage());
+        }
+    }
+
+    private static void searchOracle(
+            ConnectionProfile profile,
+            String query,
+            List<SearchHit> results,
+            int limit
+    ) {
+        List<String> visible = profile.getVisibleDatabases();
+        boolean hasFilter = visible != null && !visible.isEmpty();
+
+        String ownerFilter;
+        if (hasFilter) {
+            ownerFilter = "OWNER IN (" + String.join(",", visible.stream().map(s -> "?").toList()) + ")";
+        } else {
+            ownerFilter = "OWNER NOT IN (" +
+                    String.join(",", MetadataService.ORACLE_SYSTEM_SCHEMAS.stream().map(s -> "'" + s.toUpperCase(Locale.ROOT) + "'").toList()) +
+                    ")";
+        }
+
+        String tableSql = "SELECT * FROM (SELECT TABLE_NAME, OWNER FROM ALL_TABLES " +
+                "WHERE " + ownerFilter + " AND UPPER(TABLE_NAME) LIKE ? ORDER BY TABLE_NAME) WHERE ROWNUM <= ?";
+
+        String viewSql = "SELECT * FROM (SELECT VIEW_NAME, OWNER FROM ALL_VIEWS " +
+                "WHERE " + ownerFilter + " AND UPPER(VIEW_NAME) LIKE ? ORDER BY VIEW_NAME) WHERE ROWNUM <= ?";
+
+        String colSql = "SELECT * FROM (SELECT COLUMN_NAME, TABLE_NAME, OWNER FROM ALL_TAB_COLUMNS " +
+                "WHERE " + ownerFilter + " AND UPPER(COLUMN_NAME) LIKE ? ORDER BY COLUMN_NAME, TABLE_NAME) WHERE ROWNUM <= ?";
+
+        String seqOwnerFilter = hasFilter ? "SEQUENCE_" + ownerFilter : "SEQUENCE_OWNER NOT IN (" +
+                String.join(",", MetadataService.ORACLE_SYSTEM_SCHEMAS.stream().map(s -> "'" + s.toUpperCase(Locale.ROOT) + "'").toList()) + ")";
+        String seqSql = "SELECT * FROM (SELECT SEQUENCE_NAME, SEQUENCE_OWNER FROM ALL_SEQUENCES " +
+                "WHERE " + seqOwnerFilter + " AND UPPER(SEQUENCE_NAME) LIKE ? ORDER BY SEQUENCE_NAME) WHERE ROWNUM <= ?";
+
+        String idxSql = "SELECT * FROM (SELECT INDEX_NAME, TABLE_NAME, OWNER, UNIQUENESS FROM ALL_INDEXES " +
+                "WHERE " + ownerFilter + " AND UPPER(INDEX_NAME) LIKE ? ORDER BY INDEX_NAME) WHERE ROWNUM <= ?";
+
+        try (Connection conn = ClientRegistry.jdbc(profile, null).getConnection()) {
+            // Tables
+            try (PreparedStatement stmt = conn.prepareStatement(tableSql)) {
+                int p = 1;
+                if (hasFilter) {
+                    for (String s : visible) stmt.setString(p++, s.toUpperCase(Locale.ROOT));
+                }
+                stmt.setString(p++, buildSqlPattern(query).toUpperCase(Locale.ROOT));
+                stmt.setInt(p, limit);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        String name = rs.getString(1);
+                        String owner = rs.getString(2);
+                        DbObject obj = new DbObject(name, Kind.TABLE, owner, owner);
+                        String loc = owner + " [" + profile.getName() + "]";
+                        String uri = "DATABASE/" + profile.getId() + "/schema/" + owner + "/table/" + name;
+                        results.add(new SearchHit.Builder()
+                                .type(SearchHit.Type.TABLE)
+                                .name(name)
+                                .detail(loc)
+                                .fullUri(uri)
+                                .profile(profile)
+                                .dbObject(obj)
+                                .parentTable(name)
+                                .build());
+                    }
+                }
+            } catch (SQLException e) {
+                System.err.println("Oracle tables search failed: " + e.getMessage());
+            }
+
+            // Views
+            try (PreparedStatement stmt = conn.prepareStatement(viewSql)) {
+                int p = 1;
+                if (hasFilter) {
+                    for (String s : visible) stmt.setString(p++, s.toUpperCase(Locale.ROOT));
+                }
+                stmt.setString(p++, buildSqlPattern(query).toUpperCase(Locale.ROOT));
+                stmt.setInt(p, limit);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        String name = rs.getString(1);
+                        String owner = rs.getString(2);
+                        DbObject obj = new DbObject(name, Kind.VIEW, owner, owner);
+                        String loc = owner + " [" + profile.getName() + "]";
+                        String uri = "DATABASE/" + profile.getId() + "/schema/" + owner + "/table/" + name;
+                        results.add(new SearchHit.Builder()
+                                .type(SearchHit.Type.VIEW)
+                                .name(name)
+                                .detail(loc)
+                                .fullUri(uri)
+                                .profile(profile)
+                                .dbObject(obj)
+                                .parentTable(name)
+                                .build());
+                    }
+                }
+            } catch (SQLException ignored) {}
+
+            // Columns
+            try (PreparedStatement stmt = conn.prepareStatement(colSql)) {
+                int p = 1;
+                if (hasFilter) {
+                    for (String s : visible) stmt.setString(p++, s.toUpperCase(Locale.ROOT));
+                }
+                stmt.setString(p++, buildSqlPattern(query).toUpperCase(Locale.ROOT));
+                stmt.setInt(p, limit);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        String colName = rs.getString(1);
+                        String tblName = rs.getString(2);
+                        String owner = rs.getString(3);
+                        DbObject tblObj = new DbObject(tblName, Kind.TABLE, owner, owner);
+                        String loc = owner + "." + tblName + " [" + profile.getName() + "]";
+                        String uri = "DATABASE/" + profile.getId() + "/schema/" + owner + "/table/" + tblName + "/column/" + colName;
+                        results.add(new SearchHit.Builder()
+                                .type(SearchHit.Type.COLUMN)
+                                .name(colName)
+                                .detail(loc)
+                                .fullUri(uri)
+                                .profile(profile)
+                                .dbObject(tblObj)
+                                .parentTable(tblName)
+                                .columnName(colName)
+                                .build());
+                    }
+                }
+            } catch (SQLException ignored) {}
+
+            // Sequences
+            try (PreparedStatement stmt = conn.prepareStatement(seqSql)) {
+                int p = 1;
+                if (hasFilter) {
+                    for (String s : visible) stmt.setString(p++, s.toUpperCase(Locale.ROOT));
+                }
+                stmt.setString(p++, buildSqlPattern(query).toUpperCase(Locale.ROOT));
+                stmt.setInt(p, limit);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        String seqName = rs.getString(1);
+                        String owner = rs.getString(2);
+                        DbObject seqObj = new DbObject(seqName, Kind.SEQUENCE, owner, owner);
+                        String loc = owner + " [" + profile.getName() + "]";
+                        String uri = "DATABASE/" + profile.getId() + "/schema/" + owner + "/sequence/" + seqName;
+                        results.add(new SearchHit.Builder()
+                                .type(SearchHit.Type.SEQUENCE)
+                                .name(seqName)
+                                .detail(loc)
+                                .fullUri(uri)
+                                .profile(profile)
+                                .dbObject(seqObj)
+                                .build());
+                    }
+                }
+            } catch (SQLException ignored) {}
+
+            // Indexes
+            try (PreparedStatement stmt = conn.prepareStatement(idxSql)) {
+                int p = 1;
+                if (hasFilter) {
+                    for (String s : visible) stmt.setString(p++, s.toUpperCase(Locale.ROOT));
+                }
+                stmt.setString(p++, buildSqlPattern(query).toUpperCase(Locale.ROOT));
+                stmt.setInt(p, limit);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        String idxName = rs.getString(1);
+                        String tblName = rs.getString(2);
+                        String owner = rs.getString(3);
+                        String uniqueness = rs.getString(4);
+                        boolean isUnique = "UNIQUE".equalsIgnoreCase(uniqueness);
+
+                        DbObject idxObj = new DbObject(idxName, Kind.INDEX, owner, owner);
+                        idxObj.setTableName(tblName);
+                        String loc = owner + "." + tblName + " [" + profile.getName() + "]";
+                        String uri = "DATABASE/" + profile.getId() + "/schema/" + owner + "/table/" + tblName + "/index/" + idxName;
+
+                        results.add(new SearchHit.Builder()
+                                .type(SearchHit.Type.INDEX)
+                                .name(idxName)
+                                .detail(loc)
+                                .fullUri(uri)
+                                .profile(profile)
+                                .dbObject(idxObj)
+                                .parentTable(tblName)
+                                .uniqueIndex(isUnique)
+                                .build());
+                    }
+                }
+            } catch (SQLException ignored) {}
+        } catch (SQLException e) {
+            System.err.println("Oracle connection failed for " + profile.getName() + ": " + e.getMessage());
+        }
+    }
+
+    private static void searchSqlServer(
+            ConnectionProfile profile,
+            String catalog,
+            String query,
+            List<SearchHit> results,
+            int limit
+    ) {
+        String dbName = catalog != null ? catalog : (profile.getDatabase() != null ? profile.getDatabase() : "master");
+
+        String tableSql = """
+                SELECT TOP (?) t.name, s.name, 'TABLE'
+                FROM sys.tables t
+                JOIN sys.schemas s ON s.schema_id = t.schema_id
+                WHERE s.name NOT IN ('sys', 'information_schema')
+                  AND t.name LIKE ?
+                ORDER BY t.name
+                """;
+
+        String viewSql = """
+                SELECT TOP (?) v.name, s.name, 'VIEW'
+                FROM sys.views v
+                JOIN sys.schemas s ON s.schema_id = v.schema_id
+                WHERE s.name NOT IN ('sys', 'information_schema')
+                  AND v.name LIKE ?
+                ORDER BY v.name
+                """;
+
+        String colSql = """
+                SELECT TOP (?) c.name AS col_name, o.name AS tbl_name, s.name AS sch_name,
+                       CASE WHEN EXISTS (
+                           SELECT 1 FROM sys.index_columns ic
+                           JOIN sys.indexes i ON i.object_id = ic.object_id AND i.index_id = ic.index_id
+                           WHERE ic.object_id = c.object_id AND ic.column_id = c.column_id AND i.is_primary_key = 1
+                       ) THEN 1 ELSE 0 END AS is_pk
+                FROM sys.columns c
+                JOIN sys.objects o ON o.object_id = c.object_id
+                JOIN sys.schemas s ON s.schema_id = o.schema_id
+                WHERE o.type IN ('U', 'V')
+                  AND s.name NOT IN ('sys', 'information_schema')
+                  AND c.name LIKE ?
+                ORDER BY c.name, o.name
+                """;
+
+        String idxSql = """
+                SELECT TOP (?) i.name AS idx_name, t.name AS tbl_name, s.name AS sch_name,
+                       i.is_unique, i.is_primary_key
+                FROM sys.indexes i
+                JOIN sys.tables t ON t.object_id = i.object_id
+                JOIN sys.schemas s ON s.schema_id = t.schema_id
+                WHERE s.name NOT IN ('sys', 'information_schema')
+                  AND i.name IS NOT NULL
+                  AND i.name LIKE ?
+                ORDER BY i.name
+                """;
+
+        try (Connection conn = ClientRegistry.jdbc(profile, catalog).getConnection()) {
+            // Tables
+            try (PreparedStatement stmt = conn.prepareStatement(tableSql)) {
+                stmt.setInt(1, limit);
+                stmt.setString(2, buildSqlPattern(query));
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        String name = rs.getString(1);
+                        String schema = rs.getString(2);
+                        DbObject obj = new DbObject(name, Kind.TABLE, catalog, schema);
+                        String loc = dbName + "." + schema + " [" + profile.getName() + "]";
+                        String uri = "DATABASE/" + profile.getId() + "/database/" + dbName + "/schema/" + schema + "/table/" + name;
+                        results.add(new SearchHit.Builder()
+                                .type(SearchHit.Type.TABLE)
+                                .name(name)
+                                .detail(loc)
+                                .fullUri(uri)
+                                .profile(profile)
+                                .dbObject(obj)
+                                .parentTable(name)
+                                .build());
+                    }
+                }
+            } catch (SQLException e) {
+                System.err.println("SQL Server tables search failed: " + e.getMessage());
+            }
+
+            // Views
+            try (PreparedStatement stmt = conn.prepareStatement(viewSql)) {
+                stmt.setInt(1, limit);
+                stmt.setString(2, buildSqlPattern(query));
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        String name = rs.getString(1);
+                        String schema = rs.getString(2);
+                        DbObject obj = new DbObject(name, Kind.VIEW, catalog, schema);
+                        String loc = dbName + "." + schema + " [" + profile.getName() + "]";
+                        String uri = "DATABASE/" + profile.getId() + "/database/" + dbName + "/schema/" + schema + "/table/" + name;
+                        results.add(new SearchHit.Builder()
+                                .type(SearchHit.Type.VIEW)
+                                .name(name)
+                                .detail(loc)
+                                .fullUri(uri)
+                                .profile(profile)
+                                .dbObject(obj)
+                                .parentTable(name)
+                                .build());
+                    }
+                }
+            } catch (SQLException ignored) {}
+
+            // Columns
+            try (PreparedStatement stmt = conn.prepareStatement(colSql)) {
+                stmt.setInt(1, limit);
+                stmt.setString(2, buildSqlPattern(query));
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        String colName = rs.getString(1);
+                        String tblName = rs.getString(2);
+                        String schema = rs.getString(3);
+                        boolean isPk = rs.getInt(4) == 1;
+
+                        DbObject tblObj = new DbObject(tblName, Kind.TABLE, catalog, schema);
+                        String loc = dbName + "." + schema + "." + tblName + " [" + profile.getName() + "]";
+                        String uri = "DATABASE/" + profile.getId() + "/database/" + dbName + "/schema/" + schema + "/table/" + tblName + "/column/" + colName;
+
+                        results.add(new SearchHit.Builder()
+                                .type(SearchHit.Type.COLUMN)
+                                .name(colName)
+                                .detail(loc)
+                                .fullUri(uri)
+                                .profile(profile)
+                                .dbObject(tblObj)
+                                .parentTable(tblName)
+                                .columnName(colName)
+                                .primaryKey(isPk)
+                                .build());
+                    }
+                }
+            } catch (SQLException ignored) {}
+
+            // Indexes & PKs
+            try (PreparedStatement stmt = conn.prepareStatement(idxSql)) {
+                stmt.setInt(1, limit);
+                stmt.setString(2, buildSqlPattern(query));
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        String idxName = rs.getString(1);
+                        String tblName = rs.getString(2);
+                        String schema = rs.getString(3);
+                        boolean isUnique = rs.getBoolean(4);
+                        boolean isPk = rs.getBoolean(5);
+
+                        DbObject idxObj = new DbObject(idxName, isPk ? Kind.KEY : Kind.INDEX, catalog, schema);
+                        idxObj.setTableName(tblName);
+
+                        String loc = dbName + "." + schema + "." + tblName + " [" + profile.getName() + "]";
+                        String uri = "DATABASE/" + profile.getId() + "/database/" + dbName + "/schema/" + schema + "/table/" + tblName + "/index/" + idxName;
+
+                        results.add(new SearchHit.Builder()
+                                .type(isPk ? SearchHit.Type.PRIMARY_KEY : SearchHit.Type.INDEX)
+                                .name(idxName)
+                                .detail(loc)
+                                .fullUri(uri)
+                                .profile(profile)
+                                .dbObject(idxObj)
+                                .parentTable(tblName)
+                                .primaryKey(isPk)
+                                .uniqueIndex(isUnique)
+                                .build());
+                    }
+                }
+            } catch (SQLException ignored) {}
+        } catch (SQLException e) {
+            System.err.println("SQL Server connection failed for " + profile.getName() + " [" + catalog + "]: " + e.getMessage());
+        }
     }
 
     private static void searchSqlite(
@@ -580,7 +1076,11 @@ public final class SearchEverywhereService {
     ) {
         try {
             var client = ClientRegistry.mongo(profile);
+            List<String> visible = profile.getVisibleDatabases();
             for (String db : client.listDatabases()) {
+                if (visible != null && !visible.isEmpty() && !visible.contains(db)) {
+                    continue;
+                }
                 if (db.toLowerCase().contains(query.toLowerCase())) {
                     String loc = profile.getName();
                     String uri = "DATABASE/" + profile.getId() + "/database/" + db;
