@@ -46,6 +46,13 @@ nbdist/
 # VS Code
 .vscode/
 
+# Lumina IDE / metadata
+.lumina/
+compiler.xml
+encodings.xml
+jarRepositories.xml
+project.xml
+
 # macOS system files
 .DS_Store
 
