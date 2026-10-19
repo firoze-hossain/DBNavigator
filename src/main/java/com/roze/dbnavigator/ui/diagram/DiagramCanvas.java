@@ -90,6 +90,7 @@ public class DiagramCanvas extends BorderPane {
     private boolean showGrid = true;
     private boolean showEdgeLabels = true;
     private boolean showColumnTypes = true;
+    private boolean showVirtualForeignKeys = true;
 
     // Toolbar controls
     private final TextField searchField = new TextField();
@@ -174,6 +175,10 @@ public class DiagramCanvas extends BorderPane {
 
         Button autoRouteBtn = toolbarButton(FontAwesomeSolid.RANDOM, "Auto Route Edges (F5)", this::autoRouteEdges);
         Button showDdlBtn = toolbarButton(FontAwesomeSolid.CODE, "Show DDL / Table Definition (Space)", this::showSelectedTableDdl);
+        Button virtualFkBtn = toolbarButton(FontAwesomeSolid.LINK, "Toggle Virtual Foreign Keys / Inferred Relationships", () -> {
+            showVirtualForeignKeys = !showVirtualForeignKeys;
+            updateVirtualEdgesVisibility();
+        });
 
         // Search field to filter / highlight tables
         searchField.setPromptText("Filter tables\u2026");
@@ -192,7 +197,7 @@ public class DiagramCanvas extends BorderPane {
         HBox toolbar = new HBox(6,
                 zoomIn, zoomOut, resetZoom, fitZoom,
                 new Label("|"),
-                layoutBtn, autoRouteBtn, showDdlBtn,
+                layoutBtn, autoRouteBtn, showDdlBtn, virtualFkBtn,
                 new Label("|"),
                 searchField, exportPng, copyClip,
                 spacer, statusLabel
@@ -336,7 +341,15 @@ public class DiagramCanvas extends BorderPane {
             showColumnTypes = columnTypesItem.isSelected();
             updateColumnTypesVisibility();
         });
-        appearanceMenu.getItems().addAll(gridItem, edgeLabelsItem, columnTypesItem);
+
+        CheckMenuItem virtualFkItem = new CheckMenuItem("Show Virtual Foreign Keys");
+        virtualFkItem.setSelected(showVirtualForeignKeys);
+        virtualFkItem.setOnAction(e -> {
+            showVirtualForeignKeys = virtualFkItem.isSelected();
+            updateVirtualEdgesVisibility();
+        });
+
+        appearanceMenu.getItems().addAll(gridItem, edgeLabelsItem, columnTypesItem, virtualFkItem);
 
         MenuItem copyDiag = new MenuItem("Copy Diagram to Clipboard");
         copyDiag.setOnAction(e -> copyDiagramToClipboard());
@@ -395,18 +408,47 @@ public class DiagramCanvas extends BorderPane {
         autoRouteEdges();
     }
 
+    private void updateVirtualEdgesVisibility() {
+        for (DiagramEdgeRouter.EdgeView ev : edgeViews) {
+            if (ev.getEdge() != null && ev.getEdge().isVirtual()) {
+                ev.setVisible(showVirtualForeignKeys);
+                ev.setManaged(showVirtualForeignKeys);
+            }
+        }
+        updateStatusLabel(false, graph != null ? graph.getNodes().size() : 0);
+    }
+
     // =========================================================================
     // POPULATION & RENDERING
     // =========================================================================
 
     public void setGraph(DiagramGraph graph, boolean truncated, int totalTableCount) {
         this.graph = graph;
-        statusLabel.setText(truncated
-                ? "Showing first " + graph.getNodes().size() + " of " + totalTableCount + " tables (diagram capped for readability)"
-                : graph.getNodes().size() + " table(s), " + graph.getEdges().size() + " relationship(s)");
+        updateStatusLabel(truncated, totalTableCount);
 
         applyLayoutAndRender();
         updateGridAppearance();
+        updateVirtualEdgesVisibility();
+    }
+
+    private void updateStatusLabel(boolean truncated, int totalTableCount) {
+        if (graph == null) return;
+        if (truncated) {
+            statusLabel.setText("Showing first " + graph.getNodes().size() + " of " + totalTableCount + " tables (diagram capped for readability)");
+            return;
+        }
+
+        long virtualCount = graph.getEdges().stream().filter(DiagramGraph.Edge::isVirtual).count();
+        long physicalCount = graph.getEdges().size() - virtualCount;
+        String relInfo;
+        if (virtualCount > 0 && physicalCount > 0) {
+            relInfo = physicalCount + " physical, " + virtualCount + " inferred relationship(s)";
+        } else if (virtualCount > 0) {
+            relInfo = virtualCount + " inferred relationship(s)";
+        } else {
+            relInfo = graph.getEdges().size() + " relationship(s)";
+        }
+        statusLabel.setText(graph.getNodes().size() + " table(s), " + relInfo);
     }
 
     public void setLayoutMode(DiagramLayoutEngine.LayoutMode mode) {

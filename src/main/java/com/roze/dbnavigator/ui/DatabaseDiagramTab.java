@@ -1,6 +1,7 @@
 package com.roze.dbnavigator.ui;
 
 import com.roze.dbnavigator.db.MetadataService;
+import com.roze.dbnavigator.db.VirtualForeignKeyService;
 import com.roze.dbnavigator.model.ConnectionProfile;
 import com.roze.dbnavigator.model.DbObject;
 import com.roze.dbnavigator.ui.diagram.DiagramCanvas;
@@ -15,7 +16,9 @@ import javafx.scene.layout.VBox;
 import org.kordamp.ikonli.fontawesome5.FontAwesomeSolid;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * DataGrip-grade ER diagram tab for the whole database/schema.
@@ -67,6 +70,7 @@ public class DatabaseDiagramTab extends Tab {
                 });
 
                 DiagramGraph graph = new DiagramGraph();
+                java.util.Map<String, List<MetadataService.ColumnInfo>> tableColumnsMap = new java.util.HashMap<>();
 
                 for (DbObject table : tables) {
                     List<MetadataService.ColumnInfo> cols;
@@ -75,11 +79,16 @@ public class DatabaseDiagramTab extends Tab {
                     } catch (Exception ignored) {
                         cols = List.of();
                     }
+                    tableColumnsMap.put(table.getName(), cols);
                     graph.addNode(table, cols);
                 }
 
-                List<MetadataService.ForeignKey> relationships =
-                        MetadataService.loadForeignKeysForTables(profile, catalog, tables);
+                List<MetadataService.ForeignKey> relationships = new ArrayList<>(
+                        MetadataService.loadForeignKeysForTables(profile, catalog, tables));
+
+                List<MetadataService.ForeignKey> virtualFks =
+                        VirtualForeignKeyService.inferForeignKeysForTables(profile, catalog, tables, tableColumnsMap, relationships);
+                relationships.addAll(virtualFks);
 
                 for (MetadataService.ForeignKey fk : relationships) {
                     graph.addEdge(fk.fromTable(), fk.fromColumn(),

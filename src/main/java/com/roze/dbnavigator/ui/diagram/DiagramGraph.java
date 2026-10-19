@@ -128,14 +128,25 @@ public class DiagramGraph {
         private final Node toNode;
         private final String toColumn;
         private final String constraintName;
+        private final boolean virtual;
         private boolean reversedForCycle = false;
 
         public Edge(Node fromNode, String fromColumn, Node toNode, String toColumn, String constraintName) {
+            this(fromNode, fromColumn, toNode, toColumn, constraintName,
+                    constraintName != null && constraintName.startsWith("inferred:"));
+        }
+
+        public Edge(Node fromNode, String fromColumn, Node toNode, String toColumn, String constraintName, boolean virtual) {
             this.fromNode = fromNode;
             this.fromColumn = fromColumn;
             this.toNode = toNode;
             this.toColumn = toColumn;
             this.constraintName = constraintName;
+            this.virtual = virtual;
+        }
+
+        public boolean isVirtual() {
+            return virtual;
         }
 
         public Node getFromNode() {

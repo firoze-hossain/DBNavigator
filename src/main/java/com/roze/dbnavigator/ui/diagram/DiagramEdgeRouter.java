@@ -167,6 +167,9 @@ public class DiagramEdgeRouter {
         // Create Polyline
         Polyline polyline = new Polyline();
         polyline.getStyleClass().add("diagram-connector");
+        if (edge.isVirtual()) {
+            polyline.getStyleClass().add("diagram-connector-virtual");
+        }
         for (Point p : points) {
             polyline.getPoints().addAll(p.x(), p.y());
         }
@@ -175,6 +178,9 @@ public class DiagramEdgeRouter {
         Point dest = points.get(points.size() - 1);
         Polygon arrow = new Polygon();
         arrow.getStyleClass().add("diagram-connector-arrow");
+        if (edge.isVirtual()) {
+            arrow.getStyleClass().add("diagram-connector-arrow-virtual");
+        }
         double arrowSize = 6.0;
 
         if (arrowDirX > 0) {
@@ -198,6 +204,9 @@ public class DiagramEdgeRouter {
         if (showLabel && points.size() >= 3) {
             label = new Label(edge.getFromColumn() + ":" + edge.getToColumn());
             label.getStyleClass().add("diagram-connector-label");
+            if (edge.isVirtual()) {
+                label.getStyleClass().add("diagram-connector-label-virtual");
+            }
             label.setAlignment(Pos.CENTER);
 
             // Find longest segment to host the label
@@ -223,7 +232,7 @@ public class DiagramEdgeRouter {
             String tooltipText = edge.getFromNode().getTableName() + "." + edge.getFromColumn()
                     + " \u2192 "
                     + edge.getToNode().getTableName() + "." + edge.getToColumn()
-                    + (edge.getConstraintName() != null ? " (" + edge.getConstraintName() + ")" : "");
+                    + (edge.isVirtual() ? " (Inferred by column name)" : (edge.getConstraintName() != null ? " (" + edge.getConstraintName() + ")" : ""));
             Tooltip.install(label, new Tooltip(tooltipText));
             Tooltip.install(polyline, new Tooltip(tooltipText));
         }

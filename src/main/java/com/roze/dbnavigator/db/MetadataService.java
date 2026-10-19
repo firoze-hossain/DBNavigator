@@ -47,12 +47,12 @@ public final class MetadataService {
         return ORACLE_SYSTEM_SCHEMAS.contains(schema.toLowerCase(Locale.ROOT));
     }
 
-    private static JdbcClient client(ConnectionProfile profile, String catalog) {
+    static JdbcClient client(ConnectionProfile profile, String catalog) {
         return ClientRegistry.jdbc(profile, catalog);
     }
 
     /** PostgreSQL's JDBC metadata calls ignore/reject foreign catalogs — pass null. */
-    private static String metaCatalog(ConnectionProfile profile, String catalog) {
+    static String metaCatalog(ConnectionProfile profile, String catalog) {
         // Oracle's JDBC driver never populates TABLE_CAT at all (it has no
         // catalog concept) — passing a real value here as a catalog filter
         // would match nothing. What looks like "catalog" for an Oracle

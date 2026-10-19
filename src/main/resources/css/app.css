@@ -1039,8 +1039,10 @@
 
 /* Orthogonal connectors */
 .diagram-connector   { -fx-stroke: #526f8f; -fx-stroke-width: 1.5; -fx-fill: transparent; }
+.diagram-connector-virtual { -fx-stroke: #4d82b8; -fx-stroke-dash-array: 6 3; -fx-stroke-width: 1.5; -fx-fill: transparent; }
 .diagram-connector-selected { -fx-stroke: #e5c07b; -fx-stroke-width: 2.5; -fx-fill: transparent; }
 .diagram-connector-arrow { -fx-fill: #526f8f; }
+.diagram-connector-arrow-virtual { -fx-fill: #4d82b8; }
 .diagram-connector-arrow-selected { -fx-fill: #e5c07b; }
 
 .diagram-connector-label {
@@ -1052,6 +1054,10 @@
     -fx-background-radius: 3;
     -fx-border-radius: 3;
     -fx-padding: 1 4 1 4;
+}
+.diagram-connector-label-virtual {
+    -fx-text-fill: #70a5d8;
+    -fx-border-color: #36506c;
 }
 .diagram-connector-label-selected {
     -fx-text-fill: #e5c07b;

@@ -1,6 +1,7 @@
 package com.roze.dbnavigator.ui;
 
 import com.roze.dbnavigator.db.MetadataService;
+import com.roze.dbnavigator.db.VirtualForeignKeyService;
 import com.roze.dbnavigator.model.ConnectionProfile;
 import com.roze.dbnavigator.model.DbObject;
 import com.roze.dbnavigator.ui.diagram.DiagramCanvas;
@@ -58,8 +59,12 @@ public class DiagramTab extends Tab {
         AppExecutor.run(() -> {
             try {
                 List<MetadataService.ColumnInfo> rootColumns = MetadataService.loadColumnInfo(profile, rootTable);
-                List<MetadataService.ForeignKey> relationships =
-                        MetadataService.loadRelatedForeignKeys(profile, rootTable);
+                List<MetadataService.ForeignKey> relationships = new ArrayList<>(
+                        MetadataService.loadRelatedForeignKeys(profile, rootTable));
+
+                List<MetadataService.ForeignKey> virtualFks =
+                        VirtualForeignKeyService.inferRelatedForeignKeys(profile, rootTable, rootColumns, relationships);
+                relationships.addAll(virtualFks);
 
                 Set<String> parentNames = new LinkedHashSet<>();
                 Set<String> childNames = new LinkedHashSet<>();
