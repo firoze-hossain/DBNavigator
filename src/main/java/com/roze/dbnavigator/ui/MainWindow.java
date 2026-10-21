@@ -94,6 +94,7 @@ public class MainWindow {
     private final java.util.Deque<Tab> backHistory = new java.util.ArrayDeque<>();
     private final java.util.Deque<Tab> forwardHistory = new java.util.ArrayDeque<>();
     private boolean navigatingHistory = false;
+    private boolean reorderingTabs = false;
 
     public enum MainMenuPlacement {
         HAMBURGER, MERGE_TOOLBAR, ABOVE_TOOLBAR
@@ -2713,9 +2714,10 @@ public class MainWindow {
     }
 
     private void configureEditorTabPane(TabPane pane) {
+        TabDragHandler.install(pane, this);
         pane.getSelectionModel().selectedItemProperty().addListener((obs, oldTab, newTab) -> {
             if (newTab != null) activeTabPane = pane;
-            if (!navigatingHistory && oldTab != null && newTab != null && oldTab != newTab) {
+            if (!reorderingTabs && !navigatingHistory && oldTab != null && newTab != null && oldTab != newTab) {
                 backHistory.push(oldTab);
                 forwardHistory.clear();
             }
@@ -2732,11 +2734,13 @@ public class MainWindow {
         // A close/move can leave a leaf pane empty. Defer cleanup until the
         // tab move finishes, then promote its non-empty sibling(s).
         pane.getTabs().addListener((javafx.collections.ListChangeListener<Tab>) change -> {
-            Platform.runLater(() -> {
-                collapseEmptyEditorGroups();
-                updateNavigationBarBreadcrumb(currentSelectedTab());
-            });
-            ActionManager.getInstance().updateActions(this);
+            if (!reorderingTabs) {
+                Platform.runLater(() -> {
+                    collapseEmptyEditorGroups();
+                    updateNavigationBarBreadcrumb(currentSelectedTab());
+                });
+                ActionManager.getInstance().updateActions(this);
+            }
         });
         if (activeTabPane == null) activeTabPane = pane;
         applyTabPaneSettings(pane);
@@ -2753,6 +2757,22 @@ public class MainWindow {
         // this fallback for safety while a split is being normalized.
         activeTabPane = tabPane;
         return tabPane;
+    }
+
+    public boolean isReorderingTabs() {
+        return reorderingTabs;
+    }
+
+    public void setReorderingTabs(boolean reorderingTabs) {
+        this.reorderingTabs = reorderingTabs;
+    }
+
+    public TabPane getActiveTabPane() {
+        return activeEditorTabPane();
+    }
+
+    public void setActiveTabPane(TabPane pane) {
+        this.activeTabPane = pane;
     }
 
     /** Removes empty leaf groups and recursively promotes the surviving editor group. */

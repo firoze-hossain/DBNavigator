@@ -204,6 +204,7 @@
     -fx-background-radius: 0;
     -fx-padding: 5 12 5 12;
     -fx-border-color: transparent;
+    -fx-cursor: hand;
 }
 .main-tabs .tab:selected {
     -fx-background-color: -bg-dark;

@@ -75,27 +75,29 @@ public class QueryTabDatabaseSelectorTest {
 
     @Test
     public void testPostgresSelectorFormatAndIntrospectionBanner() {
-        ConnectionProfile profile = createPostgresProfile();
-        // Opening console with un-introspected database "postgres"
-        QueryTab tab = new QueryTab(null, profile, "postgres", "console_14");
+        runOnFxThread(() -> {
+            ConnectionProfile profile = createPostgresProfile();
+            // Opening console with un-introspected database "postgres"
+            QueryTab tab = new QueryTab(null, profile, "postgres", "console_14");
 
-        MenuButton selector = tab.getDbSelectorButton();
-        assertNotNull(selector, "PostgreSQL console must have a database selector MenuButton");
-        assertEquals("postgres.<schema>", selector.getText(),
-                "PostgreSQL selector text should format as <database>.<schema>");
+            MenuButton selector = tab.getDbSelectorButton();
+            assertNotNull(selector, "PostgreSQL console must have a database selector MenuButton");
+            assertEquals("postgres.<schema>", selector.getText(),
+                    "PostgreSQL selector text should format as <database>.<schema>");
 
-        HBox banner = tab.getIntrospectionBanner();
-        assertNotNull(banner, "Introspection banner must be initialized");
-        assertTrue(banner.isVisible(),
-                "Banner should be visible when current database ('postgres') is not in visibleDatabases");
+            HBox banner = tab.getIntrospectionBanner();
+            assertNotNull(banner, "Introspection banner must be initialized");
+            assertTrue(banner.isVisible(),
+                    "Banner should be visible when current database ('postgres') is not in visibleDatabases");
 
-        // Switch to introspected database "nexacom_db"
-        tab.switchDatabase("nexacom_db");
-        assertEquals("nexacom_db", tab.getCatalog());
-        assertEquals("nexacom_db.<schema>", selector.getText());
-        assertTrue(tab.getText().contains("[nexacom_db]"), "Tab text should update with new catalog");
-        assertFalse(banner.isVisible(),
-                "Banner should be hidden when current database ('nexacom_db') is introspected");
+            // Switch to introspected database "nexacom_db"
+            tab.switchDatabase("nexacom_db");
+            assertEquals("nexacom_db", tab.getCatalog());
+            assertEquals("nexacom_db.<schema>", selector.getText());
+            assertTrue(tab.getText().contains("[nexacom_db]"), "Tab text should update with new catalog");
+            assertFalse(banner.isVisible(),
+                    "Banner should be hidden when current database ('nexacom_db') is introspected");
+        });
     }
 
     private void runOnFxThread(Runnable r) {
