@@ -3749,6 +3749,9 @@ public class QueryTab extends Tab {
             dbSelectorButton.setText(formatSelectorText(newCatalog));
         }
         setText(fileId + (newCatalog != null ? " [" + newCatalog + "]" : ""));
+        if (mainWindow != null) {
+            mainWindow.updateNavigationBarBreadcrumb(this);
+        }
         if (breadcrumbsFileLabel != null) {
             breadcrumbsFileLabel.setText((newCatalog != null ? newCatalog : "console") + ".sql");
         }

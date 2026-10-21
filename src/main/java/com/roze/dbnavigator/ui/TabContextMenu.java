@@ -286,7 +286,10 @@ public final class TabContextMenu {
         dialog.setHeaderText(null);
         dialog.setContentText("New tab name:");
         dialog.showAndWait().ifPresent(newName -> {
-            if (!newName.isBlank()) tab.setText(newName.trim());
+            if (!newName.isBlank()) {
+                tab.setText(newName.trim());
+                if (mainWindow != null) mainWindow.updateNavigationBarBreadcrumb(tab);
+            }
         });
     }
 }

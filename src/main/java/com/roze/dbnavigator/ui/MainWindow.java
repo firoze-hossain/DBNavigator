@@ -107,6 +107,9 @@ public class MainWindow {
     private boolean showMembersInNavBar = true;
     private final Map<String, Node> statusBarWidgetNodes = new HashMap<>();
     private Node navBarStatusNode;
+    private final HBox navBarBox = new HBox(4);
+    private Tab currentlyObservedTab;
+    private javafx.beans.value.ChangeListener<String> activeTabTitleListener;
 
     private final Map<String, Boolean> statusBarWidgets = new HashMap<>(Map.ofEntries(
             Map.entry("statusText", false),
@@ -2025,15 +2028,14 @@ public class MainWindow {
     private HBox buildStatusBar() {
         statusLabel.getStyleClass().add("status-text");
 
-        // Navigation Bar Breadcrumb in Status Bar (Image 3)
-        Label navBarBreadcrumb = new Label("Database Consoles > postgres@localhost > console");
-        navBarBreadcrumb.getStyleClass().add("nav-bar-breadcrumb");
-        HBox navBarBox = new HBox(6, Icons.of(FontAwesomeSolid.TERMINAL, "#868a91", 10), navBarBreadcrumb);
+        // Navigation Bar Breadcrumb in Status Bar (DataGrip style)
         navBarBox.setAlignment(Pos.CENTER_LEFT);
+        navBarBox.getStyleClass().add("nav-bar-breadcrumb-box");
         boolean showNavInBar = (navigationBarPlacement == NavigationBarPlacement.BOTTOM);
         navBarBox.setVisible(showNavInBar);
         navBarBox.setManaged(showNavInBar);
         this.navBarStatusNode = navBarBox;
+        updateNavigationBarBreadcrumb(currentSelectedTab());
 
         taskBreadcrumbLabel.getStyleClass().add("task-breadcrumb");
         taskNameLabel.getStyleClass().add("task-name");
@@ -2161,6 +2163,7 @@ public class MainWindow {
         Tab welcome = new Tab("Welcome", box);
         welcome.setGraphic(Icons.of(FontAwesomeSolid.HOME, "#868a91", 11));
         tabPane.getTabs().add(welcome);
+        updateNavigationBarBreadcrumb(welcome);
     }
 
     // ---------------------------------------------------------- actions
@@ -2419,6 +2422,7 @@ public class MainWindow {
         TabPane targetPane = activeEditorTabPane();
         targetPane.getTabs().add(tab);
         targetPane.getSelectionModel().select(tab);
+        updateNavigationBarBreadcrumb(tab);
         TabContextMenu.install(targetPane, tab, this);
 
         // Reopen Closed Tab currently only restores consoles (with their SQL
@@ -2695,6 +2699,7 @@ public class MainWindow {
         if (owner != null) {
             owner.getSelectionModel().select(tab);
             activeTabPane = owner;
+            updateNavigationBarBreadcrumb(tab);
         }
     }
 
@@ -2714,16 +2719,23 @@ public class MainWindow {
                 backHistory.push(oldTab);
                 forwardHistory.clear();
             }
+            updateNavigationBarBreadcrumb(newTab != null ? newTab : currentSelectedTab());
             ActionManager.getInstance().updateActions(this);
         });
         pane.focusedProperty().addListener((obs, wasFocused, focused) -> {
-            if (focused) activeTabPane = pane;
+            if (focused) {
+                activeTabPane = pane;
+                updateNavigationBarBreadcrumb(pane.getSelectionModel().getSelectedItem());
+            }
             ActionManager.getInstance().updateActions(this);
         });
         // A close/move can leave a leaf pane empty. Defer cleanup until the
         // tab move finishes, then promote its non-empty sibling(s).
         pane.getTabs().addListener((javafx.collections.ListChangeListener<Tab>) change -> {
-            Platform.runLater(this::collapseEmptyEditorGroups);
+            Platform.runLater(() -> {
+                collapseEmptyEditorGroups();
+                updateNavigationBarBreadcrumb(currentSelectedTab());
+            });
             ActionManager.getInstance().updateActions(this);
         });
         if (activeTabPane == null) activeTabPane = pane;
@@ -2800,7 +2812,11 @@ public class MainWindow {
     /** Every editor pane currently in the split layout — used by TabContextMenu's Close Other/All Tabs, which act across all of them, not just the pane a tab happens to be in. */
     public List<TabPane> editorTabPanes() {
         List<TabPane> panes = new java.util.ArrayList<>();
-        collectEditorTabPanes(centerSplit.getItems().get(1), panes);
+        if (centerSplit != null && centerSplit.getItems().size() > 1) {
+            collectEditorTabPanes(centerSplit.getItems().get(1), panes);
+        } else if (tabPane != null) {
+            panes.add(tabPane);
+        }
         return panes;
     }
 
@@ -3082,6 +3098,195 @@ public class MainWindow {
         this.showMembersInNavBar = show;
         setStatus("Show Members in Navigation Bar: " + (show ? "shown" : "hidden"));
         ActionManager.getInstance().updateActions(this);
+    }
+
+    public void updateNavigationBarBreadcrumb(Tab tab) {
+        if (!Platform.isFxApplicationThread()) {
+            Platform.runLater(() -> updateNavigationBarBreadcrumb(tab));
+            return;
+        }
+        if (navBarBox == null) return;
+
+        // Manage dynamic title change listener on active tab
+        if (currentlyObservedTab != tab) {
+            if (currentlyObservedTab != null && activeTabTitleListener != null) {
+                currentlyObservedTab.textProperty().removeListener(activeTabTitleListener);
+            }
+            currentlyObservedTab = tab;
+            if (tab != null) {
+                activeTabTitleListener = (obs, oldVal, newVal) -> updateNavigationBarBreadcrumb(tab);
+                tab.textProperty().addListener(activeTabTitleListener);
+            }
+        }
+
+        navBarBox.getChildren().clear();
+
+        if (tab == null || "Welcome".equals(tab.getText())) {
+            Label rootLbl = createBreadcrumbItem("Database Consoles", this::focusOrToggleSchemaExplorer);
+            rootLbl.getStyleClass().add("nav-bar-breadcrumb-active");
+            navBarBox.getChildren().add(rootLbl);
+            return;
+        }
+
+        if (tab instanceof QueryTab qt) {
+            ConnectionProfile profile = qt.getProfile();
+            String profileName = (profile != null && profile.getName() != null && !profile.getName().isBlank())
+                    ? profile.getName() : "Local DB";
+            String consoleTitle = qt.getText() != null && !qt.getText().isBlank() ? qt.getText() : "console";
+
+            Label rootLbl = createBreadcrumbItem("Database Consoles", this::focusOrToggleSchemaExplorer);
+            Label sep1 = createBreadcrumbSeparator();
+            Label profileLbl = createBreadcrumbItem(profileName, () -> {
+                focusOrToggleSchemaExplorer();
+                if (profile != null) schemaPane.selectObjectInTree(profile, null);
+            });
+            Label sep2 = createBreadcrumbSeparator();
+            Label consoleLbl = createBreadcrumbItem(consoleTitle,
+                    Icons.of(FontAwesomeSolid.TERMINAL, "#358ebf", 11), () -> selectTab(qt));
+            consoleLbl.getStyleClass().add("nav-bar-breadcrumb-active");
+
+            navBarBox.getChildren().addAll(rootLbl, sep1, profileLbl, sep2, consoleLbl);
+        } else if (tab instanceof MongoConsoleTab mt) {
+            ConnectionProfile profile = mt.getProfile();
+            String profileName = (profile != null && profile.getName() != null && !profile.getName().isBlank())
+                    ? profile.getName() : "MongoDB";
+            String consoleTitle = mt.getText() != null && !mt.getText().isBlank() ? mt.getText() : "console";
+
+            Label rootLbl = createBreadcrumbItem("Database Consoles", this::focusOrToggleSchemaExplorer);
+            Label sep1 = createBreadcrumbSeparator();
+            Label profileLbl = createBreadcrumbItem(profileName, () -> {
+                focusOrToggleSchemaExplorer();
+                if (profile != null) schemaPane.selectObjectInTree(profile, null);
+            });
+            Label sep2 = createBreadcrumbSeparator();
+            Label consoleLbl = createBreadcrumbItem(consoleTitle,
+                    Icons.of(FontAwesomeSolid.TERMINAL, "#57965c", 11), () -> selectTab(mt));
+            consoleLbl.getStyleClass().add("nav-bar-breadcrumb-active");
+
+            navBarBox.getChildren().addAll(rootLbl, sep1, profileLbl, sep2, consoleLbl);
+        } else if (tab instanceof DataTab dt) {
+            ConnectionProfile profile = dt.getProfile();
+            String profileName = (profile != null && profile.getName() != null && !profile.getName().isBlank())
+                    ? profile.getName() : "";
+            DbObject table = dt.getTable();
+            String schema = table != null ? (table.getSchema() != null ? table.getSchema() : table.getCatalog()) : null;
+            String tableName = table != null ? table.getName() : dt.getText();
+
+            if (!profileName.isBlank()) {
+                Label profileLbl = createBreadcrumbItem(profileName, () -> {
+                    focusOrToggleSchemaExplorer();
+                    if (profile != null) schemaPane.selectObjectInTree(profile, null);
+                });
+                navBarBox.getChildren().add(profileLbl);
+            }
+
+            if (schema != null && !schema.isBlank()) {
+                if (!navBarBox.getChildren().isEmpty()) {
+                    navBarBox.getChildren().add(createBreadcrumbSeparator());
+                }
+                Label schemaLbl = createBreadcrumbItem(schema, this::focusOrToggleSchemaExplorer);
+                navBarBox.getChildren().add(schemaLbl);
+            }
+
+            if (!navBarBox.getChildren().isEmpty()) {
+                navBarBox.getChildren().add(createBreadcrumbSeparator());
+            }
+            Label tableLbl = createBreadcrumbItem(tableName,
+                    Icons.of(FontAwesomeSolid.TABLE, "#358ebf", 11), () -> selectTab(dt));
+            tableLbl.getStyleClass().add("nav-bar-breadcrumb-active");
+            navBarBox.getChildren().add(tableLbl);
+        } else if (tab instanceof MongoCollectionTab mct) {
+            ConnectionProfile profile = mct.getProfile();
+            String profileName = (profile != null && profile.getName() != null && !profile.getName().isBlank())
+                    ? profile.getName() : "";
+            String collName = mct.getText();
+
+            if (!profileName.isBlank()) {
+                Label profileLbl = createBreadcrumbItem(profileName, () -> {
+                    focusOrToggleSchemaExplorer();
+                    if (profile != null) schemaPane.selectObjectInTree(profile, null);
+                });
+                navBarBox.getChildren().addAll(profileLbl, createBreadcrumbSeparator());
+            }
+
+            Label collLbl = createBreadcrumbItem(collName,
+                    Icons.of(FontAwesomeSolid.LEAF, "#57965c", 11), () -> selectTab(mct));
+            collLbl.getStyleClass().add("nav-bar-breadcrumb-active");
+            navBarBox.getChildren().add(collLbl);
+        } else if (tab instanceof DdlTab ddlTab) {
+            ConnectionProfile profile = ddlTab.getProfile();
+            String profileName = (profile != null && profile.getName() != null && !profile.getName().isBlank())
+                    ? profile.getName() : "";
+
+            Label rootLbl = createBreadcrumbItem("Database Consoles", this::focusOrToggleSchemaExplorer);
+            Label sep1 = createBreadcrumbSeparator();
+            navBarBox.getChildren().addAll(rootLbl, sep1);
+
+            if (!profileName.isBlank()) {
+                Label profileLbl = createBreadcrumbItem(profileName, () -> {
+                    focusOrToggleSchemaExplorer();
+                    if (profile != null) schemaPane.selectObjectInTree(profile, null);
+                });
+                Label sep2 = createBreadcrumbSeparator();
+                navBarBox.getChildren().addAll(profileLbl, sep2);
+            }
+
+            Label tabLbl = createBreadcrumbItem(ddlTab.getText(),
+                    Icons.of(FontAwesomeSolid.CODE, "#e5c07b", 11), () -> selectTab(ddlTab));
+            tabLbl.getStyleClass().add("nav-bar-breadcrumb-active");
+            navBarBox.getChildren().add(tabLbl);
+        } else {
+            String title = tab.getText() != null && !tab.getText().isBlank() ? tab.getText() : "Database Consoles";
+            if ("Database Consoles".equals(title)) {
+                Label rootLbl = createBreadcrumbItem(title, this::focusOrToggleSchemaExplorer);
+                rootLbl.getStyleClass().add("nav-bar-breadcrumb-active");
+                navBarBox.getChildren().add(rootLbl);
+            } else {
+                Label rootLbl = createBreadcrumbItem("Database Consoles", this::focusOrToggleSchemaExplorer);
+                Label sep = createBreadcrumbSeparator();
+                Label tabLbl = createBreadcrumbItem(title, null, () -> selectTab(tab));
+                tabLbl.getStyleClass().add("nav-bar-breadcrumb-active");
+                navBarBox.getChildren().addAll(rootLbl, sep, tabLbl);
+            }
+        }
+    }
+
+    private Label createBreadcrumbItem(String text, Runnable action) {
+        return createBreadcrumbItem(text, null, action);
+    }
+
+    private Label createBreadcrumbItem(String text, Node graphic, Runnable action) {
+        Label label = new Label(text);
+        if (graphic != null) {
+            label.setGraphic(graphic);
+            label.setGraphicTextGap(5);
+        }
+        label.getStyleClass().add("nav-bar-breadcrumb-item");
+        if (action != null) {
+            label.setOnMouseClicked(e -> action.run());
+        }
+        return label;
+    }
+
+    private Label createBreadcrumbSeparator() {
+        Label sep = new Label("›");
+        sep.getStyleClass().add("nav-bar-breadcrumb-separator");
+        return sep;
+    }
+
+    public HBox getNavBarBox() {
+        return navBarBox;
+    }
+
+    public String getNavBarBreadcrumbText() {
+        StringBuilder sb = new StringBuilder();
+        for (Node child : navBarBox.getChildren()) {
+            if (child instanceof Label lbl) {
+                if (!sb.isEmpty()) sb.append(" ");
+                sb.append(lbl.getText());
+            }
+        }
+        return sb.toString();
     }
 
     public boolean isStatusBarWidgetActive(String id) {
