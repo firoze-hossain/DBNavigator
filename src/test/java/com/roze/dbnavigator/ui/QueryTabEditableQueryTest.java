@@ -50,6 +50,22 @@ public class QueryTabEditableQueryTest {
 
         String sqlComplex = "-- comment\nSELECT * FROM a, b WHERE a.id = b.id;";
         assertFalse(QueryTab.isSimpleSingleTableSelect(sqlComplex));
+
+        // Partition queries with ORDER BY, newlines, and LIMIT
+        String sqlOrderBy = "select *\nfrom appointment_tx order by created_at desc;";
+        assertTrue(QueryTab.isSimpleSingleTableSelect(sqlOrderBy));
+        assertEquals("appointment_tx", QueryTab.detectEditableTable(sqlOrderBy));
+
+        String sqlLimit = "SELECT * FROM appointment_tx LIMIT 100;";
+        assertTrue(QueryTab.isSimpleSingleTableSelect(sqlLimit));
+
+        String sqlWhereOrder = "SELECT * FROM appointment_tx WHERE org_id = 1 ORDER BY created_at DESC;";
+        assertTrue(QueryTab.isSimpleSingleTableSelect(sqlWhereOrder));
+
+        // Classic Mac \r line ending in comment
+        String sqlMacCr = "-- Mac comment\rSELECT * FROM appointment_tx ORDER BY created_at DESC;";
+        assertTrue(QueryTab.isSimpleSingleTableSelect(sqlMacCr));
+        assertEquals("appointment_tx", QueryTab.detectEditableTable(sqlMacCr));
     }
 
     @Test

@@ -3284,9 +3284,9 @@ public class QueryTab extends Tab {
             char next = (i + 1 < n) ? sql.charAt(i + 1) : '\0';
 
             if (inLineComment) {
-                if (c == '\n') {
+                if (c == '\n' || c == '\r') {
                     inLineComment = false;
-                    sb.append('\n');
+                    sb.append(c);
                 }
                 continue;
             }
@@ -3358,7 +3358,7 @@ public class QueryTab extends Tab {
             char next = (i + 1 < n) ? sql.charAt(i + 1) : '\0';
 
             if (inLineComment) {
-                if (c == '\n') inLineComment = false;
+                if (c == '\n' || c == '\r') inLineComment = false;
                 continue;
             }
             if (inBlockComment) {
@@ -3513,7 +3513,7 @@ public class QueryTab extends Tab {
         for (int i = 0; i < n; i++) {
             char c = sql.charAt(i);
             char next = (i + 1 < n) ? sql.charAt(i + 1) : '\0';
-            if (inLineComment) { if (c == '\n') inLineComment = false; continue; }
+            if (inLineComment) { if (c == '\n' || c == '\r') inLineComment = false; continue; }
             if (inBlockComment) { if (c == '*' && next == '/') { inBlockComment = false; i++; } continue; }
             if (inSingleQuote) { if (c == '\'' && next == '\'') { i++; continue; } if (c == '\'') inSingleQuote = false; continue; }
             if (inDoubleQuote) { if (c == '"' && next == '"') { i++; continue; } if (c == '"') inDoubleQuote = false; continue; }
@@ -3555,16 +3555,15 @@ public class QueryTab extends Tab {
     }
 
     public static boolean isSimpleSingleTableSelect(String sql) {
-        if (sql == null || sql.isBlank()) return false;
-        String cleaned = stripComments(sql);
-        while (cleaned.endsWith(";")) {
-            cleaned = cleaned.substring(0, cleaned.length() - 1).stripTrailing();
-        }
-        return cleaned.matches("(?is)^\\s*select\\s+.+?\\s+from\\s+[A-Za-z0-9_.\\\"`\\[\\]]+"
-                + "\\s*(where\\b.*)?\\s*$");
+        return detectEditableTable(sql) != null;
     }
 
     public static String addRowIdentityToSelect(String sql) {
+        if (sql == null) return sql;
+        String lower = sql.toLowerCase(Locale.ROOT);
+        if (lower.contains("tableoid") && lower.contains("ctid")) {
+            return sql;
+        }
         int idx = findSelectKeywordEnd(sql);
         if (idx < 0) return sql;
         return sql.substring(0, idx) + " tableoid::text AS tableoid, ctid," + sql.substring(idx);
