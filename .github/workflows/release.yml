@@ -19,6 +19,7 @@ on:
   push:
     tags:
       - '[0-9]+.[0-9]+.[0-9]+*'
+      - 'v*'
   workflow_dispatch:
 
 jobs:
@@ -64,6 +65,11 @@ jobs:
             echo "version=1.0.0" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Set release version in Maven pom.xml
+        shell: bash
+        run: |
+          mvn -B versions:set -DnewVersion="${{ steps.version.outputs.version }}" -DgenerateBackupPoms=false
+
       - name: Build DBNavigator JAR and Dependencies with Maven
         run: mvn -B clean package -DskipTests
 
@@ -75,11 +81,27 @@ jobs:
           cp target/dependency/*.jar packaging/input/
 
       # ------------------------------------------------------------------------
-      # Linux: Ubuntu/Debian .deb package
+      # Linux: In-place update package (.tar.gz) and .deb installer
       # ------------------------------------------------------------------------
-      - name: Build Linux .deb Package
+      - name: Build Linux Update Package and .deb Installer
         if: matrix.platform == 'linux'
         run: |
+          # 1. Build app-image for in-place update archive
+          jpackage \
+            --type app-image \
+            --input packaging/input \
+            --name dbnavigator \
+            --main-jar dbnavigator.jar \
+            --main-class com.roze.dbnavigator.Launcher \
+            --app-version "${{ steps.version.outputs.version }}" \
+            --vendor "Roze Ecosystem" \
+            --icon packaging/linux/dbnavigator.png \
+            --dest dist/app-image
+
+          tar -czf "dist/dbnavigator-${{ steps.version.outputs.version }}-linux-update.tar.gz" -C dist/app-image dbnavigator
+          rm -rf dist/app-image
+
+          # 2. Build .deb package installer
           sudo apt-get update
           sudo apt-get install -y fakeroot
           jpackage \
@@ -100,9 +122,9 @@ jobs:
             --dest dist
 
       # ------------------------------------------------------------------------
-      # Windows: Inno Setup .exe Setup Wizard & WiX .msi
+      # Windows: In-place update package (.zip) and Inno Setup .exe installer wizard
       # ------------------------------------------------------------------------
-      - name: Build Windows .exe Setup Wizard and .msi
+      - name: Build Windows Update Package and .exe Setup Wizard
         if: matrix.platform == 'windows'
         shell: pwsh
         run: |
@@ -118,41 +140,61 @@ jobs:
             --icon packaging\windows\DBNavigator.ico `
             --dest dist\dbnavigator-win-pkg
 
+          # 2. Package Windows in-place update zip (zero SmartScreen / UAC friction for existing users)
+          Compress-Archive -Path "dist\dbnavigator-win-pkg\DBNavigator\*" -DestinationPath "dist\DBNavigator-${{ steps.version.outputs.version }}-windows-update.zip" -Force
+
           # Move contents into a clean root structure for Inno Setup
           Move-Item -Path "dist\dbnavigator-win-pkg\DBNavigator\*" -Destination "dist\dbnavigator-win-pkg\"
           Remove-Item -Path "dist\dbnavigator-win-pkg\DBNavigator" -Recurse -Force
 
-          # 2. Compile Inno Setup .exe wizard
+          # 3. Compile Inno Setup .exe wizard (for fresh installs and full upgrades)
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DMyAppVersion="${{ steps.version.outputs.version }}" packaging\windows\setup.iss
           if ($LASTEXITCODE -ne 0) { throw "Inno Setup compilation failed with exit code $LASTEXITCODE" }
           if (Test-Path "packaging\windows\dist\*.exe") {
             Move-Item -Path "packaging\windows\dist\*.exe" -Destination "dist\" -Force
           }
 
-          # 3. Build Windows .msi with jpackage
-          jpackage `
-            --type msi `
-            --input packaging/input `
-            --name DBNavigator `
-            --main-jar dbnavigator.jar `
-            --main-class com.roze.dbnavigator.Launcher `
-            --app-version "${{ steps.version.outputs.version }}" `
-            --vendor "Roze Ecosystem" `
-            --description "DBNavigator - Modern Database Administration & SQL Query Tool" `
-            --win-menu `
-            --win-shortcut `
-            --icon packaging\windows\DBNavigator.ico `
-            --dest dist
-
-          # Clean intermediate app-image so only final installers remain
+          # Clean intermediate app-image folder
           Remove-Item -Path "dist\dbnavigator-win-pkg" -Recurse -Force
 
       # ------------------------------------------------------------------------
-      # macOS: .dmg disk image
+      # macOS: In-place update packages (.tar.gz & .zip), .pkg installer, and .dmg
       # ------------------------------------------------------------------------
-      - name: Build macOS .dmg Disk Image
+      - name: Build macOS Update Packages, .pkg and .dmg Installers
         if: matrix.platform == 'macos'
         run: |
+          # 1. Build app-image for in-place update packages (zero Gatekeeper quarantine for existing users)
+          jpackage \
+            --type app-image \
+            --input packaging/input \
+            --name DBNavigator \
+            --main-jar dbnavigator.jar \
+            --main-class com.roze.dbnavigator.Launcher \
+            --app-version "${{ steps.version.outputs.version }}" \
+            --vendor "Roze Ecosystem" \
+            --icon packaging/macos/DBNavigator.icns \
+            --dest dist/app-image
+
+          # Package .tar.gz and .zip with symlinks preserved (-y)
+          tar -czf "dist/DBNavigator-${{ steps.version.outputs.version }}-macos-update.tar.gz" -C dist/app-image DBNavigator.app
+          (cd dist/app-image && zip -r -y "../DBNavigator-${{ steps.version.outputs.version }}-macos-update.zip" DBNavigator.app)
+          rm -rf dist/app-image
+
+          # 2. Build Apple .pkg installer package (direct installation to /Applications)
+          jpackage \
+            --type pkg \
+            --input packaging/input \
+            --name DBNavigator \
+            --main-jar dbnavigator.jar \
+            --main-class com.roze.dbnavigator.Launcher \
+            --app-version "${{ steps.version.outputs.version }}" \
+            --vendor "Roze Ecosystem" \
+            --description "DBNavigator - Modern Database Administration & SQL Query Tool" \
+            --mac-package-name DBNavigator \
+            --icon packaging/macos/DBNavigator.icns \
+            --dest dist
+
+          # 3. Build Apple .dmg disk image installer (drag-and-drop installer)
           jpackage \
             --type dmg \
             --input packaging/input \

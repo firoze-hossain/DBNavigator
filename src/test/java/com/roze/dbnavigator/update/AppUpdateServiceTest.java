@@ -103,4 +103,75 @@ public class AppUpdateServiceTest {
         assertFalse(update.available, "Update should NOT be available because current version 1.0.0 == latest 1.0.0");
         assertEquals("1.0.0", update.latestVersion);
     }
+
+    @Test
+    void testUpdatePackagePreferredOverFullInstaller() throws Exception {
+        String json = """
+        {
+          "tag_name": "v1.0.2",
+          "name": "DBNavigator Pro 1.0.2",
+          "body": "In-place seamless updates",
+          "published_at": "2026-10-31T10:00:00Z",
+          "html_url": "https://github.com/firoze-hossain/DBNavigator/releases/tag/v1.0.2",
+          "assets": [
+            {
+              "name": "dbnavigator_1.0.2_amd64.deb",
+              "size": 84000000,
+              "browser_download_url": "https://github.com/firoze-hossain/DBNavigator/releases/download/v1.0.2/dbnavigator_1.0.2_amd64.deb"
+            },
+            {
+              "name": "dbnavigator-1.0.2-linux-update.tar.gz",
+              "size": 75000000,
+              "browser_download_url": "https://github.com/firoze-hossain/DBNavigator/releases/download/v1.0.2/dbnavigator-1.0.2-linux-update.tar.gz"
+            },
+            {
+              "name": "DBNavigator-Setup-1.0.2.exe",
+              "size": 89000000,
+              "browser_download_url": "https://github.com/firoze-hossain/DBNavigator/releases/download/v1.0.2/DBNavigator-Setup-1.0.2.exe"
+            },
+            {
+              "name": "DBNavigator-1.0.2-windows-update.zip",
+              "size": 78000000,
+              "browser_download_url": "https://github.com/firoze-hossain/DBNavigator/releases/download/v1.0.2/DBNavigator-1.0.2-windows-update.zip"
+            },
+            {
+              "name": "DBNavigator-1.0.2.dmg",
+              "size": 95000000,
+              "browser_download_url": "https://github.com/firoze-hossain/DBNavigator/releases/download/v1.0.2/DBNavigator-1.0.2.dmg"
+            },
+            {
+              "name": "DBNavigator-1.0.2.pkg",
+              "size": 93000000,
+              "browser_download_url": "https://github.com/firoze-hossain/DBNavigator/releases/download/v1.0.2/DBNavigator-1.0.2.pkg"
+            },
+            {
+              "name": "DBNavigator-1.0.2-macos-update.tar.gz",
+              "size": 80000000,
+              "browser_download_url": "https://github.com/firoze-hossain/DBNavigator/releases/download/v1.0.2/DBNavigator-1.0.2-macos-update.tar.gz"
+            }
+          ]
+        }
+        """;
+
+        JsonNode releaseNode = mapper.readTree(json);
+        AppUpdate update = AppUpdateService.parseGitHubRelease(releaseNode, "1.0.0", "Stable");
+
+        assertNotNull(update);
+        assertTrue(update.available);
+        assertNotNull(update.release);
+
+        String platform = AppUpdateService.platform();
+        if ("Linux".equals(platform)) {
+            assertEquals("dbnavigator-1.0.2-linux-update.tar.gz", update.release.fileName);
+        } else if ("Windows".equals(platform)) {
+            assertEquals("DBNavigator-1.0.2-windows-update.zip", update.release.fileName);
+        } else if ("macOS".equals(platform)) {
+            assertEquals("DBNavigator-1.0.2-macos-update.tar.gz", update.release.fileName);
+        }
+    }
+
+    @Test
+    void testGetInstallationDirectory() {
+        assertNotNull(AppUpdateService.getInstallationDirectory());
+    }
 }

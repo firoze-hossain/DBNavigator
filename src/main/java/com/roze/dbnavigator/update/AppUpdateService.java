@@ -38,10 +38,50 @@ public final class AppUpdateService {
 
     public static String currentVersion() {
         String version = AppUpdateService.class.getPackage().getImplementationVersion();
-        if (version == null || version.isBlank()) {
-            return "1.0.0";
+        if (version != null && !version.isBlank() && !"1.0.0".equals(version.trim())) {
+            return version.startsWith("v") || version.startsWith("V") ? version.substring(1) : version;
         }
-        return version.startsWith("v") || version.startsWith("V") ? version.substring(1) : version;
+
+        // Check for app bundle version in Info.plist (macOS) or DBNavigator.cfg (Windows/Linux)
+        String appVersion = detectAppBundleVersion();
+        if (appVersion != null && !appVersion.isBlank()) {
+            return appVersion.startsWith("v") || appVersion.startsWith("V") ? appVersion.substring(1) : appVersion;
+        }
+
+        if (version != null && !version.isBlank()) {
+            return version.startsWith("v") || version.startsWith("V") ? version.substring(1) : version;
+        }
+        return "1.0.0";
+    }
+
+    private static String detectAppBundleVersion() {
+        try {
+            Path installDir = getInstallationDirectory();
+            if (installDir == null) return null;
+
+            if ("macOS".equals(platform())) {
+                Path plist = installDir.resolve("Contents/Info.plist");
+                if (Files.exists(plist)) {
+                    String content = Files.readString(plist);
+                    java.util.regex.Matcher m = java.util.regex.Pattern
+                            .compile("<key>CFBundleShortVersionString</key>\\s*<string>([^<]+)</string>")
+                            .matcher(content);
+                    if (m.find()) return m.group(1).trim();
+                }
+            } else {
+                Path cfg = installDir.resolve("app/DBNavigator.cfg");
+                if (!Files.exists(cfg)) cfg = installDir.resolve("DBNavigator.cfg");
+                if (!Files.exists(cfg)) cfg = installDir.resolve("lib/app/dbnavigator.cfg");
+                if (Files.exists(cfg)) {
+                    for (String line : Files.readAllLines(cfg)) {
+                        if (line.trim().startsWith("app.version=")) {
+                            return line.substring(line.indexOf('=') + 1).trim();
+                        }
+                    }
+                }
+            }
+        } catch (Throwable ignored) {}
+        return null;
     }
 
     public static String platform() {
@@ -347,32 +387,126 @@ public final class AppUpdateService {
         return update;
     }
 
+    public static Path getInstallationDirectory() {
+        try {
+            var cmdOpt = ProcessHandle.current().info().command();
+            if (cmdOpt.isPresent() && !cmdOpt.get().isBlank()) {
+                Path execPath = Path.of(cmdOpt.get()).toAbsolutePath();
+                if (Files.exists(execPath)) {
+                    if ("macOS".equals(platform())) {
+                        Path curr = execPath;
+                        while (curr != null) {
+                            if (curr.getFileName() != null && curr.getFileName().toString().endsWith(".app")) {
+                                return curr;
+                            }
+                            curr = curr.getParent();
+                        }
+                    } else {
+                        return execPath.getParent();
+                    }
+                }
+            }
+        } catch (Throwable ignored) {}
+
+        try {
+            var loc = AppUpdateService.class.getProtectionDomain().getCodeSource().getLocation();
+            if (loc != null) {
+                Path jarPath = Path.of(loc.toURI()).toAbsolutePath();
+                if ("macOS".equals(platform())) {
+                    Path curr = jarPath;
+                    while (curr != null) {
+                        if (curr.getFileName() != null && curr.getFileName().toString().endsWith(".app")) {
+                            return curr;
+                        }
+                        curr = curr.getParent();
+                    }
+                } else {
+                    if (jarPath.getParent() != null && "app".equalsIgnoreCase(jarPath.getParent().getFileName().toString())) {
+                        return jarPath.getParent().getParent();
+                    }
+                    return jarPath.getParent();
+                }
+            }
+        } catch (Throwable ignored) {}
+
+        if ("macOS".equals(platform())) {
+            Path defaultApp = Path.of("/Applications/DBNavigator.app");
+            if (Files.isDirectory(defaultApp)) return defaultApp;
+            Path userApp = Path.of(System.getProperty("user.home"), "Applications", "DBNavigator.app");
+            if (Files.isDirectory(userApp)) return userApp;
+            return defaultApp;
+        } else if ("Windows".equals(platform())) {
+            Path localProg = Path.of(System.getProperty("user.home"), "AppData", "Local", "Programs", "DBNavigator");
+            if (Files.isDirectory(localProg)) return localProg;
+            return Path.of("C:\\Program Files\\DBNavigator");
+        } else {
+            return Path.of("/opt/dbnavigator");
+        }
+    }
+
     private static int scoreAsset(String name, String os, String arch) {
         int score = 0;
         if ("Linux".equals(os)) {
-            if (name.endsWith(".deb")) score += 1000;
-            else if (name.endsWith(".appimage")) score += 800;
-            else if (name.endsWith(".tar.gz") || name.endsWith(".tgz")) score += 600;
-            else if (name.endsWith(".rpm")) score += 300;
-            else if (name.endsWith(".zip")) score += 200;
+            // Priority 1: In-place update archive (zero-friction update)
+            if ((name.contains("linux-update") || name.contains("-update.")) && (name.endsWith(".tar.gz") || name.endsWith(".tgz") || name.endsWith(".zip"))) {
+                score += 2000;
+            } else if (name.endsWith(".deb")) {
+                score += 1000;
+            } else if (name.endsWith(".appimage")) {
+                score += 800;
+            } else if (name.endsWith(".tar.gz") || name.endsWith(".tgz")) {
+                score += 600;
+            } else if (name.endsWith(".rpm")) {
+                score += 300;
+            } else if (name.endsWith(".zip")) {
+                score += 200;
+            }
 
             if (score > 0) {
                 if ("ARM64".equals(arch) && (name.contains("arm64") || name.contains("aarch64"))) score += 300;
                 if ("x64".equals(arch) && (name.contains("x86_64") || name.contains("amd64") || name.contains("x64"))) score += 300;
             }
         } else if ("Windows".equals(os)) {
-            if (name.endsWith(".msi")) score += 1000;
-            else if (name.endsWith(".exe")) score += 900;
-            else if (name.endsWith(".zip")) score += 400;
+            // Priority 1: In-place update ZIP package (fastest, no SmartScreen prompt, no installer wizard)
+            if ((name.contains("win-update") || name.contains("windows-update") || name.contains("-update.")) && name.endsWith(".zip")) {
+                score += 2000;
+            }
+            // Priority 2: Inno Setup executable setup wizard
+            else if (name.endsWith(".exe") && (name.contains("setup") || name.contains("dbnavigator"))) {
+                score += 1200;
+            } else if (name.endsWith(".exe")) {
+                score += 1000;
+            }
+            // Priority 3: Generic ZIP
+            else if (name.endsWith(".zip")) {
+                score += 500;
+            }
+            // Priority 4: MSI (deprioritized to avoid breaking Inno Setup installations)
+            else if (name.endsWith(".msi")) {
+                score += 100;
+            }
 
             if (score > 0) {
                 if ("ARM64".equals(arch) && name.contains("arm64")) score += 300;
                 if ("x64".equals(arch) && (name.contains("x64") || name.contains("x86_64") || name.contains("win64"))) score += 300;
             }
         } else if ("macOS".equals(os)) {
-            if (name.endsWith(".pkg")) score += 1000;
-            else if (name.endsWith(".dmg")) score += 900;
-            else if (name.endsWith(".zip")) score += 400;
+            // Priority 1: In-place macOS update archive (.tar.gz or .zip - zero Gatekeeper quarantine, in-place replacement)
+            if ((name.contains("mac-update") || name.contains("macos-update") || name.contains("-update.")) && (name.endsWith(".tar.gz") || name.endsWith(".tgz") || name.endsWith(".zip"))) {
+                score += 2000;
+            }
+            // Priority 2: Apple installer .pkg (installs directly into /Applications)
+            else if (name.endsWith(".pkg")) {
+                score += 1000;
+            }
+            // Priority 3: Apple .dmg disk image
+            else if (name.endsWith(".dmg")) {
+                score += 800;
+            }
+            // Priority 4: Generic ZIP/tar.gz
+            else if (name.endsWith(".tar.gz") || name.endsWith(".tgz") || name.endsWith(".zip")) {
+                score += 400;
+            }
 
             if (score > 0) {
                 if ("ARM64".equals(arch) && (name.contains("arm64") || name.contains("aarch64"))) score += 300;
@@ -457,7 +591,7 @@ public final class AppUpdateService {
 
     /**
      * Starts the verified update package for the current operating system,
-     * terminates DBNavigator cleanly, and allows the installer to update seamlessly.
+     * terminates DBNavigator cleanly, and allows the installer or in-place updater to update seamlessly.
      */
     public static void installAndRestart(Path packageFile) throws IOException {
         if (packageFile == null || !Files.isRegularFile(packageFile)) {
@@ -466,28 +600,238 @@ public final class AppUpdateService {
 
         String name = packageFile.getFileName().toString().toLowerCase(Locale.ROOT);
         String platform = platform();
+        long currentPid = ProcessHandle.current().pid();
+        Path installDir = getInstallationDirectory();
+        Path logFile = UPDATE_DIR.resolve("update.log");
+
         ProcessBuilder builder;
 
         if (platform.equals("Windows")) {
-            if (name.endsWith(".msi")) {
-                builder = new ProcessBuilder("msiexec.exe", "/i", packageFile.toAbsolutePath().toString());
+            if (name.endsWith(".zip")) {
+                // In-place ZIP update: extract directly over install directory without installer prompts or SmartScreen
+                Path psScript = UPDATE_DIR.resolve("apply-update.ps1");
+                String scriptContent = """
+                        param(
+                            [int]$ProcessId,
+                            [string]$PackagePath,
+                            [string]$TargetDir,
+                            [string]$LogPath
+                        )
+                        Start-Transcript -Path $LogPath -Force
+                        Write-Host "=== DBNavigator Windows In-Place Updater ==="
+                        Write-Host "Process ID: $ProcessId"
+                        Write-Host "Package: $PackagePath"
+                        Write-Host "Target Directory: $TargetDir"
+                        
+                        if ($ProcessId -gt 0) {
+                            Write-Host "Waiting for DBNavigator to close..."
+                            try { Wait-Process -Id $ProcessId -Timeout 30 -ErrorAction SilentlyContinue } catch {}
+                        }
+                        Start-Sleep -Seconds 1
+                        
+                        $tempExtract = Join-Path $env:TEMP ("dbnav_win_upd_" + [Guid]::NewGuid().ToString("N"))
+                        New-Item -ItemType Directory -Path $tempExtract -Force | Out-Null
+                        
+                        try {
+                            Write-Host "Extracting update package..."
+                            Expand-Archive -Path $PackagePath -DestinationPath $tempExtract -Force
+                            
+                            $subApp = Join-Path $tempExtract "DBNavigator"
+                            $sourceDir = if (Test-Path $subApp) { $subApp } else { $tempExtract }
+                            
+                            Write-Host "Updating application files in $TargetDir..."
+                            Copy-Item -Path "$sourceDir\\*" -Destination $TargetDir -Recurse -Force
+                        } catch {
+                            Write-Host "Error updating files: $_"
+                        } finally {
+                            Remove-Item -Path $tempExtract -Recurse -Force -ErrorAction SilentlyContinue
+                        }
+                        
+                        $exePath = Join-Path $TargetDir "DBNavigator.exe"
+                        if (Test-Path $exePath) {
+                            Write-Host "Launching updated $exePath..."
+                            Start-Process -FilePath $exePath
+                        }
+                        Remove-Item -Path $PackagePath -Force -ErrorAction SilentlyContinue
+                        Stop-Transcript
+                        """;
+                Files.writeString(psScript, scriptContent, java.nio.charset.StandardCharsets.UTF_8);
+
+                builder = new ProcessBuilder(
+                        "powershell.exe",
+                        "-NoProfile",
+                        "-WindowStyle", "Hidden",
+                        "-ExecutionPolicy", "Bypass",
+                        "-File", psScript.toAbsolutePath().toString(),
+                        "-ProcessId", String.valueOf(currentPid),
+                        "-PackagePath", packageFile.toAbsolutePath().toString(),
+                        "-TargetDir", installDir.toAbsolutePath().toString(),
+                        "-LogPath", logFile.toAbsolutePath().toString()
+                );
             } else if (name.endsWith(".exe")) {
-                builder = new ProcessBuilder(packageFile.toAbsolutePath().toString());
+                // Inno Setup installer: run with /VERYSILENT so it updates without user wizard prompts
+                builder = new ProcessBuilder(
+                        packageFile.toAbsolutePath().toString(),
+                        "/VERYSILENT",
+                        "/SUPPRESSMSGBOXES",
+                        "/NORESTART",
+                        "/CLOSEAPPLICATIONS",
+                        "/RESTARTAPPLICATIONS",
+                        "/DIR=" + installDir.toAbsolutePath().toString()
+                );
+            } else if (name.endsWith(".msi")) {
+                builder = new ProcessBuilder("msiexec.exe", "/i", packageFile.toAbsolutePath().toString(), "/passive", "/norestart");
             } else {
                 builder = new ProcessBuilder("explorer.exe", "/select,", packageFile.toAbsolutePath().toString());
             }
         } else if (platform.equals("macOS")) {
-            if (name.endsWith(".pkg")) {
+            if (name.endsWith(".tar.gz") || name.endsWith(".tgz") || name.endsWith(".zip") || name.endsWith(".dmg")) {
+                // In-place macOS update or automated DMG extraction:
+                // Replaces /Applications/DBNavigator.app and clears quarantine to prevent Gatekeeper warnings
+                Path shScript = UPDATE_DIR.resolve("apply-update.sh");
+                String scriptContent = """
+                        #!/bin/bash
+                        PID=$1
+                        PKG="$2"
+                        TARGET_APP="$3"
+                        LOG="$4"
+                        
+                        exec > "$LOG" 2>&1
+                        echo "=== DBNavigator macOS Updater ==="
+                        echo "PID: $PID"
+                        echo "PKG: $PKG"
+                        echo "TARGET_APP: $TARGET_APP"
+                        
+                        if [ -n "$PID" ] && [ "$PID" -gt 0 ]; then
+                            echo "Waiting for process $PID to exit..."
+                            for i in {1..60}; do
+                                if ! kill -0 "$PID" 2>/dev/null; then
+                                    break
+                                fi
+                                sleep 0.5
+                            done
+                        fi
+                        
+                        if [ -z "$TARGET_APP" ] || [ ! -d "$TARGET_APP" ]; then
+                            if [ -d "/Applications/DBNavigator.app" ]; then
+                                TARGET_APP="/Applications/DBNavigator.app"
+                            elif [ -d "$HOME/Applications/DBNavigator.app" ]; then
+                                TARGET_APP="$HOME/Applications/DBNavigator.app"
+                            else
+                                TARGET_APP="/Applications/DBNavigator.app"
+                            fi
+                        fi
+                        
+                        TEMP_DIR=$(mktemp -d /tmp/dbnav_mac_upd.XXXXXX)
+                        
+                        if [[ "$PKG" == *.tar.gz || "$PKG" == *.tgz ]]; then
+                            echo "Unpacking tar.gz update package..."
+                            tar -xzf "$PKG" -C "$TEMP_DIR"
+                        elif [[ "$PKG" == *.zip ]]; then
+                            echo "Unpacking zip update package..."
+                            unzip -q -o "$PKG" -d "$TEMP_DIR"
+                        elif [[ "$PKG" == *.dmg ]]; then
+                            echo "Mounting DMG disk image..."
+                            MOUNT_POINT=$(hdiutil attach -nobrowse -readonly "$PKG" 2>&1 | grep -E '/Volumes/' | awk '{print $NF}')
+                            echo "Mounted at: $MOUNT_POINT"
+                            if [ -d "$MOUNT_POINT/DBNavigator.app" ]; then
+                                cp -R "$MOUNT_POINT/DBNavigator.app" "$TEMP_DIR/"
+                            fi
+                            hdiutil detach "$MOUNT_POINT" -force 2>/dev/null || true
+                        fi
+                        
+                        NEW_APP=$(find "$TEMP_DIR" -maxdepth 3 -name "DBNavigator.app" -type d | head -n 1)
+                        
+                        if [ -n "$NEW_APP" ] && [ -d "$NEW_APP" ]; then
+                            echo "Found updated app at: $NEW_APP"
+                            # Strip quarantine attribute to avoid Gatekeeper prompt
+                            xattr -dr com.apple.quarantine "$NEW_APP" 2>/dev/null || true
+                            chmod -R +x "$NEW_APP/Contents/MacOS" 2>/dev/null || true
+                            
+                            echo "Replacing $TARGET_APP..."
+                            rm -rf "$TARGET_APP"
+                            cp -R "$NEW_APP" "$TARGET_APP"
+                            xattr -dr com.apple.quarantine "$TARGET_APP" 2>/dev/null || true
+                            chmod -R +x "$TARGET_APP/Contents/MacOS" 2>/dev/null || true
+                            
+                            echo "Relaunching $TARGET_APP..."
+                            open -a "$TARGET_APP"
+                        else
+                            echo "Error: DBNavigator.app not found in package"
+                        fi
+                        
+                        rm -rf "$TEMP_DIR"
+                        rm -f "$PKG"
+                        echo "Update finished successfully."
+                        """;
+                Files.writeString(shScript, scriptContent, java.nio.charset.StandardCharsets.UTF_8);
+                shScript.toFile().setExecutable(true, false);
+
+                builder = new ProcessBuilder(
+                        "/bin/bash",
+                        shScript.toAbsolutePath().toString(),
+                        String.valueOf(currentPid),
+                        packageFile.toAbsolutePath().toString(),
+                        installDir.toAbsolutePath().toString(),
+                        logFile.toAbsolutePath().toString()
+                );
+            } else if (name.endsWith(".pkg")) {
                 builder = new ProcessBuilder("open", "-W", packageFile.toAbsolutePath().toString());
-            } else if (name.endsWith(".dmg")) {
-                builder = new ProcessBuilder("open", packageFile.toAbsolutePath().toString());
             } else {
                 builder = new ProcessBuilder("open", "-R", packageFile.toAbsolutePath().toString());
             }
         } else {
-            if (name.endsWith(".deb")) {
+            if (name.endsWith(".tar.gz") || name.endsWith(".tgz") || name.endsWith(".zip")) {
+                // In-place Linux update
+                Path shScript = UPDATE_DIR.resolve("apply-update.sh");
+                String scriptContent = """
+                        #!/bin/bash
+                        PID=$1
+                        PKG="$2"
+                        TARGET_DIR="$3"
+                        LOG="$4"
+                        
+                        exec > "$LOG" 2>&1
+                        if [ -n "$PID" ] && [ "$PID" -gt 0 ]; then
+                            for i in {1..60}; do
+                                if ! kill -0 "$PID" 2>/dev/null; then break; fi
+                                sleep 0.5
+                            done
+                        fi
+                        
+                        TEMP_DIR=$(mktemp -d /tmp/dbnav_lin_upd.XXXXXX)
+                        if [[ "$PKG" == *.tar.gz || "$PKG" == *.tgz ]]; then
+                            tar -xzf "$PKG" -C "$TEMP_DIR"
+                        elif [[ "$PKG" == *.zip ]]; then
+                            unzip -q -o "$PKG" -d "$TEMP_DIR"
+                        fi
+                        
+                        NEW_APP=$(find "$TEMP_DIR" -maxdepth 2 -name "dbnavigator" -type d | head -n 1)
+                        if [ -n "$NEW_APP" ] && [ -d "$NEW_APP" ]; then
+                            cp -R "$NEW_APP"/* "$TARGET_DIR/"
+                        else
+                            cp -R "$TEMP_DIR"/* "$TARGET_DIR/"
+                        fi
+                        
+                        if [ -f "$TARGET_DIR/bin/dbnavigator" ]; then
+                            nohup "$TARGET_DIR/bin/dbnavigator" >/dev/null 2>&1 &
+                        fi
+                        rm -rf "$TEMP_DIR"
+                        rm -f "$PKG"
+                        """;
+                Files.writeString(shScript, scriptContent, java.nio.charset.StandardCharsets.UTF_8);
+                shScript.toFile().setExecutable(true, false);
+
+                builder = new ProcessBuilder(
+                        "/bin/bash",
+                        shScript.toAbsolutePath().toString(),
+                        String.valueOf(currentPid),
+                        packageFile.toAbsolutePath().toString(),
+                        installDir.toAbsolutePath().toString(),
+                        logFile.toAbsolutePath().toString()
+                );
+            } else if (name.endsWith(".deb")) {
                 try {
-                    // Try pkexec dpkg for root installer prompt
                     builder = new ProcessBuilder("pkexec", "dpkg", "-i", packageFile.toAbsolutePath().toString());
                 } catch (Exception e) {
                     builder = new ProcessBuilder("xdg-open", packageFile.toAbsolutePath().toString());
