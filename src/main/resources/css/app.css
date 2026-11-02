@@ -1657,3 +1657,39 @@
     -fx-font-size: 11px;
     -fx-padding: 0 1 0 1;
 }
+
+/* ---------- Parameters dialog (DataGrip style) ---------- */
+.parameters-dialog .parameter-name-label {
+    -fx-text-fill: -text;
+    -fx-font-family: 'DBNavigator Mono', monospace;
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+}
+.parameters-dialog .parameter-snippet-label {
+    -fx-text-fill: -text-dim;
+    -fx-font-family: 'DBNavigator Mono', monospace;
+    -fx-font-size: 12px;
+}
+.parameters-dialog .execute-button {
+    -fx-background-color: #3574f0;
+    -fx-text-fill: #ffffff;
+    -fx-font-weight: bold;
+    -fx-background-radius: 4px;
+    -fx-padding: 5 18 5 18;
+    -fx-cursor: hand;
+}
+.parameters-dialog .execute-button:hover {
+    -fx-background-color: #4682f4;
+}
+.parameters-dialog .close-button {
+    -fx-background-color: #393b40;
+    -fx-text-fill: -text;
+    -fx-background-radius: 4px;
+    -fx-border-color: #4e5157;
+    -fx-border-radius: 4px;
+    -fx-padding: 5 14 5 14;
+    -fx-cursor: hand;
+}
+.parameters-dialog .close-button:hover {
+    -fx-background-color: #43454b;
+}

@@ -287,4 +287,96 @@ public class UserParametersTest {
         String substituted = SqlParameters.substitute(sql, values, defaultSettings, pgProfile);
         assertTrue(substituted.contains("b.bill_date_time::date BETWEEN '2026-01-12' AND '2026-01-31'"));
     }
+
+    @Test
+    public void testUserQueryAttendanceAndAdmissionStatusesSubstitution() {
+        String sql = """
+                SELECT
+                    a.id AS attendanceId,
+                    a.created_at AS attendanceCreatedAt,
+                    a.hms_bed_id AS hmsBedId,
+                    c.id AS clinicNatureId,
+                    t.uhid AS uhid,
+                    t.hms_admission_id AS admissionId,
+                    t.admission_time AS admissionTime,
+                    t.admission_date AS admissionDate,
+                    t.process_date_time AS processDateTime,
+                    t.discharge_date_time AS dischargeDateTime,
+                    t.assigned_doctor_id AS doctorId,
+                    r.b_item_code AS roomCharge
+                FROM hms_admission_attendance a
+                INNER JOIN hms_admission t ON t.hms_admission_id = a.hms_admission_id
+                LEFT JOIN hms_bed b ON a.hms_bed_id = b.id
+                LEFT JOIN hms_room r ON r.id = b.hms_room_id
+                LEFT JOIN hms_room_type rt ON rt.id = r.hms_room_type_id
+                LEFT JOIN hms_clinic_nature c ON c.id = rt.hms_clinic_nature_id
+                WHERE a.status = :attendanceStatus
+                AND t.status in (:admissionStatuses)
+                AND t.ehr_episode_type_id = 2
+                AND (t.discharge_date_time IS NULL OR t.discharge_date_time >= a.created_at);
+                """;
+
+        ConnectionProfile pgProfile = new ConnectionProfile();
+        pgProfile.setType(ConnectionProfile.DatabaseType.POSTGRESQL);
+
+        List<SqlParameters.Parameter> params = SqlParameters.detect(sql, defaultSettings, pgProfile);
+        assertEquals(2, params.size());
+        assertEquals("attendanceStatus", params.get(0).name());
+        assertEquals("admissionStatuses", params.get(1).name());
+
+        // Context snippet matching DataGrip
+        assertEquals("a.status = _", params.get(0).contextSnippet());
+        assertEquals("(_)", params.get(1).contextSnippet());
+
+        // Test 1: User types "136,138" without spaces
+        Map<String, String> values1 = Map.of(
+                "attendanceStatus", "1",
+                "admissionStatuses", "136,138"
+        );
+        String substituted1 = SqlParameters.substitute(sql, values1, defaultSettings, pgProfile);
+        assertTrue(substituted1.contains("WHERE a.status = 1"), "attendanceStatus should be 1");
+        assertTrue(substituted1.contains("AND t.status in (136, 138)"),
+                "admissionStatuses should substitute as numeric list (136, 138), not string ('136,138')");
+        assertFalse(substituted1.contains("'136,138'"), "Must not quote comma-separated numeric list");
+
+        // Test 2: User types "136, 138" with space
+        Map<String, String> values2 = Map.of(
+                "attendanceStatus", "1",
+                "admissionStatuses", "136, 138"
+        );
+        String substituted2 = SqlParameters.substitute(sql, values2, defaultSettings, pgProfile);
+        assertTrue(substituted2.contains("AND t.status in (136, 138)"));
+
+        // Test 3: User accidentally types "(136, 138)"
+        Map<String, String> values3 = Map.of(
+                "attendanceStatus", "1",
+                "admissionStatuses", "(136, 138)"
+        );
+        String substituted3 = SqlParameters.substitute(sql, values3, defaultSettings, pgProfile);
+        assertTrue(substituted3.contains("AND t.status in (136, 138)"),
+                "Should strip redundant parentheses when inside IN (...) clause");
+    }
+
+    @Test
+    public void testInClauseStringListSubstitution() {
+        String sql = "SELECT * FROM orders WHERE status IN (:statuses)";
+        Map<String, String> values = Map.of("statuses", "ACTIVE, PENDING");
+        String substituted = SqlParameters.substitute(sql, values, defaultSettings, null);
+        assertEquals("SELECT * FROM orders WHERE status IN ('ACTIVE', 'PENDING')", substituted);
+
+        Map<String, String> quotedValues = Map.of("statuses", "'ACTIVE', 'PENDING'");
+        String quotedSubstituted = SqlParameters.substitute(sql, quotedValues, defaultSettings, null);
+        assertEquals("SELECT * FROM orders WHERE status IN ('ACTIVE', 'PENDING')", quotedSubstituted);
+    }
+
+    @Test
+    public void testNonInClauseStringWithCommas() {
+        String sql = "SELECT * FROM addresses WHERE city = :city AND note = :note";
+        Map<String, String> values = Map.of(
+                "city", "Springfield",
+                "note", "123 Main St, Apt 4"
+        );
+        String substituted = SqlParameters.substitute(sql, values, defaultSettings, null);
+        assertEquals("SELECT * FROM addresses WHERE city = 'Springfield' AND note = '123 Main St, Apt 4'", substituted);
+    }
 }

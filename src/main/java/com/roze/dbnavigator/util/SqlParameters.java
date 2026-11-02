@@ -85,7 +85,7 @@ public final class SqlParameters {
         for (TokenRange range : ranges) {
             out.append(sql, lastEnd, range.start());
             String val = values.get(range.name());
-            out.append(literal(val));
+            out.append(formatParameterValue(sql, range.start(), range.end(), val));
             lastEnd = range.end();
         }
         out.append(sql.substring(lastEnd));
@@ -135,12 +135,24 @@ public final class SqlParameters {
     /**
      * Extracts a clean contextual snippet surrounding a parameter placeholder,
      * replacing the parameter with '_' to show where it fits in the query (DataGrip style).
-     * E.g. "... ::date BETWEEN _ AND"
+     * E.g. "a.status = _", "(_)" for IN clauses, "... ::date BETWEEN _ AND"
      */
     public static String extractContextSnippet(String sql, int paramStart, int paramEnd) {
         if (sql == null || paramStart < 0 || paramEnd > sql.length() || paramStart > paramEnd) {
             return "";
         }
+
+        // If inside IN (...) clause immediately surrounded by parentheses, return DataGrip-style "(_)"
+        if (isInClause(sql, paramStart, paramEnd)) {
+            int p = paramStart - 1;
+            while (p >= 0 && Character.isWhitespace(sql.charAt(p))) p--;
+            int q = paramEnd;
+            while (q < sql.length() && Character.isWhitespace(sql.charAt(q))) q++;
+            if (p >= 0 && sql.charAt(p) == '(' && q < sql.length() && sql.charAt(q) == ')') {
+                return "(_)";
+            }
+        }
+
         // Extract up to 24 chars before paramStart
         int beforeStart = Math.max(0, paramStart - 24);
         int lastNewline = sql.lastIndexOf('\n', paramStart - 1);
@@ -155,6 +167,21 @@ public final class SqlParameters {
         String before = sql.substring(beforeStart, paramStart).replaceAll("\\s+", " ");
         if (beforeStart > 0 && !before.startsWith("...")) {
             before = "... " + before.stripLeading();
+        }
+
+        // Strip leading SQL clause conjunctions like "... WHERE " to focus on the column and operator (DataGrip style)
+        String cleanedBefore = before;
+        if (cleanedBefore.startsWith("... ")) {
+            cleanedBefore = cleanedBefore.substring(4).stripLeading();
+        }
+        for (String conj : List.of("WHERE ", "where ", "AND ", "and ", "OR ", "or ", "HAVING ", "having ", "SET ", "set ", "ON ", "on ")) {
+            if (cleanedBefore.startsWith(conj)) {
+                cleanedBefore = cleanedBefore.substring(conj.length()).stripLeading();
+                break;
+            }
+        }
+        if (!cleanedBefore.isEmpty()) {
+            before = cleanedBefore;
         }
 
         // Extract up to 16 chars after paramEnd (stopping at next parameter or newline)
@@ -368,14 +395,180 @@ public final class SqlParameters {
         }
     }
 
-    private static String literal(String value) {
-        if (value == null || value.isBlank() || value.equalsIgnoreCase("<null>") || value.equalsIgnoreCase("null")) {
+    public static boolean isInClause(String sql, int tokenStart, int tokenEnd) {
+        if (sql == null || tokenStart < 0 || tokenEnd > sql.length() || tokenStart > tokenEnd) {
+            return false;
+        }
+
+        // Walk backward from tokenStart to check if inside ( ... )
+        int depth = 0;
+        int openParenPos = -1;
+        for (int i = tokenStart - 1; i >= 0; i--) {
+            char c = sql.charAt(i);
+            if (c == ')') {
+                depth++;
+            } else if (c == '(') {
+                if (depth == 0) {
+                    openParenPos = i;
+                    break;
+                }
+                depth--;
+            } else if (depth == 0 && (c == ';' || c == '\n')) {
+                break;
+            }
+        }
+
+        if (openParenPos != -1) {
+            int p = openParenPos - 1;
+            while (p >= 0 && Character.isWhitespace(sql.charAt(p))) p--;
+            if (p >= 1) {
+                int wordEnd = p + 1;
+                while (p >= 0 && Character.isLetter(sql.charAt(p))) p--;
+                String word = sql.substring(p + 1, wordEnd);
+                if (word.equalsIgnoreCase("IN")) {
+                    return true;
+                }
+            }
+        } else {
+            int p = tokenStart - 1;
+            while (p >= 0 && Character.isWhitespace(sql.charAt(p))) p--;
+            if (p >= 1) {
+                int wordEnd = p + 1;
+                while (p >= 0 && Character.isLetter(sql.charAt(p))) p--;
+                String word = sql.substring(p + 1, wordEnd);
+                if (word.equalsIgnoreCase("IN")) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    public static List<String> parseTokens(String val) {
+        List<String> tokens = new ArrayList<>();
+        if (val == null || val.isBlank()) return tokens;
+
+        StringBuilder sb = new StringBuilder();
+        boolean inSingle = false;
+        boolean inDouble = false;
+        int parenDepth = 0;
+
+        for (int i = 0; i < val.length(); i++) {
+            char c = val.charAt(i);
+            if (c == '\'' && !inDouble) {
+                if (inSingle && i + 1 < val.length() && val.charAt(i + 1) == '\'') {
+                    sb.append("''");
+                    i++;
+                    continue;
+                }
+                inSingle = !inSingle;
+                sb.append(c);
+            } else if (c == '"' && !inSingle) {
+                inDouble = !inDouble;
+                sb.append(c);
+            } else if (!inSingle && !inDouble) {
+                if (c == '(' || c == '[') {
+                    parenDepth++;
+                    sb.append(c);
+                } else if (c == ')' || c == ']') {
+                    if (parenDepth > 0) parenDepth--;
+                    sb.append(c);
+                } else if (c == ',' && parenDepth == 0) {
+                    String part = sb.toString().trim();
+                    if (!part.isEmpty()) {
+                        tokens.add(part);
+                    }
+                    sb.setLength(0);
+                } else {
+                    sb.append(c);
+                }
+            } else {
+                sb.append(c);
+            }
+        }
+        String lastPart = sb.toString().trim();
+        if (!lastPart.isEmpty()) {
+            tokens.add(lastPart);
+        }
+        return tokens;
+    }
+
+    public static boolean isLiteralToken(String token) {
+        if (token == null || token.isBlank()) return false;
+        if (token.matches("-?\\d+(\\.\\d+)?")) return true;
+        if ((token.startsWith("'") && token.endsWith("'") && token.length() >= 2) ||
+            (token.startsWith("\"") && token.endsWith("\"") && token.length() >= 2)) return true;
+        if (token.equalsIgnoreCase("true") || token.equalsIgnoreCase("false") ||
+            token.equalsIgnoreCase("null") || token.equalsIgnoreCase("<null>")) return true;
+        return false;
+    }
+
+    public static String formatSingleLiteral(String single) {
+        if (single == null || single.isBlank() || single.equalsIgnoreCase("<null>") || single.equalsIgnoreCase("null")) {
             return "NULL";
         }
-        if (value.matches("-?\\d+(\\.\\d+)?")) return value;
-        if ((value.startsWith("'") && value.endsWith("'")) || (value.startsWith("\"") && value.endsWith("\""))) {
-            return value;
+        single = single.trim();
+        if (single.matches("-?\\d+(\\.\\d+)?")) {
+            return single;
         }
-        return "'" + value.replace("'", "''") + "'";
+        if ((single.startsWith("'") && single.endsWith("'") && single.length() >= 2) ||
+            (single.startsWith("\"") && single.endsWith("\"") && single.length() >= 2)) {
+            return single;
+        }
+        if (single.equalsIgnoreCase("true") || single.equalsIgnoreCase("false")) {
+            return single.toUpperCase(Locale.ROOT);
+        }
+        return "'" + single.replace("'", "''") + "'";
+    }
+
+    public static String formatParameterValue(String sql, int tokenStart, int tokenEnd, String rawValue) {
+        if (rawValue == null || rawValue.isBlank() || rawValue.equalsIgnoreCase("<null>") || rawValue.equalsIgnoreCase("null")) {
+            return "NULL";
+        }
+        String val = rawValue.trim();
+
+        boolean inClause = (sql != null && tokenStart >= 0 && tokenEnd >= 0) && isInClause(sql, tokenStart, tokenEnd);
+
+        // If inside an IN (...) clause and user wrapped their input in parentheses, strip them
+        if (inClause && val.startsWith("(") && val.endsWith(")") && val.length() >= 2) {
+            val = val.substring(1, val.length() - 1).trim();
+            if (val.isBlank() || val.equalsIgnoreCase("<null>") || val.equalsIgnoreCase("null")) {
+                return "NULL";
+            }
+        }
+
+        List<String> tokens = parseTokens(val);
+        if (tokens.isEmpty()) {
+            return "NULL";
+        }
+
+        if (tokens.size() == 1) {
+            return formatSingleLiteral(tokens.get(0));
+        }
+
+        // Multi-token: check if all tokens are numbers (e.g. "136,138" or "1, 2, 3")
+        boolean allNumbers = tokens.stream().allMatch(t -> t.matches("-?\\d+(\\.\\d+)?"));
+        if (allNumbers) {
+            return String.join(", ", tokens);
+        }
+
+        // Multi-token: if all tokens are already valid literals (numbers, quoted strings, booleans, NULL)
+        boolean allLiterals = tokens.stream().allMatch(SqlParameters::isLiteralToken);
+        if (allLiterals) {
+            return String.join(", ", tokens.stream().map(SqlParameters::formatSingleLiteral).toList());
+        }
+
+        // Multi-token: inside an IN clause, format each token as a literal (e.g. ACTIVE, PENDING -> 'ACTIVE', 'PENDING')
+        if (inClause) {
+            return String.join(", ", tokens.stream().map(SqlParameters::formatSingleLiteral).toList());
+        }
+
+        // Not in IN clause and not all tokens are literals -> treat the whole string as a single text literal
+        return formatSingleLiteral(val);
+    }
+
+    private static String literal(String value) {
+        return formatParameterValue(null, -1, -1, value);
     }
 }
