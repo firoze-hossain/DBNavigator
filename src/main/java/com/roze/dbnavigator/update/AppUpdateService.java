@@ -447,6 +447,7 @@ public final class AppUpdateService {
     private static int scoreAsset(String name, String os, String arch) {
         int score = 0;
         if ("Linux".equals(os)) {
+            if (name.contains("mac") || name.contains("darwin") || name.contains("win")) return 0;
             // Priority 1: In-place update archive (zero-friction update)
             if ((name.contains("linux-update") || name.contains("-update.")) && (name.endsWith(".tar.gz") || name.endsWith(".tgz") || name.endsWith(".zip"))) {
                 score += 2000;
@@ -467,6 +468,7 @@ public final class AppUpdateService {
                 if ("x64".equals(arch) && (name.contains("x86_64") || name.contains("amd64") || name.contains("x64"))) score += 300;
             }
         } else if ("Windows".equals(os)) {
+            if (name.contains("mac") || name.contains("darwin") || name.contains("linux") || name.contains(".deb") || name.contains(".rpm")) return 0;
             // Priority 1: In-place update ZIP package (fastest, no SmartScreen prompt, no installer wizard)
             if ((name.contains("win-update") || name.contains("windows-update") || name.contains("-update.")) && name.endsWith(".zip")) {
                 score += 2000;
@@ -491,6 +493,7 @@ public final class AppUpdateService {
                 if ("x64".equals(arch) && (name.contains("x64") || name.contains("x86_64") || name.contains("win64"))) score += 300;
             }
         } else if ("macOS".equals(os)) {
+            if (name.contains("win") || name.contains("linux") || name.contains(".deb") || name.contains(".rpm") || name.contains(".exe") || name.contains(".msi")) return 0;
             // Priority 1: In-place macOS update archive (.tar.gz or .zip - zero Gatekeeper quarantine, in-place replacement)
             if ((name.contains("mac-update") || name.contains("macos-update") || name.contains("-update.")) && (name.endsWith(".tar.gz") || name.endsWith(".tgz") || name.endsWith(".zip"))) {
                 score += 2000;
