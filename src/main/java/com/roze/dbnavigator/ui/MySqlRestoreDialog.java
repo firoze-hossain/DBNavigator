@@ -1,6 +1,7 @@
 package com.roze.dbnavigator.ui;
 
 import com.roze.dbnavigator.model.ConnectionProfile;
+import com.roze.dbnavigator.util.DatabaseToolDetector;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -28,7 +29,7 @@ public final class MySqlRestoreDialog {
     private final ConnectionProfile profile;
     private final Stage stage = new Stage();
 
-    private final TextField pathField = new TextField("mysql");
+    private final TextField pathField = new TextField();
     private final TextField databaseField = new TextField();
     private final TextField dumpPathField = new TextField();
     private final TextArea commandPreview = new TextArea();
@@ -56,13 +57,27 @@ public final class MySqlRestoreDialog {
         locallyRadio.setToggleGroup(new ToggleGroup());
         Tooltip.install(locallyRadio, new Tooltip("Running mysql over an SSH tunnel isn't supported yet"));
 
+        String defaultTool = (profile != null && profile.getType() == ConnectionProfile.DatabaseType.MARIADB && DatabaseToolDetector.hasTool("mariadb"))
+                ? "mariadb" : "mysql";
+        pathField.setText(DatabaseToolDetector.detectToolPath(defaultTool, profile));
         pathField.setPrefWidth(420);
         Button browsePath = browseButton();
         browsePath.setOnAction(e -> {
             FileChooser chooser = new FileChooser();
-            chooser.setTitle("Locate mysql executable");
+            chooser.setTitle("Locate " + defaultTool + " executable");
+            String cur = pathField.getText();
+            if (cur != null && !cur.isBlank()) {
+                File curFile = new File(cur.trim());
+                File parent = curFile.getParentFile();
+                if (parent != null && parent.isDirectory()) {
+                    chooser.setInitialDirectory(parent);
+                }
+            }
             File file = chooser.showOpenDialog(stage);
-            if (file != null) pathField.setText(file.getAbsolutePath());
+            if (file != null) {
+                pathField.setText(file.getAbsolutePath());
+                DatabaseToolDetector.saveToolPath(defaultTool, file.getAbsolutePath());
+            }
         });
 
         databaseField.setText(database);
@@ -74,6 +89,10 @@ public final class MySqlRestoreDialog {
             FileChooser chooser = new FileChooser();
             chooser.setTitle("Choose .sql dump to restore");
             chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("SQL files", "*.sql"));
+            File downloads = new File(System.getProperty("user.home", ""), "Downloads");
+            if (downloads.exists() && downloads.isDirectory()) {
+                chooser.setInitialDirectory(downloads);
+            }
             File file = chooser.showOpenDialog(stage);
             if (file != null) dumpPathField.setText(file.getAbsolutePath());
         });
@@ -184,8 +203,13 @@ public final class MySqlRestoreDialog {
         confirm.initOwner(stage);
         if (confirm.showAndWait().orElse(ButtonType.NO) != ButtonType.YES) return;
 
+        String defaultTool = (profile != null && profile.getType() == ConnectionProfile.DatabaseType.MARIADB && DatabaseToolDetector.hasTool("mariadb"))
+                ? "mariadb" : "mysql";
+        String toolPath = pathField.getText().trim();
+        DatabaseToolDetector.saveToolPath(defaultTool, toolPath);
+
         List<String> command = new ArrayList<>();
-        command.add(pathField.getText());
+        command.add(toolPath);
         command.add("-h");
         command.add(profile.getHost());
         command.add("-P");

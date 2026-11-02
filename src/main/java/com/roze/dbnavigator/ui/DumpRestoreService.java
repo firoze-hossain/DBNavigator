@@ -3,6 +3,7 @@ package com.roze.dbnavigator.ui;
 import com.roze.dbnavigator.model.ConnectionProfile;
 import com.roze.dbnavigator.model.ConnectionProfile.DatabaseType;
 import com.roze.dbnavigator.util.AppExecutor;
+import com.roze.dbnavigator.util.DatabaseToolDetector;
 import javafx.application.Platform;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
@@ -36,23 +37,34 @@ public final class DumpRestoreService {
     public static void dumpDatabase(MainWindow mainWindow, ConnectionProfile profile, String database) {
         String defaultTool = switch (profile.getType()) {
             case POSTGRESQL -> "pg_dump";
-            case MYSQL, MARIADB -> "mysqldump";
+            case MYSQL -> "mysqldump";
+            case MARIADB -> DatabaseToolDetector.hasTool("mariadb-dump") ? "mariadb-dump" : "mysqldump";
+            case SQLITE -> "sqlite3";
+            case MONGODB -> "mongodump";
+            case SQLSERVER -> "bcp";
+            case ORACLE -> "expdp";
             default -> null;
         };
         if (defaultTool == null) {
-            info(mainWindow.getOwnerWindow(), "Dump is supported for PostgreSQL, MySQL and MariaDB connections.");
+            info(mainWindow.getOwnerWindow(), "Dump is not supported for " + profile.getType().getDisplayName());
             return;
         }
 
+        String initialPath = DatabaseToolDetector.detectToolPath(defaultTool, profile);
         Window owner = mainWindow.getOwnerWindow();
-        var tool = toolPathDialog(owner, defaultTool,
-                "Dump " + database, "Path to " + defaultTool + " (keep default if it is on PATH):").showAndWait();
-        if (tool.isEmpty()) return;
+        var tool = toolPathDialog(owner, initialPath,
+                "Dump " + database, "Path to " + defaultTool + " executable:").showAndWait();
+        if (tool.isEmpty() || tool.get().isBlank()) return;
+        DatabaseToolDetector.saveToolPath(defaultTool, tool.get().trim());
 
         FileChooser chooser = new FileChooser();
         chooser.setTitle("Save dump as…");
         chooser.setInitialFileName(database + ".sql");
         chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("SQL files", "*.sql"));
+        File downloads = new File(System.getProperty("user.home", ""), "Downloads");
+        if (downloads.exists() && downloads.isDirectory()) {
+            chooser.setInitialDirectory(downloads);
+        }
         File file = chooser.showSaveDialog(owner);
         if (file == null) return;
 
@@ -65,6 +77,15 @@ public final class DumpRestoreService {
                     "--dbname", database,
                     "--no-password",
                     "--file", file.getAbsolutePath()));
+        } else if (profile.getType() == DatabaseType.SQLITE) {
+            String dbPath = profile.getDatabase() != null && !profile.getDatabase().isBlank() ? profile.getDatabase() : database;
+            command.addAll(List.of(tool.get(), dbPath, ".dump"));
+        } else if (profile.getType() == DatabaseType.MONGODB) {
+            command.addAll(List.of(tool.get(),
+                    "--host", profile.getHost(),
+                    "--port", String.valueOf(profile.getPort()),
+                    "--db", database,
+                    "--archive=" + file.getAbsolutePath()));
         } else {
             command.addAll(List.of(tool.get(),
                     "-h", profile.getHost(),
@@ -82,22 +103,33 @@ public final class DumpRestoreService {
     public static void restoreDatabase(MainWindow mainWindow, ConnectionProfile profile, String database) {
         String defaultTool = switch (profile.getType()) {
             case POSTGRESQL -> "psql";
-            case MYSQL, MARIADB -> "mysql";
+            case MYSQL -> "mysql";
+            case MARIADB -> DatabaseToolDetector.hasTool("mariadb") ? "mariadb" : "mysql";
+            case SQLITE -> "sqlite3";
+            case MONGODB -> "mongorestore";
+            case SQLSERVER -> "sqlcmd";
+            case ORACLE -> "impdp";
             default -> null;
         };
         if (defaultTool == null) {
-            info(mainWindow.getOwnerWindow(), "Restore is supported for PostgreSQL, MySQL and MariaDB connections.");
+            info(mainWindow.getOwnerWindow(), "Restore is not supported for " + profile.getType().getDisplayName());
             return;
         }
 
+        String initialPath = DatabaseToolDetector.detectToolPath(defaultTool, profile);
         Window owner = mainWindow.getOwnerWindow();
-        var tool = toolPathDialog(owner, defaultTool,
-                "Restore into " + database, "Path to " + defaultTool + " (keep default if it is on PATH):").showAndWait();
-        if (tool.isEmpty()) return;
+        var tool = toolPathDialog(owner, initialPath,
+                "Restore into " + database, "Path to " + defaultTool + " executable:").showAndWait();
+        if (tool.isEmpty() || tool.get().isBlank()) return;
+        DatabaseToolDetector.saveToolPath(defaultTool, tool.get().trim());
 
         FileChooser chooser = new FileChooser();
         chooser.setTitle("Choose .sql dump to restore");
         chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("SQL files", "*.sql"));
+        File downloads = new File(System.getProperty("user.home", ""), "Downloads");
+        if (downloads.exists() && downloads.isDirectory()) {
+            chooser.setInitialDirectory(downloads);
+        }
         File file = chooser.showOpenDialog(owner);
         if (file == null) return;
 
@@ -118,6 +150,22 @@ public final class DumpRestoreService {
                     "--dbname", database,
                     "--no-password",
                     "--file", file.getAbsolutePath()));
+        } else if (profile.getType() == DatabaseType.SQLITE) {
+            String dbPath = profile.getDatabase() != null && !profile.getDatabase().isBlank() ? profile.getDatabase() : database;
+            command.addAll(List.of(tool.get(), dbPath));
+            stdinFile = file;
+        } else if (profile.getType() == DatabaseType.MONGODB) {
+            command.addAll(List.of(tool.get(),
+                    "--host", profile.getHost(),
+                    "--port", String.valueOf(profile.getPort()),
+                    "--db", database,
+                    "--archive=" + file.getAbsolutePath()));
+        } else if (profile.getType() == DatabaseType.SQLSERVER) {
+            command.addAll(List.of(tool.get(),
+                    "-S", profile.getHost() + (profile.getPort() > 0 ? "," + profile.getPort() : ""),
+                    "-U", profile.getUsername(),
+                    "-d", database,
+                    "-i", file.getAbsolutePath()));
         } else {
             command.addAll(List.of(tool.get(),
                     "-h", profile.getHost(),
@@ -174,8 +222,10 @@ public final class DumpRestoreService {
                 String password = profile.getPassword() == null ? "" : profile.getPassword();
                 if (profile.getType() == DatabaseType.POSTGRESQL) {
                     builder.environment().put("PGPASSWORD", password);
-                } else {
+                } else if (profile.getType() == DatabaseType.MYSQL || profile.getType() == DatabaseType.MARIADB) {
                     builder.environment().put("MYSQL_PWD", password);
+                } else if (profile.getType() == DatabaseType.SQLSERVER) {
+                    builder.environment().put("SQLCMDPASSWORD", password);
                 }
 
                 Process process = builder.start();
@@ -194,9 +244,8 @@ public final class DumpRestoreService {
                 handle.markFinished(exit);
             } catch (Exception ex) {
                 String msg = ex.getMessage() == null ? ex.toString() : ex.getMessage();
-                handle.markFailed(msg + "  — is the client tool installed and on PATH? "
-                        + "On Windows, point the dialog at e.g. "
-                        + "C:\\Program Files\\PostgreSQL\\16\\bin\\pg_dump.exe");
+                handle.markFailed(msg + "  — could not execute the database client tool. "
+                        + "Please ensure the client executable is installed or specify its full path.");
             } finally {
                 Platform.runLater(mainWindow::hideTask);
             }

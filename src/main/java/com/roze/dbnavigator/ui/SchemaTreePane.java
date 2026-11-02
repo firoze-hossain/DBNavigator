@@ -1483,18 +1483,34 @@ public class SchemaTreePane extends VBox {
         };
         MenuItem dumpItem = new MenuItem(dumpName);
         dumpItem.setOnAction(e -> {
-            if (profile.getType() == ConnectionProfile.DatabaseType.STRATOSDB) {
+            String db = (profile.getDatabase() != null && !profile.getDatabase().isBlank())
+                    ? profile.getDatabase()
+                    : (profile.getType() == ConnectionProfile.DatabaseType.POSTGRESQL ? "postgres" : "mysql");
+            if (profile.getType() == ConnectionProfile.DatabaseType.POSTGRESQL) {
+                PgDumpDialog.show(mainWindow, profile, db);
+            } else if (profile.getType() == ConnectionProfile.DatabaseType.MYSQL
+                    || profile.getType() == ConnectionProfile.DatabaseType.MARIADB) {
+                MySqlDumpDialog.show(mainWindow, profile, db);
+            } else if (profile.getType() == ConnectionProfile.DatabaseType.STRATOSDB) {
                 StratosDumpService.dumpDatabase(mainWindow, profile, profile.getDatabase() != null ? profile.getDatabase() : "stratos");
             } else {
-                mainWindow.setStatus(dumpName.replace("…", ""));
+                DumpRestoreService.dumpDatabase(mainWindow, profile, db);
             }
         });
         MenuItem restoreItem = new MenuItem("Restore…");
         restoreItem.setOnAction(e -> {
-            if (profile.getType() == ConnectionProfile.DatabaseType.STRATOSDB) {
+            String db = (profile.getDatabase() != null && !profile.getDatabase().isBlank())
+                    ? profile.getDatabase()
+                    : (profile.getType() == ConnectionProfile.DatabaseType.POSTGRESQL ? "postgres" : "mysql");
+            if (profile.getType() == ConnectionProfile.DatabaseType.POSTGRESQL) {
+                RestoreDialog.show(mainWindow, profile, db);
+            } else if (profile.getType() == ConnectionProfile.DatabaseType.MYSQL
+                    || profile.getType() == ConnectionProfile.DatabaseType.MARIADB) {
+                MySqlRestoreDialog.show(mainWindow, profile, db);
+            } else if (profile.getType() == ConnectionProfile.DatabaseType.STRATOSDB) {
                 StratosDumpService.restoreDatabase(mainWindow, profile, profile.getDatabase() != null ? profile.getDatabase() : "stratos");
             } else {
-                mainWindow.setStatus("Restore database");
+                DumpRestoreService.restoreDatabase(mainWindow, profile, db);
             }
         });
         importExport.getItems().addAll(dumpItem, restoreItem);
@@ -3146,22 +3162,26 @@ public class SchemaTreePane extends VBox {
                 };
                 MenuItem dumpItem = new MenuItem(dumpName);
                 dumpItem.setOnAction(e -> {
-                    if (type == ConnectionProfile.DatabaseType.MYSQL || type == ConnectionProfile.DatabaseType.MARIADB) {
+                    if (type == ConnectionProfile.DatabaseType.POSTGRESQL) {
+                        PgDumpDialog.show(mainWindow, profile, targetCatalog);
+                    } else if (type == ConnectionProfile.DatabaseType.MYSQL || type == ConnectionProfile.DatabaseType.MARIADB) {
                         MySqlDumpDialog.show(mainWindow, profile, targetCatalog);
                     } else if (type == ConnectionProfile.DatabaseType.STRATOSDB) {
                         StratosDumpService.dumpDatabase(mainWindow, profile, targetCatalog != null ? targetCatalog : profile.getDatabase());
                     } else {
-                        if (mainWindow != null) mainWindow.setStatus(dumpName.replace("…", ""));
+                        DumpRestoreService.dumpDatabase(mainWindow, profile, targetCatalog != null ? targetCatalog : profile.getDatabase());
                     }
                 });
                 MenuItem restoreItem = new MenuItem("Restore…");
                 restoreItem.setOnAction(e -> {
-                    if (type == ConnectionProfile.DatabaseType.MYSQL || type == ConnectionProfile.DatabaseType.MARIADB) {
+                    if (type == ConnectionProfile.DatabaseType.POSTGRESQL) {
+                        RestoreDialog.show(mainWindow, profile, targetCatalog);
+                    } else if (type == ConnectionProfile.DatabaseType.MYSQL || type == ConnectionProfile.DatabaseType.MARIADB) {
                         MySqlRestoreDialog.show(mainWindow, profile, targetCatalog);
                     } else if (type == ConnectionProfile.DatabaseType.STRATOSDB) {
                         StratosDumpService.restoreDatabase(mainWindow, profile, targetCatalog != null ? targetCatalog : profile.getDatabase());
                     } else {
-                        if (mainWindow != null) mainWindow.setStatus("Restore database");
+                        DumpRestoreService.restoreDatabase(mainWindow, profile, targetCatalog != null ? targetCatalog : profile.getDatabase());
                     }
                 });
                 importExport.getItems().addAll(dumpItem, restoreItem);
@@ -3627,7 +3647,7 @@ public class SchemaTreePane extends VBox {
             } else if (profile.getType() == ConnectionProfile.DatabaseType.STRATOSDB) {
                 StratosDumpService.dumpDatabase(mainWindow, profile, targetDatabase);
             } else {
-                if (mainWindow != null) mainWindow.setStatus(dumpName.replace("…", ""));
+                DumpRestoreService.dumpDatabase(mainWindow, profile, targetDatabase);
             }
         });
         MenuItem restoreItem = new MenuItem("Restore…");
@@ -3640,7 +3660,7 @@ public class SchemaTreePane extends VBox {
             } else if (profile.getType() == ConnectionProfile.DatabaseType.STRATOSDB) {
                 StratosDumpService.restoreDatabase(mainWindow, profile, targetDatabase);
             } else {
-                if (mainWindow != null) mainWindow.setStatus("Restore database");
+                DumpRestoreService.restoreDatabase(mainWindow, profile, targetDatabase);
             }
         });
         importExport.getItems().addAll(dumpItem, restoreItem);

@@ -143,6 +143,7 @@ public final class AppSettingsStore {
         public boolean reviewParametersBeforeExecution = true;
         public boolean warnUnsafeQueries = true;
         public boolean confirmExit = true;
+        public Map<String, String> databaseClientToolPaths = new LinkedHashMap<>();
 
         // Window geometry and placement
         public double windowWidth = -1;
@@ -4742,6 +4743,15 @@ public final class AppSettingsStore {
         public String getStatementDelimiter() { return statementDelimiter; }
         public void setStatementDelimiter(String statementDelimiter) {
             this.statementDelimiter = statementDelimiter != null ? statementDelimiter : "";
+        }
+
+        public Map<String, String> getDatabaseClientToolPaths() {
+            if (databaseClientToolPaths == null) databaseClientToolPaths = new LinkedHashMap<>();
+            return databaseClientToolPaths;
+        }
+
+        public void setDatabaseClientToolPaths(Map<String, String> paths) {
+            this.databaseClientToolPaths = (paths != null) ? new LinkedHashMap<>(paths) : new LinkedHashMap<>();
         }
 
         // Appearance: Theme & Colors Getters and Setters

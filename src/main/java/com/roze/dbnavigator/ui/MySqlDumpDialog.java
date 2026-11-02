@@ -1,6 +1,7 @@
 package com.roze.dbnavigator.ui;
 
 import com.roze.dbnavigator.model.ConnectionProfile;
+import com.roze.dbnavigator.util.DatabaseToolDetector;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -34,7 +35,7 @@ public final class MySqlDumpDialog {
     private final String database;
     private final Stage stage = new Stage();
 
-    private final TextField pathField = new TextField("mysqldump");
+    private final TextField pathField = new TextField();
     private final TextField outputField = new TextField();
     private final TextField databasesField = new TextField();
     private final TextField tablesField = new TextField();
@@ -81,13 +82,28 @@ public final class MySqlDumpDialog {
         locallyRadio.setToggleGroup(new ToggleGroup());
         Tooltip.install(locallyRadio, new Tooltip("Running mysqldump over an SSH tunnel isn't supported yet"));
 
+        // ---- Path to executable ----
+        String defaultTool = (profile != null && profile.getType() == ConnectionProfile.DatabaseType.MARIADB && DatabaseToolDetector.hasTool("mariadb-dump"))
+                ? "mariadb-dump" : "mysqldump";
+        pathField.setText(DatabaseToolDetector.detectToolPath(defaultTool, profile));
         pathField.setPrefWidth(420);
         Button browsePath = browseButton();
         browsePath.setOnAction(e -> {
             FileChooser chooser = new FileChooser();
-            chooser.setTitle("Locate mysqldump executable");
+            chooser.setTitle("Locate " + defaultTool + " executable");
+            String cur = pathField.getText();
+            if (cur != null && !cur.isBlank()) {
+                File curFile = new File(cur.trim());
+                File parent = curFile.getParentFile();
+                if (parent != null && parent.isDirectory()) {
+                    chooser.setInitialDirectory(parent);
+                }
+            }
             File file = chooser.showOpenDialog(stage);
-            if (file != null) pathField.setText(file.getAbsolutePath());
+            if (file != null) {
+                pathField.setText(file.getAbsolutePath());
+                DatabaseToolDetector.saveToolPath(defaultTool, file.getAbsolutePath());
+            }
         });
 
         outputField.setText(defaultOutputPath());
@@ -220,7 +236,9 @@ public final class MySqlDumpDialog {
 
     private String defaultOutputPath() {
         String home = System.getProperty("user.home", "");
-        return new File(home, "{data_source}-{timestamp}-dump.sql").getAbsolutePath();
+        File downloads = new File(home, "Downloads");
+        File baseDir = (downloads.exists() && downloads.isDirectory()) ? downloads : new File(home);
+        return new File(baseDir, "{data_source}-{timestamp}-dump.sql").getAbsolutePath();
     }
 
     // ------------------------------------------------------- live preview
@@ -292,9 +310,13 @@ public final class MySqlDumpDialog {
         }
 
         String resolvedOutput = substitutePlaceholders(outputField.getText());
+        String toolPath = pathField.getText().trim();
+        String currentTool = (profile != null && profile.getType() == ConnectionProfile.DatabaseType.MARIADB && DatabaseToolDetector.hasTool("mariadb-dump"))
+                ? "mariadb-dump" : "mysqldump";
+        DatabaseToolDetector.saveToolPath(currentTool, toolPath);
 
         List<String> command = new ArrayList<>();
-        command.add(pathField.getText());
+        command.add(toolPath);
         command.add("-h");
         command.add(profile.getHost());
         command.add("-P");

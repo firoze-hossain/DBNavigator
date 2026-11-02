@@ -1,6 +1,7 @@
 package com.roze.dbnavigator.ui;
 
 import com.roze.dbnavigator.model.ConnectionProfile;
+import com.roze.dbnavigator.util.DatabaseToolDetector;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -94,10 +95,22 @@ public final class RestoreDialog {
         pathField.setPrefWidth(420);
         Button browsePath = browseButton();
         browsePath.setOnAction(e -> {
+            String currentToolName = (tool == Tool.PG_RESTORE ? "pg_restore" : "psql");
             FileChooser chooser = new FileChooser();
-            chooser.setTitle("Locate " + (tool == Tool.PG_RESTORE ? "pg_restore" : "psql") + " executable");
+            chooser.setTitle("Locate " + currentToolName + " executable");
+            String cur = pathField.getText();
+            if (cur != null && !cur.isBlank()) {
+                File curFile = new File(cur.trim());
+                File parent = curFile.getParentFile();
+                if (parent != null && parent.isDirectory()) {
+                    chooser.setInitialDirectory(parent);
+                }
+            }
             File file = chooser.showOpenDialog(stage);
-            if (file != null) pathField.setText(file.getAbsolutePath());
+            if (file != null) {
+                pathField.setText(file.getAbsolutePath());
+                DatabaseToolDetector.saveToolPath(currentToolName, file.getAbsolutePath());
+            }
         });
 
         databaseField.setPrefWidth(260);
@@ -108,6 +121,10 @@ public final class RestoreDialog {
         browseDump.setOnAction(e -> {
             FileChooser chooser = new FileChooser();
             chooser.setTitle("Choose dump file");
+            File downloads = new File(System.getProperty("user.home", ""), "Downloads");
+            if (downloads.exists() && downloads.isDirectory()) {
+                chooser.setInitialDirectory(downloads);
+            }
             File file = chooser.showOpenDialog(stage);
             if (file != null) dumpPathField.setText(file.getAbsolutePath());
         });
@@ -231,11 +248,20 @@ public final class RestoreDialog {
 
         // Refresh the executable path default unless the user typed something
         // that doesn't match either tool's default (in which case leave it alone).
-        String current = pathField.getText();
-        boolean isDefault = current.isBlank() || current.endsWith("/pg_restore") || current.endsWith("/psql")
-                || current.equals("pg_restore") || current.equals("psql");
+        String targetToolName = (newTool == Tool.PG_RESTORE) ? "pg_restore" : "psql";
+        String oldToolName = (newTool == Tool.PG_RESTORE) ? "psql" : "pg_restore";
+        String current = pathField.getText() == null ? "" : pathField.getText().trim();
+
+        boolean isDefault = current.isBlank()
+                || current.endsWith("/" + oldToolName) || current.endsWith("\\" + oldToolName)
+                || current.endsWith("/" + oldToolName + ".exe") || current.endsWith("\\" + oldToolName + ".exe")
+                || current.endsWith("/" + targetToolName) || current.endsWith("\\" + targetToolName)
+                || current.endsWith("/" + targetToolName + ".exe") || current.endsWith("\\" + targetToolName + ".exe")
+                || current.equals(oldToolName) || current.equals(targetToolName)
+                || current.equals("/usr/bin/pg_restore") || current.equals("/usr/bin/psql");
+
         if (isDefault) {
-            pathField.setText(newTool == Tool.PG_RESTORE ? "/usr/bin/pg_restore" : "/usr/bin/psql");
+            pathField.setText(DatabaseToolDetector.detectToolPath(targetToolName, profile));
         }
         refreshPreview();
     }
@@ -304,12 +330,20 @@ public final class RestoreDialog {
         List<String> preview = new ArrayList<>();
         if (tool == Tool.PG_RESTORE) {
             preview.addAll(buildPgRestoreOptionArgs());
-            preview.add("--dbname=" + databaseField.getText());
-            preview.add("\"" + dumpPathField.getText() + "\"");
+            if (!databaseField.getText().isBlank()) {
+                preview.add("--dbname=" + databaseField.getText());
+            }
+            if (!dumpPathField.getText().isBlank()) {
+                preview.add("\"" + dumpPathField.getText() + "\"");
+            }
         } else {
-            preview.add(databaseField.getText());
-            preview.add("--file=\"" + dumpPathField.getText() + "\"");
+            if (!dumpPathField.getText().isBlank()) {
+                preview.add("--file=\"" + dumpPathField.getText() + "\"");
+            }
             if (singleTxPsql.isSelected()) preview.add("--single-transaction");
+            if (!databaseField.getText().isBlank()) {
+                preview.add("\"" + databaseField.getText() + "\"");
+            }
         }
         commandPreview.setText(String.join(" ", preview));
     }
@@ -336,10 +370,12 @@ public final class RestoreDialog {
         confirm.initOwner(stage);
         if (confirm.showAndWait().orElse(ButtonType.NO) != ButtonType.YES) return;
 
-        List<String> command = new ArrayList<>();
-        command.add(pathField.getText());
+        String toolName = (tool == Tool.PG_RESTORE ? "pg_restore" : "psql");
+        String toolPath = pathField.getText().trim();
+        DatabaseToolDetector.saveToolPath(toolName, toolPath);
 
-        String toolName;
+        List<String> command = new ArrayList<>();
+        command.add(toolPath);
         if (tool == Tool.PG_RESTORE) {
             toolName = "pg_restore";
             command.add("--host");

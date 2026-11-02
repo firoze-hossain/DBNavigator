@@ -1,6 +1,7 @@
 package com.roze.dbnavigator.ui;
 
 import com.roze.dbnavigator.model.ConnectionProfile;
+import com.roze.dbnavigator.util.DatabaseToolDetector;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -35,7 +36,7 @@ public final class PgDumpDialog {
     private final String database;
     private final Stage stage = new Stage();
 
-    private final TextField pathField = new TextField("pg_dump");
+    private final TextField pathField = new TextField();
     private final TextField outputField = new TextField();
     private final ComboBox<String> statementsCombo = new ComboBox<>();
     private final TextField databaseField = new TextField();
@@ -76,13 +77,25 @@ public final class PgDumpDialog {
         Tooltip.install(locallyRadio, new Tooltip("Running pg_dump over an SSH tunnel isn't supported yet"));
 
         // ---- Path to executable ----
+        pathField.setText(DatabaseToolDetector.detectToolPath("pg_dump", profile));
         pathField.setPrefWidth(420);
         Button browsePath = browseButton();
         browsePath.setOnAction(e -> {
             FileChooser chooser = new FileChooser();
             chooser.setTitle("Locate pg_dump executable");
+            String cur = pathField.getText();
+            if (cur != null && !cur.isBlank()) {
+                File curFile = new File(cur.trim());
+                File parent = curFile.getParentFile();
+                if (parent != null && parent.isDirectory()) {
+                    chooser.setInitialDirectory(parent);
+                }
+            }
             File file = chooser.showOpenDialog(stage);
-            if (file != null) pathField.setText(file.getAbsolutePath());
+            if (file != null) {
+                pathField.setText(file.getAbsolutePath());
+                DatabaseToolDetector.saveToolPath("pg_dump", file.getAbsolutePath());
+            }
         });
 
         // ---- Output result to ----
@@ -235,7 +248,9 @@ public final class PgDumpDialog {
 
     private String defaultOutputPath() {
         String home = System.getProperty("user.home", "");
-        return new File(home, "{data_source}-{timestamp}-dump.sql").getAbsolutePath();
+        File downloads = new File(home, "Downloads");
+        File baseDir = (downloads.exists() && downloads.isDirectory()) ? downloads : new File(home);
+        return new File(baseDir, "{data_source}-{timestamp}-dump.sql").getAbsolutePath();
     }
 
     // ------------------------------------------------------- live preview
@@ -313,9 +328,11 @@ public final class PgDumpDialog {
         }
 
         String resolvedOutput = substitutePlaceholders(outputField.getText());
+        String toolPath = pathField.getText().trim();
+        DatabaseToolDetector.saveToolPath("pg_dump", toolPath);
 
         List<String> command = new ArrayList<>();
-        command.add(pathField.getText());
+        command.add(toolPath);
         command.add("--host");
         command.add(profile.getHost());
         command.add("--port");
