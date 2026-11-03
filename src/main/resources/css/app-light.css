@@ -1540,6 +1540,17 @@
 .sql-editor .sql-function  { -fx-fill: #00838f; -fx-font-style: italic; }
 .sql-editor .sql-parameter { -fx-fill: #a56000; -fx-font-weight: bold; }
 .sql-editor .sql-qualifier { -fx-fill: #1a56c4; }
+
+/* ---------- unresolved schema symbols (DataGrip-style error inspection) ---------- */
+.sql-editor .sql-unresolved-table,
+.sql-editor .sql-unresolved-column,
+.sql-editor .sql-unresolved-symbol {
+    -fx-fill: #c93b3b;
+    -rtfx-underline-color: #c93b3b;
+    -rtfx-underline-width: 1.4;
+    -rtfx-underline-wave-radius: 2.0;
+    -rtfx-underline-cap: round;
+}
 .current-statement-line {
     -rtfx-background-color: transparent;
 }

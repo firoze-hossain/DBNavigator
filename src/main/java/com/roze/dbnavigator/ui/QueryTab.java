@@ -43,6 +43,7 @@ import javafx.stage.Window;
 import org.fxmisc.flowless.VirtualizedScrollPane;
 import org.fxmisc.richtext.CodeArea;
 import org.fxmisc.richtext.LineNumberFactory;
+import org.fxmisc.richtext.event.MouseOverTextEvent;
 import org.kordamp.ikonli.fontawesome5.FontAwesomeSolid;
 
 import java.io.File;
@@ -55,6 +56,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -150,6 +152,14 @@ public class QueryTab extends Tab {
     private final ListView<CompletionService.Suggestion> completionList = new ListView<>();
     private int tokenStart = -1;
     private boolean suppressCompletion = false;
+
+    // ---- schema validation & inspection (DataGrip style) ----
+    private List<SqlSchemaValidator.Diagnostic> currentDiagnostics = List.of();
+    private final Popup inspectionPopup = new Popup();
+    private final VBox inspectionCard = new VBox();
+    private final Label inspectionTitle = new Label();
+    private final Label inspectionDetails = new Label();
+    private final Label inspectionActionHint = new Label();
 
     public QueryTab(ConnectionProfile profile, String catalog, String title) {
         this(null, profile, catalog, title);
@@ -399,7 +409,8 @@ public class QueryTab extends Tab {
         setupEditorContextMenu();
         setupStatementHighlighting();
         setupOutsideClickDismiss();
-        CompletionService.preload(profile, catalog);
+        setupInspection();
+        CompletionService.preload(profile, catalog, this::refreshEditorStyling);
 
         root.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
             if ((e.isControlDown() && e.getCode() == KeyCode.F5) || e.getCode() == KeyCode.F5) {
@@ -1441,6 +1452,7 @@ public class QueryTab extends Tab {
             icon.setPrefWidth(14);
             icon.setMaxWidth(14);
             icon.setAlignment(Pos.CENTER);
+            boolean hasLineError = hasErrorOnLine(lineIdx);
             if (executedLines.contains(lineIdx)) {
                 icon.setText("✓");
                 icon.setStyle("-fx-text-fill: #57965c; -fx-font-size: 11px; -fx-font-weight: bold;");
@@ -1449,6 +1461,10 @@ public class QueryTab extends Tab {
                 icon.setText("★");
                 icon.setStyle("-fx-text-fill: #3574f0; -fx-font-size: 11px;");
                 icon.setTooltip(new Tooltip("Bookmarked line"));
+            } else if (hasLineError) {
+                icon.setText("💡");
+                icon.setStyle("-fx-text-fill: #bc3f3c; -fx-font-size: 11px; -fx-font-weight: bold;");
+                icon.setTooltip(new Tooltip(getErrorMessageForLine(lineIdx)));
             } else if (lineIdx == cur && isInsideExecutableStatement()) {
                 icon.setText("💡");
                 icon.setStyle("-fx-font-size: 10px;");
@@ -1626,14 +1642,25 @@ public class QueryTab extends Tab {
         if (historyPopup.isShowing()) historyPopup.hide();
         if (statementsPopup.isShowing()) statementsPopup.hide();
         if (activeChooserPopup != null && activeChooserPopup.isShowing()) activeChooserPopup.hide();
+        if (inspectionPopup.isShowing()) inspectionPopup.hide();
     }
 
-    /** Recomputes syntax highlighting and overlays the current-statement and active row styling in DataGrip fashion. */
+    /** Recomputes syntax highlighting and overlays schema inspection diagnostics and statement styling. */
     private void refreshEditorStyling() {
         try {
             String text = editor.getText();
             org.fxmisc.richtext.model.StyleSpans<java.util.Collection<String>> syntax =
                     plainTextMode ? emptySpans(text.length()) : SqlHighlighter.computeHighlighting(text);
+
+            if (!plainTextMode && profile != null) {
+                currentDiagnostics = SqlSchemaValidator.validate(text, profile, catalog, this::refreshEditorStyling);
+                if (!currentDiagnostics.isEmpty()) {
+                    syntax = overlayDiagnostics(text, syntax, currentDiagnostics);
+                }
+            } else {
+                currentDiagnostics = List.of();
+            }
+
             editor.setStyleSpans(0, syntax);
 
             int currentPara = editor.getCurrentParagraph();
@@ -1652,6 +1679,133 @@ public class QueryTab extends Tab {
         } catch (Exception ignored) {
             // Never let a highlight-computation edge case leave stale/broken styling behind.
         }
+    }
+
+    private static org.fxmisc.richtext.model.StyleSpans<java.util.Collection<String>> overlayDiagnostics(
+            String text,
+            org.fxmisc.richtext.model.StyleSpans<java.util.Collection<String>> syntax,
+            List<SqlSchemaValidator.Diagnostic> diagnostics) {
+
+        List<SqlSchemaValidator.Diagnostic> errors = diagnostics.stream()
+                .filter(d -> d.kind() != SqlSchemaValidator.DiagnosticKind.RESOLVED_TABLE)
+                .sorted(Comparator.comparingInt(SqlSchemaValidator.Diagnostic::start))
+                .toList();
+
+        if (errors.isEmpty()) return syntax;
+
+        var diagBuilder = new org.fxmisc.richtext.model.StyleSpansBuilder<java.util.Collection<String>>();
+        int lastEnd = 0;
+        for (var d : errors) {
+            if (d.start() < lastEnd) continue;
+            if (d.start() > text.length() || d.end() > text.length() || d.start() >= d.end()) continue;
+
+            if (d.start() > lastEnd) {
+                diagBuilder.add(Collections.emptyList(), d.start() - lastEnd);
+            }
+            String cls = d.kind() == SqlSchemaValidator.DiagnosticKind.UNRESOLVED_TABLE ?
+                    "sql-unresolved-table" : "sql-unresolved-column";
+            diagBuilder.add(Collections.singleton(cls), d.end() - d.start());
+            lastEnd = d.end();
+        }
+        if (text.length() > lastEnd) {
+            diagBuilder.add(Collections.emptyList(), text.length() - lastEnd);
+        }
+
+        return syntax.overlay(diagBuilder.create(), (classes1, classes2) -> {
+            Set<String> merged = new LinkedHashSet<>(classes1);
+            merged.addAll(classes2);
+            return merged;
+        });
+    }
+
+    private void setupInspection() {
+        inspectionCard.setStyle("-fx-background-color: #2b2d30; -fx-border-color: #393b40; -fx-border-width: 1px; " +
+                "-fx-background-radius: 6px; -fx-border-radius: 6px; -fx-padding: 8px 12px; " +
+                "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.5), 8, 0, 0, 2); -fx-max-width: 460px;");
+        inspectionTitle.setStyle("-fx-text-fill: #e6e9f2; -fx-font-size: 12px; -fx-font-weight: bold;");
+        inspectionDetails.setStyle("-fx-text-fill: #a9b7c6; -fx-font-family: 'DBNavigator Mono', monospace; -fx-font-size: 11px;");
+        inspectionActionHint.setStyle("-fx-text-fill: #589df6; -fx-font-size: 11px; -fx-padding: 4px 0 0 0;");
+        inspectionCard.getChildren().addAll(inspectionTitle, inspectionDetails, inspectionActionHint);
+        inspectionPopup.getContent().add(inspectionCard);
+        inspectionPopup.setAutoHide(true);
+
+        editor.setMouseOverTextDelay(Duration.ofMillis(250));
+        editor.addEventHandler(MouseOverTextEvent.MOUSE_OVER_TEXT_BEGIN, e -> {
+            int idx = e.getCharacterIndex();
+            Point2D pos = e.getScreenPosition();
+            showInspectionPopup(idx, pos);
+        });
+        editor.addEventHandler(MouseOverTextEvent.MOUSE_OVER_TEXT_END, e -> inspectionPopup.hide());
+    }
+
+    private void showInspectionPopup(int charIdx, Point2D screenPos) {
+        if (currentDiagnostics.isEmpty() || screenPos == null) return;
+        String text = editor.getText();
+        if (charIdx < 0 || charIdx >= text.length()) return;
+
+        for (var d : currentDiagnostics) {
+            if (charIdx >= d.start() && charIdx <= d.end()) {
+                if (d.kind() == SqlSchemaValidator.DiagnosticKind.UNRESOLVED_TABLE
+                        || d.kind() == SqlSchemaValidator.DiagnosticKind.UNRESOLVED_COLUMN) {
+                    inspectionTitle.setText(d.message());
+                    inspectionTitle.setStyle("-fx-text-fill: #e05555; -fx-font-size: 12px; -fx-font-weight: bold;");
+                    inspectionDetails.setText(d.details() != null ? d.details() : "");
+                    inspectionDetails.setVisible(d.details() != null && !d.details().isBlank());
+                    inspectionDetails.setManaged(inspectionDetails.isVisible());
+                    inspectionActionHint.setText("Choose schema  Alt+Shift+Enter   More actions…  Alt+Enter");
+                    inspectionActionHint.setVisible(true);
+                    inspectionActionHint.setManaged(true);
+                    inspectionPopup.show(editor, screenPos.getX() + 8, screenPos.getY() + 16);
+                    return;
+                } else if (d.kind() == SqlSchemaValidator.DiagnosticKind.RESOLVED_TABLE) {
+                    inspectionTitle.setText(d.message());
+                    inspectionTitle.setStyle("-fx-text-fill: #9876aa; -fx-font-size: 12px; -fx-font-weight: bold;");
+                    inspectionDetails.setText(d.details());
+                    inspectionDetails.setVisible(true);
+                    inspectionDetails.setManaged(true);
+                    inspectionActionHint.setText("Ctrl+Click or F4 to Go to DDL / Table");
+                    inspectionActionHint.setVisible(true);
+                    inspectionActionHint.setManaged(true);
+                    inspectionPopup.show(editor, screenPos.getX() + 8, screenPos.getY() + 16);
+                    return;
+                }
+            }
+        }
+        inspectionPopup.hide();
+    }
+
+    private boolean hasErrorOnLine(int lineIdx) {
+        if (currentDiagnostics.isEmpty()) return false;
+        String text = editor.getText();
+        for (var d : currentDiagnostics) {
+            if (d.kind() == SqlSchemaValidator.DiagnosticKind.RESOLVED_TABLE) continue;
+            if (d.start() <= text.length()) {
+                int line = countNewlines(text, d.start());
+                if (line == lineIdx) return true;
+            }
+        }
+        return false;
+    }
+
+    private String getErrorMessageForLine(int lineIdx) {
+        String text = editor.getText();
+        for (var d : currentDiagnostics) {
+            if (d.kind() == SqlSchemaValidator.DiagnosticKind.RESOLVED_TABLE) continue;
+            if (d.start() <= text.length()) {
+                int line = countNewlines(text, d.start());
+                if (line == lineIdx) return d.message();
+            }
+        }
+        return "Schema inspection warning";
+    }
+
+    private static int countNewlines(String text, int endIdx) {
+        int count = 0;
+        int limit = Math.min(endIdx, text.length());
+        for (int i = 0; i < limit; i++) {
+            if (text.charAt(i) == '\n') count++;
+        }
+        return count;
     }
 
     private static org.fxmisc.richtext.model.StyleSpans<java.util.Collection<String>> emptySpans(int length) {
@@ -3762,7 +3916,7 @@ public class QueryTab extends Tab {
         updateIntrospectionBanner();
         statusLabel.setText("Connected to " + newCatalog);
 
-        AppExecutor.run(() -> CompletionService.preload(profile, newCatalog));
+        AppExecutor.run(() -> CompletionService.preload(profile, newCatalog, this::refreshEditorStyling));
 
         long start = System.currentTimeMillis();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");

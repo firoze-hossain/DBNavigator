@@ -20,7 +20,7 @@ import java.util.regex.Pattern;
 public final class SqlAliases {
 
     private static final Pattern FROM_OR_JOIN = Pattern.compile(
-            "(?i)\\b(?:FROM|JOIN)\\s+([A-Za-z_][A-Za-z0-9_.]*)\\s+(?:AS\\s+)?([A-Za-z_][A-Za-z0-9_]*)\\b");
+            "(?i)\\b(?:FROM|JOIN)\\s+[\"`\\[]?([A-Za-z_][A-Za-z0-9_.]*)[\"`\\]]?\\s+(?:AS\\s+)?[\"`\\[]?([A-Za-z_][A-Za-z0-9_]*)[\"`\\]]?\\b");
 
     private static final Pattern FROM_OR_JOIN_TABLE = Pattern.compile(
             "(?i)\\b(?:FROM|JOIN)\\s+([A-Za-z_][A-Za-z0-9_.\\\"]*)(?:\\s+(?:AS\\s+)?([A-Za-z_][A-Za-z0-9_]*))?\\b");

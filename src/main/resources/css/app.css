@@ -1394,6 +1394,17 @@
 .sql-editor .sql-parameter { -fx-fill: #e0a44c; -fx-font-weight: bold; }
 .sql-editor .sql-qualifier { -fx-fill: #82aaff; }
 
+/* ---------- unresolved schema symbols (DataGrip-style error inspection) ---------- */
+.sql-editor .sql-unresolved-table,
+.sql-editor .sql-unresolved-column,
+.sql-editor .sql-unresolved-symbol {
+    -fx-fill: #bc3f3c;
+    -rtfx-underline-color: #bc3f3c;
+    -rtfx-underline-width: 1.4;
+    -rtfx-underline-wave-radius: 2.0;
+    -rtfx-underline-cap: round;
+}
+
 /* ---------- serial/row-number column ---------- */
 .result-grid .serial-cell {
     -fx-text-fill: #6f7680;

@@ -206,6 +206,8 @@ public final class CompletionService {
     /** cacheKey = profileId::catalog::table */
     private static final Map<String, List<String>> columnCache = new ConcurrentHashMap<>();
 
+    private static final Set<String> loadedKeys = ConcurrentHashMap.newKeySet();
+
     private CompletionService() {}
 
     private static String key(ConnectionProfile profile, String catalog) {
@@ -214,10 +216,20 @@ public final class CompletionService {
 
     /** Kick off background loading of table, column, sequence, database, and schema names for a console. */
     public static void preload(ConnectionProfile profile, String catalog) {
+        preload(profile, catalog, null);
+    }
+
+    /** Kick off background loading with an optional completion callback on JavaFX Application Thread. */
+    public static void preload(ConnectionProfile profile, String catalog, Runnable onLoaded) {
         if (profile == null) return;
         String key = key(profile, catalog);
         String profId = profile.getId();
-        if (tableCache.containsKey(key)) return;
+        if (tableCache.containsKey(key)) {
+            if (loadedKeys.contains(key) && onLoaded != null) {
+                javafx.application.Platform.runLater(onLoaded);
+            }
+            return;
+        }
         tableCache.put(key, List.of());
         allColumnsCache.put(key, List.of());
         sequenceCache.put(key, List.of());
@@ -237,11 +249,72 @@ public final class CompletionService {
             tableCache.put(key, MetadataService.listAllTables(profile, catalog));
             allColumnsCache.put(key, MetadataService.listAllColumns(profile, catalog));
             sequenceCache.put(key, MetadataService.listAllSequences(profile, catalog));
+            loadedKeys.add(key);
+            if (onLoaded != null) {
+                javafx.application.Platform.runLater(onLoaded);
+            }
         });
+    }
+
+    public static boolean isMetadataLoaded(ConnectionProfile profile, String catalog) {
+        if (profile == null) return false;
+        return loadedKeys.contains(key(profile, catalog));
+    }
+
+    public static List<String> getCachedTables(ConnectionProfile profile, String catalog) {
+        if (profile == null) return List.of();
+        return tableCache.getOrDefault(key(profile, catalog), List.of());
+    }
+
+    public static String canonicalTableName(ConnectionProfile profile, String catalog, String table) {
+        if (table == null || table.isBlank() || profile == null) return null;
+        String clean = table.replace("\"", "").replace("`", "").replace("[", "").replace("]", "");
+        if (clean.contains(".")) {
+            clean = clean.substring(clean.lastIndexOf('.') + 1);
+        }
+        List<String> tables = tableCache.get(key(profile, catalog));
+        if (tables != null) {
+            for (String t : tables) {
+                if (t.equalsIgnoreCase(clean)) {
+                    return t;
+                }
+            }
+        }
+        return null;
+    }
+
+    public static List<String> getCachedColumns(ConnectionProfile profile, String catalog, String table, Runnable onColumnsLoaded) {
+        if (profile == null || table == null || table.isBlank()) return List.of();
+        String canonical = canonicalTableName(profile, catalog, table);
+        String targetTable = canonical != null ? canonical : table;
+        String cacheKey = key(profile, catalog) + "::" + targetTable.toLowerCase(Locale.ROOT);
+        List<String> cached = columnCache.get(cacheKey);
+        if (cached != null) return cached;
+        // Asynchronously load columns
+        AppExecutor.run(() -> {
+            List<String> cols = columnsOf(profile, catalog, targetTable);
+            if (onColumnsLoaded != null && cols != null && !cols.isEmpty()) {
+                javafx.application.Platform.runLater(onColumnsLoaded);
+            }
+        });
+        return null;
+    }
+
+    /** Testing hook: populate test caches directly */
+    public static void setCachedMetadataForTesting(ConnectionProfile profile, String catalog, List<String> tables, Map<String, List<String>> columnsPerTable) {
+        String key = key(profile, catalog);
+        tableCache.put(key, new ArrayList<>(tables));
+        loadedKeys.add(key);
+        if (columnsPerTable != null) {
+            for (var entry : columnsPerTable.entrySet()) {
+                columnCache.put(key + "::" + entry.getKey().toLowerCase(Locale.ROOT), new ArrayList<>(entry.getValue()));
+            }
+        }
     }
 
     /** Used by "Invalidate Caches" — forces every cache to reload on next use. */
     public static void clearAllCaches() {
+        loadedKeys.clear();
         tableCache.clear();
         allColumnsCache.clear();
         sequenceCache.clear();
